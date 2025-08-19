@@ -65,10 +65,13 @@ Create this exact structure:
 ### 8. Code Quality Requirements
 - Verbose, readable code over compact solutions
 - Maximum 15 lines per function
-- Descriptive variable names
-- Comments explaining business logic
+- Descriptive variable names (no single letters except i, j for loops)
+- Comments explaining business logic and WHY
 - No nested ternary operators
+- No method chaining beyond 2 levels
 - Separate files for different concerns
+- Explicit error handling where critical
+- One responsibility per function
 
 ### 9. Definition of Done
 **SKELETON COMPLETE WHEN:**
