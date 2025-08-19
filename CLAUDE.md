@@ -14,7 +14,7 @@ This project uses a three-stage development workflow:
    - Conducts adaptive questioning to understand requirements
    - Outputs: `docs/idea-summary.md`
 
-2. **`/prp-generator`** - Project Requirements Plan generation
+2. **`/prp-generator`** - Product Requirements Prompts generation
    - Creates technical requirements from idea summary
    - Reads: `docs/idea-summary.md`
    - Outputs: `docs/prp.md`
