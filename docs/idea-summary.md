@@ -8,69 +8,53 @@ Merchant onboarding is currently managed through fragmented WhatsApp/text conver
 - **Secondary:** Merchant Onboarding Managers (need real-time visibility of merchant progress and automated data flow to Salesforce)
 
 ## Solution Approach
-A white-labeled merchant portal with subdomain routing ({merchantname}.onboardingstorehub.com) built on a simplified monolith architecture with service modules that provides:
+A self-service merchant portal with path-based routing (onboardingstorehub.com/m/{merchant-slug}) built as a single Next.js application that provides:
 - Centralized place for merchants to view onboarding status and timeline
-- Upload required documents (store videos, etc.)
 - Update business information (address, phone number, etc.)
-- Schedule key dates (hardware delivery, installation, training) via integrated scheduling tools (Cal.com)
-- Track hardware shipment status
+- Schedule key dates (installation, training) via simple date picker
+- Track onboarding progress
 - See what information is missing or required
 
 All data syncs bidirectionally with Salesforce:
-- Portal → Salesforce: Batch sync every 5 minutes (reduces API calls by 90%)
-- Salesforce → Portal: Real-time via Change Data Capture webhooks
-- UI feels instant with WebSocket updates (< 100ms response time)
+- Portal → Salesforce: Immediate sync on save (fire-and-forget)
+- Salesforce → Portal: Real-time via webhook endpoint
+- Simple last-write-wins conflict resolution
 
 ## Key User Journey
-1. Merchant navigates to their subdomain portal ({merchantname}.onboardingstorehub.com)
+1. Merchant navigates to their portal URL (onboardingstorehub.com/m/bestbuy)
 2. Logs in with credentials provided by MOM
 3. Views dashboard showing onboarding progress/status
 4. Sees required actions clearly highlighted
-5. Updates any missing business information (instant UI feedback)
-6. Selects available installation and training dates via calendar integration
-7. Uploads required store video
-8. Tracks hardware shipment status
-9. All changes appear immediately in UI (WebSocket broadcast)
-10. MOM sees updates in Salesforce within 5 minutes
+5. Updates any missing business information
+6. Selects available installation and training dates
+7. All changes sync to Salesforce immediately
+8. MOM sees updates in Salesforce in real-time
 
 ## Success Looks Like
 - 80% reduction in WhatsApp/text coordination messages
 - Complete merchant data captured in one session vs. multiple fragmented conversations
 - Zero manual data entry for MOMs - everything flows to Salesforce automatically
 - Merchants can answer their own status questions 24/7
-- Installation and training scheduling happens automatically without back-and-forth
-- UI feels instant despite 5-minute sync intervals
-- 90% reduction in Salesforce API calls through batching
+- Installation and training scheduling happens without back-and-forth
+- Simple, maintainable codebase that can be built in 3-5 days
 
 ## Technical Direction
-- **Architecture:** Single Node.js/Express application with service modules
-  - authService (JWT + subdomain handling)
-  - merchantService (CRUD operations)
-  - salesforceService (bidirectional sync)
-  - calendarService (Cal.com integration)
-  - queueService (background job processing with node-cron)
-- **Frontend:** Next.js 14 with TypeScript
-- **Authentication:** JWT with refresh tokens
-- **Data Storage:** PostgreSQL (immediate writes) + Salesforce (source of truth)
-- **Real-time:** WebSockets (Socket.io) for instant UI updates
-- **Background Jobs:** node-cron with database-based job queue
-- **Integrations:** 
-  - Salesforce API (OAuth 2.0 JWT Bearer, Composite API for batching)
-  - Cal.com API for scheduling
-  - Shipping tracking API for hardware status
+- **Architecture:** Single Next.js application with API routes
+- **Frontend:** Next.js 14 with TypeScript and Tailwind CSS
+- **Authentication:** Simple JWT (no refresh tokens needed for MVP)
+- **Data Storage:** PostgreSQL via Prisma ORM
+- **Salesforce Integration:** jsforce library for direct API calls
 - **Sync Strategy:**
-  - Portal → Salesforce: 5-minute batch intervals
-  - Salesforce → Portal: Real-time via Change Data Capture
-- **Deployment:** Single application deployment to Render (no Docker needed)
+  - Portal → Salesforce: Immediate on save
+  - Salesforce → Portal: Webhook endpoint for real-time updates
+- **Deployment:** Render Web Service ($7/month) + PostgreSQL ($7/month)
 
 ## First Version Focus
 MVP should handle core onboarding workflow:
-1. Merchant login with subdomain routing
-2. Dashboard with real-time progress updates
-3. Business information collection (instant UI feedback)
+1. Merchant login with path-based routing (/m/merchant-slug)
+2. Dashboard showing onboarding progress
+3. Business information collection forms
 4. Date selection for installation and training
-5. Store video upload capability
-6. Onboarding status visualization
-7. 5-minute batch sync to Salesforce (feels instant to users)
-8. Real-time sync from Salesforce via webhooks
-9. WebSocket broadcasting for all UI updates
+5. Onboarding status visualization
+6. Immediate bidirectional sync with Salesforce
+7. Simple error handling and logging
