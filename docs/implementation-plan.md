@@ -1000,93 +1000,64 @@ describe('Bidirectional Sync', () => {
 
 ---
 
-### Task 12: Render Deployment & Monitoring
+### Task 10: Render Deployment & Integration Testing
 **Status:** ⬜
 **Implementation Checklist:**
-- [ ] Create render.yaml configuration
+- [ ] Create simplified render.yaml configuration
 - [ ] Connect GitHub repository to Render
 - [ ] Configure environment variables
-- [ ] Set up health check endpoints
+- [ ] Set up health check endpoint
+- [ ] Run integration tests
 - [ ] Enable Render monitoring
 
-**Render Configuration (render.yaml):**
+**Simplified Render Configuration (render.yaml):**
 ```yaml
 services:
-  # API Gateway
+  # Single Backend Application
   - type: web
-    name: api-gateway
+    name: onboarding-portal-backend
     env: node
     region: oregon
     plan: starter
-    buildCommand: cd services/api-gateway && npm install
-    startCommand: node index.js
-    healthCheckPath: /health
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: REDIS_URL
-        fromDatabase:
-          name: redis-cache
-          property: connectionString
+      - key: PORT
+        value: 3000
       - key: DATABASE_URL
         fromDatabase:
           name: merchant-db
           property: connectionString
-  
-  # Auth Service
-  - type: web
-    name: auth-service
-    env: node
-    plan: starter
-    buildCommand: cd services/auth-service && npm install
-    startCommand: node index.js
-    healthCheckPath: /health
-    
-  # Merchant Service  
-  - type: web
-    name: merchant-service
-    env: node
-    plan: starter
-    buildCommand: cd services/merchant-service && npm install
-    startCommand: node index.js
-    healthCheckPath: /health
-    
-  # Salesforce Service
-  - type: web
-    name: salesforce-service
-    env: node
-    plan: starter
-    buildCommand: cd services/salesforce-service && npm install
-    startCommand: node index.js
-    healthCheckPath: /health
-    envVars:
+      - key: REDIS_URL
+        fromDatabase:
+          name: redis-cache
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false
       - key: SF_CLIENT_ID
-        sync: false  # Set in dashboard
+        sync: false
       - key: SF_CLIENT_SECRET
-        sync: false  # Set in dashboard
-    
-  # Queue Service (Background Worker)
-  - type: worker
-    name: queue-service
-    env: node
-    plan: starter
-    buildCommand: cd services/queue-service && npm install
-    startCommand: node index.js
-    
-  # Calendar Service
+        sync: false
+      - key: CALCOM_API_KEY
+        sync: false
+
+  # Frontend (Optional - can be separate repo)
   - type: web
-    name: calendar-service
-    env: node
-    plan: starter
-    buildCommand: cd services/calendar-service && npm install
-    startCommand: node index.js
-    healthCheckPath: /health
+    name: onboarding-portal-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://onboarding-portal-backend.onrender.com
 
 # Databases
 databases:
   - name: merchant-db
     databaseName: onboarding
-    user: onboarding_user
     plan: starter  # $7/month
     
   - name: redis-cache
@@ -1119,23 +1090,58 @@ git push origin main
 
 **Health Check Implementation:**
 ```javascript
-// Each service needs /health endpoint
-app.get('/health', (req, res) => {
+// Single health endpoint in main app
+app.get('/api/health', async (req, res) => {
   const health = {
     uptime: process.uptime(),
     message: 'OK',
     timestamp: Date.now(),
-    service: 'merchant-service'
+    service: 'onboarding-portal'
   };
   
-  // Check database connection
   try {
+    // Check database connection
     await db.query('SELECT 1');
+    
+    // Check Redis connection
+    await redis.ping();
+    
     res.status(200).json(health);
   } catch (error) {
-    health.message = 'Database connection failed';
+    health.message = 'Service connection failed';
+    health.error = error.message;
     res.status(503).json(health);
   }
+});
+```
+
+**Integration Testing:**
+```javascript
+// tests/integration/full-flow.test.js
+describe('Full User Flow', () => {
+  it('should complete merchant onboarding end-to-end', async () => {
+    // Test login
+    const loginResponse = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'test@merchant.com', password: 'password' });
+    
+    expect(loginResponse.status).toBe(200);
+    const { token } = loginResponse.body;
+    
+    // Test merchant update
+    const updateResponse = await request(app)
+      .put('/api/merchant/123')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ address: 'New Address' });
+    
+    expect(updateResponse.status).toBe(200);
+    
+    // Verify sync to Salesforce (wait for batch)
+    await new Promise(resolve => setTimeout(resolve, 6000));
+    
+    const sfRecord = await salesforce.getRecord('123');
+    expect(sfRecord.BillingStreet).toBe('New Address');
+  });
 });
 ```
 
@@ -1146,14 +1152,14 @@ app.get('/health', (req, res) => {
 - Auto-restart on crashes
 - Preview environments for PRs
 
-**Success Criteria:** All services deployed on Render with monitoring
+**Success Criteria:** Single application deployed on Render with full integration tests passing
 
 ---
 
 **Batch 4 Completion Checklist:**
 - [ ] Frontend with real-time updates
-- [ ] Integration tests passing
-- [ ] All services deployed to Render
+- [ ] Integration tests passing  
+- [ ] Single application deployed to Render
 - [ ] Monitoring operational in Render dashboard
 - [ ] Custom domain configured for subdomains
 
@@ -1169,14 +1175,16 @@ app.get('/health', (req, res) => {
 - **API Efficiency:** Batch operations reduce API calls by 90%
 
 ## Architecture Benefits
-1. **Service Independence** - Each service can be scaled/deployed separately
+1. **Simplicity** - Single application, easier to develop and debug
 2. **Real-time Updates** - WebSockets ensure immediate UI updates
-3. **Reliability** - Queue service handles failures gracefully
+3. **Reliability** - Queue service module handles failures gracefully
 4. **Bidirectional Sync** - Changes from either system propagate immediately
 5. **Conflict Resolution** - Version tracking prevents data loss
+6. **Easy Deployment** - Single application deployment to Render
+7. **Scalable Path** - Can be split into microservices later if needed
 
 ---
 
-**Generated from:** `docs/prp.md` (Microservices Architecture)  
+**Generated from:** `docs/prp.md` (Monolith with Service Modules Architecture)  
 **Date:** 2025-09-30  
 **Ready to implement:** Start with Batch 1, Task 1

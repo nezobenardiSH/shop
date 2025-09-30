@@ -8,7 +8,7 @@ Merchant onboarding is currently managed through fragmented WhatsApp/text conver
 - **Secondary:** Merchant Onboarding Managers (need real-time visibility of merchant progress and automated data flow to Salesforce)
 
 ## Solution Approach
-A white-labeled merchant portal with subdomain routing ({merchantname}.onboardingstorehub.com) built on microservices architecture that provides:
+A white-labeled merchant portal with subdomain routing ({merchantname}.onboardingstorehub.com) built on a simplified monolith architecture with service modules that provides:
 - Centralized place for merchants to view onboarding status and timeline
 - Upload required documents (store videos, etc.)
 - Update business information (address, phone number, etc.)
@@ -43,18 +43,17 @@ All data syncs bidirectionally with Salesforce:
 - 90% reduction in Salesforce API calls through batching
 
 ## Technical Direction
-- **Architecture:** Microservices (5 backend services + API Gateway)
-  - API Gateway (routing & WebSockets)
-  - Auth Service (JWT + subdomain handling)
-  - Merchant Service (CRUD operations)
-  - Salesforce Service (bidirectional sync)
-  - Calendar Service (Cal.com integration)
-  - Queue Service (batch processing)
+- **Architecture:** Single Node.js/Express application with service modules
+  - authService (JWT + subdomain handling)
+  - merchantService (CRUD operations)
+  - salesforceService (bidirectional sync)
+  - calendarService (Cal.com integration)
+  - queueService (background job processing with node-cron)
 - **Frontend:** Next.js 14 with TypeScript
 - **Authentication:** JWT with refresh tokens
 - **Data Storage:** PostgreSQL (immediate writes) + Salesforce (source of truth)
-- **Real-time:** WebSockets for instant UI updates
-- **Message Queue:** BullMQ with Redis for job processing
+- **Real-time:** WebSockets (Socket.io) for instant UI updates
+- **Background Jobs:** node-cron with database-based job queue
 - **Integrations:** 
   - Salesforce API (OAuth 2.0 JWT Bearer, Composite API for batching)
   - Cal.com API for scheduling
@@ -62,7 +61,7 @@ All data syncs bidirectionally with Salesforce:
 - **Sync Strategy:**
   - Portal → Salesforce: 5-minute batch intervals
   - Salesforce → Portal: Real-time via Change Data Capture
-- **Deployment:** Docker Compose for local development, Render for production
+- **Deployment:** Single application deployment to Render (no Docker needed)
 
 ## First Version Focus
 MVP should handle core onboarding workflow:

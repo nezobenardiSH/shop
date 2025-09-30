@@ -1,7 +1,7 @@
 # Product Requirements Plan (PRP) - Merchant Onboarding Portal
 
 ### 1. Core Identity
-A self-service merchant onboarding portal built on microservices architecture that replaces fragmented WhatsApp/text coordination with a structured web interface. Merchants update their information, schedule installation dates, and track onboarding progress while the system maintains bidirectional sync with Salesforce (5-minute batches outbound, real-time inbound via CDC).
+A self-service merchant onboarding portal built on simplified monolith architecture with service modules that replaces fragmented WhatsApp/text coordination with a structured web interface. Merchants update their information, schedule installation dates, and track onboarding progress while the system maintains bidirectional sync with Salesforce (5-minute batches outbound, real-time inbound via CDC).
 
 ### 2. Single Success Scenario
 - User does: Merchant logs in via subdomain and updates missing store address, selects installation date from calendar
@@ -11,15 +11,15 @@ A self-service merchant onboarding portal built on microservices architecture th
 ### 3. User Flows
 **PRIMARY FLOW:**
 1. User navigates to subdomain ({merchantname}.onboardingstorehub.com)
-2. System identifies merchant from subdomain via auth-service
-3. User enters credentials → auth-service validates → shows dashboard
-4. User clicks "Update Information" → merchant-service processes → syncs to Salesforce
+2. System identifies merchant from subdomain via authService module
+3. User enters credentials → authService validates → shows dashboard
+4. User clicks "Update Information" → merchantService processes → syncs to Salesforce
 5. Result: Real-time bidirectional sync ensures data consistency
 
 **ERROR HANDLING:**
 - Invalid credentials: Show "Invalid login" message
-- Salesforce sync failure: Queue in queue-service, retry with exponential backoff
-- Service down: Circuit breaker activates, fallback to cache
+- Salesforce sync failure: Queue in queueService module, retry with exponential backoff
+- Service module error: Circuit breaker activates, fallback to cache
 
 ### 4. Technical Stack & Architecture
 **STACK:**
@@ -106,7 +106,7 @@ Queue Management:
 **SALESFORCE → PORTAL (Real-time via CDC):**
 - Change Data Capture (CDC) publishes events
 - Webhook endpoint receives changes immediately
-- Queue-service processes and updates PostgreSQL
+- queueService module processes and updates PostgreSQL
 - WebSocket notifies frontend of changes instantly
 
 **PORTAL → SALESFORCE (5-minute batch with instant UI):**
