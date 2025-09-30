@@ -24,33 +24,33 @@ A self-service merchant onboarding portal built on microservices architecture th
 ### 4. Technical Stack & Architecture
 **STACK:**
 - Frontend: Next.js 14 with TypeScript (client application)
-- API Gateway: Express.js (routes requests to services)
-- Backend Services: Node.js microservices
-- Message Queue: BullMQ with Redis
+- Backend: Single Node.js/Express application with service modules
+- Background Jobs: node-cron with database queue table
 - Data Storage: PostgreSQL + Salesforce (bidirectional sync)
-- Real-time: WebSockets for live updates
-- Deployment: Render (managed platform with auto-scaling)
+- Real-time: WebSockets (Socket.io) for live updates
+- Session Management: Redis for caching and pub/sub
+- Deployment: Render (single web service deployment)
 
-**MICROSERVICES ARCHITECTURE:**
+**MONOLITH WITH SERVICE MODULES ARCHITECTURE:**
 ```
 Next.js Frontend
     ↓
-API Gateway (Express)
+Single Express App
     ↓
-/services
-  ├── auth-service/          # Authentication & tenant management
-  ├── merchant-service/      # Merchant data CRUD operations
-  ├── salesforce-service/    # Real-time SF sync (bidirectional)
-  ├── calendar-service/      # Cal.com integration
-  └── queue-service/         # Message queue & retry logic
+/services (modules, not microservices)
+  ├── authService.js         # Authentication & tenant management
+  ├── merchantService.js     # Merchant data CRUD operations
+  ├── salesforceService.js   # Real-time SF sync (bidirectional)
+  ├── calendarService.js     # Cal.com integration
+  └── queueService.js        # Background jobs with node-cron
     ↓
 PostgreSQL ↔ Salesforce (5-min batch → | ← CDC real-time)
 ```
 
 **SERVICE COMMUNICATION:**
-- REST APIs between services
+- Direct function calls between service modules
 - Redis pub/sub for real-time events
-- BullMQ for async job processing
+- Database-based job queue with node-cron
 - WebSockets for client updates
 
 ### 5. API Design & Data Models
@@ -76,30 +76,30 @@ EventLog {
 }
 ```
 
-**SERVICE ENDPOINTS:**
+**API ENDPOINTS (Single Express App):**
 ```
-auth-service:
+Authentication:
   POST /api/auth/login
   POST /api/auth/validate
   GET  /api/auth/tenant/:subdomain
 
-merchant-service:
+Merchant Management:
   GET  /api/merchant/:id
   PUT  /api/merchant/:id
   GET  /api/merchant/:id/progress
 
-salesforce-service:
+Salesforce Integration:
   POST /api/sync/push
   POST /api/sync/pull
   POST /api/webhook/cdc (Change Data Capture)
   
-calendar-service:
+Calendar Integration:
   GET  /api/calendar/slots
   POST /api/calendar/book
 
-queue-service:
-  POST /api/queue/add
+Queue Management:
   GET  /api/queue/status
+  POST /api/queue/retry/:id
 ```
 
 ### 6. Near Real-time Bidirectional Sync
@@ -132,13 +132,14 @@ if (localVersion !== salesforceVersion) {
 
 ### 7. Dependencies & Constraints
 **REQUIRED PACKAGES:**
-- `express` - API Gateway
-- `jsforce` - Salesforce API
-- `bullmq` & `redis` - Queue management
-- `socket.io` - WebSockets
-- `@calcom/embed-react` - Calendar
-- `pg` - PostgreSQL
-- `docker` - Containerization
+- `express` - Main web server
+- `jsforce` - Salesforce API integration
+- `node-cron` & `redis` - Background jobs and caching
+- `socket.io` - WebSockets for real-time updates
+- `@calcom/embed-react` - Calendar integration
+- `pg` - PostgreSQL database driver
+- `jsonwebtoken` - JWT authentication
+- `bcrypt` - Password hashing
 
 **CONSTRAINTS:**
 - Must handle 1000+ concurrent merchants
@@ -149,34 +150,34 @@ if (localVersion !== salesforceVersion) {
 - Salesforce API limits (15,000 calls/day)
 - Zero data loss tolerance
 
-### 8. Service Implementation Details
+### 8. Service Module Implementation Details
 
-**AUTH-SERVICE:**
+**authService.js:**
 - JWT with refresh tokens
 - Subdomain-based tenant resolution
 - Session management with Redis
 - Rate limiting per tenant
 
-**MERCHANT-SERVICE:**
+**merchantService.js:**
 - CRUD operations with validation
 - Progress calculation algorithm
 - Caching layer with Redis
 - Audit trail for all changes
 
-**SALESFORCE-SERVICE:**
+**salesforceService.js:**
 - OAuth 2.0 JWT Bearer flow
 - Connection pooling
 - Circuit breaker pattern
 - Bulk API for batch operations
 - Change Data Capture listener
 
-**QUEUE-SERVICE:**
-- Priority queues (critical/normal/low)
-- Exponential backoff retry
-- Dead letter queue handling
-- Job scheduling and monitoring
+**queueService.js:**
+- Database-based job queue with priority levels
+- node-cron for scheduled processing
+- Exponential backoff retry logic
+- Failed job handling and monitoring
 
-**CALENDAR-SERVICE:**
+**calendarService.js:**
 - Cal.com API integration
 - Availability caching
 - Timezone handling
@@ -184,54 +185,50 @@ if (localVersion !== salesforceVersion) {
 
 ### 9. Render Deployment Configuration
 
-**RENDER SERVICES:**
+**SIMPLIFIED RENDER DEPLOYMENT:**
 ```yaml
 # render.yaml
 services:
-  # API Gateway with WebSocket support
+  # Single Backend Application
   - type: web
-    name: api-gateway
+    name: onboarding-portal-backend
     env: node
-    buildCommand: cd services/api-gateway && npm install
-    startCommand: node services/api-gateway/index.js
+    region: oregon
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: PORT
         value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: merchant-db
+          property: connectionString
       - key: REDIS_URL
         fromDatabase:
           name: redis-cache
           property: connectionString
-  
-  # Microservices
-  - type: web
-    name: auth-service
-    env: node
-    startCommand: node services/auth-service/index.js
-    
-  - type: web
-    name: merchant-service
-    env: node
-    startCommand: node services/merchant-service/index.js
-    
-  - type: web
-    name: salesforce-service
-    env: node
-    startCommand: node services/salesforce-service/index.js
-    envVars:
+      - key: JWT_SECRET
+        sync: false
       - key: SF_CLIENT_ID
         sync: false
       - key: SF_CLIENT_SECRET
         sync: false
-    
-  - type: worker
-    name: queue-service
-    env: node
-    startCommand: node services/queue-service/index.js
-    
+      - key: CALCOM_API_KEY
+        sync: false
+
+  # Frontend (Optional - can be separate repo)
   - type: web
-    name: calendar-service
-    env: node
-    startCommand: node services/calendar-service/index.js
+    name: onboarding-portal-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://onboarding-portal-backend.onrender.com
 
 databases:
   - name: merchant-db
@@ -244,11 +241,12 @@ databases:
 ```
 
 **DEPLOYMENT STRATEGY:**
+- Single application deployment (much simpler)
 - GitHub integration for auto-deploy on push
-- Preview environments for branches
 - Environment variables managed in Render dashboard
-- Automatic SSL certificates
+- Automatic SSL certificates and custom domains
 - Built-in logging and monitoring
+- No container orchestration needed
 
 ### 10. Code Quality Requirements
 - Maximum 25 lines per function
@@ -262,14 +260,14 @@ databases:
 
 ### 11. Definition of Done
 **SYSTEM COMPLETE WHEN:**
-- All 5 microservices deployed and communicating via API Gateway
+- Single Express application deployed with all service modules
 - Portal → Salesforce sync batching every 5 minutes
 - Salesforce → Portal real-time sync via CDC (< 1 second)
 - UI updates feel instant via WebSockets (< 100ms)
 - Subdomain routing functional ({merchantname}.onboardingstorehub.com)
 - Merchant can complete full onboarding flow
 - Zero data loss between PostgreSQL and Salesforce
-- All services have health checks and monitoring
+- Health checks and monitoring operational
 - Load testing confirms 1000+ concurrent users
 - API calls reduced by 90% through batching
 - Full API documentation with Swagger/OpenAPI

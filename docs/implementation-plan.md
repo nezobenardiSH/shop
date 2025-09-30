@@ -1,166 +1,209 @@
-dd# Implementation & Testing Plan: Merchant Onboarding Portal (Microservices)
+# Implementation & Testing Plan: Merchant Onboarding Portal (Monolith with Service Modules)
 
 ## Quick Reference
-**PRP Status:** ✅ Microservices with real-time bidirectional Salesforce sync  
-**Total Tasks:** 12 tasks across 4 conversation batches  
+**PRP Status:** ✅ Simplified monolith with service modules and real-time Salesforce sync  
+**Total Tasks:** 10 tasks across 4 conversation batches  
 **Estimated Timeline:** 4 conversations over 1 week
 
 ## Architecture Overview
 ```
-Next.js Frontend → API Gateway → 5 Microservices → PostgreSQL ↔ Salesforce
-                                                          ↑
-                                                    Real-time sync
+Next.js Frontend → Single Express App → Service Modules → PostgreSQL ↔ Salesforce
+                                                                ↑
+                                                          Real-time sync
 ```
 
 ## Conversation Batching Strategy
-- **Batch 1:** Foundation & Gateway (3 tasks: Project structure, API Gateway, Docker setup)
-- **Batch 2:** Core Services (3 tasks: Auth, Merchant, Queue services)
-- **Batch 3:** Integration Services (3 tasks: Salesforce bidirectional, Calendar, WebSockets)
-- **Batch 4:** Frontend & Testing (3 tasks: Next.js UI, Integration testing, Deployment)
+- **Batch 1:** Project Foundation (3 tasks: Project structure, Express setup, Database)
+- **Batch 2:** Service Modules (3 tasks: Auth, Merchant, Queue modules)
+- **Batch 3:** Integration Services (2 tasks: Salesforce sync, WebSockets + Calendar)
+- **Batch 4:** Frontend & Testing (2 tasks: Next.js UI, Integration testing + Deployment)
 
 ---
 
-## BATCH 1: Foundation & API Gateway
+## BATCH 1: Project Foundation
 **Status:** ⬜ Not Started  
-**Goal:** Set up microservices architecture with API Gateway
-**Context Window Strategy:** Fresh conversation, focus on structure
+**Goal:** Set up single Express application with project structure
+**Context Window Strategy:** Fresh conversation, focus on monolith setup
 
-### Task 1: Project Structure & Docker Setup
+### Task 1: Project Structure & Package Setup
 **Status:** ⬜
 **Implementation Checklist:**
-- [ ] Create monorepo structure with service folders
-- [ ] Set up Docker Compose for all services
-- [ ] Configure shared utilities and types
-- [ ] Set up Redis for messaging
+- [ ] Create monolith project structure
+- [ ] Initialize package.json with dependencies
+- [ ] Set up environment configuration
+- [ ] Create basic Express app structure
 
 **Project Structure:**
 ```
 onboarding-portal/
-├── docker-compose.yml
-├── services/
-│   ├── api-gateway/
-│   ├── auth-service/
-│   ├── merchant-service/
-│   ├── salesforce-service/
-│   ├── calendar-service/
-│   └── queue-service/
-├── frontend/              # Next.js app
-├── shared/                # Shared types & utilities
+├── package.json
+├── .env.example
+├── .gitignore
+├── server/
+│   ├── index.js           # Main Express application
+│   ├── routes/            # API route handlers
+│   │   ├── auth.js
+│   │   ├── merchant.js
+│   │   ├── salesforce.js
+│   │   └── calendar.js
+│   ├── services/          # Business logic modules
+│   │   ├── authService.js
+│   │   ├── merchantService.js
+│   │   ├── salesforceService.js
+│   │   ├── calendarService.js
+│   │   └── queueService.js
+│   ├── middleware/        # Express middleware
+│   ├── database/          # Database connection & migrations
+│   └── utils/             # Helper functions
+├── frontend/              # Next.js app (separate)
 └── scripts/               # Deployment scripts
 ```
 
-**Docker Compose:**
-```yaml
-version: '3.8'
-services:
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-      
-  postgres:
-    image: postgres:14
-    environment:
-      POSTGRES_DB: onboarding
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-      
-  api-gateway:
-    build: ./services/api-gateway
-    ports:
-      - "3000:3000"
-    depends_on:
-      - redis
-      - postgres
-      
-  auth-service:
-    build: ./services/auth-service
-    ports:
-      - "3001:3001"
-      
-  # ... other services
+**Package.json:**
+```json
+{
+  "name": "onboarding-portal",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "socket.io": "^4.7.0",
+    "pg": "^8.11.0",
+    "redis": "^4.6.0",
+    "jsonwebtoken": "^9.0.0",
+    "bcrypt": "^5.1.0",
+    "jsforce": "^2.0.0",
+    "node-cron": "^3.0.0",
+    "cors": "^2.8.0",
+    "helmet": "^7.0.0",
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0",
+    "jest": "^29.0.0"
+  }
+}
 ```
 
 **Manual Test Commands:**
 ```bash
-# Start all services
-docker-compose up -d
+# Install dependencies
+npm install
 
-# Check services are running
-docker-compose ps
-# Expected: All services showing as "Up"
+# Start development server
+npm run dev
 
-# Test Redis connection
-redis-cli ping
-# Expected: PONG
+# Test server is running
+curl http://localhost:3000/api/health
+# Expected: {"status":"ok","timestamp":"..."}
 ```
 
-**Success Criteria:** All services start in Docker containers
+**Success Criteria:** Express server starts and responds to health check
 
 ---
 
-### Task 2: API Gateway Implementation
+### Task 2: Express Server & Routing Setup
 **Status:** ⬜
 **Implementation Checklist:**
-- [ ] Create Express gateway with routing
-- [ ] Add service discovery logic
-- [ ] Implement rate limiting
-- [ ] Add subdomain parsing middleware
+- [ ] Create main Express application
+- [ ] Set up middleware stack
+- [ ] Implement subdomain parsing
+- [ ] Create API route structure
 
-**API Gateway (services/api-gateway/index.js):**
+**Main Express App (server/index.js):**
 ```javascript
 const express = require('express');
-const httpProxy = require('http-proxy-middleware');
+const cors = require('cors');
+const helmet = require('helmet');
+const http = require('http');
+const { Server } = require('socket.io');
+require('dotenv').config();
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-// Service registry
-const services = {
-  auth: 'http://auth-service:3001',
-  merchant: 'http://merchant-service:3002',
-  salesforce: 'http://salesforce-service:3003',
-  calendar: 'http://calendar-service:3004',
-  queue: 'http://queue-service:3005'
-};
+// Middleware
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
 
-// Subdomain middleware
+// Subdomain parsing middleware
 app.use((req, res, next) => {
-  const subdomain = req.hostname.split('.')[0];
-  req.headers['x-subdomain'] = subdomain;
+  const host = req.get('host') || '';
+  const subdomain = host.split('.')[0];
+  if (subdomain !== 'localhost' && subdomain !== '127') {
+    req.subdomain = subdomain;
+  }
   next();
 });
 
-// Route to services
-app.use('/api/auth', proxy({ target: services.auth }));
-app.use('/api/merchant', proxy({ target: services.merchant }));
-app.use('/api/sync', proxy({ target: services.salesforce }));
-app.use('/api/calendar', proxy({ target: services.calendar }));
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/merchant', require('./routes/merchant'));
+app.use('/api/sync', require('./routes/salesforce'));
+app.use('/api/calendar', require('./routes/calendar'));
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    subdomain: req.subdomain
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+module.exports = { app, io };
 ```
 
 **Manual Test Commands:**
 ```bash
-# Test gateway routing
+# Test server health
 curl http://localhost:3000/api/health
-# Expected: {"status":"ok","services":["auth","merchant",...]}
+# Expected: {"status":"ok","timestamp":"..."}
 
 # Test subdomain parsing
-curl -H "Host: testmerchant.localhost" http://localhost:3000/api/health
-# Expected: Subdomain in response headers
+curl -H "Host: testmerchant.localhost:3000" http://localhost:3000/api/health
+# Expected: {"status":"ok","subdomain":"testmerchant"}
 ```
 
-**Success Criteria:** Gateway routes requests to correct services
+**Success Criteria:** Express server with routing and subdomain parsing working
 
 ---
 
-### Task 3: Shared Database & Messaging Setup
+### Task 3: Database & Redis Setup
 **Status:** ⬜
 **Implementation Checklist:**
-- [ ] Set up PostgreSQL with migrations
-- [ ] Configure Redis pub/sub
-- [ ] Create shared data models
-- [ ] Set up BullMQ for job processing
+- [ ] Set up PostgreSQL connection
+- [ ] Create database schema and migrations
+- [ ] Configure Redis for caching and pub/sub
+- [ ] Create database service module
 
-**Database Schema (shared/database/schema.sql):**
+**Database Connection (server/database/connection.js):**
+```javascript
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/onboarding',
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+module.exports = {
+  query: (text, params) => pool.query(text, params),
+  getClient: () => pool.connect()
+};
+```
+
+**Database Schema (server/database/schema.sql):**
 ```sql
 CREATE TABLE merchants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -198,101 +241,223 @@ CREATE TABLE event_log (
 );
 ```
 
-**Redis Pub/Sub Setup:**
+**Redis Setup (server/utils/redis.js):**
 ```javascript
-// shared/messaging/redis.js
-const Redis = require('ioredis');
-const pub = new Redis();
-const sub = new Redis();
+const redis = require('redis');
+
+const client = redis.createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+const publisher = client.duplicate();
+const subscriber = client.duplicate();
+
+async function connectRedis() {
+  await client.connect();
+  await publisher.connect();
+  await subscriber.connect();
+  console.log('Redis connected');
+}
 
 // Publish merchant update
-pub.publish('merchant:updated', JSON.stringify({
-  merchantId: '123',
-  changes: { address: 'New Address' }
-}));
+async function publishUpdate(channel, data) {
+  await publisher.publish(channel, JSON.stringify(data));
+}
 
-// Subscribe in services
-sub.subscribe('merchant:updated');
-sub.on('message', (channel, message) => {
-  const data = JSON.parse(message);
-  // Handle update
-});
+// Subscribe to updates
+async function subscribeToUpdates(channel, callback) {
+  await subscriber.subscribe(channel, (message) => {
+    const data = JSON.parse(message);
+    callback(data);
+  });
+}
+
+module.exports = {
+  client,
+  publisher,
+  subscriber,
+  connectRedis,
+  publishUpdate,
+  subscribeToUpdates
+};
 ```
 
-**Success Criteria:** Database tables created, Redis pub/sub working
+**Manual Test Commands:**
+```bash
+# Test database connection
+psql postgresql://user:password@localhost:5432/onboarding -c "SELECT 1;"
+# Expected: Returns 1
+
+# Test Redis connection
+redis-cli ping
+# Expected: PONG
+```
+
+**Success Criteria:** Database tables created, Redis connection working
 
 ---
 
 **Batch 1 Completion Checklist:**
-- [ ] Docker Compose orchestrating all services
-- [ ] API Gateway routing requests
-- [ ] Database and Redis configured
-- [ ] Ready for service implementation
+- [ ] Express server running with health endpoint
+- [ ] Database schema created and connected
+- [ ] Redis configured for pub/sub
+- [ ] Project structure established
+- [ ] Ready for service module implementation
 
 ---
 
-## BATCH 2: Core Services Implementation
+## BATCH 2: Service Modules Implementation
 **Status:** ⬜ Not Started  
-**Goal:** Build auth, merchant, and queue services
-**Context Window Strategy:** Fresh conversation with infrastructure ready
+**Goal:** Build auth, merchant, and queue service modules
+**Context Window Strategy:** Fresh conversation with foundation ready
 
-### Task 4: Auth Service with JWT
+### Task 4: Auth Service Module
 **Status:** ⬜
 **Implementation Checklist:**
+- [ ] Create authService.js module
 - [ ] JWT token generation and validation
 - [ ] Subdomain-based tenant resolution
+- [ ] Create auth routes
 - [ ] Session management with Redis
-- [ ] Rate limiting per tenant
 
-**Auth Service (services/auth-service/index.js):**
+**Auth Service Module (server/services/authService.js):**
 ```javascript
-const express = require('express');
 const jwt = require('jsonwebtoken');
-const redis = require('ioredis');
-const app = express();
-const cache = new redis();
+const bcrypt = require('bcrypt');
+const db = require('../database/connection');
+const { client: redis } = require('../utils/redis');
 
-// Login endpoint
-app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  const subdomain = req.headers['x-subdomain'];
-  
-  // Validate credentials against database
-  const merchant = await validateMerchant(email, password, subdomain);
-  
-  if (merchant) {
-    const token = jwt.sign(
-      { merchantId: merchant.id, subdomain },
+class AuthService {
+  // Generate JWT token
+  generateToken(merchantId, subdomain) {
+    return jwt.sign(
+      { merchantId, subdomain },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
+  }
+
+  // Validate merchant credentials
+  async validateMerchant(email, password, subdomain) {
+    try {
+      const result = await db.query(
+        'SELECT * FROM merchants WHERE email = $1 AND subdomain = $2',
+        [email, subdomain]
+      );
+      
+      if (result.rows.length === 0) return null;
+      
+      const merchant = result.rows[0];
+      const validPassword = await bcrypt.compare(password, merchant.password_hash);
+      
+      return validPassword ? merchant : null;
+    } catch (error) {
+      console.error('Auth validation error:', error);
+      return null;
+    }
+  }
+
+  // Store session in Redis
+  async storeSession(merchantId, token) {
+    await redis.set(`session:${merchantId}`, token, 'EX', 86400);
+  }
+
+  // Validate token
+  async validateToken(token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const cached = await redis.get(`session:${decoded.merchantId}`);
+      
+      return cached === token ? decoded : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Get merchant by subdomain
+  async getMerchantBySubdomain(subdomain) {
+    const result = await db.query(
+      'SELECT * FROM merchants WHERE subdomain = $1',
+      [subdomain]
+    );
+    return result.rows[0] || null;
+  }
+}
+
+module.exports = new AuthService();
+```
+
+**Auth Routes (server/routes/auth.js):**
+```javascript
+const express = require('express');
+const authService = require('../services/authService');
+const router = express.Router();
+
+// Login endpoint
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const subdomain = req.subdomain;
     
-    // Store session in Redis
-    await cache.set(`session:${merchant.id}`, token, 'EX', 86400);
+    if (!subdomain) {
+      return res.status(400).json({ error: 'Subdomain required' });
+    }
     
-    res.json({ token, merchantId: merchant.id });
-  } else {
-    res.status(401).json({ error: 'Invalid credentials' });
+    const merchant = await authService.validateMerchant(email, password, subdomain);
+    
+    if (merchant) {
+      const token = authService.generateToken(merchant.id, subdomain);
+      await authService.storeSession(merchant.id, token);
+      
+      res.json({ 
+        token, 
+        merchantId: merchant.id,
+        companyName: merchant.company_name 
+      });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Authentication failed' });
   }
 });
 
 // Validate token
-app.post('/api/auth/validate', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  
+router.post('/validate', async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const cached = await cache.get(`session:${decoded.merchantId}`);
+    const token = req.headers.authorization?.split(' ')[1];
+    const decoded = await authService.validateToken(token);
     
-    if (cached === token) {
+    if (decoded) {
       res.json({ valid: true, merchantId: decoded.merchantId });
     } else {
       res.status(401).json({ valid: false });
     }
-  } catch (err) {
+  } catch (error) {
     res.status(401).json({ valid: false });
   }
 });
+
+// Get tenant info
+router.get('/tenant/:subdomain', async (req, res) => {
+  try {
+    const merchant = await authService.getMerchantBySubdomain(req.params.subdomain);
+    
+    if (merchant) {
+      res.json({ 
+        exists: true, 
+        companyName: merchant.company_name,
+        onboardingStage: merchant.onboarding_stage
+      });
+    } else {
+      res.status(404).json({ exists: false });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Tenant lookup failed' });
+  }
+});
+
+module.exports = router;
 ```
 
 **Manual Test Commands:**
