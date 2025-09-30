@@ -8,15 +8,15 @@
 ## Architecture Overview
 ```
 Next.js Frontend → API Gateway → 5 Microservices → PostgreSQL ↔ Salesforce
-                                                          ↑
-                                                    Real-time sync
+     (Render)         (Render)      (Render)        (Render)    5-min batch →
+                                                                 ← CDC real-time
 ```
 
 ## Conversation Batching Strategy
-- **Batch 1:** Foundation & Gateway (3 tasks: Project structure, API Gateway, Docker setup)
-- **Batch 2:** Core Services (3 tasks: Auth, Merchant, Queue services)
+- **Batch 1:** Foundation & Gateway (3 tasks: Project structure, API Gateway, Local Docker setup)
+- **Batch 2:** Core Services (3 tasks: Auth, Merchant, Queue services with 5-min batch)
 - **Batch 3:** Integration Services (3 tasks: Salesforce bidirectional, Calendar, WebSockets)
-- **Batch 4:** Frontend & Testing (3 tasks: Next.js UI, Integration testing, Deployment)
+- **Batch 4:** Frontend & Render Deployment (3 tasks: Next.js UI, Integration testing, Render setup)
 
 ---
 
@@ -835,52 +835,162 @@ describe('Bidirectional Sync', () => {
 
 ---
 
-### Task 12: Deployment & Monitoring
+### Task 12: Render Deployment & Monitoring
 **Status:** ⬜
 **Implementation Checklist:**
-- [ ] Kubernetes deployment configs
-- [ ] Health check endpoints
-- [ ] Monitoring with Prometheus
-- [ ] Logging with correlation IDs
+- [ ] Create render.yaml configuration
+- [ ] Connect GitHub repository to Render
+- [ ] Configure environment variables
+- [ ] Set up health check endpoints
+- [ ] Enable Render monitoring
 
-**Kubernetes Deployment:**
+**Render Configuration (render.yaml):**
 ```yaml
-# k8s/merchant-service.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: merchant-service
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: merchant-service
-  template:
-    spec:
-      containers:
-      - name: merchant-service
-        image: merchant-service:latest
-        ports:
-        - containerPort: 3002
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3002
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 3002
+services:
+  # API Gateway
+  - type: web
+    name: api-gateway
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd services/api-gateway && npm install
+    startCommand: node index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromDatabase:
+          name: redis-cache
+          property: connectionString
+      - key: DATABASE_URL
+        fromDatabase:
+          name: merchant-db
+          property: connectionString
+  
+  # Auth Service
+  - type: web
+    name: auth-service
+    env: node
+    plan: starter
+    buildCommand: cd services/auth-service && npm install
+    startCommand: node index.js
+    healthCheckPath: /health
+    
+  # Merchant Service  
+  - type: web
+    name: merchant-service
+    env: node
+    plan: starter
+    buildCommand: cd services/merchant-service && npm install
+    startCommand: node index.js
+    healthCheckPath: /health
+    
+  # Salesforce Service
+  - type: web
+    name: salesforce-service
+    env: node
+    plan: starter
+    buildCommand: cd services/salesforce-service && npm install
+    startCommand: node index.js
+    healthCheckPath: /health
+    envVars:
+      - key: SF_CLIENT_ID
+        sync: false  # Set in dashboard
+      - key: SF_CLIENT_SECRET
+        sync: false  # Set in dashboard
+    
+  # Queue Service (Background Worker)
+  - type: worker
+    name: queue-service
+    env: node
+    plan: starter
+    buildCommand: cd services/queue-service && npm install
+    startCommand: node index.js
+    
+  # Calendar Service
+  - type: web
+    name: calendar-service
+    env: node
+    plan: starter
+    buildCommand: cd services/calendar-service && npm install
+    startCommand: node index.js
+    healthCheckPath: /health
+
+# Databases
+databases:
+  - name: merchant-db
+    databaseName: onboarding
+    user: onboarding_user
+    plan: starter  # $7/month
+    
+  - name: redis-cache
+    type: redis
+    plan: starter  # $7/month
 ```
 
-**Success Criteria:** All services deployed with monitoring
+**Deployment Steps:**
+```bash
+# 1. Push render.yaml to repo
+git add render.yaml
+git commit -m "Add Render configuration"
+git push origin main
+
+# 2. Connect GitHub to Render
+# - Go to dashboard.render.com
+# - Click "New Blueprint Instance"
+# - Select your repo
+# - Render auto-deploys from render.yaml
+
+# 3. Configure secrets in Render dashboard
+# - Add Salesforce credentials
+# - Add JWT secret
+# - Add Cal.com API keys
+
+# 4. Set up custom domain
+# - Add *.onboardingstorehub.com to Render
+# - Configure DNS CNAME records
+```
+
+**Health Check Implementation:**
+```javascript
+// Each service needs /health endpoint
+app.get('/health', (req, res) => {
+  const health = {
+    uptime: process.uptime(),
+    message: 'OK',
+    timestamp: Date.now(),
+    service: 'merchant-service'
+  };
+  
+  // Check database connection
+  try {
+    await db.query('SELECT 1');
+    res.status(200).json(health);
+  } catch (error) {
+    health.message = 'Database connection failed';
+    res.status(503).json(health);
+  }
+});
+```
+
+**Monitoring in Render:**
+- Automatic metrics dashboard
+- Log aggregation built-in
+- Alerts for service failures
+- Auto-restart on crashes
+- Preview environments for PRs
+
+**Success Criteria:** All services deployed on Render with monitoring
 
 ---
 
 **Batch 4 Completion Checklist:**
 - [ ] Frontend with real-time updates
 - [ ] Integration tests passing
-- [ ] Deployed to Kubernetes
-- [ ] Monitoring operational
+- [ ] All services deployed to Render
+- [ ] Monitoring operational in Render dashboard
+- [ ] Custom domain configured for subdomains
 
 ---
 
@@ -893,12 +1003,14 @@ spec:
 - **Data Consistency:** Zero data loss
 - **API Efficiency:** Batch operations reduce API calls by 90%
 
-## Architecture Benefits
-1. **Service Independence** - Each service can be scaled/deployed separately
+## Architecture Benefits with Render
+1. **Service Independence** - Each service scales automatically on Render
 2. **Real-time Updates** - WebSockets ensure immediate UI updates
-3. **Reliability** - Queue service handles failures gracefully
-4. **Bidirectional Sync** - Changes from either system propagate immediately
-5. **Conflict Resolution** - Version tracking prevents data loss
+3. **Reliability** - Queue service handles failures with auto-restart
+4. **Bidirectional Sync** - 5-minute batches + real-time CDC
+5. **Zero DevOps** - Render handles all infrastructure management
+6. **Cost Effective** - ~$49/month total vs hundreds for Kubernetes
+7. **Auto-deploy** - Push to GitHub = automatic deployment
 
 ---
 

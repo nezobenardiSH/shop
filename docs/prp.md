@@ -44,7 +44,7 @@ API Gateway (Express)
   ├── calendar-service/      # Cal.com integration
   └── queue-service/         # Message queue & retry logic
     ↓
-PostgreSQL ↔ Salesforce (Real-time bidirectional)
+PostgreSQL ↔ Salesforce (5-min batch → | ← CDC real-time)
 ```
 
 **SERVICE COMMUNICATION:**
@@ -182,7 +182,75 @@ if (localVersion !== salesforceVersion) {
 - Timezone handling
 - Booking conflict prevention
 
-### 9. Code Quality Requirements
+### 9. Render Deployment Configuration
+
+**RENDER SERVICES:**
+```yaml
+# render.yaml
+services:
+  # API Gateway with WebSocket support
+  - type: web
+    name: api-gateway
+    env: node
+    buildCommand: cd services/api-gateway && npm install
+    startCommand: node services/api-gateway/index.js
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: REDIS_URL
+        fromDatabase:
+          name: redis-cache
+          property: connectionString
+  
+  # Microservices
+  - type: web
+    name: auth-service
+    env: node
+    startCommand: node services/auth-service/index.js
+    
+  - type: web
+    name: merchant-service
+    env: node
+    startCommand: node services/merchant-service/index.js
+    
+  - type: web
+    name: salesforce-service
+    env: node
+    startCommand: node services/salesforce-service/index.js
+    envVars:
+      - key: SF_CLIENT_ID
+        sync: false
+      - key: SF_CLIENT_SECRET
+        sync: false
+    
+  - type: worker
+    name: queue-service
+    env: node
+    startCommand: node services/queue-service/index.js
+    
+  - type: web
+    name: calendar-service
+    env: node
+    startCommand: node services/calendar-service/index.js
+
+databases:
+  - name: merchant-db
+    databaseName: onboarding
+    plan: starter
+    
+  - name: redis-cache
+    type: redis
+    plan: starter
+```
+
+**DEPLOYMENT STRATEGY:**
+- GitHub integration for auto-deploy on push
+- Preview environments for branches
+- Environment variables managed in Render dashboard
+- Automatic SSL certificates
+- Built-in logging and monitoring
+
+### 10. Code Quality Requirements
 - Maximum 25 lines per function
 - Comprehensive error handling
 - Unit tests for each service (80% coverage)
@@ -192,7 +260,7 @@ if (localVersion !== salesforceVersion) {
 - Structured logging with correlation IDs
 - Health checks for each service
 
-### 10. Definition of Done
+### 11. Definition of Done
 **SYSTEM COMPLETE WHEN:**
 - All 5 microservices deployed and communicating via API Gateway
 - Portal → Salesforce sync batching every 5 minutes

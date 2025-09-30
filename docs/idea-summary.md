@@ -43,13 +43,13 @@ All data syncs bidirectionally with Salesforce:
 - 90% reduction in Salesforce API calls through batching
 
 ## Technical Direction
-- **Architecture:** Microservices (5 independent services)
+- **Architecture:** Microservices (5 backend services + API Gateway)
   - API Gateway (routing & WebSockets)
   - Auth Service (JWT + subdomain handling)
   - Merchant Service (CRUD operations)
   - Salesforce Service (bidirectional sync)
-  - Queue Service (batch processing)
   - Calendar Service (Cal.com integration)
+  - Queue Service (batch processing)
 - **Frontend:** Next.js 14 with TypeScript
 - **Authentication:** JWT with refresh tokens
 - **Data Storage:** PostgreSQL (immediate writes) + Salesforce (source of truth)
