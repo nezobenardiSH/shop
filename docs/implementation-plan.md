@@ -40,9 +40,8 @@ merchant-portal/
 ├── app/
 │   ├── api/
 │   │   └── health/route.ts       # Health check endpoint
-│   ├── m/
-│   │   └── [merchant]/
-│   │       └── page.tsx          # Merchant dashboard (placeholder)
+│   ├── [merchant]/
+│   │   └── page.tsx          # Merchant dashboard (placeholder)
 │   ├── layout.tsx
 │   └── page.tsx                  # Landing page
 ├── lib/
@@ -90,6 +89,7 @@ export async function GET() {
 
 **Manual Test:**
 ```bash
+cd merchant-portal
 npm run dev
 # Visit http://localhost:3010/api/health
 # Expected: {"status":"ok","timestamp":"..."}
@@ -164,6 +164,23 @@ npx prisma generate
 npx prisma db seed
 ```
 
+**Manual Test:**
+```bash
+cd merchant-portal
+# Verify database was created
+ls prisma/dev.db
+# Expected: file exists
+
+# Open Prisma Studio to inspect database
+npx prisma studio
+# Visit http://localhost:5555
+# Expected: See Merchant table with schema fields
+
+# Test Prisma client generation
+npx prisma generate
+# Expected: "✔ Generated Prisma Client"
+```
+
 ### Task 3: Deploy to Render
 **Status:** ⬜ Not Started  
 **Implementation:**
@@ -210,6 +227,23 @@ git push -u origin main
 # 1. New > Blueprint
 # 2. Connect GitHub repo
 # 3. Render will auto-deploy using render.yaml
+```
+
+**Manual Test:**
+```bash
+cd merchant-portal
+# Initialize git repository
+git init
+git add .
+git commit -m "Initial setup"
+
+# Push to GitHub (after creating repo)
+git remote add origin https://github.com/yourusername/merchant-portal.git
+git push -u origin main
+
+# After deployment on Render:
+curl https://merchant-portal.onrender.com/api/health
+# Expected: {"status":"ok","timestamp":"..."}
 ```
 
 **Success Criteria:** 
@@ -402,6 +436,20 @@ export async function PUT(
 }
 ```
 
+**Manual Test:**
+```bash
+cd merchant-portal
+# Test GET merchant endpoint
+curl http://localhost:3010/api/merchant/bestbuy
+# Expected: {"error":"Merchant not found"} or merchant data
+
+# Test PUT merchant endpoint (need existing merchant)
+curl -X PUT http://localhost:3010/api/merchant/[merchant-id] \
+  -H "Content-Type: application/json" \
+  -d '{"address":"123 Main St","phone":"555-1234"}'
+# Expected: Updated merchant data
+```
+
 ---
 
 ## Day 3: Salesforce Integration
@@ -468,6 +516,16 @@ export async function syncToSalesforce(merchant: any) {
 }
 ```
 
+**Manual Test:**
+```bash
+cd merchant-portal
+# Since Salesforce requires credentials, test with mock data
+# Create test merchant in Prisma Studio first
+# Then test sync function (will fail without SF creds but logs error)
+node -e "console.log('Test would require SF credentials')"
+# Expected: "Salesforce sync failed:" error in console if no creds
+```
+
 ### Task 7: Salesforce Webhook Endpoint
 **Status:** ⬜ Not Started  
 **Implementation:**
@@ -514,6 +572,16 @@ export async function POST(request: NextRequest) {
 2. Set webhook URL: `https://merchant-portal.onrender.com/api/salesforce/webhook`
 3. Configure to trigger on Account record changes
 
+**Manual Test:**
+```bash
+cd merchant-portal
+# Test webhook endpoint with mock data
+curl -X POST http://localhost:3010/api/salesforce/webhook \
+  -H "Content-Type: application/json" \
+  -d '{"recordId":"SF123","changes":{"BillingStreet":"456 New St","Phone":"555-5678"}}'
+# Expected: {"success":true}
+```
+
 ---
 
 ## Day 4: Frontend UI
@@ -524,7 +592,7 @@ export async function POST(request: NextRequest) {
 **Status:** ⬜ Not Started  
 **Implementation:**
 
-**Dashboard Page (app/m/[merchant]/page.tsx):**
+**Dashboard Page (app/[merchant]/page.tsx):**
 ```tsx
 'use client'
 
@@ -644,6 +712,18 @@ export default function MerchantDashboard() {
     </div>
   )
 }
+```
+
+**Manual Test:**
+```bash
+cd merchant-portal
+# Visit merchant dashboard
+# http://localhost:3010/bestbuy
+# Expected: Dashboard loads with "Welcome, bestbuy"
+
+# Test with existing merchant slug
+# http://localhost:3010/[merchant-slug]
+# Expected: Merchant data loads and forms are interactive
 ```
 
 ---

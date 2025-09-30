@@ -10,7 +10,7 @@ A self-service merchant onboarding portal built as a single Next.js application 
 
 ### 3. User Flows
 **PRIMARY FLOW:**
-1. User navigates to path-based URL (onboardingstorehub.com/m/bestbuy)
+1. User navigates to path-based URL (onboardingstorehub.com/bestbuy)
 2. System identifies merchant from URL slug
 3. User enters credentials → JWT validates → shows dashboard
 4. User clicks "Update Information" → saves to DB → syncs to Salesforce
@@ -144,9 +144,8 @@ merchant-portal/
 │   │   │   └── [id]/route.ts
 │   │   └── salesforce/
 │   │       └── webhook/route.ts
-│   ├── m/
-│   │   └── [merchant]/
-│   │       └── page.tsx          # Merchant dashboard
+│   ├── [merchant]/
+│   │   └── page.tsx          # Merchant dashboard
 │   ├── layout.tsx
 │   └── page.tsx                  # Landing/login
 ├── lib/
