@@ -1,12 +1,12 @@
 # Product Requirements Plan (PRP) - Merchant Onboarding Portal
 
 ### 1. Core Identity
-A self-service merchant onboarding portal that replaces fragmented WhatsApp/text coordination with a structured web interface where merchants update their information, schedule installation dates via calendar integration, and track onboarding progress while maintaining real-time bidirectional sync with Salesforce.
+A self-service merchant onboarding portal built on microservices architecture that replaces fragmented WhatsApp/text coordination with a structured web interface. Merchants update their information, schedule installation dates, and track onboarding progress while the system maintains bidirectional sync with Salesforce (5-minute batches outbound, real-time inbound via CDC).
 
 ### 2. Single Success Scenario
-- User does: Merchant logs in and updates missing store address, selects installation date from calendar
-- System responds: Saves data to PostgreSQL, immediately syncs to Salesforce, shows updated progress (60% → 80% complete)
-- User verifies: Dashboard shows new address, scheduled date confirmed, Salesforce record updated in real-time
+- User does: Merchant logs in via subdomain and updates missing store address, selects installation date from calendar
+- System responds: Saves to PostgreSQL instantly, UI updates via WebSocket (< 100ms), shows progress (60% → 80%)
+- User verifies: Dashboard shows new address immediately, scheduled date confirmed, Salesforce updated within 5 minutes
 
 ### 3. User Flows
 **PRIMARY FLOW:**
@@ -29,7 +29,7 @@ A self-service merchant onboarding portal that replaces fragmented WhatsApp/text
 - Message Queue: BullMQ with Redis
 - Data Storage: PostgreSQL + Salesforce (bidirectional sync)
 - Real-time: WebSockets for live updates
-- Deployment: Docker containers with Kubernetes
+- Deployment: Render (managed platform with auto-scaling)
 
 **MICROSERVICES ARCHITECTURE:**
 ```
@@ -138,7 +138,7 @@ if (localVersion !== salesforceVersion) {
 - `socket.io` - WebSockets
 - `@calcom/embed-react` - Calendar
 - `pg` - PostgreSQL
-- `docker` & `kubernetes` - Orchestration
+- `docker` - Containerization
 
 **CONSTRAINTS:**
 - Must handle 1000+ concurrent merchants
@@ -194,13 +194,14 @@ if (localVersion !== salesforceVersion) {
 
 ### 10. Definition of Done
 **SYSTEM COMPLETE WHEN:**
-- All 5 services deployed and communicating
-- Real-time bidirectional sync working (< 1 second)
-- Subdomain routing functional
+- All 5 microservices deployed and communicating via API Gateway
+- Portal → Salesforce sync batching every 5 minutes
+- Salesforce → Portal real-time sync via CDC (< 1 second)
+- UI updates feel instant via WebSockets (< 100ms)
+- Subdomain routing functional ({merchantname}.onboardingstorehub.com)
 - Merchant can complete full onboarding flow
 - Zero data loss between PostgreSQL and Salesforce
-- WebSocket updates reflect changes immediately
 - All services have health checks and monitoring
 - Load testing confirms 1000+ concurrent users
-- Disaster recovery plan tested
-- Full API documentation available
+- API calls reduced by 90% through batching
+- Full API documentation with Swagger/OpenAPI
