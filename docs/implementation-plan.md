@@ -1,4 +1,4 @@
-# Implementation & Testing Plan: Merchant Onboarding Portal (Microservices)
+dd# Implementation & Testing Plan: Merchant Onboarding Portal (Microservices)
 
 ## Quick Reference
 **PRP Status:** ✅ Microservices with real-time bidirectional Salesforce sync  
@@ -8,15 +8,15 @@
 ## Architecture Overview
 ```
 Next.js Frontend → API Gateway → 5 Microservices → PostgreSQL ↔ Salesforce
-     (Render)         (Render)      (Render)        (Render)    5-min batch →
-                                                                 ← CDC real-time
+                                                          ↑
+                                                    Real-time sync
 ```
 
 ## Conversation Batching Strategy
-- **Batch 1:** Foundation & Gateway (3 tasks: Project structure, API Gateway, Local Docker setup)
-- **Batch 2:** Core Services (3 tasks: Auth, Merchant, Queue services with 5-min batch)
+- **Batch 1:** Foundation & Gateway (3 tasks: Project structure, API Gateway, Docker setup)
+- **Batch 2:** Core Services (3 tasks: Auth, Merchant, Queue services)
 - **Batch 3:** Integration Services (3 tasks: Salesforce bidirectional, Calendar, WebSockets)
-- **Batch 4:** Frontend & Render Deployment (3 tasks: Next.js UI, Integration testing, Render setup)
+- **Batch 4:** Frontend & Testing (3 tasks: Next.js UI, Integration testing, Deployment)
 
 ---
 
@@ -1003,14 +1003,12 @@ app.get('/health', (req, res) => {
 - **Data Consistency:** Zero data loss
 - **API Efficiency:** Batch operations reduce API calls by 90%
 
-## Architecture Benefits with Render
-1. **Service Independence** - Each service scales automatically on Render
+## Architecture Benefits
+1. **Service Independence** - Each service can be scaled/deployed separately
 2. **Real-time Updates** - WebSockets ensure immediate UI updates
-3. **Reliability** - Queue service handles failures with auto-restart
-4. **Bidirectional Sync** - 5-minute batches + real-time CDC
-5. **Zero DevOps** - Render handles all infrastructure management
-6. **Cost Effective** - ~$49/month total vs hundreds for Kubernetes
-7. **Auto-deploy** - Push to GitHub = automatic deployment
+3. **Reliability** - Queue service handles failures gracefully
+4. **Bidirectional Sync** - Changes from either system propagate immediately
+5. **Conflict Resolution** - Version tracking prevents data loss
 
 ---
 
