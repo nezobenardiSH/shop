@@ -5,7 +5,7 @@ A self-service merchant onboarding portal built as a single Next.js application 
 
 ### 2. Single Success Scenario
 - User does: Merchant logs in via path URL and updates missing store address, selects installation date
-- System responds: Saves to PostgreSQL instantly, syncs to Salesforce immediately
+- System responds: Saves to database instantly (SQLite for development, PostgreSQL for production), syncs to Salesforce immediately
 - User verifies: Dashboard shows new address and scheduled date, Salesforce reflects changes in real-time
 
 ### 3. User Flows
@@ -24,17 +24,17 @@ A self-service merchant onboarding portal built as a single Next.js application 
 ### 4. Technical Stack & Architecture
 **STACK:**
 - Full-Stack Framework: Next.js 14 with TypeScript
-- Database: PostgreSQL with Prisma ORM
+- Database: SQLite (development) / PostgreSQL (production) with Prisma ORM
 - Salesforce Integration: jsforce library
 - Authentication: Simple JWT tokens
 - Styling: Tailwind CSS
-- Deployment: Render Web Service
+- Deployment: TBD (Render/Vercel/Railway)
 
 **SIMPLIFIED ARCHITECTURE:**
 ```
 Next.js App (with API routes)
     ↓ ↑
-PostgreSQL (Prisma)
+SQLite/PostgreSQL (Prisma)
     ↓ ↑
 Salesforce API (jsforce)
 ```

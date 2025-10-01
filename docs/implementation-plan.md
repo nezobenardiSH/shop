@@ -4,13 +4,14 @@
 **Architecture:** Single Next.js application with immediate bidirectional Salesforce sync  
 **Total Tasks:** 8 tasks across 4 days  
 **Estimated Timeline:** 3-5 days  
-**Deployment Cost:** $14/month on Render  
+**Development:** Local SQLite database  
+**Production Deployment:** TBD (Render/Vercel/Other)  
 
 ## Architecture Overview
 ```
 Next.js App (with API routes)
     ↓ ↑
-PostgreSQL (Prisma ORM)
+SQLite (Local Development) / PostgreSQL (Future Production)
     ↓ ↑
 Salesforce API (jsforce)
 ```
@@ -18,7 +19,7 @@ Salesforce API (jsforce)
 ---
 
 ## Day 1: Project Setup & Foundation
-**Goal:** Set up Next.js app, database, and deploy skeleton to Render  
+**Goal:** Set up Next.js app with local SQLite database  
 **Time:** 4-6 hours
 
 ### Task 1: Create Next.js Application
@@ -110,7 +111,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -148,13 +149,17 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 **Commands:**
 ```bash
-# Create local PostgreSQL database for development
-# Update .env with DATABASE_URL="postgresql://user:password@localhost:5432/merchants"
+# Create .env file for local SQLite development
+cat > .env << EOF
+PORT=3010
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="development-secret-key-change-in-production"
+SF_USERNAME=""
+SF_PASSWORD=""
+SF_TOKEN=""
+EOF
 
-# Add PORT to .env.local for development
-echo "PORT=3010" >> .env.local
-
-# Run migration
+# Run migration to create SQLite database
 npx prisma migrate dev --name init
 
 # Generate Prisma Client
