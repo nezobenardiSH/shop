@@ -1,11 +1,12 @@
 # Implementation & Testing Plan: Merchant Onboarding Portal (Simplified)
 
 ## Quick Reference
-**Architecture:** Single Next.js application with immediate bidirectional Salesforce sync  
-**Total Tasks:** 8 tasks across 4 days  
-**Estimated Timeline:** 3-5 days  
-**Development:** Local SQLite database  
-**Production Deployment:** TBD (Render/Vercel/Other)  
+**Architecture:** Single Next.js application with immediate bidirectional Salesforce Sandbox sync
+**Total Tasks:** 8 tasks across 4 days
+**Estimated Timeline:** 3-5 days
+**Development:** Local SQLite database
+**Salesforce Environment:** Sandbox (https://test.salesforce.com)
+**Production Deployment:** TBD (Render/Vercel/Other)
 
 ## Architecture Overview
 ```
@@ -13,7 +14,7 @@ Next.js App (with API routes)
     ↓ ↑
 SQLite (Local Development) / PostgreSQL (Future Production)
     ↓ ↑
-Salesforce API (jsforce)
+Salesforce Sandbox API (jsforce)
 ```
 
 ---
