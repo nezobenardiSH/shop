@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
     // Map frontend field names to Salesforce field names
     const fieldMapping: { [key: string]: string } = {
       name: 'Name',
-      firstRevisedEGLD: 'First_Revised_EGLD__c'
+      firstRevisedEGLD: 'First_Revised_EGLD__c',
+      onboardingTrainerStage: 'Onboarding_Trainer_Stage__c'
     }
 
     // Test each field individually to see which ones are writable
@@ -89,8 +90,8 @@ export async function POST(request: NextRequest) {
       if (result.success) {
         // Fetch the updated record to return current values
         const updatedRecord = await conn.query(`
-          SELECT Id, Name, First_Revised_EGLD__c, CreatedDate, LastModifiedDate
-          FROM Onboarding_Trainer__c 
+          SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, CreatedDate, LastModifiedDate
+          FROM Onboarding_Trainer__c
           WHERE Id = '${trainerId}'
         `)
 
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
           id: trainer.Id,
           name: trainer.Name,
           firstRevisedEGLD: trainer.First_Revised_EGLD__c,
+          onboardingTrainerStage: trainer.Onboarding_Trainer_Stage__c,
           createdDate: trainer.CreatedDate,
           lastModifiedDate: trainer.LastModifiedDate
         }
