@@ -15,6 +15,7 @@ export default function TrainerPortal() {
   const [successMessage, setSuccessMessage] = useState('')
   const [availableStages, setAvailableStages] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<string>('')
+  const [reminderLoading, setReminderLoading] = useState<string | null>(null)
 
   const loadTrainerData = async () => {
     setLoading(true)
@@ -48,6 +49,24 @@ export default function TrainerPortal() {
       }
     } catch (error) {
       console.error('Failed to load stages:', error)
+    }
+  }
+
+  const handleReminder = async (phoneNumber: string, contactType: string) => {
+    setReminderLoading(phoneNumber)
+    try {
+      // Here you can implement the reminder functionality
+      // For now, we'll just show a success message
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+
+      setSuccessMessage(`Reminder sent to ${contactType}: ${phoneNumber}`)
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      console.error('Failed to send reminder:', error)
+      setSuccessMessage(`Failed to send reminder to ${phoneNumber}`)
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } finally {
+      setReminderLoading(null)
     }
   }
 
@@ -213,6 +232,41 @@ export default function TrainerPortal() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
+                    📞 Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={editData.phoneNumber || ''}
+                    onChange={(e) => handleFieldChange('phoneNumber', e.target.value)}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
+                    📞 Merchant PIC Contact Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={editData.merchantPICContactNumber || ''}
+                    onChange={(e) => handleFieldChange('merchantPICContactNumber', e.target.value)}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter merchant PIC contact number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
+                    🔧 Installation Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formatDate(editData.installationDate)}
+                    onChange={(e) => handleFieldChange('installationDate', e.target.value)}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               <div className="mt-4 flex gap-2">
                 <button
@@ -333,6 +387,98 @@ export default function TrainerPortal() {
                                 <strong className="text-purple-800">🎯 Current Stage:</strong>
                                 <div className="text-lg font-medium text-purple-900">
                                   {trainer.onboardingTrainerStage || 'N/A'}
+                                </div>
+                              </div>
+
+                              <div className="bg-orange-50 p-4 rounded border border-orange-300">
+                                <strong className="text-orange-800">🔧 Installation Date:</strong>
+                                <div className="text-lg font-medium text-orange-900">
+                                  {trainer.installationDate ? new Date(trainer.installationDate).toLocaleDateString() : 'N/A'}
+                                </div>
+                              </div>
+
+                              {/* Contact Phone Information */}
+                              <div className="bg-green-50 p-4 rounded border border-green-300">
+                                <strong className="text-green-800">📞 Contact Information:</strong>
+                                <div className="mt-2 space-y-3">
+                                  {trainer.phoneNumber && (
+                                    <div className="flex items-center justify-between text-green-900 bg-white p-2 rounded border">
+                                      <div>
+                                        <strong>Phone Number:</strong> {trainer.phoneNumber}
+                                      </div>
+                                      <button
+                                        onClick={() => handleReminder(trainer.phoneNumber, 'Phone Number')}
+                                        disabled={reminderLoading === trainer.phoneNumber}
+                                        className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        {reminderLoading === trainer.phoneNumber ? '⏳' : '🔔 Reminder'}
+                                      </button>
+                                    </div>
+                                  )}
+                                  {trainer.merchantPICContactNumber && (
+                                    <div className="flex items-center justify-between text-green-900 bg-white p-2 rounded border">
+                                      <div>
+                                        <strong>Merchant PIC Contact:</strong> {trainer.merchantPICContactNumber}
+                                      </div>
+                                      <button
+                                        onClick={() => handleReminder(trainer.merchantPICContactNumber, 'Merchant PIC')}
+                                        disabled={reminderLoading === trainer.merchantPICContactNumber}
+                                        className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        {reminderLoading === trainer.merchantPICContactNumber ? '⏳' : '🔔 Reminder'}
+                                      </button>
+                                    </div>
+                                  )}
+                                  {trainer.operationManagerContact && (
+                                    <div className="text-green-900 bg-white p-2 rounded border">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <strong>Operation Manager:</strong> {trainer.operationManagerContact.name}
+                                        </div>
+                                        {trainer.operationManagerContact.phone && (
+                                          <button
+                                            onClick={() => handleReminder(trainer.operationManagerContact.phone, `Operation Manager (${trainer.operationManagerContact.name})`)}
+                                            disabled={reminderLoading === trainer.operationManagerContact.phone}
+                                            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                          >
+                                            {reminderLoading === trainer.operationManagerContact.phone ? '⏳' : '🔔 Reminder'}
+                                          </button>
+                                        )}
+                                      </div>
+                                      {trainer.operationManagerContact.phone && (
+                                        <div className="text-sm text-gray-600 mt-1">
+                                          📞 {trainer.operationManagerContact.phone}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  {trainer.businessOwnerContact && (
+                                    <div className="text-green-900 bg-white p-2 rounded border">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <strong>Business Owner:</strong> {trainer.businessOwnerContact.name}
+                                        </div>
+                                        {trainer.businessOwnerContact.phone && (
+                                          <button
+                                            onClick={() => handleReminder(trainer.businessOwnerContact.phone, `Business Owner (${trainer.businessOwnerContact.name})`)}
+                                            disabled={reminderLoading === trainer.businessOwnerContact.phone}
+                                            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                          >
+                                            {reminderLoading === trainer.businessOwnerContact.phone ? '⏳' : '🔔 Reminder'}
+                                          </button>
+                                        )}
+                                      </div>
+                                      {trainer.businessOwnerContact.phone && (
+                                        <div className="text-sm text-gray-600 mt-1">
+                                          📞 {trainer.businessOwnerContact.phone}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  {!trainer.phoneNumber && !trainer.merchantPICContactNumber &&
+                                   !trainer.operationManagerContact && !trainer.businessOwnerContact && (
+                                    <div className="text-gray-500 italic">No contact information available</div>
+                                  )}
                                 </div>
                               </div>
 

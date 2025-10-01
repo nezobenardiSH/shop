@@ -49,7 +49,10 @@ export async function POST(request: NextRequest) {
     const fieldMapping: { [key: string]: string } = {
       name: 'Name',
       firstRevisedEGLD: 'First_Revised_EGLD__c',
-      onboardingTrainerStage: 'Onboarding_Trainer_Stage__c'
+      onboardingTrainerStage: 'Onboarding_Trainer_Stage__c',
+      installationDate: 'Installation_Date__c',
+      phoneNumber: 'Phone_Number__c',
+      merchantPICContactNumber: 'Merchant_PIC_Contact_Number__c'
     }
 
     // Test each field individually to see which ones are writable
@@ -90,7 +93,9 @@ export async function POST(request: NextRequest) {
       if (result.success) {
         // Fetch the updated record to return current values
         const updatedRecord = await conn.query(`
-          SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, CreatedDate, LastModifiedDate
+          SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
+                 Phone_Number__c, Merchant_PIC_Contact_Number__c,
+                 CreatedDate, LastModifiedDate
           FROM Onboarding_Trainer__c
           WHERE Id = '${trainerId}'
         `)
@@ -101,6 +106,9 @@ export async function POST(request: NextRequest) {
           name: trainer.Name,
           firstRevisedEGLD: trainer.First_Revised_EGLD__c,
           onboardingTrainerStage: trainer.Onboarding_Trainer_Stage__c,
+          installationDate: trainer.Installation_Date__c,
+          phoneNumber: trainer.Phone_Number__c,
+          merchantPICContactNumber: trainer.Merchant_PIC_Contact_Number__c,
           createdDate: trainer.CreatedDate,
           lastModifiedDate: trainer.LastModifiedDate
         }

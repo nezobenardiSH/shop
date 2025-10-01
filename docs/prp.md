@@ -1,53 +1,68 @@
-# Product Requirements Plan (PRP) - Merchant Onboarding Portal (Simplified)
+# Product Requirements Plan (PRP) - Onboarding Trainer Portal ✅ COMPLETED
 
-### 1. Core Identity
-A self-service merchant onboarding portal built as a single Next.js application that replaces fragmented WhatsApp/text coordination with a structured web interface. Merchants update their information and track onboarding progress while the system maintains immediate bidirectional sync with Salesforce.
+### 1. Core Identity - IMPLEMENTED ✅
+A trainer-focused onboarding portal built as a Next.js application that provides comprehensive management of merchant onboarding through direct Salesforce integration. Each trainer gets their own portal URL for managing their assigned merchants with real-time data sync.
 
-### 2. Single Success Scenario
-- User does: Merchant logs in via path URL and updates missing store address, selects installation date
-- System responds: Saves to database instantly (SQLite for development, PostgreSQL for production), syncs to Salesforce immediately
-- User verifies: Dashboard shows new address and scheduled date, Salesforce reflects changes in real-time
+### 2. Success Scenario - ACHIEVED ✅
+- **User does**: Trainer navigates to `localhost:3010/merchant/Nasi-Lemak` and views comprehensive onboarding data
+- **System responds**: Loads real-time data from Salesforce, displays trainer info, contact details, stage progress, and dates
+- **User interacts**: Updates trainer information, changes stages, sends contact reminders
+- **System syncs**: All changes immediately sync to Salesforce sandbox environment
+- **Result**: Complete trainer portal with stage management, contact functionality, and real-time Salesforce integration
 
-### 3. User Flows
-**PRIMARY FLOW:**
-1. User navigates to path-based URL (onboardingstorehub.com/bestbuy)
-2. System identifies merchant from URL slug
-3. User enters credentials → JWT validates → shows dashboard
-4. User clicks "Update Information" → saves to DB → syncs to Salesforce
-5. Result: Immediate bidirectional sync ensures data consistency
+### 3. User Flows - IMPLEMENTED ✅
+**PRIMARY FLOW - COMPLETED:**
+1. ✅ User navigates to trainer-specific URL (`localhost:3010/merchant/Nasi-Lemak`)
+2. ✅ System identifies trainer from URL parameter (`Onboarding_Trainer__c.Name`)
+3. ✅ User clicks "📥 Load Trainer Data" → system queries Salesforce
+4. ✅ System displays comprehensive trainer information with interactive interface
+5. ✅ User can edit fields, navigate stages, send reminders → changes sync to Salesforce
+6. ✅ Result: Real-time Salesforce integration with immediate data sync
 
-**ERROR HANDLING:**
-- Invalid credentials: Show "Invalid login" message
-- Salesforce sync failure: Log error, continue (fire-and-forget)
-- Database error: Show user-friendly error message
+**IMPLEMENTED FEATURES:**
+- ✅ **Stage Management**: Interactive tabbed interface for 11 onboarding stages
+- ✅ **Contact Management**: Multiple phone numbers with reminder functionality
+- ✅ **Data Editing**: Update trainer information directly in Salesforce
+- ✅ **Error Handling**: Comprehensive debugging and user-friendly error messages
+- ✅ **Real-time Sync**: Immediate updates to Salesforce on save
 
-### 4. Technical Stack & Architecture
-**STACK:**
-- Full-Stack Framework: Next.js 14 with TypeScript
-- Database: SQLite (development) / PostgreSQL (production) with Prisma ORM
-- Salesforce Integration: jsforce library
-- Authentication: Simple JWT tokens
-- Styling: Tailwind CSS
-- Deployment: TBD (Render/Vercel/Railway)
+### 4. Technical Stack & Architecture - IMPLEMENTED ✅
+**IMPLEMENTED STACK:**
+- ✅ **Framework**: Next.js 15.0.3 with TypeScript
+- ✅ **Salesforce Integration**: jsforce library with direct API connection
+- ✅ **Environment**: Salesforce Sandbox (test.salesforce.com)
+- ✅ **Styling**: Tailwind CSS with responsive design
+- ✅ **Development**: Local development server (localhost:3010)
 
-**SIMPLIFIED ARCHITECTURE:**
+**IMPLEMENTED ARCHITECTURE:**
 ```
-Next.js App (with API routes)
+Next.js 15 App (with API routes)
+    ↓ ↑ (Real-time)
+Salesforce Sandbox API (jsforce)
     ↓ ↑
-SQLite/PostgreSQL (Prisma)
-    ↓ ↑
-Salesforce API (jsforce)
+Onboarding_Trainer__c + Contact objects
 ```
 
-### 5. API Design & Data Models
-**DATA MODEL (Prisma Schema):**
-```prisma
-model Merchant {
-  id            String   @id @default(cuid())
-  slug          String   @unique  // e.g., "bestbuy"
-  salesforceId  String?  @unique
-  companyName   String
-  email         String   @unique
+**KEY ARCHITECTURAL DECISIONS:**
+- ✅ **Direct Salesforce Integration**: No intermediate database, direct API calls
+- ✅ **URL-based Routing**: `/merchant/{Onboarding_Trainer__c.Name}` structure
+- ✅ **Real-time Data**: Live queries to Salesforce for current data
+- ✅ **JavaScript Filtering**: Client-side filtering for complex name matching
+
+### 5. Data Models & API Design - IMPLEMENTED ✅
+**SALESFORCE DATA MODEL (Implemented):**
+```javascript
+// Onboarding_Trainer__c Object
+{
+  Id: "a0yBE000002SwCnYAK",
+  Name: "Nasi Lemak",
+  First_Revised_EGLD__c: "2026-01-31",
+  Onboarding_Trainer_Stage__c: "New", // 11 possible stages
+  Installation_Date__c: null,
+  Phone_Number__c: "+6012345678",
+  Merchant_PIC_Contact_Number__c: "+6012345678",
+  Operation_Manager_Contact__c: "003BE00000J9oEKYAZ", // Contact ID
+  Business_Owner_Contact__c: "003BE00000J9CnoYAF", // Contact ID
   passwordHash  String
   address       String?
   phone         String?

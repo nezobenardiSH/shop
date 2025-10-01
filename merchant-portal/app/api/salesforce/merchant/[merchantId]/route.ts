@@ -48,7 +48,15 @@ export async function GET(
     console.log('Getting all trainers and filtering in JavaScript...')
 
     try {
-      const allTrainersQuery = `SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, CreatedDate, LastModifiedDate FROM Onboarding_Trainer__c ORDER BY Name LIMIT 50`
+      const allTrainersQuery = `
+        SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
+               Phone_Number__c, Merchant_PIC_Contact_Number__c,
+               Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
+               Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
+               CreatedDate, LastModifiedDate
+        FROM Onboarding_Trainer__c
+        ORDER BY Name LIMIT 50
+      `
       const allTrainersResult = await conn.query(allTrainersQuery)
 
       console.log('All trainers found:', allTrainersResult.records.map((t: any) => `"${t.Name}"`))
@@ -169,6 +177,19 @@ export async function GET(
         name: trainer.Name,
         firstRevisedEGLD: trainer.First_Revised_EGLD__c,
         onboardingTrainerStage: trainer.Onboarding_Trainer_Stage__c,
+        installationDate: trainer.Installation_Date__c,
+        phoneNumber: trainer.Phone_Number__c,
+        merchantPICContactNumber: trainer.Merchant_PIC_Contact_Number__c,
+        operationManagerContact: trainer.Operation_Manager_Contact__r ? {
+          id: trainer.Operation_Manager_Contact__c,
+          name: trainer.Operation_Manager_Contact__r.Name,
+          phone: trainer.Operation_Manager_Contact__r.Phone
+        } : null,
+        businessOwnerContact: trainer.Business_Owner_Contact__r ? {
+          id: trainer.Business_Owner_Contact__c,
+          name: trainer.Business_Owner_Contact__r.Name,
+          phone: trainer.Business_Owner_Contact__r.Phone
+        } : null,
         createdDate: trainer.CreatedDate,
         lastModifiedDate: trainer.LastModifiedDate
       }]
