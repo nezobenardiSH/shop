@@ -363,7 +363,7 @@ class LarkService {
       const user = await this.getUserByEmail(trainerEmail)
       await this.sendNotification(
         user.user_id,
-        `New training session booked for ${merchantName} on ${date} from ${startTime} to ${endTime}`
+        `New training session booked for ${merchantInfo.name} on ${date} from ${startTime} to ${endTime}`
       )
     } catch (notifyError) {
       console.error('Failed to send notification:', notifyError)
