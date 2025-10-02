@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       firstRevisedEGLD: 'First_Revised_EGLD__c',
       onboardingTrainerStage: 'Onboarding_Trainer_Stage__c',
       installationDate: 'Installation_Date__c',
+      trainingDate: 'Training_Date__c',
       phoneNumber: 'Phone_Number__c',
       merchantPICContactNumber: 'Merchant_PIC_Contact_Number__c'
     }
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
         // Fetch the updated record to return current values
         const updatedRecord = await conn.query(`
           SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
-                 Phone_Number__c, Merchant_PIC_Contact_Number__c,
+                 Training_Date__c, Phone_Number__c, Merchant_PIC_Contact_Number__c,
                  CreatedDate, LastModifiedDate
           FROM Onboarding_Trainer__c
           WHERE Id = '${trainerId}'
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
           firstRevisedEGLD: trainer.First_Revised_EGLD__c,
           onboardingTrainerStage: trainer.Onboarding_Trainer_Stage__c,
           installationDate: trainer.Installation_Date__c,
+          trainingDate: trainer.Training_Date__c,
           phoneNumber: trainer.Phone_Number__c,
           merchantPICContactNumber: trainer.Merchant_PIC_Contact_Number__c,
           createdDate: trainer.CreatedDate,

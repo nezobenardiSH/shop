@@ -1,0 +1,31 @@
+{
+  "trainers": [
+    {
+      "name": "Nezo",
+      "email": "nezo.benardi@storehub.com",
+      "larkUserId": "",
+      "calendarId": "primary",
+      "salesforceId": ""
+    },
+    {
+      "name": "Jia En", 
+      "email": "jiaen.chai@storehub.com",
+      "larkUserId": "",
+      "calendarId": "primary",
+      "salesforceId": ""
+    },
+    {
+      "name": "Nasi Lemak",
+      "email": "nezo.benardi@storehub.com",
+      "larkUserId": "",
+      "calendarId": "primary",
+      "salesforceId": "a0yBE000002SwCnYAK"
+    }
+  ],
+  "defaultCalendarId": "primary",
+  "timezone": "Asia/Singapore",
+  "defaultTrainer": {
+    "email": "nezo.benardi@storehub.com",
+    "calendarId": "primary"
+  }
+}

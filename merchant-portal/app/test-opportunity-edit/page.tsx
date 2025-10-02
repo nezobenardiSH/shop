@@ -76,7 +76,7 @@ export default function TestOpportunityEdit() {
           setSelectedOpportunity(updateResult.updatedData)
           
           // Update the opportunity in the list
-          setResult(prev => ({
+          setResult((prev: any) => ({
             ...prev,
             opportunityData: {
               ...prev.opportunityData,
@@ -97,7 +97,7 @@ export default function TestOpportunityEdit() {
   }
 
   const handleFieldChange = (field: string, value: string) => {
-    setEditData(prev => ({
+    setEditData((prev: any) => ({
       ...prev,
       [field]: value
     }))

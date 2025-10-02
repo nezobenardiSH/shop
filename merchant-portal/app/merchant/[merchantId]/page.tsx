@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import BookingModal from '@/components/BookingModal'
 
 export default function TrainerPortal() {
   const params = useParams()
@@ -16,6 +17,8 @@ export default function TrainerPortal() {
   const [availableStages, setAvailableStages] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<string>('')
   const [reminderLoading, setReminderLoading] = useState<string | null>(null)
+  const [bookingModalOpen, setBookingModalOpen] = useState(false)
+  const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
 
   const loadTrainerData = async () => {
     setLoading(true)
@@ -77,6 +80,52 @@ export default function TrainerPortal() {
     }
   }, [trainerName])
 
+  const handleOpenBookingModal = (trainer: any) => {
+    // Determine which actual trainer to use based on Salesforce data
+    // This could be from a field like trainer.assignedTrainerEmail or trainer.operationManagerEmail
+    let actualTrainerName = 'Nezo'; // Default trainer
+    
+    // Option 1: Use Operation Manager name if it matches a configured trainer
+    if (trainer.operationManagerContact?.name) {
+      actualTrainerName = trainer.operationManagerContact.name;
+    }
+    
+    // Option 2: Map based on merchant name or other logic
+    // For example: Nasi Lemak -> Nezo, Other merchants -> Jia En
+    
+    setCurrentBookingInfo({
+      trainerId: trainer.id,
+      trainerName: actualTrainerName, // Use the actual trainer name for Lark
+      merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
+      merchantAddress: trainerData?.account?.billingAddress || '',
+      merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
+      merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
+      displayName: trainer.name, // Keep the Salesforce trainer name for display
+      existingBooking: trainer.larkEventId ? {
+        eventId: trainer.larkEventId,
+        date: trainer.trainingDate ? new Date(trainer.trainingDate).toLocaleDateString() : '',
+        time: 'Scheduled'
+      } : null
+    })
+    setBookingModalOpen(true)
+  }
+
+  const handleBookingComplete = async () => {
+    console.log('Booking completed, refreshing trainer data...')
+    setSuccessMessage('📅 Booking confirmed! Refreshing data...')
+    
+    // Refresh the trainer data to show the new training date
+    await loadTrainerData()
+    
+    // Clear booking modal state
+    setBookingModalOpen(false)
+    setCurrentBookingInfo(null)
+    
+    // Show success message for a few seconds
+    setSuccessMessage('✅ Training date updated successfully!')
+    setTimeout(() => setSuccessMessage(''), 5000)
+  }
+
   const startEditing = (trainer: any) => {
     setEditingTrainer(trainer)
     setEditData(trainer)
@@ -124,7 +173,7 @@ export default function TrainerPortal() {
         
         // Update the data with new values
         if (updateResult.updatedData) {
-          setTrainerData(prev => ({
+          setTrainerData((prev: any) => ({
             ...prev,
             onboardingTrainerData: {
               ...prev.onboardingTrainerData,
@@ -147,7 +196,7 @@ export default function TrainerPortal() {
   }
 
   const handleFieldChange = (field: string, value: string) => {
-    setEditData(prev => ({
+    setEditData((prev: any) => ({
       ...prev,
       [field]: value
     }))
@@ -266,6 +315,35 @@ export default function TrainerPortal() {
                     onChange={(e) => handleFieldChange('installationDate', e.target.value)}
                     className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
+                    🎓 Training Date
+                  </label>
+                  <div className="flex gap-2">
+                    {editData.trainingDate ? (
+                      <>
+                        <div className="flex-1 px-3 py-2 border border-blue-300 rounded-md bg-gray-50">
+                          {formatDate(editData.trainingDate)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenBookingModal(editData)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          📅 Reschedule
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenBookingModal(editData)}
+                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      >
+                        📅 Book Training via Lark
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="mt-4 flex gap-2">
@@ -395,6 +473,19 @@ export default function TrainerPortal() {
                                 <div className="text-lg font-medium text-orange-900">
                                   {trainer.installationDate ? new Date(trainer.installationDate).toLocaleDateString() : 'N/A'}
                                 </div>
+                              </div>
+
+                              <div className="bg-blue-50 p-4 rounded border border-blue-300">
+                                <strong className="text-blue-800">🎓 Training Date:</strong>
+                                <div className="text-lg font-medium text-blue-900">
+                                  {trainer.trainingDate ? new Date(trainer.trainingDate).toLocaleDateString() : 'Not Scheduled'}
+                                </div>
+                                <button
+                                  onClick={() => handleOpenBookingModal(trainer)}
+                                  className="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                >
+                                  {trainer.trainingDate ? '📅 Reschedule' : '📅 Book Training'}
+                                </button>
                               </div>
 
                               {/* Contact Phone Information */}
@@ -596,6 +687,22 @@ export default function TrainerPortal() {
           )}
         </div>
       </div>
+
+      {/* Booking Modal */}
+      {bookingModalOpen && currentBookingInfo && (
+        <BookingModal
+          isOpen={bookingModalOpen}
+          onClose={() => setBookingModalOpen(false)}
+          merchantId={currentBookingInfo.trainerId}
+          merchantName={currentBookingInfo.merchantName}
+          merchantAddress={currentBookingInfo.merchantAddress}
+          merchantPhone={currentBookingInfo.merchantPhone}
+          merchantContactPerson={currentBookingInfo.merchantContactPerson}
+          trainerName={currentBookingInfo.trainerName}
+          currentBooking={currentBookingInfo.existingBooking}
+          onBookingComplete={handleBookingComplete}
+        />
+      )}
     </div>
   )
 }

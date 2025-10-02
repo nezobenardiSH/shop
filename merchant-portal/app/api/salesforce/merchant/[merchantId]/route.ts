@@ -3,11 +3,12 @@ import { getSalesforceConnection } from '@/lib/salesforce'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { merchantId: string } }
+  { params }: { params: Promise<{ merchantId: string }> }
 ) {
+  const resolvedParams = await params
+  const trainerName = resolvedParams.merchantId
+
   try {
-    const resolvedParams = await params
-    const trainerName = resolvedParams.merchantId
 
     if (!trainerName) {
       return NextResponse.json(
@@ -50,7 +51,7 @@ export async function GET(
     try {
       const allTrainersQuery = `
         SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
-               Phone_Number__c, Merchant_PIC_Contact_Number__c,
+               Training_Date__c, Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
                Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
                CreatedDate, LastModifiedDate
@@ -178,6 +179,7 @@ export async function GET(
         firstRevisedEGLD: trainer.First_Revised_EGLD__c,
         onboardingTrainerStage: trainer.Onboarding_Trainer_Stage__c,
         installationDate: trainer.Installation_Date__c,
+        trainingDate: trainer.Training_Date__c,
         phoneNumber: trainer.Phone_Number__c,
         merchantPICContactNumber: trainer.Merchant_PIC_Contact_Number__c,
         operationManagerContact: trainer.Operation_Manager_Contact__r ? {
@@ -209,7 +211,7 @@ export async function GET(
       { 
         success: false, 
         message: `Failed to fetch trainer data: ${error.message}`,
-        trainerName: resolvedParams.merchantId
+        trainerName: trainerName
       },
       { status: 500 }
     )

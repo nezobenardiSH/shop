@@ -1,7 +1,7 @@
 import jsforce from 'jsforce'
 import { prisma } from './prisma'
 
-let connection: jsforce.Connection | null = null
+let connection: any | null = null
 let connectionError: string | null = null
 
 export async function getSalesforceConnection() {
@@ -157,7 +157,7 @@ export async function testSalesforceConnection() {
       try {
         const accountDescribe = await conn.sobject('Account').describe()
         availableFields = accountDescribe.fields.map((field: any) => field.name)
-        console.log('Available Account fields:', availableFields.filter(f => f.includes('__c')).slice(0, 20))
+        console.log('Available Account fields:', availableFields.filter((f: any) => f.includes('__c')).slice(0, 20))
       } catch (describeError) {
         console.log('Could not describe Account object:', describeError)
       }
@@ -184,7 +184,7 @@ export async function testSalesforceConnection() {
           await conn.query(`SELECT Id, ${field} FROM Account WHERE Id = '${accountId}' LIMIT 1`)
           existingFields.push(field)
           fieldTestResults.push({ field, exists: true })
-        } catch (error) {
+        } catch (error: any) {
           fieldTestResults.push({ field, exists: false, error: error.message })
         }
       }
@@ -218,20 +218,20 @@ export async function testSalesforceConnection() {
             },
             fieldTestResults,
             existingFields,
-            availableCustomFields: availableFields.filter(f => f.includes('__c')).slice(0, 20)
+            availableCustomFields: availableFields.filter((f: any) => f.includes('__c')).slice(0, 20)
           }
         } catch (queryError) {
           customFieldsData = {
             error: `Query failed: ${queryError}`,
             fieldTestResults,
-            availableCustomFields: availableFields.filter(f => f.includes('__c')).slice(0, 20)
+            availableCustomFields: availableFields.filter((f: any) => f.includes('__c')).slice(0, 20)
           }
         }
       } else {
         customFieldsData = {
           error: 'None of the specified custom fields exist on this Account',
           fieldTestResults,
-          availableCustomFields: availableFields.filter(f => f.includes('__c')).slice(0, 20)
+          availableCustomFields: availableFields.filter((f: any) => f.includes('__c')).slice(0, 20)
         }
       }
     } else {
@@ -241,7 +241,7 @@ export async function testSalesforceConnection() {
     // Test Onboarding Trainer data
     try {
       const onboardingTrainerQuery = `
-        SELECT Id, Name, First_Revised_EGLD__c, CreatedDate, LastModifiedDate
+        SELECT Id, Name, First_Revised_EGLD__c, Training_Date__c, CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         ORDER BY CreatedDate DESC
         LIMIT 10
@@ -254,6 +254,7 @@ export async function testSalesforceConnection() {
           id: trainer.Id,
           name: trainer.Name,
           firstRevisedEGLD: trainer.First_Revised_EGLD__c,
+          trainingDate: trainer.Training_Date__c,
           createdDate: trainer.CreatedDate,
           lastModifiedDate: trainer.LastModifiedDate
         }))

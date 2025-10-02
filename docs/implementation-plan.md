@@ -879,6 +879,315 @@ curl https://merchant-portal.onrender.com/api/health
 
 ---
 
-**Project Status:** ✅ **COMPLETED** - Fully functional trainer portal
-**Last Updated:** 2025-10-01
-**Implementation:** Trainer-focused portal with direct Salesforce integration
+## 📅 Lark Calendar Integration
+**Goal:** Enable merchants to self-book training sessions through Lark Calendar
+**Status:** 🟦 **IN PLANNING**
+**Last Updated:** 2025-10-02
+
+### Overview
+Implement a self-service training date booking system using Lark Calendar API that allows merchants to book available time slots, automatically updates Salesforce, and notifies trainers via Lark.
+
+### Architecture Components
+
+#### 1. **Backend Services**
+- **`lib/lark.ts`** - Lark API authentication and calendar operations
+- **`lib/trainer-availability.ts`** - Combined availability and intelligent assignment
+- **`config/trainers.json`** - Trainer email and calendar configuration
+
+#### 2. **API Endpoints**
+- **`GET /api/lark/availability`** - Query combined available slots from all trainers
+- **`POST /api/lark/book-training`** - Book a training session with auto-assignment
+- **`DELETE /api/lark/cancel-training`** - Cancel existing booking
+
+#### 3. **UI Components**
+- Interactive calendar showing combined availability
+- Show 2-hour time slots (9am-6pm on weekdays only)
+- Visual calendar grid with availability status
+- Display assigned trainer after booking
+
+### Available Lark Permissions
+✅ **Configured in Lark App:**
+- `calendar:calendar.event:create` - Create training events
+- `calendar:calendar.event:read` - Check existing bookings
+- `calendar:calendar.event:update` - Modify bookings
+- `calendar:calendar.event:delete` - Cancel bookings
+- `calendar:calendar:readonly` - Check availability
+- `calendar:calendar:update` - Update calendar settings
+- `contact:user.email:readonly` - Get trainer emails
+- `contact:user.id:readonly` - Get trainer Lark IDs
+
+### Intelligent Trainer Assignment Logic
+
+#### Assignment Rules:
+1. **Check All Trainers' Availability** for requested time slot
+   - Query Nezo's calendar
+   - Query Jia En's calendar
+   - Combine availability data
+
+2. **Assignment Decision Tree**:
+   ```
+   IF only Nezo is available → Assign to Nezo
+   ELSE IF only Jia En is available → Assign to Jia En  
+   ELSE IF both are available → Random assignment (50/50)
+   ELSE IF neither available → Slot is unavailable
+   ```
+
+3. **Random Assignment Algorithm**:
+   - Use `Math.random()` for fair distribution
+   - Track assignment history for load balancing (optional)
+   - Store assigned trainer in Salesforce for records
+
+4. **Availability Display**:
+   - Show slot as "Available" if ANY trainer is free
+   - Don't show which specific trainer until after booking
+   - After booking, display: "Assigned to: [Trainer Name]"
+
+### Implementation Tasks
+
+#### Phase 1: Core Lark Integration (Day 1)
+**Task 1: Create Lark Service Library**
+- [ ] Implement tenant access token authentication
+- [ ] Create calendar event CRUD operations
+- [ ] Build free/busy time checking
+- [ ] Add trainer notification functions
+
+**Files to create:**
+```
+lib/lark.ts                    # Core Lark API integration
+config/trainers.json           # Trainer configuration
+```
+
+#### Phase 2: Intelligent Booking APIs (Day 1-2)
+**Task 2: Combined Availability Endpoint**
+- [ ] Query ALL trainers' calendars for free/busy times
+- [ ] Merge availability data from multiple trainers
+- [ ] Generate 2-hour slots (9am, 11am, 1pm, 3pm)
+- [ ] Mark slot as available if ANY trainer is free
+- [ ] Filter weekdays only
+- [ ] Return next 30 days of combined available slots
+
+**Task 3: Smart Booking Endpoint**
+- [ ] Check which trainers are available for selected slot
+- [ ] Implement assignment logic:
+  - Single trainer available → Auto-assign
+  - Multiple trainers available → Random assignment
+  - No trainers available → Return error
+- [ ] Create Lark calendar event for assigned trainer
+- [ ] Update Salesforce with:
+  - Training_Date__c
+  - Assigned_Trainer__c (new field)
+  - Training_Status__c
+- [ ] Send Lark notification to assigned trainer only
+
+**Task 4: Cancellation Endpoint**
+- [ ] Delete Lark calendar event
+- [ ] Clear Salesforce Training_Date__c
+- [ ] Notify trainer of cancellation
+
+**Files to create:**
+```
+app/api/lark/availability/route.ts
+app/api/lark/book-training/route.ts
+app/api/lark/cancel-training/route.ts
+```
+
+#### Phase 3: Frontend Calendar UI (Day 2)
+**Task 5: Calendar Booking Component**
+- [ ] Create BookingModal component
+- [ ] Display 30-day calendar grid
+- [ ] Show available/booked slots visually
+- [ ] Add booking confirmation flow
+
+**Task 6: Update Merchant Portal**
+- [ ] Replace date input with "Book Training" button
+- [ ] Integrate BookingModal
+- [ ] Add loading states
+- [ ] Handle errors gracefully
+
+**Files to modify:**
+```
+app/merchant/[merchantId]/page.tsx
+components/BookingModal.tsx (new)
+```
+
+#### Phase 4: Salesforce Integration (Day 2-3)
+**Task 7: Extend Salesforce Schema**
+- [ ] Add Lark_User_Id__c to Onboarding_Trainer__c
+- [ ] Add Lark_Calendar_Id__c field
+- [ ] Map trainers to Lark users
+
+**Task 8: Sync Implementation**
+- [ ] Auto-update Training_Date__c on booking
+- [ ] Handle timezone conversions
+- [ ] Implement error recovery
+
+#### Phase 5: Testing & Deployment (Day 3)
+**Task 9: Testing**
+- [ ] Unit tests for slot generation
+- [ ] Integration tests for Lark API
+- [ ] E2E booking flow testing
+- [ ] Manual testing with real trainers
+
+**Task 10: Documentation**
+- [ ] API documentation
+- [ ] Trainer setup guide
+- [ ] Troubleshooting guide
+
+### Technical Specifications
+
+#### Implementation Code Examples
+
+**Combined Availability Logic:**
+```typescript
+// lib/trainer-availability.ts
+async function getCombinedAvailability(date: string, timeSlot: TimeSlot) {
+  const trainers = ['Nezo', 'Jia En']
+  const availability = []
+  
+  for (const trainer of trainers) {
+    const isFree = await checkTrainerAvailability(trainer, date, timeSlot)
+    if (isFree) {
+      availability.push(trainer)
+    }
+  }
+  
+  return {
+    isAvailable: availability.length > 0,
+    availableTrainers: availability
+  }
+}
+```
+
+**Intelligent Assignment:**
+```typescript
+// lib/trainer-assignment.ts
+function assignTrainer(availableTrainers: string[]): string {
+  if (availableTrainers.length === 0) {
+    throw new Error('No trainers available')
+  }
+  
+  if (availableTrainers.length === 1) {
+    return availableTrainers[0]  // Only one available
+  }
+  
+  // Random selection when multiple trainers available
+  const randomIndex = Math.floor(Math.random() * availableTrainers.length)
+  return availableTrainers[randomIndex]
+}
+```
+
+**Booking Flow:**
+```typescript
+// api/lark/book-training/route.ts
+async function bookTraining(date, timeSlot, merchantInfo) {
+  // 1. Get available trainers for this slot
+  const { availableTrainers } = await getCombinedAvailability(date, timeSlot)
+  
+  // 2. Assign a trainer
+  const assignedTrainer = assignTrainer(availableTrainers)
+  
+  // 3. Create calendar event for assigned trainer
+  const eventId = await createCalendarEvent(assignedTrainer, date, timeSlot, merchantInfo)
+  
+  // 4. Update Salesforce
+  await updateSalesforce({
+    merchantId: merchantInfo.id,
+    trainingDate: date,
+    assignedTrainer: assignedTrainer,
+    larkEventId: eventId
+  })
+  
+  // 5. Return booking confirmation
+  return {
+    success: true,
+    assignedTrainer,
+    eventId
+  }
+}
+```
+
+#### Time Slot Configuration
+```typescript
+const TIME_SLOTS = [
+  { start: '09:00', end: '11:00', label: '9:00 AM - 11:00 AM' },
+  { start: '11:00', end: '13:00', label: '11:00 AM - 1:00 PM' },
+  { start: '13:00', end: '15:00', label: '1:00 PM - 3:00 PM' },
+  { start: '15:00', end: '17:00', label: '3:00 PM - 5:00 PM' },
+  { start: '16:00', end: '18:00', label: '4:00 PM - 6:00 PM' }
+]
+
+const WORKING_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+```
+
+#### Lark API Integration
+```typescript
+// Authentication
+POST /open-apis/auth/v3/tenant_access_token/internal
+
+// Calendar Operations
+GET /open-apis/calendar/v4/freebusy/query
+POST /open-apis/calendar/v4/calendars/{calendar_id}/events
+DELETE /open-apis/calendar/v4/calendars/{calendar_id}/events/{event_id}
+
+// Notifications
+POST /open-apis/im/v1/messages
+```
+
+#### Data Model Updates
+```typescript
+// Training Session tracking (optional local storage)
+interface TrainingBooking {
+  id: string
+  merchantId: string
+  trainerId: string
+  trainerName: string
+  dateTime: Date
+  duration: number // minutes (120)
+  larkEventId: string
+  status: 'pending' | 'confirmed' | 'cancelled'
+  createdAt: Date
+}
+```
+
+### Environment Variables
+```env
+# Already configured in .env.local
+LARK_APP_ID=cli_a8549d99f97c502f
+LARK_APP_SECRET=M7Wzk5ZGORiSJJp7xKjxEdzWEOBVtpNT
+LARK_DOMAIN=https://open.larksuite.com
+```
+
+### Success Criteria
+- [ ] Merchants can view available training slots (combined from all trainers)
+- [ ] System intelligently assigns bookings to available trainers
+- [ ] Booking creates event in assigned trainer's Lark calendar
+- [ ] Salesforce Training_Date__c auto-updates with trainer assignment
+- [ ] Trainers receive Lark notifications
+- [ ] No double-booking possible
+- [ ] Weekday 9am-6pm slots only
+- [ ] 2-hour duration per session
+- [ ] Timezone handling works correctly
+
+### Rollout Strategy
+1. **Week 1:** Development and internal testing
+2. **Week 2:** Pilot with 1-2 trainers
+3. **Week 3:** Full rollout to all trainers
+
+### Risk Mitigation
+- **API Rate Limits:** Implement caching for availability queries
+- **Double Booking:** Use transaction locking during booking
+- **Timezone Issues:** Store all times in UTC, convert for display
+- **Network Failures:** Implement retry logic with exponential backoff
+
+---
+
+**Project Status:** 🔄 **IN PROGRESS** - Implementing intelligent trainer assignment
+**Last Updated:** 2025-10-02
+**Implementation:** Trainer portal with Salesforce integration and intelligent Lark Calendar booking system
+
+### Next Steps:
+1. **Fix Lark Calendar Permissions** - Ensure calendar:calendar.event:create is active
+2. **Implement Combined Availability** - Query all trainers and merge availability
+3. **Add Intelligent Assignment** - Auto-assign based on availability with randomization
+4. **Update Booking UI** - Show combined slots and display assigned trainer after booking
+5. **Test End-to-End** - Verify booking creates events in correct trainer's calendar

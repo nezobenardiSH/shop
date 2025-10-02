@@ -63,7 +63,7 @@ export default function TestSalesforceEdit() {
 
         // Update the result with new data
         if (updateResult.updatedData) {
-          setResult(prev => ({
+          setResult((prev: any) => ({
             ...prev,
             customFieldsData: {
               ...prev.customFieldsData,
@@ -83,7 +83,7 @@ export default function TestSalesforceEdit() {
   }
 
   const handleFieldChange = (field: string, value: string) => {
-    setEditData(prev => ({
+    setEditData((prev: any) => ({
       ...prev,
       [field]: value
     }))

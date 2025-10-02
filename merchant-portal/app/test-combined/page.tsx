@@ -71,7 +71,7 @@ export default function TestCombined() {
 
         // Update the result with new data
         if (updateResult.updatedData) {
-          setResult(prev => ({
+          setResult((prev: any) => ({
             ...prev,
             onboardingTrainerData: {
               ...prev.onboardingTrainerData,
@@ -94,7 +94,7 @@ export default function TestCombined() {
   }
 
   const handleFieldChange = (field: string, value: string) => {
-    setEditData(prev => ({
+    setEditData((prev: any) => ({
       ...prev,
       [field]: value
     }))
@@ -154,6 +154,17 @@ export default function TestCombined() {
                     type="date"
                     value={formatDate(editData.firstRevisedEGLD)}
                     onChange={(e) => handleFieldChange('firstRevisedEGLD', e.target.value)}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
+                    🎓 Training Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formatDate(editData.trainingDate)}
+                    onChange={(e) => handleFieldChange('trainingDate', e.target.value)}
                     className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -255,6 +266,13 @@ export default function TestCombined() {
                                 <strong className="text-yellow-800">📅 First Revised EGLD:</strong>
                                 <div className="text-lg font-medium text-yellow-900">
                                   {trainer.firstRevisedEGLD || 'N/A'}
+                                </div>
+                              </div>
+
+                              <div className="bg-blue-50 p-4 rounded border border-blue-300">
+                                <strong className="text-blue-800">🎓 Training Date:</strong>
+                                <div className="text-lg font-medium text-blue-900">
+                                  {trainer.trainingDate ? new Date(trainer.trainingDate).toLocaleDateString() : 'N/A'}
                                 </div>
                               </div>
 
