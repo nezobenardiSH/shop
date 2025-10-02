@@ -25,7 +25,10 @@
   "defaultCalendarId": "primary",
   "timezone": "Asia/Singapore",
   "defaultTrainer": {
+    "name": "Nezo",
     "email": "nezo.benardi@storehub.com",
-    "calendarId": "primary"
+    "calendarId": "primary",
+    "larkUserId": "",
+    "salesforceId": ""
   }
 }
