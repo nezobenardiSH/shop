@@ -28,8 +28,8 @@ export async function DELETE(request: NextRequest) {
     if (!trainer && trainersConfig.defaultTrainer) {
       console.log('Trainer not found, using default trainer configuration')
       trainer = {
-        name: trainerName,
-        ...trainersConfig.defaultTrainer
+        ...trainersConfig.defaultTrainer,
+        name: trainerName || trainersConfig.defaultTrainer.name
       }
     }
     
