@@ -16,7 +16,8 @@ export default function TrainerPortal() {
   const [successMessage, setSuccessMessage] = useState('')
   const [availableStages, setAvailableStages] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<string>('')
-  const [reminderLoading, setReminderLoading] = useState<string | null>(null)
+  const [editingFields, setEditingFields] = useState<{ [key: string]: boolean }>({})
+  const [tempFieldValues, setTempFieldValues] = useState<{ [key: string]: string }>({})
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
 
@@ -55,22 +56,41 @@ export default function TrainerPortal() {
     }
   }
 
-  const handleReminder = async (phoneNumber: string, contactType: string) => {
-    setReminderLoading(phoneNumber)
-    try {
-      // Here you can implement the reminder functionality
-      // For now, we'll just show a success message
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+  const handleEditField = (fieldName: string, currentValue: string) => {
+    setEditingFields({ ...editingFields, [fieldName]: true })
+    setTempFieldValues({ ...tempFieldValues, [fieldName]: currentValue || '' })
+  }
 
-      setSuccessMessage(`Reminder sent to ${contactType}: ${phoneNumber}`)
-      setTimeout(() => setSuccessMessage(''), 3000)
+  const handleSaveField = async (fieldName: string, trainerId: string) => {
+    setSaving(true)
+    try {
+      const response = await fetch('/api/salesforce/update-trainer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trainerId,
+          updates: { [fieldName]: tempFieldValues[fieldName] }
+        })
+      })
+      const result = await response.json()
+      if (result.success) {
+        setSuccessMessage(`✅ ${fieldName} updated successfully!`)
+        setEditingFields({ ...editingFields, [fieldName]: false })
+        await loadTrainerData()
+        setTimeout(() => setSuccessMessage(''), 3000)
+      } else {
+        alert(`Failed to update: ${result.error}`)
+      }
     } catch (error) {
-      console.error('Failed to send reminder:', error)
-      setSuccessMessage(`Failed to send reminder to ${phoneNumber}`)
-      setTimeout(() => setSuccessMessage(''), 3000)
+      alert(`Error updating: ${error}`)
     } finally {
-      setReminderLoading(null)
+      setSaving(false)
     }
+  }
+
+  const handleCancelField = (fieldName: string) => {
+    setEditingFields({ ...editingFields, [fieldName]: false })
+    delete tempFieldValues[fieldName]
   }
 
   useEffect(() => {
@@ -456,23 +476,103 @@ export default function TrainerPortal() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div className="bg-yellow-50 p-4 rounded border border-yellow-300">
                                 <strong className="text-yellow-800">📅 First Revised EGLD:</strong>
-                                <div className="text-lg font-medium text-yellow-900">
-                                  {trainer.firstRevisedEGLD || 'N/A'}
-                                </div>
+                                {editingFields[`egld-${trainer.id}`] ? (
+                                  <div className="mt-2 space-y-2">
+                                    <input
+                                      type="date"
+                                      value={formatDate(tempFieldValues[`egld-${trainer.id}`])}
+                                      onChange={(e) => setTempFieldValues({ ...tempFieldValues, [`egld-${trainer.id}`]: e.target.value })}
+                                      className="w-full px-2 py-1 border border-yellow-400 rounded"
+                                    />
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => handleSaveField('firstRevisedEGLD', trainer.id)}
+                                        disabled={saving}
+                                        className="px-2 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
+                                      >
+                                        {saving ? 'Saving...' : 'Save'}
+                                      </button>
+                                      <button
+                                        onClick={() => handleCancelField(`egld-${trainer.id}`)}
+                                        className="px-2 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between mt-1">
+                                    <div className="text-lg font-medium text-yellow-900">
+                                      {trainer.firstRevisedEGLD || 'N/A'}
+                                    </div>
+                                    <button
+                                      onClick={() => handleEditField(`egld-${trainer.id}`, trainer.firstRevisedEGLD)}
+                                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                    >
+                                      ✏️ Edit
+                                    </button>
+                                  </div>
+                                )}
                               </div>
 
                               <div className="bg-purple-50 p-4 rounded border border-purple-300">
                                 <strong className="text-purple-800">🎯 Current Stage:</strong>
-                                <div className="text-lg font-medium text-purple-900">
-                                  {trainer.onboardingTrainerStage || 'N/A'}
-                                </div>
+                                {editingFields[`stage-${trainer.id}`] ? (
+                                  <div className="mt-2 space-y-2">
+                                    <select
+                                      value={tempFieldValues[`stage-${trainer.id}`] || ''}
+                                      onChange={(e) => setTempFieldValues({ ...tempFieldValues, [`stage-${trainer.id}`]: e.target.value })}
+                                      className="w-full px-2 py-1 border border-purple-400 rounded"
+                                    >
+                                      <option value="">Select a stage...</option>
+                                      {availableStages.map((stage) => (
+                                        <option key={stage.value} value={stage.value}>
+                                          {stage.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => handleSaveField('onboardingTrainerStage', trainer.id)}
+                                        disabled={saving}
+                                        className="px-2 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
+                                      >
+                                        {saving ? 'Saving...' : 'Save'}
+                                      </button>
+                                      <button
+                                        onClick={() => handleCancelField(`stage-${trainer.id}`)}
+                                        className="px-2 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between mt-1">
+                                    <div className="text-lg font-medium text-purple-900">
+                                      {trainer.onboardingTrainerStage || 'N/A'}
+                                    </div>
+                                    <button
+                                      onClick={() => handleEditField(`stage-${trainer.id}`, trainer.onboardingTrainerStage)}
+                                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                    >
+                                      ✏️ Edit
+                                    </button>
+                                  </div>
+                                )}
                               </div>
 
                               <div className="bg-orange-50 p-4 rounded border border-orange-300">
                                 <strong className="text-orange-800">🔧 Installation Date:</strong>
                                 <div className="text-lg font-medium text-orange-900">
-                                  {trainer.installationDate ? new Date(trainer.installationDate).toLocaleDateString() : 'N/A'}
+                                  {trainer.installationDate ? new Date(trainer.installationDate).toLocaleDateString() : 'Not Scheduled'}
                                 </div>
+                                <button
+                                  onClick={() => handleOpenBookingModal({ ...trainer, bookingType: 'installation' })}
+                                  className="mt-2 px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700"
+                                >
+                                  {trainer.installationDate ? '📅 Reschedule' : '📅 Book Installation'}
+                                </button>
                               </div>
 
                               <div className="bg-blue-50 p-4 rounded border border-blue-300">
@@ -493,48 +593,19 @@ export default function TrainerPortal() {
                                 <strong className="text-green-800">📞 Contact Information:</strong>
                                 <div className="mt-2 space-y-3">
                                   {trainer.phoneNumber && (
-                                    <div className="flex items-center justify-between text-green-900 bg-white p-2 rounded border">
-                                      <div>
-                                        <strong>Phone Number:</strong> {trainer.phoneNumber}
-                                      </div>
-                                      <button
-                                        onClick={() => handleReminder(trainer.phoneNumber, 'Phone Number')}
-                                        disabled={reminderLoading === trainer.phoneNumber}
-                                        className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        {reminderLoading === trainer.phoneNumber ? '⏳' : '🔔 Reminder'}
-                                      </button>
+                                    <div className="text-green-900 bg-white p-2 rounded border">
+                                      <strong>Phone Number:</strong> {trainer.phoneNumber}
                                     </div>
                                   )}
                                   {trainer.merchantPICContactNumber && (
-                                    <div className="flex items-center justify-between text-green-900 bg-white p-2 rounded border">
-                                      <div>
-                                        <strong>Merchant PIC Contact:</strong> {trainer.merchantPICContactNumber}
-                                      </div>
-                                      <button
-                                        onClick={() => handleReminder(trainer.merchantPICContactNumber, 'Merchant PIC')}
-                                        disabled={reminderLoading === trainer.merchantPICContactNumber}
-                                        className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        {reminderLoading === trainer.merchantPICContactNumber ? '⏳' : '🔔 Reminder'}
-                                      </button>
+                                    <div className="text-green-900 bg-white p-2 rounded border">
+                                      <strong>Merchant PIC Contact:</strong> {trainer.merchantPICContactNumber}
                                     </div>
                                   )}
                                   {trainer.operationManagerContact && (
                                     <div className="text-green-900 bg-white p-2 rounded border">
-                                      <div className="flex items-center justify-between">
-                                        <div>
-                                          <strong>Operation Manager:</strong> {trainer.operationManagerContact.name}
-                                        </div>
-                                        {trainer.operationManagerContact.phone && (
-                                          <button
-                                            onClick={() => handleReminder(trainer.operationManagerContact.phone, `Operation Manager (${trainer.operationManagerContact.name})`)}
-                                            disabled={reminderLoading === trainer.operationManagerContact.phone}
-                                            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                                          >
-                                            {reminderLoading === trainer.operationManagerContact.phone ? '⏳' : '🔔 Reminder'}
-                                          </button>
-                                        )}
+                                      <div>
+                                        <strong>Operation Manager:</strong> {trainer.operationManagerContact.name}
                                       </div>
                                       {trainer.operationManagerContact.phone && (
                                         <div className="text-sm text-gray-600 mt-1">
@@ -545,19 +616,8 @@ export default function TrainerPortal() {
                                   )}
                                   {trainer.businessOwnerContact && (
                                     <div className="text-green-900 bg-white p-2 rounded border">
-                                      <div className="flex items-center justify-between">
-                                        <div>
-                                          <strong>Business Owner:</strong> {trainer.businessOwnerContact.name}
-                                        </div>
-                                        {trainer.businessOwnerContact.phone && (
-                                          <button
-                                            onClick={() => handleReminder(trainer.businessOwnerContact.phone, `Business Owner (${trainer.businessOwnerContact.name})`)}
-                                            disabled={reminderLoading === trainer.businessOwnerContact.phone}
-                                            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                                          >
-                                            {reminderLoading === trainer.businessOwnerContact.phone ? '⏳' : '🔔 Reminder'}
-                                          </button>
-                                        )}
+                                      <div>
+                                        <strong>Business Owner:</strong> {trainer.businessOwnerContact.name}
                                       </div>
                                       {trainer.businessOwnerContact.phone && (
                                         <div className="text-sm text-gray-600 mt-1">
