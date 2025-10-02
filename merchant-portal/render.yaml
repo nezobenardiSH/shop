@@ -4,7 +4,7 @@ services:
     runtime: node
     region: singapore  # Changed to match your database region
     plan: starter   # Or 'free' for testing
-    buildCommand: npm install && npx prisma migrate deploy && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
