@@ -416,31 +416,115 @@ export default function TrainerPortal() {
                 )}
               </div>
 
-              {/* Account Data */}
-              {trainerData.account && (
+              {/* Merchant Details Section - FIRST SECTION */}
+              {trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
                 <div className="mt-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">🏢 Account Information</h3>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-blue-900 mb-3">
-                      {trainerData.account.name}
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="bg-white p-3 rounded border">
-                        <strong className="text-blue-800">Business Store Name:</strong>
-                        <div className="text-lg text-blue-900 font-medium">
-                          {trainerData.account.businessStoreName || 'N/A'}
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">📋 Merchant Details</h3>
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    {(() => {
+                      const trainer = trainerData.onboardingTrainerData.trainers[0];
+                      const formatAddress = () => {
+                        const parts = [
+                          trainer.shippingStreet,
+                          trainer.shippingCity,
+                          trainer.shippingState && trainer.shippingZipPostalCode 
+                            ? `${trainer.shippingState} ${trainer.shippingZipPostalCode}`
+                            : trainer.shippingState || trainer.shippingZipPostalCode,
+                          trainer.shippingCountry
+                        ].filter(Boolean);
+                        return parts.length > 0 ? parts : ['N/A'];
+                      };
+
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                          {/* Left Column */}
+                          <div className="space-y-4">
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Trainer Name</div>
+                              <div className="text-gray-900">{trainer.name || 'N/A'}</div>
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Account Name</div>
+                              <div className="text-gray-900">{trainer.accountName || 'N/A'}</div>
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
+                              <div className="text-gray-900">
+                                {formatAddress().map((line, index) => (
+                                  <div key={index}>{line}</div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Sub-Industry</div>
+                              <div className="text-gray-900">{trainer.subIndustry || 'N/A'}</div>
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Preferred Language</div>
+                              <div className="text-gray-900">{trainer.preferredLanguage || 'N/A'}</div>
+                            </div>
+                          </div>
+
+                          {/* Right Column */}
+                          <div className="space-y-4">
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Business Owner Contact</div>
+                              <div className="text-gray-900">
+                                {trainer.businessOwnerContact ? (
+                                  <>
+                                    <div>{trainer.businessOwnerContact.name}</div>
+                                    {trainer.businessOwnerContact.phone && (
+                                      <div className="text-gray-600">{trainer.businessOwnerContact.phone}</div>
+                                    )}
+                                  </>
+                                ) : 'N/A'}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Merchant PIC Contact</div>
+                              <div className="text-gray-900">{trainer.merchantPICContactNumber || 'N/A'}</div>
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Operation Manager</div>
+                              <div className="text-gray-900">
+                                {trainer.operationManagerContact ? (
+                                  <>
+                                    <div>{trainer.operationManagerContact.name}</div>
+                                    {trainer.operationManagerContact.phone && (
+                                      <div className="text-gray-600">{trainer.operationManagerContact.phone}</div>
+                                    )}
+                                  </>
+                                ) : 'N/A'}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Planned Go-Live Date</div>
+                              <div className="text-gray-900">
+                                {trainer.plannedGoLiveDate ? new Date(trainer.plannedGoLiveDate).toLocaleDateString() : 'N/A'}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Required Features</div>
+                              <div className="text-gray-900 text-sm">
+                                {trainer.requiredFeaturesByMerchant || 'N/A'}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="bg-white p-3 rounded border">
-                        <strong className="text-blue-800">Account ID:</strong>
-                        <div className="text-sm font-mono text-gray-600">
-                          {trainerData.account.id}
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
+
 
               {/* Onboarding Trainer Data */}
               {trainerData.onboardingTrainerData && (

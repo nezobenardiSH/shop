@@ -27,19 +27,19 @@ export async function GET(
     }
 
     // Convert URL-friendly trainer name back to actual name
-    // "Nasi-Lemak-" should become "Nasi Lemak-"
-    // Replace hyphens with spaces, but preserve trailing hyphen
+    // "Nasi-Lemak-" should become "Nasi Lemak" (without trailing hyphen)
+    // "Nasi-Lemak" should become "Nasi Lemak"
+    // Replace hyphens with spaces
     let actualTrainerName = trainerName
-    if (trainerName.includes('-')) {
-      if (trainerName.endsWith('-')) {
-        // For names ending with hyphen: "Nasi-Lemak-" -> "Nasi Lemak-"
-        const withoutTrailingHyphen = trainerName.slice(0, -1) // Remove last hyphen
-        const withSpaces = withoutTrailingHyphen.replace(/-/g, ' ') // Replace remaining hyphens with spaces
-        actualTrainerName = withSpaces + '-' // Add back the trailing hyphen
-      } else {
-        // For names not ending with hyphen: replace all hyphens with spaces
-        actualTrainerName = trainerName.replace(/-/g, ' ')
-      }
+    
+    // Remove trailing hyphen if present
+    if (trainerName.endsWith('-')) {
+      actualTrainerName = trainerName.slice(0, -1)
+    }
+    
+    // Replace hyphens with spaces
+    if (actualTrainerName.includes('-')) {
+      actualTrainerName = actualTrainerName.replace(/-/g, ' ')
     }
 
     // First, find the OnboardingTrainer by name
@@ -54,6 +54,9 @@ export async function GET(
                Training_Date__c, Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
                Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
+               Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c, 
+               Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c, 
+               Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         ORDER BY Name LIMIT 50
@@ -65,11 +68,26 @@ export async function GET(
 
       // Filter in JavaScript for exact match
       const matchingTrainer = allTrainersResult.records.find((trainer: any) => {
-        console.log(`Comparing "${trainer.Name}" === "${actualTrainerName}": ${trainer.Name === actualTrainerName}`)
+        console.log(`Comparing "${trainer.Name}" with "${actualTrainerName}" and original "${trainerName}"`)
+        
+        // Try multiple matching strategies
+        const trainerNameLower = trainer.Name.toLowerCase()
+        const actualNameLower = actualTrainerName.toLowerCase()
+        const originalNameLower = trainerName.toLowerCase()
+        
+        // Remove trailing hyphens for comparison
+        const trainerNameClean = trainer.Name.replace(/-$/, '').toLowerCase()
+        const actualNameClean = actualTrainerName.replace(/-$/, '').toLowerCase()
+        const originalNameClean = trainerName.replace(/-$/, '').toLowerCase()
+        
         return trainer.Name === actualTrainerName ||
                trainer.Name === trainerName ||
-               trainer.Name.toLowerCase() === actualTrainerName.toLowerCase() ||
-               trainer.Name.toLowerCase() === trainerName.toLowerCase()
+               trainerNameLower === actualNameLower ||
+               trainerNameLower === originalNameLower ||
+               trainerNameClean === actualNameClean ||
+               trainerNameClean === originalNameClean ||
+               // Also try without any hyphens at all
+               trainer.Name.replace(/-/g, ' ').toLowerCase() === actualTrainerName.replace(/-/g, ' ').toLowerCase()
       })
 
       if (matchingTrainer) {
@@ -123,16 +141,18 @@ export async function GET(
 
     const trainer = trainerResult.records[0]
 
-    // Since Account__c field doesn't exist, let's get the first account for now
-    // This might need refinement based on your actual data model
+    // Get the Account by ID (Account_Name__c actually contains the Account ID)
     let account: any = null
-    try {
-      const accountResult = await conn.query(`SELECT Id, Name, Business_Store_Name__c FROM Account LIMIT 1`)
-      if (accountResult.totalSize > 0) {
-        account = accountResult.records[0]
+    if (trainer.Account_Name__c) {
+      try {
+        // Account_Name__c contains the Account ID, not the name
+        const accountResult = await conn.query(`SELECT Id, Name, Business_Store_Name__c FROM Account WHERE Id = '${trainer.Account_Name__c}'`)
+        if (accountResult.totalSize > 0) {
+          account = accountResult.records[0]
+        }
+      } catch (error) {
+        console.log('Failed to get account by ID:', error)
       }
-    } catch (error) {
-      console.log('Failed to get account:', error)
     }
 
     // Get detailed account data with custom fields (if account exists)
@@ -140,10 +160,7 @@ export async function GET(
     if (account) {
       try {
         const detailedAccountQuery = `
-          SELECT Id, Name, Business_Store_Name__c, Onboarding_Trainer__c,
-                 Onboarding_Services_Bought__c, Go_Live_Stage_Timestamp__c,
-                 Planned_Go_Live_Date__c, Finalised_Go_Live_Date__c,
-                 Latest_Stage_Date__c, Latest_SF_Stage__c, Onboarding_Trainer_Stage__c
+          SELECT Id, Name, Business_Store_Name__c
           FROM Account
           WHERE Id = '${account.Id}'
         `
@@ -154,15 +171,7 @@ export async function GET(
           accountData = {
             id: acc.Id,
             name: acc.Name,
-            businessStoreName: acc.Business_Store_Name__c,
-            onboardingTrainer: acc.Onboarding_Trainer__c,
-            servicesBought: acc.Onboarding_Services_Bought__c,
-            goLiveStageTimestamp: acc.Go_Live_Stage_Timestamp__c,
-            plannedGoLiveDate: acc.Planned_Go_Live_Date__c,
-            finalisedGoLiveDate: acc.Finalised_Go_Live_Date__c,
-            latestStageDate: acc.Latest_Stage_Date__c,
-            latestSFStage: acc.Latest_SF_Stage__c,
-            onboardingTrainerStage: acc.Onboarding_Trainer_Stage__c
+            businessStoreName: acc.Business_Store_Name__c
           }
         }
       } catch (error) {
@@ -192,6 +201,17 @@ export async function GET(
           name: trainer.Business_Owner_Contact__r.Name,
           phone: trainer.Business_Owner_Contact__r.Phone
         } : null,
+        accountId: trainer.Account_Name__c,  // This field contains the Account ID
+        accountName: account?.Name || trainer.Account_Name__c,  // Use fetched Account name or fallback to ID
+        shippingStreet: trainer.Shipping_Street__c,
+        shippingCity: trainer.Shipping_City__c,
+        shippingState: trainer.Shipping_State__c,
+        shippingZipPostalCode: trainer.Shipping_Zip_Postal_Code__c,
+        shippingCountry: trainer.Shipping_Country__c,
+        subIndustry: trainer.Sub_Industry__c,
+        preferredLanguage: trainer.Preferred_Language__c,
+        plannedGoLiveDate: trainer.Planned_Go_Live_Date__c,
+        requiredFeaturesByMerchant: trainer.Required_Features_by_Merchant__c,
         createdDate: trainer.CreatedDate,
         lastModifiedDate: trainer.LastModifiedDate
       }]
