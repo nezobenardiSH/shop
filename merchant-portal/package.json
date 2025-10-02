@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3010",
-    "build": "next build",
-    "start": "next start -p 3010",
-    "lint": "next lint"
+    "build": "prisma generate && next build",
+    "start": "next start -p $PORT",
+    "lint": "next lint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
