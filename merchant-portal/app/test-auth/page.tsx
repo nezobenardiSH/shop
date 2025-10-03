@@ -29,8 +29,8 @@ export default function TestAuthPage() {
           router.push(`/merchant/${merchantId}`)
         }, 2000)
       }
-    } catch (error) {
-      setResult({ error: error.message })
+    } catch (error: any) {
+      setResult({ error: error?.message || 'An error occurred' })
     } finally {
       setLoading(false)
     }
