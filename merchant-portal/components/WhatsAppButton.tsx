@@ -32,9 +32,6 @@ export default function WhatsAppButton() {
 
           {/* Button */}
           <div className="relative flex items-center justify-center w-14 h-14 bg-green-500 rounded-full shadow-lg hover:shadow-xl transform transition-all duration-300 hover:scale-110 group-hover:bg-green-600">
-            {/* Pulse animation */}
-            <div className="absolute inset-0 rounded-full bg-green-500 opacity-75 animate-ping"></div>
-            
             {/* WhatsApp Icon */}
             <svg 
               className="w-8 h-8 text-white relative z-10" 
