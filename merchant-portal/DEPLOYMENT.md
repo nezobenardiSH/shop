@@ -49,6 +49,10 @@ git push origin main
 
 ## 4. Deploy to Render
 
+### ⚠️ CRITICAL SECURITY WARNING ⚠️
+**The application WILL NOT be secure without setting JWT_SECRET!**
+Without this, anyone can access merchant pages without authentication.
+
 ### Option A: Using Render Dashboard (Recommended)
 
 1. **Create New Web Service**
@@ -66,14 +70,18 @@ git push origin main
    - **Build Command**: `npm install && npm run build`
    - **Start Command**: `npm start`
 
-3. **Set Environment Variables** (CRITICAL)
+3. **Set Environment Variables** (ABSOLUTELY CRITICAL)
    ```
-   JWT_SECRET=<your-generated-secret>
+   JWT_SECRET=<your-generated-secret>  ⚠️ REQUIRED FOR SECURITY
    NODE_ENV=production
    SF_USERNAME=<your-salesforce-username>
    SF_PASSWORD=<your-salesforce-password>
    SF_TOKEN=<your-salesforce-token>
    SF_LOGIN_URL=https://test.salesforce.com
+   SALESFORCE_USERNAME=<same-as-SF_USERNAME>
+   SALESFORCE_PASSWORD=<same-as-SF_PASSWORD>
+   SALESFORCE_SECURITY_TOKEN=<same-as-SF_TOKEN>
+   SALESFORCE_LOGIN_URL=<same-as-SF_LOGIN_URL>
    ```
 
 4. **Advanced Settings**
