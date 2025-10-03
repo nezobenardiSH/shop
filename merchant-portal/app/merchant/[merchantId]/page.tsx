@@ -624,6 +624,10 @@ export default function TrainerPortal() {
                             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Preferred Language</div>
                             <div className="text-gray-900">{trainer.preferredLanguage || 'N/A'}</div>
                           </div>
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
+                            <div className="text-gray-900">{trainer.onboardingServicesBought || 'N/A'}</div>
+                          </div>
                         </div>
 
                         {/* Right Column */}
