@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import BookingModal from '@/components/BookingModal'
 import OnboardingTimeline from '@/components/OnboardingTimeline'
+import WhatsAppButton from '@/components/WhatsAppButton'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -806,6 +807,9 @@ export default function TrainerPortal() {
           onBookingComplete={handleBookingComplete}
         />
       )}
+      
+      {/* WhatsApp Floating Button */}
+      <WhatsAppButton />
     </div>
   )
 }
