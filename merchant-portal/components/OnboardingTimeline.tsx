@@ -99,44 +99,74 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   }
 
   useEffect(() => {
-    // Determine which main stage is current based on Salesforce data
-    const currentMappedStage = currentStage ? stageMapping[currentStage] : null
+    // Determine stage statuses based on business rules
+    const timelineStages: TimelineStage[] = []
     
-    // Map the current stage to main stage
-    let currentMainStageId = currentMappedStage
-    if (currentMappedStage && ['product-setup', 'hardware-fulfillment', 'hardware-installation', 'training'].includes(currentMappedStage)) {
-      currentMainStageId = 'implementation'
-    }
+    // 1. Welcome Call Stage
+    const welcomeCallCompleted = trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
+                                 trainerData?.welcomeCallStatus === 'Completed'
     
-    // Find the index of the current main stage
-    const currentIndex = currentMainStageId 
-      ? mainStages.findIndex(s => s.id === currentMainStageId)
-      : -1
-
-    // Build the timeline stages with their statuses
-    const timelineStages: TimelineStage[] = mainStages.map((stage, index) => {
-      let status: 'completed' | 'current' | 'pending' = 'pending'
-      
-      if (currentIndex >= 0) {
-        if (index < currentIndex) {
-          status = 'completed'
-        } else if (index === currentIndex) {
-          status = 'current'
-        } else {
-          status = 'pending'
-        }
-      }
-
-      return {
-        id: stage.id,
-        label: stage.label,
-        status,
-        completedDate: undefined
-      }
+    timelineStages.push({
+      id: 'welcome-call',
+      label: 'Welcome Call',
+      status: welcomeCallCompleted ? 'completed' : 
+              (trainerData?.welcomeCallStatus && trainerData.welcomeCallStatus !== 'Not Started' ? 'current' : 'pending'),
+      completedDate: trainerData?.firstCallTimestamp
+    })
+    
+    // 2. Implementation Stage
+    // Check if all implementation sub-stages are completed
+    const productSetupCompleted = trainerData?.productSetupStatus === 'Completed' || 
+                                  trainerData?.productSetupStatus === 'Product Setup Completed'
+    const hardwareDeliveryCompleted = trainerData?.hardwareDeliveryStatus === 'Completed' || 
+                                      trainerData?.hardwareDeliveryStatus === 'Hardware Delivered'
+    const installationCompleted = trainerData?.hardwareInstallationStatus === 'Completed' || 
+                                  trainerData?.hardwareInstallationStatus === 'Installation Completed'
+    const trainingCompleted = trainerData?.trainingStatus === 'Completed' || 
+                             trainerData?.trainingStatus === 'Training Completed'
+    
+    const allImplementationCompleted = productSetupCompleted && 
+                                       hardwareDeliveryCompleted && 
+                                       installationCompleted && 
+                                       trainingCompleted
+    
+    const implementationInProgress = welcomeCallCompleted && !allImplementationCompleted
+    
+    timelineStages.push({
+      id: 'implementation',
+      label: 'Implementation',
+      status: allImplementationCompleted ? 'completed' : 
+              (implementationInProgress ? 'current' : 'pending'),
+      completedDate: undefined
+    })
+    
+    // 3. Go Live Stage
+    const goLiveInProgress = allImplementationCompleted && 
+                            (!trainerData?.firstRevisedEGLD || new Date(trainerData.firstRevisedEGLD) > new Date())
+    const goLiveCompleted = allImplementationCompleted && 
+                           trainerData?.firstRevisedEGLD && 
+                           new Date(trainerData.firstRevisedEGLD) <= new Date()
+    
+    timelineStages.push({
+      id: 'go-live',
+      label: 'Go Live',
+      status: goLiveCompleted ? 'completed' : 
+              (goLiveInProgress ? 'current' : 'pending'),
+      completedDate: trainerData?.firstRevisedEGLD
+    })
+    
+    // 4. Post Go Live Stage
+    const postGoLiveActive = goLiveCompleted
+    
+    timelineStages.push({
+      id: 'post-go-live',
+      label: 'Post Go Live',
+      status: postGoLiveActive ? 'current' : 'pending',
+      completedDate: undefined
     })
 
     setStages(timelineStages)
-  }, [currentStage, stageData])
+  }, [trainerData])
 
   const getStageIcon = (stage: TimelineStage, index: number) => {
     if (stage.status === 'completed') {
@@ -413,10 +443,66 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
         {selectedStage === 'implementation' && (
           <div className="space-y-4">
+            {/* Implementation Progress Overview */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
+              <h4 className="text-sm font-semibold text-blue-800 mb-2">Implementation Progress</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="flex items-center gap-2">
+                  {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') ? 
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg> :
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  <span className="text-xs">Product Setup</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(trainerData?.hardwareDeliveryStatus === 'Completed' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') ?
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg> :
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  <span className="text-xs">Hardware Delivery</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') ?
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg> :
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  <span className="text-xs">Installation</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') ?
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg> :
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  <span className="text-xs">Training</span>
+                </div>
+              </div>
+            </div>
+            
             {/* Product Setup */}
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-              <span className="mr-2">⚙️</span> Product Setup
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+              <span className="flex items-center">
+                <span className="mr-2">⚙️</span> Product Setup
+              </span>
+              {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') &&
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+              }
             </h4>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -499,8 +585,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
             {/* Hardware Fulfillment */}
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-              <span className="mr-2">📦</span> Hardware Fulfillment
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+              <span className="flex items-center">
+                <span className="mr-2">📦</span> Hardware Fulfillment
+              </span>
+              {(trainerData?.hardwareDeliveryStatus === 'Completed' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') &&
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+              }
             </h4>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -548,8 +639,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
             {/* Hardware Installation */}
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-              <span className="mr-2">🔧</span> Hardware Installation
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+              <span className="flex items-center">
+                <span className="mr-2">🔧</span> Hardware Installation
+              </span>
+              {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') &&
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+              }
             </h4>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -604,8 +700,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
             {/* Training */}
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-              <span className="mr-2">🎓</span> Training
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+              <span className="flex items-center">
+                <span className="mr-2">🎓</span> Training
+              </span>
+              {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') &&
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+              }
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
