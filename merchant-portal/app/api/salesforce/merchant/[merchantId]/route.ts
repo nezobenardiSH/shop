@@ -57,6 +57,7 @@ export async function GET(
                Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c, 
                Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c, 
                Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
+               Synced_Quote_Total_Amount__c, Pending_Payment__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         ORDER BY Name LIMIT 50
@@ -264,6 +265,8 @@ export async function GET(
         preferredLanguage: trainer.Preferred_Language__c,
         plannedGoLiveDate: trainer.Planned_Go_Live_Date__c,
         requiredFeaturesByMerchant: trainer.Required_Features_by_Merchant__c,
+        syncedQuoteTotalAmount: trainer.Synced_Quote_Total_Amount__c,
+        pendingPayment: trainer.Pending_Payment__c,
         createdDate: trainer.CreatedDate,
         lastModifiedDate: trainer.LastModifiedDate
       }]

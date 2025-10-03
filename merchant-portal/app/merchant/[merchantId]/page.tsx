@@ -632,6 +632,53 @@ export default function TrainerPortal() {
                 </div>
               )}
 
+              {/* Payment Section */}
+              {trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
+                <div className="mt-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">💳 Payment Information</h3>
+                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                    {(() => {
+                      const trainer = trainerData.onboardingTrainerData.trainers[0];
+                      const currencyInfo = getCurrencyInfo(trainer.shippingCountry || '');
+                      
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Quote Total Amount */}
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">
+                              Quote Total Amount
+                            </div>
+                            <div className="text-2xl font-bold text-blue-900">
+                              {trainer.syncedQuoteTotalAmount !== null && trainer.syncedQuoteTotalAmount !== undefined 
+                                ? formatCurrency(trainer.syncedQuoteTotalAmount, currencyInfo)
+                                : 'Not Available'}
+                            </div>
+                            <div className="text-sm text-blue-600 mt-1">
+                              Synced from quote
+                            </div>
+                          </div>
+                          
+                          {/* Pending Payment */}
+                          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                            <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
+                              Pending Payment
+                            </div>
+                            <div className="text-2xl font-bold text-amber-900">
+                              {trainer.pendingPayment !== null && trainer.pendingPayment !== undefined
+                                ? formatCurrency(trainer.pendingPayment, currencyInfo)
+                                : 'Not Available'}
+                            </div>
+                            <div className="text-sm text-amber-600 mt-1">
+                              Amount outstanding
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
               {/* Product Section */}
               {trainerData.orderItems && trainerData.orderItems.length > 0 && (() => {
                 // Group products by order type
