@@ -7,6 +7,8 @@ interface TimelineStage {
   label: string
   status: 'completed' | 'current' | 'pending'
   completedDate?: string
+  completedCount?: number
+  totalCount?: number
 }
 
 interface OnboardingTimelineProps {
@@ -42,7 +44,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         { id: 'product-setup', label: 'Product Setup', sfValue: 'Product Setup' },
         { id: 'hardware-fulfillment', label: 'Hardware Fulfillment', sfValue: 'Hardware Fulfillment' },
         { id: 'hardware-installation', label: 'Installation', sfValue: 'Hardware Installation' },
-        { id: 'training', label: 'Training', sfValue: 'Training' }
+        { id: 'training', label: 'Training', sfValue: 'Training' },
+        { id: 'store-readiness', label: 'Store Readiness', sfValue: 'Store Readiness' }
       ]
     },
     { 
@@ -128,11 +131,18 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                              trainerData?.trainingStatus === 'Training Completed'
     const storeReadinessCompleted = trainerData?.videoProofLink || uploadedVideoUrl
     
-    const allImplementationCompleted = productSetupCompleted && 
-                                       hardwareDeliveryCompleted && 
-                                       installationCompleted && 
-                                       trainingCompleted &&
-                                       storeReadinessCompleted
+    // Count completed implementation sub-stages
+    const implementationSubStages = [
+      productSetupCompleted,
+      hardwareDeliveryCompleted,
+      installationCompleted,
+      trainingCompleted,
+      storeReadinessCompleted
+    ]
+    const completedImplementationCount = implementationSubStages.filter(Boolean).length
+    const totalImplementationStages = 5
+    
+    const allImplementationCompleted = completedImplementationCount === totalImplementationStages
     
     const implementationInProgress = welcomeCallCompleted && !allImplementationCompleted
     
@@ -141,7 +151,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       label: 'Implementation',
       status: allImplementationCompleted ? 'completed' : 
               (implementationInProgress ? 'current' : 'pending'),
-      completedDate: undefined
+      completedDate: undefined,
+      // Add custom properties for the completion count
+      completedCount: completedImplementationCount,
+      totalCount: totalImplementationStages
     })
     
     // 3. Go Live Stage
@@ -296,7 +309,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     </div>
                     {stage.id === 'implementation' && (
                       <div className="text-xs text-gray-500 mt-1">
-                        (4 sub-stages)
+                        {stage.completedCount}/{stage.totalCount} completed
                       </div>
                     )}
                     <div className="mt-1">
@@ -344,6 +357,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     }`}>
                       {stage.label}
                     </div>
+                    {stage.id === 'implementation' && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {stage.completedCount}/{stage.totalCount} completed
+                      </div>
+                    )}
                     <div className="mt-1">
                       {getStatusText(stage)}
                     </div>
@@ -395,6 +413,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 }`}>
                   {stage.label}
                 </div>
+                {stage.id === 'implementation' && (
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {stage.completedCount}/{stage.totalCount} completed
+                  </div>
+                )}
                 <div className="mt-1">
                   {getStatusText(stage)}
                 </div>
