@@ -204,10 +204,10 @@ export default function BookingModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-2xl font-semibold flex items-center gap-2">
-            <Calendar className="h-6 w-6 text-blue-600" />
+      <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-[#e5e7eb] flex justify-between items-center">
+          <h2 className="text-2xl font-semibold text-[#0b0707] flex items-center gap-2">
+            <Calendar className="h-6 w-6 text-[#ff630f]" />
             {(() => {
               switch(bookingType) {
                 case 'hardware-fulfillment':
@@ -225,7 +225,7 @@ export default function BookingModal({
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-[#6b6a6a] hover:text-[#0b0707] transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -234,22 +234,22 @@ export default function BookingModal({
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
           {loading ? (
             <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff630f]"></div>
             </div>
           ) : currentBooking ? (
             <div className="space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4">Current Booking</h3>
-                <p className="text-gray-700 mb-2">
+              <div className="bg-[#fff4ed] border border-[#ff630f] rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-[#0b0707] mb-4">Current Booking</h3>
+                <p className="text-[#6b6a6a] mb-2">
                   Date: <span className="font-medium">{currentBooking.date}</span>
                 </p>
-                <p className="text-gray-700 mb-4">
+                <p className="text-[#6b6a6a] mb-4">
                   Time: <span className="font-medium">{currentBooking.time}</span>
                 </p>
                 <button
                   onClick={handleCancellation}
                   disabled={bookingStatus === 'loading'}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:bg-gray-400"
+                  className="bg-red-500 hover:bg-red-600 text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105 disabled:bg-gray-400"
                 >
                   {bookingStatus === 'loading' ? 'Cancelling...' : 'Cancel Booking'}
                 </button>
@@ -258,7 +258,7 @@ export default function BookingModal({
           ) : (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold mb-4">Select Date</h3>
+                <h3 className="text-lg font-semibold text-[#0b0707] mb-4">Select Date</h3>
                 <div className="grid grid-cols-7 gap-2">
                   {availability.slice(0, 28).map((day) => {
                     const hasAvailableSlots = day.slots.some(slot => slot.available)
@@ -268,11 +268,11 @@ export default function BookingModal({
                         onClick={() => setSelectedDate(day.date)}
                         disabled={!hasAvailableSlots}
                         className={`
-                          p-3 rounded-lg text-center transition-colors
+                          p-3 rounded-xl text-center transition-colors
                           ${selectedDate === day.date
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-[#ff630f] text-white'
                             : hasAvailableSlots
-                            ? 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                            ? 'bg-gray-100 hover:bg-[#fff4ed] text-[#0b0707]'
                             : 'bg-gray-50 text-gray-400 cursor-not-allowed'
                           }
                         `}
@@ -287,7 +287,7 @@ export default function BookingModal({
 
               {selectedDate && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Select Time Slot</h3>
+                  <h3 className="text-lg font-semibold text-[#0b0707] mb-4">Select Time Slot</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {availability
                       .find(day => day.date === selectedDate)
@@ -297,11 +297,11 @@ export default function BookingModal({
                           onClick={() => setSelectedSlot(slot)}
                           disabled={!slot.available}
                           className={`
-                            p-3 rounded-lg flex flex-col items-start gap-1 transition-colors
+                            p-3 rounded-xl flex flex-col items-start gap-1 transition-colors
                             ${selectedSlot === slot
-                              ? 'bg-blue-600 text-white'
+                              ? 'bg-[#ff630f] text-white'
                               : slot.available
-                              ? 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                              ? 'bg-gray-100 hover:bg-[#fff4ed] text-[#0b0707]'
                               : 'bg-gray-50 text-gray-400 cursor-not-allowed'
                             }
                           `}
@@ -326,18 +326,18 @@ export default function BookingModal({
               )}
 
               {selectedDate && selectedSlot && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">Booking Summary</h4>
-                  <p className="text-sm text-gray-600">
-                    Date: <span className="font-medium text-gray-900">{formatDate(selectedDate)}</span>
+                <div className="bg-[#faf9f6] rounded-xl p-4">
+                  <h4 className="font-semibold text-[#0b0707] mb-2">Booking Summary</h4>
+                  <p className="text-sm text-[#6b6a6a]">
+                    Date: <span className="font-medium text-[#0b0707]">{formatDate(selectedDate)}</span>
                   </p>
-                  <p className="text-sm text-gray-600">
-                    Time: <span className="font-medium text-gray-900">
+                  <p className="text-sm text-[#6b6a6a]">
+                    Time: <span className="font-medium text-[#0b0707]">
                       {formatTime(selectedSlot.start)} - {formatTime(selectedSlot.end)}
                     </span>
                   </p>
-                  <p className="text-sm text-gray-600">
-                    Trainer: <span className="font-medium text-gray-900">{trainerName}</span>
+                  <p className="text-sm text-[#6b6a6a]">
+                    Trainer: <span className="font-medium text-[#0b0707]">{trainerName}</span>
                   </p>
                 </div>
               )}
@@ -346,7 +346,7 @@ export default function BookingModal({
 
           {message && (
             <div className={`
-              mt-4 p-4 rounded-lg
+              mt-4 p-4 rounded-2xl
               ${bookingStatus === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : ''}
               ${bookingStatus === 'error' ? 'bg-red-50 text-red-800 border border-red-200' : ''}
             `}>
@@ -365,10 +365,10 @@ export default function BookingModal({
           )}
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+        <div className="p-6 border-t border-[#e5e7eb] flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            className="bg-white hover:bg-gray-50 text-[#0b0707] font-medium rounded-full px-6 py-2.5 border border-[#e5e7eb] transition-all duration-200"
           >
             Cancel
           </button>
@@ -376,7 +376,7 @@ export default function BookingModal({
             <button
               onClick={handleBooking}
               disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading'}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+              className="bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105 disabled:bg-gray-400"
             >
               {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}
             </button>

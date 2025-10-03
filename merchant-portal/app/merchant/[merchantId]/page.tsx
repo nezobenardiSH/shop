@@ -329,15 +329,15 @@ export default function TrainerPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-[#faf9f6] py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="mb-8 flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-[#0b0707]">
               🎯 {trainerName.replace(/-/g, ' ')}
             </h1>
             {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-[#6b6a6a] mt-2">
                 Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleDateString()}
               </p>
             )}
@@ -346,7 +346,7 @@ export default function TrainerPortal() {
             <button
               onClick={loadTrainerData}
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+              className="bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white font-medium py-2.5 px-6 rounded-full transition-all duration-200 transform hover:scale-105 flex items-center gap-2"
             >
               {loading ? (
                 <>
@@ -375,7 +375,7 @@ export default function TrainerPortal() {
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+              className="bg-white hover:bg-gray-50 disabled:bg-gray-200 text-[#0b0707] border border-[#e5e7eb] font-medium py-2.5 px-6 rounded-full transition-all duration-200 flex items-center gap-2"
             >
             {loggingOut ? (
               <>
@@ -397,7 +397,7 @@ export default function TrainerPortal() {
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div>
           {successMessage && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="text-green-700 font-medium whitespace-pre-line">{successMessage}</div>
@@ -489,13 +489,13 @@ export default function TrainerPortal() {
                   <div className="flex gap-2">
                     {editData.trainingDate ? (
                       <>
-                        <div className="flex-1 px-3 py-2 border border-blue-300 rounded-md bg-gray-50">
+                        <div className="flex-1 px-4 py-2.5 border border-[#e5e7eb] rounded-full bg-[#faf9f6]">
                           {formatDate(editData.trainingDate)}
                         </div>
                         <button
                           type="button"
                           onClick={() => handleOpenBookingModal(editData)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                          className="px-4 py-2 bg-[#ff630f] text-white rounded-full hover:bg-[#fe5b25] transition-all duration-200"
                         >
                           📅 Reschedule
                         </button>
@@ -504,7 +504,7 @@ export default function TrainerPortal() {
                       <button
                         type="button"
                         onClick={() => handleOpenBookingModal(editData)}
-                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        className="w-full px-4 py-2.5 bg-[#ff630f] text-white rounded-full hover:bg-[#fe5b25] transition-all duration-200 transform hover:scale-105"
                       >
                         📅 Book Training via Lark
                       </button>
@@ -791,8 +791,6 @@ export default function TrainerPortal() {
             )
           })() : null}
 
-
-        </div>
       </div>
 
       {/* Booking Modal */}
@@ -814,6 +812,7 @@ export default function TrainerPortal() {
       
       {/* WhatsApp Floating Button */}
       <WhatsAppButton />
+      </div>
     </div>
   )
 }

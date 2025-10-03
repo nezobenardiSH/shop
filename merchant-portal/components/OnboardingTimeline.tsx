@@ -188,7 +188,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   const getStageIcon = (stage: TimelineStage, index: number) => {
     if (stage.status === 'completed') {
       return (
-        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white shadow-lg">
+        <div className="w-10 h-10 bg-[#ff630f] rounded-full flex items-center justify-center text-white shadow-lg">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
@@ -196,9 +196,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       )
     } else if (stage.status === 'current') {
       return (
-        <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white shadow-md ring-4 ring-purple-200">
+        <div className="w-10 h-10 bg-[#ff630f] rounded-full flex items-center justify-center text-white shadow-md ring-4 ring-[#ff630f]/20">
           <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-            <span className="text-purple-600 font-bold text-sm">{index + 1}</span>
+            <span className="text-[#ff630f] font-bold text-sm">{index + 1}</span>
           </div>
         </div>
       )
@@ -276,8 +276,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
-      <h3 className="text-xl font-bold text-gray-900 mb-6">🚀 Onboarding Timeline</h3>
+    <div className="bg-white border border-[#e5e7eb] rounded-2xl p-6">
+      <h3 className="text-xl font-bold text-[#0b0707] mb-6">🚀 Onboarding Timeline</h3>
       
       {/* Desktop Timeline (Horizontal) */}
       <div className="hidden lg:block overflow-x-auto">
@@ -290,7 +290,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   onClick={() => setSelectedStage(stage.id)}
                 >
                   {/* Step Number */}
-                  <div className="text-xs text-gray-500 mb-2">Step {index + 1}</div>
+                  <div className="text-xs text-[#6b6a6a] mb-2">Step {index + 1}</div>
                   
                   {/* Stage Icon */}
                   <div className="relative z-10">
@@ -300,10 +300,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   {/* Stage Label */}
                   <div className="mt-3 text-center max-w-[120px]">
                     <div className={`text-sm font-semibold ${
-                      selectedStage === stage.id ? 'text-purple-700' :
-                      stage.status === 'completed' ? 'text-gray-800' :
-                      stage.status === 'current' ? 'text-purple-700' :
-                      'text-gray-600'
+                      selectedStage === stage.id ? 'text-[#ff630f]' :
+                      stage.status === 'completed' ? 'text-[#0b0707]' :
+                      stage.status === 'current' ? 'text-[#ff630f]' :
+                      'text-[#6b6a6a]'
                     }`}>
                       {stage.label}
                     </div>
@@ -445,19 +445,19 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       {/* Stage Details Section - Shows only selected stage */}
       <div className="mt-6">
         {selectedStage === 'welcome-call' && (
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
+            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center">
               <span className="mr-2">📞</span> Welcome Call Details
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Call Status</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Call Status</div>
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.welcomeCallStatus || 'Not Started'}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Call Timestamp</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">First Call Timestamp</div>
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.firstCallTimestamp 
                     ? new Date(trainerData.firstCallTimestamp).toLocaleString() 
@@ -465,7 +465,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">MSM Name</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">MSM Name</div>
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.msmName || 'Not Assigned'}
                 </div>
@@ -539,25 +539,25 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             </div>
             
             {/* Product Setup */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
+            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
               <span className="flex items-center">
                 <span className="mr-2">⚙️</span> Product Setup
               </span>
               {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') &&
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Product Setup Status</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Product Setup Status</div>
                   <div className="text-sm font-medium text-gray-900">
                     {trainerData?.productSetupStatus || 'Not Started'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed Product Setup</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Completed Product Setup</div>
                   <div className="text-sm font-medium text-gray-900">
                     {trainerData?.completedProductSetup 
                       ? new Date(trainerData.completedProductSetup).toLocaleDateString() 
@@ -568,7 +568,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               
               {trainerData?.boAccountName && (
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">StoreHub Account</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">StoreHub Account</div>
                   <a
                     href={`https://${trainerData.boAccountName}.storehubhq.com/`}
                     target="_blank"
@@ -628,25 +628,25 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
 
             {/* Hardware Fulfillment */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
+            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
               <span className="flex items-center">
                 <span className="mr-2">📦</span> Hardware Fulfillment
               </span>
               {(trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') &&
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Hardware Delivery Status</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Hardware Delivery Status</div>
                   <div className="text-sm font-medium text-gray-900">
                     {trainerData?.hardwareDeliveryStatus || 'Not Started'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Hardware Fulfillment Date</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Hardware Fulfillment Date</div>
                   <div className="flex items-center gap-2">
                     <div className="text-sm font-medium text-gray-900">
                       {trainerData?.hardwareFulfillmentDate 
@@ -682,25 +682,25 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
 
             {/* Hardware Installation */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
+            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
               <span className="flex items-center">
                 <span className="mr-2">🔧</span> Hardware Installation
               </span>
               {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') &&
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Status</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Status</div>
                   <div className="text-sm font-medium text-gray-900">
                     {trainerData?.hardwareInstallationStatus || 'Not Started'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Date</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Date</div>
                   <div className="flex items-center gap-2">
                     <div className="text-sm font-medium text-gray-900">
                       {trainerData?.installationDate 
@@ -709,7 +709,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     </div>
                     <button
                       onClick={() => handleBookingClick('installation', trainerData?.installationDate)}
-                      className="text-blue-600 hover:text-blue-700 text-sm"
+                      className="text-[#ff630f] hover:text-[#fe5b25] text-sm transition-colors"
                       title="Book with Lark Calendar"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -722,7 +722,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Actual Installation Date</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Actual Installation Date</div>
                   <div className="text-sm font-medium text-gray-900">
                     {trainerData?.actualInstallationDate 
                       ? new Date(trainerData.actualInstallationDate).toLocaleDateString() 
@@ -733,7 +733,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               
               {trainerData?.installationIssuesElaboration && (
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Issues</div>
+                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Issues</div>
                   <div className="text-sm text-gray-900 bg-yellow-50 p-2 rounded border border-yellow-200">
                     {trainerData.installationIssuesElaboration}
                   </div>
@@ -743,24 +743,24 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
 
             {/* Training */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
+            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
               <span className="flex items-center">
                 <span className="mr-2">🎓</span> Training
               </span>
               {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') &&
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Status</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Training Status</div>
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.trainingStatus || 'Not Started'}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Date</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Training Date</div>
                 <div className="flex items-center gap-2">
                   <div className="text-sm font-medium text-gray-900">
                     {trainerData?.trainingDate 
@@ -779,7 +779,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CSM Name</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">CSM Name</div>
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.csmName || 'Not Assigned'}
                 </div>
@@ -788,18 +788,18 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
 
             {/* Store Readiness */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
+            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
               <span className="flex items-center">
                 <span className="mr-2">📹</span> Store Readiness
               </span>
               {(trainerData?.videoProofLink || uploadedVideoUrl) &&
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
             <div className="space-y-4">
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Proof</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Video Proof</div>
                 {trainerData?.videoProofLink || uploadedVideoUrl ? (
                   <div className="flex items-center gap-2">
                     <a 
@@ -867,7 +867,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   <button
                     onClick={() => document.getElementById('video-upload')?.click()}
                     disabled={uploadingVideo}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-6 py-2.5 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white font-medium rounded-full transition-all duration-200 transform hover:scale-105 disabled:cursor-not-allowed"
                   >
                     {uploadingVideo ? (
                       <>
@@ -894,13 +894,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         )}
 
         {selectedStage === 'go-live' && (
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
+            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center">
               <span className="mr-2">🚀</span> Go Live
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Planned Go-Live Date</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Planned Go-Live Date</div>
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.plannedGoLiveDate 
                     ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString() 
@@ -908,7 +908,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Revised EGLD</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">First Revised EGLD</div>
                 {editingGoLiveDate ? (
                   <div className="flex items-center gap-2">
                     <input
@@ -960,7 +960,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           ? new Date(trainerData.firstRevisedEGLD).toISOString().split('T')[0]
                           : new Date().toISOString().split('T')[0])
                       }}
-                      className="text-blue-600 hover:text-blue-700 text-sm"
+                      className="text-[#ff630f] hover:text-[#fe5b25] text-sm transition-colors"
                       title="Set Go-Live Date"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -975,8 +975,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         )}
 
         {selectedStage === 'post-go-live' && (
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
+            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center">
               <span className="mr-2">✅</span> Post Go Live Check In
             </h4>
             <div className="text-sm text-gray-600">Scheduled after go-live completion</div>
