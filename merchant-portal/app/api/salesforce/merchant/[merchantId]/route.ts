@@ -187,9 +187,9 @@ export async function GET(
     }
 
     // Get OrderItems and Shipment data associated with this Account
-    let orderItems = []
-    let hardwareFulfillmentDate = null
-    let trackingLink = null
+    let orderItems: any[] = []
+    let hardwareFulfillmentDate: string | null = null
+    let trackingLink: string | null = null
     if (account) {
       try {
         // First get Orders for this Account with Type field and Hardware Fulfillment Date
@@ -271,7 +271,6 @@ export async function GET(
         firstRevisedEGLD: trainer.First_Revised_EGLD__c,
         onboardingTrainerStage: trainer.Onboarding_Trainer_Stage__c,
         installationDate: trainer.Installation_Date__c,
-        trainingDate: trainer.Training_Date__c,
         phoneNumber: trainer.Phone_Number__c,
         merchantPICContactNumber: trainer.Merchant_PIC_Contact_Number__c,
         operationManagerContact: trainer.Operation_Manager_Contact__r ? {
