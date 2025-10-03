@@ -23,6 +23,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   const [updatingField, setUpdatingField] = useState<string | null>(null)
   const [editingGoLiveDate, setEditingGoLiveDate] = useState(false)
   const [goLiveDateValue, setGoLiveDateValue] = useState('')
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null)
 
   // Define the main 4 stages with sub-stages
   const mainStages = [
@@ -124,11 +126,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                                   trainerData?.hardwareInstallationStatus === 'Installation Completed'
     const trainingCompleted = trainerData?.trainingStatus === 'Completed' || 
                              trainerData?.trainingStatus === 'Training Completed'
+    const storeReadinessCompleted = trainerData?.videoProofLink || uploadedVideoUrl
     
     const allImplementationCompleted = productSetupCompleted && 
                                        hardwareDeliveryCompleted && 
                                        installationCompleted && 
-                                       trainingCompleted
+                                       trainingCompleted &&
+                                       storeReadinessCompleted
     
     const implementationInProgress = welcomeCallCompleted && !allImplementationCompleted
     
@@ -446,7 +450,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             {/* Implementation Progress Overview */}
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
               <h4 className="text-sm font-semibold text-blue-800 mb-2">Implementation Progress</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 <div className="flex items-center gap-2">
                   {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') ? 
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -490,6 +494,17 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     </svg>
                   }
                   <span className="text-xs">Training</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(trainerData?.videoProofLink || uploadedVideoUrl) ?
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg> :
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  <span className="text-xs">Store Readiness</span>
                 </div>
               </div>
             </div>
@@ -738,6 +753,110 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CSM Name</div>
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.csmName || 'Not Assigned'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+            {/* Store Readiness */}
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+              <span className="flex items-center">
+                <span className="mr-2">📹</span> Store Readiness
+              </span>
+              {(trainerData?.videoProofLink || uploadedVideoUrl) &&
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+              }
+            </h4>
+            <div className="space-y-4">
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Proof</div>
+                {trainerData?.videoProofLink || uploadedVideoUrl ? (
+                  <div className="flex items-center gap-2">
+                    <a 
+                      href={uploadedVideoUrl || trainerData?.videoProofLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
+                    >
+                      View Uploaded Video
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 italic">No video uploaded</div>
+                )}
+              </div>
+              
+              <div className="pt-2 border-t border-gray-200">
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Upload Store Video</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="video-upload"
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      
+                      setUploadingVideo(true)
+                      try {
+                        const formData = new FormData()
+                        formData.append('file', file)
+                        formData.append('trainerId', trainerData?.id || '')
+                        
+                        const response = await fetch('/api/salesforce/upload-video', {
+                          method: 'POST',
+                          body: formData
+                        })
+                        
+                        if (!response.ok) {
+                          const error = await response.json()
+                          throw new Error(error.details || error.error || 'Failed to upload video')
+                        }
+                        
+                        const result = await response.json()
+                        setUploadedVideoUrl(result.fileUrl)
+                        
+                        // Refresh the page data
+                        if (onBookingComplete) {
+                          onBookingComplete()
+                        }
+                      } catch (error) {
+                        console.error('Error uploading video:', error)
+                        alert(error instanceof Error ? error.message : 'Failed to upload video')
+                      } finally {
+                        setUploadingVideo(false)
+                        // Reset the input
+                        e.target.value = ''
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => document.getElementById('video-upload')?.click()}
+                    disabled={uploadingVideo}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed"
+                  >
+                    {uploadingVideo ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        Upload Video
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>

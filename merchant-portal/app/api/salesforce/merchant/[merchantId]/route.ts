@@ -57,6 +57,7 @@ export async function GET(
                Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c, 
                Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c, 
                Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
+               Video_Proof_Link__c,
                Synced_Quote_Total_Amount__c, Pending_Payment__c,
                Welcome_Call_Status__c, First_Call_Timestamp__c, MSM_Name__c, MSM_Name__r.Name,
                Product_Setup_Status__c, Completed_product_setup__c,
@@ -312,6 +313,7 @@ export async function GET(
         trackingLink: trackingLink,
         menuCollectionFormLink: trainer.Menu_Collection_Form_Link__c,
         boAccountName: trainer.BO_Account_Name__c,
+        videoProofLink: trainer.Video_Proof_Link__c,
         createdDate: trainer.CreatedDate,
         lastModifiedDate: trainer.LastModifiedDate
       }]
