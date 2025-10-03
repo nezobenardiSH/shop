@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'development-secret-key-change-in-production'
-)
+// Ensure we have a proper JWT secret
+const jwtSecretString = process.env.JWT_SECRET || 'development-secret-key-change-in-production'
+if (!process.env.JWT_SECRET) {
+  console.warn('[Middleware] WARNING: Using default JWT_SECRET. Set JWT_SECRET environment variable in production!')
+}
+
+const JWT_SECRET = new TextEncoder().encode(jwtSecretString)
 
 async function verifyTokenEdge(token: string) {
   try {
@@ -18,11 +22,16 @@ async function verifyTokenEdge(token: string) {
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   
+  // Debug logging for production
+  console.log('[Middleware] Processing path:', path)
+  
   // Only protect /merchant/* routes (but not API routes)
   if (path.startsWith('/merchant/') && !path.includes('/api/')) {
+    console.log('[Middleware] Protecting merchant route:', path)
     const token = request.cookies.get('auth-token')
     
     if (!token) {
+      console.log('[Middleware] No auth token found, redirecting to login')
       // Preserve the original URL for redirect after login
       const merchantId = path.split('/')[2]
       const loginUrl = new URL(`/login/${merchantId}`, request.url)
@@ -30,9 +39,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
     
+    console.log('[Middleware] Found auth token, verifying...')
     const payload = await verifyTokenEdge(token.value)
     
     if (!payload) {
+      console.log('[Middleware] Token invalid or expired, redirecting to login')
       // Token is invalid or expired
       const merchantId = path.split('/')[2]
       const loginUrl = new URL(`/login/${merchantId}`, request.url)
@@ -44,6 +55,8 @@ export async function middleware(request: NextRequest) {
       response.cookies.delete('auth-token')
       return response
     }
+    
+    console.log('[Middleware] Token valid for merchant:', payload.merchantId)
     
     // Verify token matches the merchantId in URL (case-insensitive comparison)
     const urlMerchantId = path.split('/')[2]
@@ -67,7 +80,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - login (login page)
+     * - public assets
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|login).*)',
+    '/merchant/:path*',
+    '/((?!api|_next/static|_next/image|favicon.ico|login|public).*)',
   ]
 }
