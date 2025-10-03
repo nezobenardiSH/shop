@@ -379,51 +379,57 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         </div>
       </div>
       
-      {/* Mobile Timeline (Vertical) */}
-      <div className="block md:hidden">
-        <div className="relative">
-          {stages.map((stage, index) => (
-            <div 
-              key={stage.id} 
-              className="flex items-start mb-6 last:mb-0 cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setSelectedStage(stage.id)}
-            >
-              <div className="flex flex-col items-center mr-4">
-                {/* Step Number */}
-                <div className="text-xs text-gray-500 mb-1">Step {index + 1}</div>
-                
-                {/* Stage Icon */}
-                <div className="relative z-10">
-                  {getStageIcon(stage, index)}
+      {/* Mobile Timeline (Horizontal Scrollable - Compact) */}
+      <div className="block md:hidden overflow-x-auto pb-1">
+        <div className="relative min-w-max">
+          <div className="flex items-center justify-between" style={{ minWidth: '500px' }}>
+            {stages.map((stage, index) => (
+              <div key={stage.id} className="flex items-center">
+                <div 
+                  className="relative flex flex-col items-center px-2 cursor-pointer hover:opacity-90 transition-all"
+                  onClick={() => setSelectedStage(stage.id)}
+                >
+                  {/* Stage Icon with Step Number */}
+                  <div className="relative z-10">
+                    <div className="transform scale-75">
+                      {getStageIcon(stage, index)}
+                    </div>
+                    <div className="absolute -top-1 -right-1 text-[10px] bg-white rounded-full w-4 h-4 flex items-center justify-center font-bold text-gray-600 border border-gray-300">
+                      {index + 1}
+                    </div>
+                  </div>
+                  
+                  {/* Stage Label - Compact */}
+                  <div className="mt-2 text-center max-w-[80px]">
+                    <div className={`text-[11px] font-semibold leading-tight ${
+                      selectedStage === stage.id ? 'text-purple-700' :
+                      stage.status === 'completed' ? 'text-gray-800' :
+                      stage.status === 'current' ? 'text-purple-700' :
+                      'text-gray-600'
+                    }`}>
+                      {stage.label}
+                    </div>
+                    {stage.id === 'implementation' && (
+                      <div className="text-[10px] text-gray-500 mt-0.5">
+                        {stage.completedCount}/{stage.totalCount}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
-                {/* Vertical Connector */}
+                {/* Connector Line */}
                 {index < stages.length - 1 && (
-                  <div className={`w-0.5 h-20 mt-2 ${getConnectorColor(stage)}`} />
-                )}
-              </div>
-              
-              {/* Stage Info */}
-              <div className="flex-1 pt-8">
-                <div className={`text-sm font-semibold ${
-                  selectedStage === stage.id ? 'text-purple-700' :
-                  stage.status === 'completed' ? 'text-gray-800' :
-                  stage.status === 'current' ? 'text-purple-700' :
-                  'text-gray-600'
-                }`}>
-                  {stage.label}
-                </div>
-                {stage.id === 'implementation' && (
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {stage.completedCount}/{stage.totalCount} completed
+                  <div className="w-8 h-0.5 relative -top-3">
+                    <div className={`h-full ${getConnectorColor(stage)} rounded-full`} />
                   </div>
                 )}
-                <div className="mt-1">
-                  {getStatusText(stage)}
-                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+        {/* Scroll indicator - smaller */}
+        <div className="text-center mt-1 md:hidden">
+          <span className="text-[10px] text-gray-400">← Swipe →</span>
         </div>
       </div>
       
