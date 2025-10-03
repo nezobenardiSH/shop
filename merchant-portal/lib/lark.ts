@@ -310,38 +310,108 @@ class LarkService {
     trainerCalendarId: string,
     date: string,
     startTime: string,
-    endTime: string
+    endTime: string,
+    bookingType: string = 'training'
   ): Promise<string> {
     const startDateTime = new Date(`${date}T${startTime}:00`)
     const endDateTime = new Date(`${date}T${endTime}:00`)
     
-    // Build detailed description with merchant information
-    let description = `🏪 Onboarding Training Session\n\n`
-    description += `📍 Merchant: ${merchantInfo.name}\n`
-    if (merchantInfo.address) {
-      description += `📮 Address: ${merchantInfo.address}\n`
+    // Build detailed description with merchant information based on booking type
+    let eventTitle: string
+    let description: string
+    
+    switch(bookingType) {
+      case 'hardware-fulfillment':
+        eventTitle = `Hardware Delivery: ${merchantInfo.name}`
+        description = `📦 Hardware Fulfillment\n\n`
+        description += `📍 Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.address) {
+          description += `📮 Delivery Address: ${merchantInfo.address}\n`
+        }
+        if (merchantInfo.phone) {
+          description += `📞 Phone: ${merchantInfo.phone}\n`
+        }
+        if (merchantInfo.contactPerson) {
+          description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        description += `\n📋 Hardware Delivery Checklist:\n`
+        description += `• POS terminals\n`
+        description += `• Receipt printers\n`
+        description += `• Cash drawers\n`
+        description += `• Network equipment\n`
+        break
+        
+      case 'installation':
+        eventTitle = `Installation: ${merchantInfo.name}`
+        description = `🔧 Hardware Installation\n\n`
+        description += `📍 Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.address) {
+          description += `📮 Installation Site: ${merchantInfo.address}\n`
+        }
+        if (merchantInfo.phone) {
+          description += `📞 Phone: ${merchantInfo.phone}\n`
+        }
+        if (merchantInfo.contactPerson) {
+          description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        description += `\n📋 Installation Tasks:\n`
+        description += `• Hardware setup and configuration\n`
+        description += `• Network connectivity\n`
+        description += `• System integration\n`
+        description += `• Testing and verification\n`
+        break
+        
+      case 'go-live':
+        eventTitle = `Go-Live: ${merchantInfo.name}`
+        description = `🚀 Go-Live Session\n\n`
+        description += `📍 Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.address) {
+          description += `📮 Address: ${merchantInfo.address}\n`
+        }
+        if (merchantInfo.phone) {
+          description += `📞 Phone: ${merchantInfo.phone}\n`
+        }
+        if (merchantInfo.contactPerson) {
+          description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        description += `\n📋 Go-Live Checklist:\n`
+        description += `• Final system checks\n`
+        description += `• Live transaction testing\n`
+        description += `• Staff readiness verification\n`
+        description += `• Support handover\n`
+        break
+        
+      case 'training':
+      default:
+        eventTitle = `Training: ${merchantInfo.name}`
+        description = `🏪 Onboarding Training Session\n\n`
+        description += `📍 Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.address) {
+          description += `📮 Address: ${merchantInfo.address}\n`
+        }
+        if (merchantInfo.phone) {
+          description += `📞 Phone: ${merchantInfo.phone}\n`
+        }
+        if (merchantInfo.contactPerson) {
+          description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        if (merchantInfo.businessType) {
+          description += `🏢 Business Type: ${merchantInfo.businessType}\n`
+        }
+        description += `\n📋 Training Topics:\n`
+        description += `• System setup and configuration\n`
+        description += `• POS operations training\n`
+        description += `• Payment processing\n`
+        description += `• Reporting and analytics\n`
+        break
     }
-    if (merchantInfo.phone) {
-      description += `📞 Phone: ${merchantInfo.phone}\n`
-    }
-    if (merchantInfo.contactPerson) {
-      description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
-    }
-    if (merchantInfo.businessType) {
-      description += `🏢 Business Type: ${merchantInfo.businessType}\n`
-    }
-    description += `\n📋 Training Topics:\n`
-    description += `• System setup and configuration\n`
-    description += `• POS operations training\n`
-    description += `• Payment processing\n`
-    description += `• Reporting and analytics\n`
     
     if (merchantInfo.salesforceId) {
       description += `\n🔗 Salesforce ID: ${merchantInfo.salesforceId}`
     }
     
     const event: LarkEvent = {
-      summary: `Training: ${merchantInfo.name}`,
+      summary: eventTitle,
       description,
       location: merchantInfo.address,
       start_time: {

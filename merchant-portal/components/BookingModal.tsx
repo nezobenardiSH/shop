@@ -12,12 +12,13 @@ interface BookingModalProps {
   merchantPhone?: string
   merchantContactPerson?: string
   trainerName: string
+  bookingType?: string
   currentBooking?: {
     eventId: string
     date: string
     time: string
   }
-  onBookingComplete: () => void
+  onBookingComplete: (selectedDate?: string) => void
 }
 
 interface TimeSlot {
@@ -40,6 +41,7 @@ export default function BookingModal({
   merchantPhone,
   merchantContactPerson,
   trainerName,
+  bookingType = 'training',
   currentBooking,
   onBookingComplete
 }: BookingModalProps) {
@@ -101,7 +103,8 @@ export default function BookingModal({
           trainerName,
           date: selectedDate,
           startTime: selectedSlot.start,
-          endTime: selectedSlot.end
+          endTime: selectedSlot.end,
+          bookingType: bookingType
         })
       })
 
@@ -121,8 +124,8 @@ export default function BookingModal({
         
         setMessage(successMsg)
         
-        // Call onBookingComplete immediately to refresh data
-        onBookingComplete()
+        // Call onBookingComplete with the selected date to update Salesforce
+        onBookingComplete(selectedDate)
         
         // Keep modal open for 3 seconds to show success message
         setTimeout(() => {
@@ -205,7 +208,20 @@ export default function BookingModal({
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-2xl font-semibold flex items-center gap-2">
             <Calendar className="h-6 w-6 text-blue-600" />
-            Book Training Session
+            {(() => {
+              switch(bookingType) {
+                case 'hardware-fulfillment':
+                  return 'Schedule Hardware Fulfillment Date'
+                case 'installation':
+                  return 'Schedule Installation Date'
+                case 'training':
+                  return 'Book Training Session'
+                case 'go-live':
+                  return 'Schedule Go-Live Date'
+                default:
+                  return 'Schedule Date'
+              }
+            })()}
           </h2>
           <button
             onClick={onClose}

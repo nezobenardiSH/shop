@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
       trainerName,
       date,
       startTime,
-      endTime
+      endTime,
+      bookingType = 'training'
     } = body
 
     if (!merchantId || !merchantName || !date || !startTime || !endTime) {
@@ -27,9 +28,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 1: Check which trainers are available for this slot
-    console.log('Checking availability for slot:', { date, startTime, endTime })
-    const { available, availableTrainers } = await getSlotAvailability(date, startTime, endTime)
+    // Step 1: Check which trainers are available for this slot (skip in mock mode)
+    const mockMode = process.env.MOCK_LARK_BOOKING === 'true' || searchParams.get('mock') === 'true'
+    
+    let available = true
+    let availableTrainers = ['Nezo'] // Default trainer for mock mode
+    
+    if (!mockMode) {
+      console.log('Checking availability for slot:', { date, startTime, endTime })
+      const slotResult = await getSlotAvailability(date, startTime, endTime)
+      available = slotResult.available
+      availableTrainers = slotResult.availableTrainers
+    } else {
+      console.log('📝 MOCK MODE: Skipping availability check')
+    }
     
     if (!available || availableTrainers.length === 0) {
       return NextResponse.json(
@@ -60,7 +72,6 @@ export async function POST(request: NextRequest) {
     })
 
     let eventId: string
-    const mockMode = process.env.MOCK_LARK_BOOKING === 'true' || searchParams.get('mock') === 'true'
     
     if (mockMode) {
       // Mock mode for testing without Lark permissions
@@ -82,7 +93,8 @@ export async function POST(request: NextRequest) {
           calendarId,
           date,
           startTime,
-          endTime
+          endTime,
+          bookingType
         )
       } catch (bookingError: any) {
         console.error('Lark booking failed:', bookingError)
@@ -98,11 +110,12 @@ export async function POST(request: NextRequest) {
     try {
       const conn = await getSalesforceConnection()
       
-      console.log('📅 Updating Salesforce training date:', {
+      console.log(`📅 Updating Salesforce ${bookingType} date:`, {
         trainerId: merchantId,
         date: date,
         eventId: eventId,
-        assignedTrainer: assignment.assigned
+        assignedTrainer: assignment.assigned,
+        bookingType: bookingType
       })
       
       // First check if we have a valid connection
@@ -111,11 +124,59 @@ export async function POST(request: NextRequest) {
         throw new Error('No Salesforce connection available')
       }
       
-      // Update the training date using the correct format (YYYY-MM-DD)
-      const updateResult = await conn.sobject('Onboarding_Trainer__c').update({
-        Id: merchantId,
-        Training_Date__c: date // Salesforce Date field expects YYYY-MM-DD
-      })
+      // Map booking types to Salesforce field names
+      const fieldMapping: { [key: string]: { field: string, object: string } } = {
+        'hardware-fulfillment': { field: 'Hardware_Fulfillment_Date__c', object: 'Order' },
+        'installation': { field: 'Installation_Date__c', object: 'Onboarding_Trainer__c' },
+        'training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' },
+        'go-live': { field: 'First_Revised_EGLD__c', object: 'Onboarding_Trainer__c' }
+      }
+      
+      const mapping = fieldMapping[bookingType] || { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' }
+      
+      let updateResult: any
+      
+      if (mapping.object === 'Order') {
+        // For Order object, we need to find the Order first
+        console.log('📦 Updating Hardware Fulfillment Date in Order object')
+        const trainer = await conn.sobject('Onboarding_Trainer__c')
+          .select('Id, Account_Name__c')
+          .where({ Id: merchantId })
+          .limit(1)
+          .execute()
+        
+        if (trainer && trainer.length > 0) {
+          const accountId = trainer[0].Account_Name__c
+          console.log('Found Account ID:', accountId)
+          
+          const orders = await conn.query(
+            `SELECT Id FROM Order WHERE AccountId = '${accountId}' LIMIT 1`
+          )
+          
+          if (orders.records && orders.records.length > 0) {
+            const orderId = orders.records[0].Id
+            console.log('Found Order ID:', orderId)
+            console.log('Updating field:', mapping.field, 'with date:', date)
+            
+            updateResult = await conn.sobject('Order').update({
+              Id: orderId,
+              [mapping.field]: date
+            })
+            
+            console.log('Order update result:', updateResult)
+          } else {
+            console.log('❌ No Order found for Account:', accountId)
+          }
+        } else {
+          console.log('❌ No Trainer found with ID:', merchantId)
+        }
+      } else {
+        // Update Onboarding_Trainer__c record
+        updateResult = await conn.sobject('Onboarding_Trainer__c').update({
+          Id: merchantId,
+          [mapping.field]: date // Salesforce Date field expects YYYY-MM-DD
+        })
+      }
       
       console.log('✅ Salesforce update result:', updateResult)
       
@@ -128,8 +189,14 @@ export async function POST(request: NextRequest) {
         salesforceUpdated = false
       }
     } catch (sfError: any) {
-      console.error('❌ Failed to update Salesforce:', sfError.message || sfError)
+      const errorMessage = sfError.message || sfError
+      console.error('❌ Failed to update Salesforce:', errorMessage)
       salesforceUpdated = false
+      
+      // If it's a permission/validation error for hardware fulfillment, provide clearer feedback
+      if (bookingType === 'hardware-fulfillment' && errorMessage.includes('CSM')) {
+        console.log('⚠️ Note: Hardware Fulfillment Date requires special permissions in Salesforce')
+      }
     }
 
     return NextResponse.json({

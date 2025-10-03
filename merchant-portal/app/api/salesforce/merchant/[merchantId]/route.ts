@@ -58,6 +58,12 @@ export async function GET(
                Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c, 
                Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
                Synced_Quote_Total_Amount__c, Pending_Payment__c,
+               Welcome_Call_Status__c, First_Call_Timestamp__c, MSM_Name__c, MSM_Name__r.Name,
+               Product_Setup_Status__c, Completed_product_setup__c,
+               Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
+               Installation_Issues_Elaboration__c, Training_Status__c,
+               CSM_Name__c, CSM_Name__r.Name,
+               Menu_Collection_Form_Link__c, BO_Account_Name__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         ORDER BY Name LIMIT 50
@@ -180,13 +186,15 @@ export async function GET(
       }
     }
 
-    // Get OrderItems associated with this Account
+    // Get OrderItems and Shipment data associated with this Account
     let orderItems = []
+    let hardwareFulfillmentDate = null
+    let trackingLink = null
     if (account) {
       try {
-        // First get Orders for this Account with Type field
+        // First get Orders for this Account with Type field and Hardware Fulfillment Date
         const ordersQuery = `
-          SELECT Id, Type
+          SELECT Id, Type, Hardware_Fulfillment_Date__c
           FROM Order
           WHERE AccountId = '${account.Id}'
           LIMIT 10
@@ -195,10 +203,13 @@ export async function GET(
         const ordersResult = await conn.query(ordersQuery)
         
         if (ordersResult.totalSize > 0) {
-          // Create a map of order IDs to order types
+          // Create a map of order IDs to order types and hardware fulfillment dates
           const orderTypeMap: { [key: string]: string } = {}
           ordersResult.records.forEach((order: any) => {
             orderTypeMap[order.Id] = order.Type || 'N/A'
+            if (order.Hardware_Fulfillment_Date__c && !hardwareFulfillmentDate) {
+              hardwareFulfillmentDate = order.Hardware_Fulfillment_Date__c
+            }
           })
           
           const orderIds = ordersResult.records.map((order: any) => `'${order.Id}'`).join(',')
@@ -225,6 +236,25 @@ export async function GET(
               orderType: orderTypeMap[item.OrderId] || 'N/A'
             }))
           }
+        }
+        
+        // Get Shipment tracking link
+        try {
+          const shipmentQuery = `
+            SELECT Id, Tracking_Link__c
+            FROM Shipment__c
+            WHERE Account__c = '${account.Id}'
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+          `
+          
+          const shipmentResult = await conn.query(shipmentQuery)
+          if (shipmentResult.totalSize > 0) {
+            trackingLink = shipmentResult.records[0].Tracking_Link__c
+          }
+        } catch (shipmentError) {
+          console.log('Failed to fetch Shipment tracking:', shipmentError)
+          // Continue without tracking link - not a critical failure
         }
       } catch (error) {
         console.log('Failed to fetch OrderItems:', error)
@@ -267,6 +297,22 @@ export async function GET(
         requiredFeaturesByMerchant: trainer.Required_Features_by_Merchant__c,
         syncedQuoteTotalAmount: trainer.Synced_Quote_Total_Amount__c,
         pendingPayment: trainer.Pending_Payment__c,
+        welcomeCallStatus: trainer.Welcome_Call_Status__c,
+        firstCallTimestamp: trainer.First_Call_Timestamp__c,
+        msmName: trainer.MSM_Name__r ? trainer.MSM_Name__r.Name : trainer.MSM_Name__c,
+        productSetupStatus: trainer.Product_Setup_Status__c,
+        completedProductSetup: trainer.Completed_product_setup__c,
+        hardwareDeliveryStatus: trainer.Hardware_Delivery_Status__c,
+        hardwareInstallationStatus: trainer.Hardware_Installation_Status__c,
+        actualInstallationDate: trainer.Actual_Installation_Date__c,
+        installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
+        trainingStatus: trainer.Training_Status__c,
+        trainingDate: trainer.Training_Date__c,
+        csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
+        hardwareFulfillmentDate: hardwareFulfillmentDate,
+        trackingLink: trackingLink,
+        menuCollectionFormLink: trainer.Menu_Collection_Form_Link__c,
+        boAccountName: trainer.BO_Account_Name__c,
         createdDate: trainer.CreatedDate,
         lastModifiedDate: trainer.LastModifiedDate
       }]

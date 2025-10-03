@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import BookingModal from '@/components/BookingModal'
+import OnboardingTimeline from '@/components/OnboardingTimeline'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -165,6 +166,8 @@ export default function TrainerPortal() {
   }, [trainerName])
 
   const handleOpenBookingModal = (trainer: any) => {
+    console.log('Opening booking modal with:', { bookingType: trainer.bookingType, trainer });
+    
     // Determine which actual trainer to use based on Salesforce data
     // This could be from a field like trainer.assignedTrainerEmail or trainer.operationManagerEmail
     let actualTrainerName = 'Nezo'; // Default trainer
@@ -177,6 +180,19 @@ export default function TrainerPortal() {
     // Option 2: Map based on merchant name or other logic
     // For example: Nasi Lemak -> Nezo, Other merchants -> Jia En
     
+    // Determine which date to use based on bookingType
+    let existingDate = null;
+    if (trainer.bookingType === 'installation') {
+      existingDate = trainer.installationDate;
+    } else if (trainer.bookingType === 'hardware-fulfillment') {
+      existingDate = trainer.hardwareFulfillmentDate;
+    } else if (trainer.bookingType === 'go-live') {
+      existingDate = trainer.firstRevisedEGLD;
+    } else {
+      // Default to training
+      existingDate = trainer.trainingDate;
+    }
+    
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
@@ -185,16 +201,13 @@ export default function TrainerPortal() {
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
-      existingBooking: trainer.larkEventId ? {
-        eventId: trainer.larkEventId,
-        date: trainer.trainingDate ? new Date(trainer.trainingDate).toLocaleDateString() : '',
-        time: 'Scheduled'
-      } : null
+      bookingType: trainer.bookingType || 'training', // Pass the booking type
+      existingBooking: null // Don't pass existing booking for now, let user select new date
     })
     setBookingModalOpen(true)
   }
 
-  const handleBookingComplete = async () => {
+  const handleBookingComplete = async (selectedDate?: string) => {
     console.log('Booking completed, refreshing trainer data...')
     setSuccessMessage('📅 Booking confirmed! Refreshing data...')
     
@@ -320,17 +333,49 @@ export default function TrainerPortal() {
         <div className="mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              🎯 Trainer Portal
+              🎯 {trainerName.replace(/-/g, ' ')}
             </h1>
-            <p className="text-gray-600 mt-2">
-              Trainer: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{trainerName}</span>
-            </p>
+            {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
+              <p className="text-sm text-gray-600 mt-2">
+                Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleDateString()}
+              </p>
+            )}
           </div>
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
-          >
+          <div className="flex items-center gap-3">
+            <button
+              onClick={loadTrainerData}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </>
+              )}
+            </button>
+            {trainerData?.success && (
+              <div className="text-green-600" title={trainerData.message}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            )}
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+            >
             {loggingOut ? (
               <>
                 <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -348,17 +393,10 @@ export default function TrainerPortal() {
               </>
             )}
           </button>
+          </div>
         </div>
         
         <div className="bg-white rounded-lg shadow-md p-6">
-          <button
-            onClick={loadTrainerData}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            {loading ? '🔄 Loading...' : '📥 Load Trainer Data'}
-          </button>
-
           {successMessage && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="text-green-700 font-medium whitespace-pre-line">{successMessage}</div>
@@ -492,16 +530,12 @@ export default function TrainerPortal() {
             </div>
           )}
 
-          {trainerData && (
+          {trainerData && !trainerData.success && (
             <div className="mt-6">
-              <div className={`p-4 rounded-lg border ${
-                trainerData.success
-                  ? 'bg-green-50 border-green-200 text-green-800'
-                  : 'bg-red-50 border-red-200 text-red-800'
-              }`}>
+              <div className="p-4 rounded-lg border bg-red-50 border-red-200 text-red-800">
                 <p className="font-medium">{trainerData.message}</p>
 
-                {!trainerData.success && trainerData.availableTrainers && (
+                {trainerData.availableTrainers && (
                   <div className="mt-4">
                     <p className="text-sm font-medium">🔍 Debug Information:</p>
                     <p className="text-xs mt-1">Searched for: {trainerData.searchedFor}</p>
@@ -522,548 +556,237 @@ export default function TrainerPortal() {
                   </div>
                 )}
               </div>
-
-              {/* Merchant Details Section - FIRST SECTION */}
-              {trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">📋 Merchant Details</h3>
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    {(() => {
-                      const trainer = trainerData.onboardingTrainerData.trainers[0];
-                      const formatAddress = () => {
-                        const parts = [
-                          trainer.shippingStreet,
-                          trainer.shippingCity,
-                          trainer.shippingState && trainer.shippingZipPostalCode 
-                            ? `${trainer.shippingState} ${trainer.shippingZipPostalCode}`
-                            : trainer.shippingState || trainer.shippingZipPostalCode,
-                          trainer.shippingCountry
-                        ].filter(Boolean);
-                        return parts.length > 0 ? parts : ['N/A'];
-                      };
-
-                      return (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                          {/* Left Column */}
-                          <div className="space-y-4">
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Trainer Name</div>
-                              <div className="text-gray-900">{trainer.name || 'N/A'}</div>
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Account Name</div>
-                              <div className="text-gray-900">{trainer.accountName || 'N/A'}</div>
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
-                              <div className="text-gray-900">
-                                {formatAddress().map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Sub-Industry</div>
-                              <div className="text-gray-900">{trainer.subIndustry || 'N/A'}</div>
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Preferred Language</div>
-                              <div className="text-gray-900">{trainer.preferredLanguage || 'N/A'}</div>
-                            </div>
-                          </div>
-
-                          {/* Right Column */}
-                          <div className="space-y-4">
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Business Owner Contact</div>
-                              <div className="text-gray-900">
-                                {trainer.businessOwnerContact ? (
-                                  <>
-                                    <div>{trainer.businessOwnerContact.name}</div>
-                                    {trainer.businessOwnerContact.phone && (
-                                      <div className="text-gray-600">{trainer.businessOwnerContact.phone}</div>
-                                    )}
-                                  </>
-                                ) : 'N/A'}
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Merchant PIC Contact</div>
-                              <div className="text-gray-900">{trainer.merchantPICContactNumber || 'N/A'}</div>
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Operation Manager</div>
-                              <div className="text-gray-900">
-                                {trainer.operationManagerContact ? (
-                                  <>
-                                    <div>{trainer.operationManagerContact.name}</div>
-                                    {trainer.operationManagerContact.phone && (
-                                      <div className="text-gray-600">{trainer.operationManagerContact.phone}</div>
-                                    )}
-                                  </>
-                                ) : 'N/A'}
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Planned Go-Live Date</div>
-                              <div className="text-gray-900">
-                                {trainer.plannedGoLiveDate ? new Date(trainer.plannedGoLiveDate).toLocaleDateString() : 'N/A'}
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Required Features</div>
-                              <div className="text-gray-900 text-sm">
-                                {trainer.requiredFeaturesByMerchant || 'N/A'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {/* Payment Section */}
-              {trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">💳 Payment Information</h3>
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    {(() => {
-                      const trainer = trainerData.onboardingTrainerData.trainers[0];
-                      const currencyInfo = getCurrencyInfo(trainer.shippingCountry || '');
-                      
-                      return (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Quote Total Amount */}
-                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                            <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">
-                              Quote Total Amount
-                            </div>
-                            <div className="text-2xl font-bold text-blue-900">
-                              {trainer.syncedQuoteTotalAmount !== null && trainer.syncedQuoteTotalAmount !== undefined 
-                                ? formatCurrency(trainer.syncedQuoteTotalAmount, currencyInfo)
-                                : 'Not Available'}
-                            </div>
-                            <div className="text-sm text-blue-600 mt-1">
-                              Synced from quote
-                            </div>
-                          </div>
-                          
-                          {/* Pending Payment */}
-                          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-                            <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
-                              Pending Payment
-                            </div>
-                            <div className="text-2xl font-bold text-amber-900">
-                              {trainer.pendingPayment !== null && trainer.pendingPayment !== undefined
-                                ? formatCurrency(trainer.pendingPayment, currencyInfo)
-                                : 'Not Available'}
-                            </div>
-                            <div className="text-sm text-amber-600 mt-1">
-                              Amount outstanding
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {/* Product Section */}
-              {trainerData.orderItems && trainerData.orderItems.length > 0 && (() => {
-                // Group products by order type
-                const groupedProducts = trainerData.orderItems.reduce((acc: any, item: any) => {
-                  const orderType = item.orderType || 'Other'
-                  if (!acc[orderType]) {
-                    acc[orderType] = []
-                  }
-                  acc[orderType].push(item)
-                  return acc
-                }, {})
-
-                // Get currency info once for all products
-                const trainer = trainerData.onboardingTrainerData?.trainers?.[0]
-                const shippingCountry = trainer?.shippingCountry || ''
-                const currencyInfo = getCurrencyInfo(shippingCountry)
-
-                return (
-                  <div className="mt-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">📦 Products</h3>
-                    <div className="space-y-6">
-                      {Object.entries(groupedProducts).map(([orderType, items]: [string, any]) => (
-                        <div key={orderType} className="bg-white border border-gray-200 rounded-lg p-6">
-                          {/* Order Type as Subsection Header */}
-                          <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                              {orderType}
-                            </span>
-                            <span className="ml-2 text-sm text-gray-500">({items.length} items)</span>
-                          </h4>
-                          
-                          {/* Products Grid */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {items.map((item: any, index: number) => (
-                              <div key={item.id || index} className="border border-gray-100 rounded-lg p-4 hover:shadow-md transition-shadow bg-gray-50">
-                                <div className="space-y-3">
-                                  <div>
-                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product Name</div>
-                                    <div className="text-gray-900 font-medium">{item.productName || 'N/A'}</div>
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Unit Price</div>
-                                      <div className="text-gray-900">
-                                        {formatCurrency(item.unitPrice, currencyInfo)}
-                                      </div>
-                                    </div>
-                                    
-                                    <div>
-                                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Price</div>
-                                      <div className="text-gray-900 font-semibold">
-                                        {formatCurrency(item.totalPrice, currencyInfo)}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {item.quantity && (
-                                    <div>
-                                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Quantity</div>
-                                      <div className="text-gray-900">{item.quantity}</div>
-                                    </div>
-                                  )}
-
-                                  <div>
-                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product ID</div>
-                                    <div className="text-gray-600 text-xs font-mono truncate" title={item.product2Id}>
-                                      {item.product2Id || 'N/A'}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
-
-
-              {/* Onboarding Trainer Data */}
-              {trainerData.onboardingTrainerData && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">🎯 Onboarding Trainer</h3>
-
-                  {trainerData.onboardingTrainerData.error ? (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <p className="text-red-700 font-medium">Error loading trainer:</p>
-                      <p className="text-red-600">{trainerData.onboardingTrainerData.error}</p>
-                    </div>
-                  ) : trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers.length > 0 ? (
-                    <div>
-                      <p className="text-gray-600 mb-4">
-                        Showing trainer: {trainerData.onboardingTrainerData.trainers[0].name}
-                      </p>
-                      <div className="space-y-4">
-                        {trainerData.onboardingTrainerData.trainers.map((trainer: any) => (
-                          <div key={trainer.id} className="bg-green-50 border border-green-200 rounded-lg p-6">
-                            <div className="flex justify-between items-start mb-4">
-                              <h4 className="text-lg font-semibold text-green-900">
-                                🎯 {trainer.name}
-                              </h4>
-                              <button
-                                onClick={() => startEditing(trainer)}
-                                disabled={editingTrainer?.id === trainer.id}
-                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium py-1 px-3 rounded transition-colors"
-                              >
-                                {editingTrainer?.id === trainer.id ? 'Editing...' : '✏️ Edit'}
-                              </button>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              <div className="bg-yellow-50 p-4 rounded border border-yellow-300">
-                                <strong className="text-yellow-800">📅 First Revised EGLD:</strong>
-                                {editingFields[`egld-${trainer.id}`] ? (
-                                  <div className="mt-2 space-y-2">
-                                    <input
-                                      type="date"
-                                      value={formatDate(tempFieldValues[`egld-${trainer.id}`])}
-                                      onChange={(e) => setTempFieldValues({ ...tempFieldValues, [`egld-${trainer.id}`]: e.target.value })}
-                                      className="w-full px-2 py-1 border border-yellow-400 rounded"
-                                    />
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => handleSaveField('firstRevisedEGLD', trainer.id)}
-                                        disabled={saving}
-                                        className="px-2 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
-                                      >
-                                        {saving ? 'Saving...' : 'Save'}
-                                      </button>
-                                      <button
-                                        onClick={() => handleCancelField(`egld-${trainer.id}`)}
-                                        className="px-2 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center justify-between mt-1">
-                                    <div className="text-lg font-medium text-yellow-900">
-                                      {trainer.firstRevisedEGLD || 'N/A'}
-                                    </div>
-                                    <button
-                                      onClick={() => handleEditField(`egld-${trainer.id}`, trainer.firstRevisedEGLD)}
-                                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                                    >
-                                      ✏️ Edit
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="bg-purple-50 p-4 rounded border border-purple-300">
-                                <strong className="text-purple-800">🎯 Current Stage:</strong>
-                                {editingFields[`stage-${trainer.id}`] ? (
-                                  <div className="mt-2 space-y-2">
-                                    <select
-                                      value={tempFieldValues[`stage-${trainer.id}`] || ''}
-                                      onChange={(e) => setTempFieldValues({ ...tempFieldValues, [`stage-${trainer.id}`]: e.target.value })}
-                                      className="w-full px-2 py-1 border border-purple-400 rounded"
-                                    >
-                                      <option value="">Select a stage...</option>
-                                      {availableStages.map((stage) => (
-                                        <option key={stage.value} value={stage.value}>
-                                          {stage.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => handleSaveField('onboardingTrainerStage', trainer.id)}
-                                        disabled={saving}
-                                        className="px-2 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
-                                      >
-                                        {saving ? 'Saving...' : 'Save'}
-                                      </button>
-                                      <button
-                                        onClick={() => handleCancelField(`stage-${trainer.id}`)}
-                                        className="px-2 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center justify-between mt-1">
-                                    <div className="text-lg font-medium text-purple-900">
-                                      {trainer.onboardingTrainerStage || 'N/A'}
-                                    </div>
-                                    <button
-                                      onClick={() => handleEditField(`stage-${trainer.id}`, trainer.onboardingTrainerStage)}
-                                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                                    >
-                                      ✏️ Edit
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="bg-orange-50 p-4 rounded border border-orange-300">
-                                <strong className="text-orange-800">🔧 Installation Date:</strong>
-                                <div className="text-lg font-medium text-orange-900">
-                                  {trainer.installationDate ? new Date(trainer.installationDate).toLocaleDateString() : 'Not Scheduled'}
-                                </div>
-                                <button
-                                  onClick={() => handleOpenBookingModal({ ...trainer, bookingType: 'installation' })}
-                                  className="mt-2 px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700"
-                                >
-                                  {trainer.installationDate ? '📅 Reschedule' : '📅 Book Installation'}
-                                </button>
-                              </div>
-
-                              <div className="bg-blue-50 p-4 rounded border border-blue-300">
-                                <strong className="text-blue-800">🎓 Training Date:</strong>
-                                <div className="text-lg font-medium text-blue-900">
-                                  {trainer.trainingDate ? new Date(trainer.trainingDate).toLocaleDateString() : 'Not Scheduled'}
-                                </div>
-                                <button
-                                  onClick={() => handleOpenBookingModal(trainer)}
-                                  className="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                >
-                                  {trainer.trainingDate ? '📅 Reschedule' : '📅 Book Training'}
-                                </button>
-                              </div>
-
-                              {/* Contact Phone Information */}
-                              <div className="bg-green-50 p-4 rounded border border-green-300">
-                                <strong className="text-green-800">📞 Contact Information:</strong>
-                                <div className="mt-2 space-y-3">
-                                  {trainer.phoneNumber && (
-                                    <div className="text-green-900 bg-white p-2 rounded border">
-                                      <strong>Phone Number:</strong> {trainer.phoneNumber}
-                                    </div>
-                                  )}
-                                  {trainer.merchantPICContactNumber && (
-                                    <div className="text-green-900 bg-white p-2 rounded border">
-                                      <strong>Merchant PIC Contact:</strong> {trainer.merchantPICContactNumber}
-                                    </div>
-                                  )}
-                                  {trainer.operationManagerContact && (
-                                    <div className="text-green-900 bg-white p-2 rounded border">
-                                      <div>
-                                        <strong>Operation Manager:</strong> {trainer.operationManagerContact.name}
-                                      </div>
-                                      {trainer.operationManagerContact.phone && (
-                                        <div className="text-sm text-gray-600 mt-1">
-                                          📞 {trainer.operationManagerContact.phone}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  {trainer.businessOwnerContact && (
-                                    <div className="text-green-900 bg-white p-2 rounded border">
-                                      <div>
-                                        <strong>Business Owner:</strong> {trainer.businessOwnerContact.name}
-                                      </div>
-                                      {trainer.businessOwnerContact.phone && (
-                                        <div className="text-sm text-gray-600 mt-1">
-                                          📞 {trainer.businessOwnerContact.phone}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  {!trainer.phoneNumber && !trainer.merchantPICContactNumber &&
-                                   !trainer.operationManagerContact && !trainer.businessOwnerContact && (
-                                    <div className="text-gray-500 italic">No contact information available</div>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="bg-white p-3 rounded border">
-                                <strong className="text-green-800">Created Date:</strong>
-                                <div className="text-green-900">
-                                  {trainer.createdDate ? new Date(trainer.createdDate).toLocaleDateString() : 'N/A'}
-                                </div>
-                              </div>
-
-                              <div className="bg-white p-3 rounded border">
-                                <strong className="text-green-800">Last Modified:</strong>
-                                <div className="text-green-900">
-                                  {trainer.lastModifiedDate ? new Date(trainer.lastModifiedDate).toLocaleDateString() : 'N/A'}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <p className="text-yellow-800 font-medium">No trainer found with this name</p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
-          {/* Stage Tabs Section */}
-          {availableStages.length > 0 && (
-            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
-                🎯 Onboarding Trainer Stages
-              </h2>
+          {/* Onboarding Timeline Section */}
+          {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
+            <div className="mt-6">
+              <OnboardingTimeline 
+                currentStage={trainerData.onboardingTrainerData.trainers[0].onboardingTrainerStage}
+                stageData={trainerData.onboardingTrainerData.trainers[0]}
+                trainerData={trainerData.onboardingTrainerData.trainers[0]}
+                onBookingComplete={handleBookingComplete}
+                onOpenBookingModal={handleOpenBookingModal}
+              />
+            </div>
+          )}
 
-              {/* Tab Navigation */}
-              <div className="border-b border-gray-200 mb-4">
-                <nav className="-mb-px flex space-x-8 overflow-x-auto">
-                  {availableStages.map((stage) => {
-                    const isActive = activeTab === stage.value
-                    const isCurrent = trainerData?.onboardingTrainerData?.trainers?.[0]?.onboardingTrainerStage === stage.value
+          {/* Merchant Details Section - FIRST SECTION */}
+          {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
+            <div className="mt-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">📋 Merchant Details</h3>
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  {(() => {
+                    const trainer = trainerData.onboardingTrainerData.trainers[0];
+                    const formatAddress = () => {
+                      const parts = [
+                        trainer.shippingStreet,
+                        trainer.shippingCity,
+                        trainer.shippingState && trainer.shippingZipPostalCode 
+                          ? `${trainer.shippingState} ${trainer.shippingZipPostalCode}`
+                          : trainer.shippingState || trainer.shippingZipPostalCode,
+                        trainer.shippingCountry
+                      ].filter(Boolean);
+                      return parts.length > 0 ? parts : ['N/A'];
+                    };
 
                     return (
-                      <button
-                        key={stage.value}
-                        onClick={() => setActiveTab(stage.value)}
-                        className={`
-                          whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200
-                          ${isActive
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                          }
-                          ${isCurrent ? 'bg-green-50 rounded-t-lg px-3' : ''}
-                        `}
-                      >
-                        {isCurrent && '✅ '}
-                        {stage.label}
-                      </button>
-                    )
-                  })}
-                </nav>
-              </div>
-
-              {/* Tab Content */}
-              <div className="mt-4">
-                {availableStages.map((stage) => (
-                  <div
-                    key={stage.value}
-                    className={`${activeTab === stage.value ? 'block' : 'hidden'}`}
-                  >
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                        {stage.label}
-                      </h3>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-white p-3 rounded border">
-                          <strong className="text-gray-700">Stage Value:</strong>
-                          <div className="text-gray-900 font-mono text-sm">
-                            {stage.value}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                        {/* Left Column */}
+                        <div className="space-y-4">
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Trainer Name</div>
+                            <div className="text-gray-900">{trainer.name || 'N/A'}</div>
                           </div>
-                        </div>
 
-                        <div className="bg-white p-3 rounded border">
-                          <strong className="text-gray-700">Status:</strong>
-                          <div className="text-gray-900">
-                            {stage.active ? (
-                              <span className="text-green-600">✅ Active</span>
-                            ) : (
-                              <span className="text-red-600">❌ Inactive</span>
-                            )}
-                            {stage.defaultValue && (
-                              <span className="ml-2 text-blue-600">🔹 Default</span>
-                            )}
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Account Name</div>
+                            <div className="text-gray-900">{trainer.accountName || 'N/A'}</div>
                           </div>
-                        </div>
 
-                        {trainerData?.onboardingTrainerData?.trainers?.[0]?.onboardingTrainerStage === stage.value && (
-                          <div className="md:col-span-2 bg-green-50 p-3 rounded border border-green-300">
-                            <strong className="text-green-800">🎯 Current Stage:</strong>
-                            <div className="text-green-900">
-                              This trainer is currently at this stage
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
+                            <div className="text-gray-900">
+                              {formatAddress().map((line, index) => (
+                                <div key={index}>{line}</div>
+                              ))}
                             </div>
                           </div>
-                        )}
+
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Sub-Industry</div>
+                            <div className="text-gray-900">{trainer.subIndustry || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Preferred Language</div>
+                            <div className="text-gray-900">{trainer.preferredLanguage || 'N/A'}</div>
+                          </div>
+                        </div>
+
+                        {/* Right Column */}
+                        <div className="space-y-4">
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Business Owner Contact</div>
+                            <div className="text-gray-900">
+                              {trainer.businessOwnerContact ? (
+                                <>
+                                  <div>{trainer.businessOwnerContact.name}</div>
+                                  {trainer.businessOwnerContact.phone && (
+                                    <div className="text-gray-600">{trainer.businessOwnerContact.phone}</div>
+                                  )}
+                                </>
+                              ) : 'N/A'}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Merchant PIC Contact</div>
+                            <div className="text-gray-900">{trainer.merchantPICContactNumber || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Operation Manager</div>
+                            <div className="text-gray-900">
+                              {trainer.operationManagerContact ? (
+                                <>
+                                  <div>{trainer.operationManagerContact.name}</div>
+                                  {trainer.operationManagerContact.phone && (
+                                    <div className="text-gray-600">{trainer.operationManagerContact.phone}</div>
+                                  )}
+                                </>
+                              ) : 'N/A'}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Planned Go-Live Date</div>
+                            <div className="text-gray-900">
+                              {trainer.plannedGoLiveDate ? new Date(trainer.plannedGoLiveDate).toLocaleDateString() : 'N/A'}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Required Features</div>
+                            <div className="text-gray-900 text-sm">
+                              {trainer.requiredFeaturesByMerchant || 'N/A'}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })()}
+                </div>
             </div>
           )}
+
+          {/* Product Section */}
+          {trainerData && trainerData.success && ((trainerData.orderItems && trainerData.orderItems.length > 0) || (trainerData.onboardingTrainerData?.trainers?.[0])) ? (() => {
+            // Group products by order type
+            const groupedProducts = trainerData.orderItems ? trainerData.orderItems.reduce((acc: any, item: any) => {
+              const orderType = item.orderType || 'Other'
+              if (!acc[orderType]) {
+                acc[orderType] = []
+              }
+              acc[orderType].push(item)
+              return acc
+            }, {}) : {}
+
+            // Get currency info once for all products
+            const trainer = trainerData.onboardingTrainerData?.trainers?.[0]
+            const shippingCountry = trainer?.shippingCountry || ''
+            const currencyInfo = getCurrencyInfo(shippingCountry)
+
+            return (
+              <div className="mt-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">📦 Products & Payment</h3>
+                <div className="space-y-6">
+                  {/* Payment Summary at the top */}
+                  {trainer && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Quote Total Amount */}
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">
+                            Quote Total Amount
+                          </div>
+                          <div className="text-2xl font-bold text-blue-900">
+                            {trainer.syncedQuoteTotalAmount !== null && trainer.syncedQuoteTotalAmount !== undefined 
+                              ? formatCurrency(trainer.syncedQuoteTotalAmount, currencyInfo)
+                              : 'Not Available'}
+                          </div>
+                          <div className="text-sm text-blue-600 mt-1">
+                            Synced from quote
+                          </div>
+                        </div>
+                        
+                        {/* Pending Payment */}
+                        <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                          <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
+                            Pending Payment
+                          </div>
+                          <div className="text-2xl font-bold text-amber-900">
+                            {trainer.pendingPayment !== null && trainer.pendingPayment !== undefined
+                              ? formatCurrency(trainer.pendingPayment, currencyInfo)
+                              : 'Not Available'}
+                          </div>
+                          <div className="text-sm text-amber-600 mt-1">
+                            Amount outstanding
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {Object.entries(groupedProducts).map(([orderType, items]: [string, any]) => (
+                    <div key={orderType} className="bg-white border border-gray-200 rounded-lg p-6">
+                      {/* Order Type as Subsection Header */}
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                          {orderType}
+                        </span>
+                        <span className="ml-2 text-sm text-gray-500">({items.length} items)</span>
+                      </h4>
+                      
+                      {/* Products Table List */}
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Price</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {items.map((item: any, index: number) => (
+                              <tr key={item.id || index} className="hover:bg-gray-50">
+                                <td className="px-4 py-2 text-sm text-gray-900">{item.productName || 'N/A'}</td>
+                                <td className="px-4 py-2 text-sm text-gray-900 text-right">{item.quantity || 1}</td>
+                                <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.unitPrice, currencyInfo)}</td>
+                                <td className="px-4 py-2 text-sm font-semibold text-gray-900 text-right">{formatCurrency(item.totalPrice, currencyInfo)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-gray-50">
+                              <td colSpan={3} className="px-4 py-2 text-sm font-medium text-gray-900 text-right">Order Total:</td>
+                              <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
+                                {formatCurrency(items.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0), currencyInfo)}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })() : null}
+
+
         </div>
       </div>
 
@@ -1072,12 +795,13 @@ export default function TrainerPortal() {
         <BookingModal
           isOpen={bookingModalOpen}
           onClose={() => setBookingModalOpen(false)}
-          merchantId={currentBookingInfo.trainerId}
-          merchantName={currentBookingInfo.merchantName}
+          merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
+          merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
           merchantAddress={currentBookingInfo.merchantAddress}
-          merchantPhone={currentBookingInfo.merchantPhone}
+          merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
           merchantContactPerson={currentBookingInfo.merchantContactPerson}
           trainerName={currentBookingInfo.trainerName}
+          bookingType={currentBookingInfo.bookingType}
           currentBooking={currentBookingInfo.existingBooking}
           onBookingComplete={handleBookingComplete}
         />
