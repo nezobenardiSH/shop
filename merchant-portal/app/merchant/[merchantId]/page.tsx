@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import BookingModal from '@/components/BookingModal'
 
 // Helper function to get currency based on country
@@ -68,6 +68,7 @@ const formatCurrency = (amount: number | null | undefined, currencyInfo: { symbo
 
 export default function TrainerPortal() {
   const params = useParams()
+  const router = useRouter()
   const trainerName = params.merchantId as string
   
   const [trainerData, setTrainerData] = useState<any>(null)
@@ -82,6 +83,7 @@ export default function TrainerPortal() {
   const [tempFieldValues, setTempFieldValues] = useState<{ [key: string]: string }>({})
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const loadTrainerData = async () => {
     setLoading(true)
@@ -293,16 +295,59 @@ export default function TrainerPortal() {
     }
   }
 
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    try {
+      const response = await fetch('/api/auth/merchant-logout', {
+        method: 'POST'
+      })
+      
+      if (response.ok) {
+        // Redirect to login page
+        router.push(`/login/${trainerName}`)
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            🎯 Trainer Portal
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Trainer: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{trainerName}</span>
-          </p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              🎯 Trainer Portal
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Trainer: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{trainerName}</span>
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+          >
+            {loggingOut ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Logging out...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+              </>
+            )}
+          </button>
         </div>
         
         <div className="bg-white rounded-lg shadow-md p-6">

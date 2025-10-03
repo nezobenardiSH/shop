@@ -1,0 +1,99 @@
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key-change-in-production'
+
+export function extractPINFromPhone(phone: string | null | undefined): string | null {
+  if (!phone) return null
+  
+  // Remove all non-numeric characters
+  const cleaned = phone.replace(/\D/g, '')
+  
+  // Must have at least 4 digits
+  if (cleaned.length < 4) return null
+  
+  // Return last 4 digits
+  return cleaned.slice(-4)
+}
+
+export function validatePIN(
+  submittedPIN: string,
+  phoneNumbers: (string | null | undefined)[]
+): boolean {
+  // Clean submitted PIN
+  const cleanPIN = submittedPIN.replace(/\D/g, '')
+  
+  if (cleanPIN.length !== 4) return false
+  
+  // Check against all available phone numbers
+  for (const phone of phoneNumbers) {
+    const validPIN = extractPINFromPhone(phone)
+    if (validPIN && validPIN === cleanPIN) {
+      return true
+    }
+  }
+  
+  return false
+}
+
+export function generateToken(payload: any): string {
+  return jwt.sign(payload, JWT_SECRET, { 
+    expiresIn: '24h'
+  })
+}
+
+export function verifyToken(token: string): any {
+  try {
+    return jwt.verify(token, JWT_SECRET)
+  } catch (error: any) {
+    return null
+  }
+}
+
+// Rate limiting logic (simple in-memory implementation)
+const loginAttempts: Map<string, { count: number; firstAttempt: number }> = new Map()
+const MAX_ATTEMPTS = 5
+const LOCKOUT_DURATION = 15 * 60 * 1000 // 15 minutes
+
+export function checkRateLimit(merchantId: string): { allowed: boolean; remainingAttempts?: number; lockoutTime?: number } {
+  const now = Date.now()
+  const attempts = loginAttempts.get(merchantId)
+  
+  if (!attempts) {
+    return { allowed: true, remainingAttempts: MAX_ATTEMPTS }
+  }
+  
+  // Check if lockout period has passed
+  if (now - attempts.firstAttempt > LOCKOUT_DURATION) {
+    loginAttempts.delete(merchantId)
+    return { allowed: true, remainingAttempts: MAX_ATTEMPTS }
+  }
+  
+  if (attempts.count >= MAX_ATTEMPTS) {
+    const lockoutRemaining = LOCKOUT_DURATION - (now - attempts.firstAttempt)
+    return { 
+      allowed: false, 
+      lockoutTime: Math.ceil(lockoutRemaining / 1000 / 60) // minutes remaining
+    }
+  }
+  
+  return { 
+    allowed: true, 
+    remainingAttempts: MAX_ATTEMPTS - attempts.count 
+  }
+}
+
+export function recordLoginAttempt(merchantId: string, success: boolean) {
+  if (success) {
+    loginAttempts.delete(merchantId)
+    return
+  }
+  
+  const now = Date.now()
+  const attempts = loginAttempts.get(merchantId)
+  
+  if (!attempts) {
+    loginAttempts.set(merchantId, { count: 1, firstAttempt: now })
+  } else {
+    attempts.count++
+  }
+}
