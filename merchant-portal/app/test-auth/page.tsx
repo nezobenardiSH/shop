@@ -17,7 +17,7 @@ export default function TestAuthPage() {
     try {
       const response = await fetch('/api/auth/merchant-login', {
         method: 'POST',
-        headers: { 'Content-Type': application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ merchantId, pin })
       })
       
