@@ -179,6 +179,58 @@ export async function GET(
       }
     }
 
+    // Get OrderItems associated with this Account
+    let orderItems = []
+    if (account) {
+      try {
+        // First get Orders for this Account with Type field
+        const ordersQuery = `
+          SELECT Id, Type
+          FROM Order
+          WHERE AccountId = '${account.Id}'
+          LIMIT 10
+        `
+        
+        const ordersResult = await conn.query(ordersQuery)
+        
+        if (ordersResult.totalSize > 0) {
+          // Create a map of order IDs to order types
+          const orderTypeMap: { [key: string]: string } = {}
+          ordersResult.records.forEach((order: any) => {
+            orderTypeMap[order.Id] = order.Type || 'N/A'
+          })
+          
+          const orderIds = ordersResult.records.map((order: any) => `'${order.Id}'`).join(',')
+          
+          // Now get OrderItems for these Orders
+          const orderItemsQuery = `
+            SELECT Id, Product2Id, Product2.Name, TotalPrice, UnitPrice, Quantity, OrderId
+            FROM OrderItem
+            WHERE OrderId IN (${orderIds})
+            LIMIT 50
+          `
+          
+          const orderItemsResult = await conn.query(orderItemsQuery)
+          
+          if (orderItemsResult.totalSize > 0) {
+            orderItems = orderItemsResult.records.map((item: any) => ({
+              id: item.Id,
+              product2Id: item.Product2Id,
+              productName: item.Product2?.Name || 'Unknown Product',
+              totalPrice: item.TotalPrice,
+              unitPrice: item.UnitPrice,
+              quantity: item.Quantity,
+              orderId: item.OrderId,
+              orderType: orderTypeMap[item.OrderId] || 'N/A'
+            }))
+          }
+        }
+      } catch (error) {
+        console.log('Failed to fetch OrderItems:', error)
+        // Continue without order items - not a critical failure
+      }
+    }
+
     // Return the specific trainer data (not all trainers)
     const onboardingTrainerData = {
       totalCount: 1,
@@ -222,7 +274,8 @@ export async function GET(
       message: `Successfully loaded data for trainer: ${trainer.Name}`,
       trainerName: trainerName,
       account: accountData,
-      onboardingTrainerData: onboardingTrainerData
+      onboardingTrainerData: onboardingTrainerData,
+      orderItems: orderItems
     })
 
   } catch (error: any) {

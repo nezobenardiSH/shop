@@ -4,6 +4,68 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import BookingModal from '@/components/BookingModal'
 
+// Helper function to get currency based on country
+const getCurrencyInfo = (country: string) => {
+  const countryUpper = (country || '').toUpperCase()
+  
+  // Common country to currency mapping
+  const currencyMap: { [key: string]: { symbol: string, code: string } } = {
+    'MALAYSIA': { symbol: 'RM', code: 'MYR' },
+    'MY': { symbol: 'RM', code: 'MYR' },
+    'PHILIPPINES': { symbol: '₱', code: 'PHP' },
+    'PH': { symbol: '₱', code: 'PHP' },
+    'SINGAPORE': { symbol: 'S$', code: 'SGD' },
+    'SG': { symbol: 'S$', code: 'SGD' },
+    'INDONESIA': { symbol: 'Rp', code: 'IDR' },
+    'ID': { symbol: 'Rp', code: 'IDR' },
+    'THAILAND': { symbol: '฿', code: 'THB' },
+    'TH': { symbol: '฿', code: 'THB' },
+    'VIETNAM': { symbol: '₫', code: 'VND' },
+    'VN': { symbol: '₫', code: 'VND' },
+    'UNITED STATES': { symbol: '$', code: 'USD' },
+    'USA': { symbol: '$', code: 'USD' },
+    'US': { symbol: '$', code: 'USD' },
+    'CHINA': { symbol: '¥', code: 'CNY' },
+    'CN': { symbol: '¥', code: 'CNY' },
+    'JAPAN': { symbol: '¥', code: 'JPY' },
+    'JP': { symbol: '¥', code: 'JPY' },
+    'INDIA': { symbol: '₹', code: 'INR' },
+    'IN': { symbol: '₹', code: 'INR' },
+    'AUSTRALIA': { symbol: 'A$', code: 'AUD' },
+    'AU': { symbol: 'A$', code: 'AUD' },
+    'UNITED KINGDOM': { symbol: '£', code: 'GBP' },
+    'UK': { symbol: '£', code: 'GBP' },
+    'GB': { symbol: '£', code: 'GBP' },
+  }
+  
+  // Check for exact match or partial match
+  for (const [key, value] of Object.entries(currencyMap)) {
+    if (countryUpper.includes(key) || key.includes(countryUpper)) {
+      return value
+    }
+  }
+  
+  // Default to USD if country not found
+  return { symbol: '$', code: 'USD' }
+}
+
+// Helper function to format currency
+const formatCurrency = (amount: number | null | undefined, currencyInfo: { symbol: string, code: string }) => {
+  if (amount === null || amount === undefined) return 'N/A'
+  
+  // For currencies that typically don't use decimals (like IDR, VND, JPY)
+  const noDecimalCurrencies = ['IDR', 'VND', 'JPY']
+  const decimals = noDecimalCurrencies.includes(currencyInfo.code) ? 0 : 2
+  
+  // Format based on currency
+  if (currencyInfo.code === 'IDR' || currencyInfo.code === 'VND') {
+    // For large number currencies, use different formatting
+    return `${currencyInfo.symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
+  } else {
+    return `${currencyInfo.symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
+  }
+}
+
 export default function TrainerPortal() {
   const params = useParams()
   const trainerName = params.merchantId as string
@@ -524,6 +586,87 @@ export default function TrainerPortal() {
                   </div>
                 </div>
               )}
+
+              {/* Product Section */}
+              {trainerData.orderItems && trainerData.orderItems.length > 0 && (() => {
+                // Group products by order type
+                const groupedProducts = trainerData.orderItems.reduce((acc: any, item: any) => {
+                  const orderType = item.orderType || 'Other'
+                  if (!acc[orderType]) {
+                    acc[orderType] = []
+                  }
+                  acc[orderType].push(item)
+                  return acc
+                }, {})
+
+                // Get currency info once for all products
+                const trainer = trainerData.onboardingTrainerData?.trainers?.[0]
+                const shippingCountry = trainer?.shippingCountry || ''
+                const currencyInfo = getCurrencyInfo(shippingCountry)
+
+                return (
+                  <div className="mt-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">📦 Products</h3>
+                    <div className="space-y-6">
+                      {Object.entries(groupedProducts).map(([orderType, items]: [string, any]) => (
+                        <div key={orderType} className="bg-white border border-gray-200 rounded-lg p-6">
+                          {/* Order Type as Subsection Header */}
+                          <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                              {orderType}
+                            </span>
+                            <span className="ml-2 text-sm text-gray-500">({items.length} items)</span>
+                          </h4>
+                          
+                          {/* Products Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {items.map((item: any, index: number) => (
+                              <div key={item.id || index} className="border border-gray-100 rounded-lg p-4 hover:shadow-md transition-shadow bg-gray-50">
+                                <div className="space-y-3">
+                                  <div>
+                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product Name</div>
+                                    <div className="text-gray-900 font-medium">{item.productName || 'N/A'}</div>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Unit Price</div>
+                                      <div className="text-gray-900">
+                                        {formatCurrency(item.unitPrice, currencyInfo)}
+                                      </div>
+                                    </div>
+                                    
+                                    <div>
+                                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Price</div>
+                                      <div className="text-gray-900 font-semibold">
+                                        {formatCurrency(item.totalPrice, currencyInfo)}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {item.quantity && (
+                                    <div>
+                                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Quantity</div>
+                                      <div className="text-gray-900">{item.quantity}</div>
+                                    </div>
+                                  )}
+
+                                  <div>
+                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product ID</div>
+                                    <div className="text-gray-600 text-xs font-mono truncate" title={item.product2Id}>
+                                      {item.product2Id || 'N/A'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
 
 
               {/* Onboarding Trainer Data */}

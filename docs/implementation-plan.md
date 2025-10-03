@@ -1181,13 +1181,421 @@ LARK_DOMAIN=https://open.larksuite.com
 
 ---
 
-**Project Status:** 🔄 **IN PROGRESS** - Implementing intelligent trainer assignment
-**Last Updated:** 2025-10-02
-**Implementation:** Trainer portal with Salesforce integration and intelligent Lark Calendar booking system
+## 🔐 PIN Authentication System
+**Goal:** Secure merchant portal access using phone number-based PIN authentication
+**Status:** 🟦 **IN PLANNING**
+**Last Updated:** 2025-10-03
+
+### Overview
+Implement a simple yet secure PIN-based authentication system that uses the last 4 digits of registered phone numbers from three contact fields to protect merchant-specific portal access. This ensures only authorized personnel can view sensitive merchant onboarding data.
+
+### Architecture Components
+
+#### 1. **Authentication Flow**
+- User visits `/merchant/[merchantId]` 
+- System checks for valid session token
+- If not authenticated, display PIN login form
+- Validate PIN against last 4 digits of contact phones
+- Generate JWT session token on successful authentication
+- Store token in httpOnly cookie for security
+
+#### 2. **Phone Number Sources**
+The system will extract and validate PINs from:
+- `Business_Owner_Contact__r.Phone` - Business Owner's phone
+- `Merchant_PIC_Contact_Number__c` - Merchant PIC contact  
+- `Operation_Manager_Contact__r.Phone` - Operation Manager's phone
+
+#### 3. **Security Features**
+- **Rate Limiting**: Max 5 failed attempts per 15-minute window
+- **Session Binding**: Tokens bound to specific merchantId
+- **HttpOnly Cookies**: Prevent XSS attacks
+- **Graceful Fallback**: Handle missing phone numbers elegantly
+- **Format Flexibility**: Support various phone formats (+60, spaces, dashes)
+
+### Implementation Tasks
+
+#### Phase 1: Core Authentication (Day 1)
+**Task 1: Create Authentication Middleware**
+- [ ] Create `middleware.ts` in root directory
+- [ ] Implement JWT token verification
+- [ ] Protect `/merchant/*` routes
+- [ ] Redirect to login when not authenticated
+- [ ] Skip middleware for API routes
+
+**Task 2: Build Login API Endpoint**
+- [ ] Create `/api/auth/merchant-login/route.ts`
+- [ ] Query Salesforce for merchant contact phones
+- [ ] Extract last 4 digits from each phone number
+- [ ] Validate submitted PIN against all valid options
+- [ ] Generate JWT with merchantId claim
+- [ ] Set httpOnly cookie with token
+
+**Task 3: Create Logout Endpoint**
+- [ ] Create `/api/auth/merchant-logout/route.ts`
+- [ ] Clear authentication cookie
+- [ ] Invalidate session
+- [ ] Return success response
+
+**Files to create:**
+```
+merchant-portal/
+├── middleware.ts                                    # Auth middleware
+├── app/api/auth/
+│   ├── merchant-login/route.ts                    # Login endpoint
+│   └── merchant-logout/route.ts                   # Logout endpoint
+└── lib/
+    └── auth-utils.ts                              # Auth helper functions
+```
+
+#### Phase 2: Frontend Components (Day 1-2)
+**Task 4: Create Login Form Component**
+- [ ] Build `components/LoginForm.tsx`
+- [ ] 4-digit PIN input field
+- [ ] Show merchant name for context
+- [ ] Loading states during authentication
+- [ ] Error handling with user-friendly messages
+- [ ] Remember me option (optional)
+
+**Task 5: Update Merchant Portal Page**
+- [ ] Check authentication status on load
+- [ ] Display login form when not authenticated
+- [ ] Show portal data only after authentication
+- [ ] Add logout button in header
+- [ ] Handle session expiry gracefully
+
+**Files to modify:**
+```
+merchant-portal/
+├── app/merchant/[merchantId]/page.tsx            # Add auth check
+└── components/
+    └── LoginForm.tsx                              # New login component
+```
+
+#### Phase 3: Session Management (Day 2)
+**Task 6: Implement Session Handling**
+- [ ] Configure JWT expiry (24 hours default)
+- [ ] Add refresh token mechanism (optional)
+- [ ] Handle expired sessions gracefully
+- [ ] Implement "Remember Me" functionality
+- [ ] Add session activity tracking
+
+**Task 7: Rate Limiting & Security**
+- [ ] Implement failed attempt counter
+- [ ] Add temporary lockout after 5 failures
+- [ ] Store attempt history in memory/cache
+- [ ] Clear attempts after successful login
+- [ ] Log security events for monitoring
+
+### Technical Specifications
+
+#### Authentication Middleware
+```typescript
+// middleware.ts
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { verifyToken } from './lib/auth-utils'
+
+export function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname
+  
+  // Only protect /merchant/* routes
+  if (path.startsWith('/merchant/')) {
+    const token = request.cookies.get('auth-token')
+    
+    if (!token || !verifyToken(token.value)) {
+      // Preserve the original URL for redirect after login
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('redirect', path)
+      return NextResponse.redirect(loginUrl)
+    }
+    
+    // Verify token matches the merchantId in URL
+    const merchantId = path.split('/')[2]
+    const payload = verifyToken(token.value)
+    
+    if (payload.merchantId !== merchantId) {
+      return NextResponse.redirect(new URL('/unauthorized', request.url))
+    }
+  }
+  
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: '/merchant/:path*'
+}
+```
+
+#### PIN Validation Logic
+```typescript
+// lib/auth-utils.ts
+export function extractPINFromPhone(phone: string | null): string | null {
+  if (!phone) return null
+  
+  // Remove all non-numeric characters
+  const cleaned = phone.replace(/\D/g, '')
+  
+  // Must have at least 4 digits
+  if (cleaned.length < 4) return null
+  
+  // Return last 4 digits
+  return cleaned.slice(-4)
+}
+
+export function validatePIN(
+  submittedPIN: string,
+  phoneNumbers: (string | null)[]
+): boolean {
+  // Clean submitted PIN
+  const cleanPIN = submittedPIN.replace(/\D/g, '')
+  
+  if (cleanPIN.length !== 4) return false
+  
+  // Check against all available phone numbers
+  for (const phone of phoneNumbers) {
+    const validPIN = extractPINFromPhone(phone)
+    if (validPIN && validPIN === cleanPIN) {
+      return true
+    }
+  }
+  
+  return false
+}
+```
+
+#### Login API Endpoint
+```typescript
+// app/api/auth/merchant-login/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { getSalesforceConnection } from '@/lib/salesforce'
+import { validatePIN, generateToken } from '@/lib/auth-utils'
+import { cookies } from 'next/headers'
+
+export async function POST(request: NextRequest) {
+  try {
+    const { merchantId, pin } = await request.json()
+    
+    // Get Salesforce connection
+    const conn = await getSalesforceConnection()
+    if (!conn) {
+      return NextResponse.json(
+        { error: 'Service unavailable' },
+        { status: 503 }
+      )
+    }
+    
+    // Query merchant's phone numbers
+    const query = `
+      SELECT Id, Name,
+             Business_Owner_Contact__r.Phone,
+             Merchant_PIC_Contact_Number__c,
+             Operation_Manager_Contact__r.Phone
+      FROM Onboarding_Trainer__c
+      WHERE Name = '${merchantId}'
+      LIMIT 1
+    `
+    
+    const result = await conn.query(query)
+    
+    if (result.totalSize === 0) {
+      return NextResponse.json(
+        { error: 'Merchant not found' },
+        { status: 404 }
+      )
+    }
+    
+    const trainer = result.records[0] as any
+    const phoneNumbers = [
+      trainer.Business_Owner_Contact__r?.Phone,
+      trainer.Merchant_PIC_Contact_Number__c,
+      trainer.Operation_Manager_Contact__r?.Phone
+    ]
+    
+    // Validate PIN
+    if (!validatePIN(pin, phoneNumbers)) {
+      return NextResponse.json(
+        { error: 'Invalid PIN' },
+        { status: 401 }
+      )
+    }
+    
+    // Generate JWT token
+    const token = generateToken({
+      merchantId: merchantId,
+      trainerId: trainer.Id,
+      exp: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+    })
+    
+    // Set httpOnly cookie
+    cookies().set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 // 24 hours in seconds
+    })
+    
+    return NextResponse.json({
+      success: true,
+      merchantName: trainer.Name
+    })
+    
+  } catch (error) {
+    console.error('Login error:', error)
+    return NextResponse.json(
+      { error: 'Authentication failed' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+#### Login Form Component
+```tsx
+// components/LoginForm.tsx
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function LoginForm({ merchantId }: { merchantId: string }) {
+  const [pin, setPIN] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    
+    try {
+      const response = await fetch('/api/auth/merchant-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchantId, pin })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok) {
+        // Refresh the page to load authenticated content
+        router.refresh()
+      } else {
+        setError(data.error || 'Invalid PIN')
+      }
+    } catch (error) {
+      setError('Connection error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900">
+            Merchant Portal Access
+          </h2>
+          <p className="mt-2 text-gray-600">
+            Merchant: <span className="font-mono">{merchantId}</span>
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Enter 4-Digit PIN
+            </label>
+            <input
+              type="text"
+              maxLength={4}
+              pattern="[0-9]{4}"
+              value={pin}
+              onChange={(e) => setPIN(e.target.value.replace(/\D/g, ''))}
+              className="mt-1 block w-full text-center text-2xl tracking-widest
+                       border-gray-300 rounded-md shadow-sm"
+              placeholder="••••"
+              required
+              disabled={loading}
+            />
+            <p className="mt-2 text-sm text-gray-500">
+              Use the last 4 digits of your registered phone number
+            </p>
+          </div>
+          
+          {error && (
+            <div className="text-red-600 text-sm text-center">
+              {error}
+            </div>
+          )}
+          
+          <button
+            type="submit"
+            disabled={loading || pin.length !== 4}
+            className="w-full py-2 px-4 border border-transparent rounded-md
+                     shadow-sm text-white bg-blue-600 hover:bg-blue-700
+                     disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Verifying...' : 'Access Portal'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+```
+
+### Environment Variables
+```env
+# Add to existing .env.local
+JWT_SECRET=your-secure-jwt-secret-key-change-in-production
+SESSION_DURATION=86400000  # 24 hours in milliseconds
+MAX_LOGIN_ATTEMPTS=5
+LOCKOUT_DURATION=900000     # 15 minutes in milliseconds
+```
+
+### Success Criteria
+- [ ] Only authenticated users can access `/merchant/*` pages
+- [ ] PIN validation works with all three phone number sources
+- [ ] Support for international phone formats
+- [ ] Graceful handling of missing phone numbers
+- [ ] Session persists for 24 hours or until logout
+- [ ] Rate limiting prevents brute force attacks
+- [ ] Clear error messages without revealing security details
+- [ ] Logout functionality clears all session data
+- [ ] Mobile-responsive login interface
+
+### Security Considerations
+1. **PIN Complexity**: While 4 digits provide 10,000 combinations, rate limiting makes brute force impractical
+2. **Phone Number Privacy**: Error messages don't reveal which phone numbers exist
+3. **Session Security**: HttpOnly cookies prevent client-side access to tokens
+4. **HTTPS Required**: Production deployment must use HTTPS for secure cookie transmission
+5. **Audit Logging**: Consider adding login attempt logging for security monitoring
+
+### Edge Cases Handled
+- Merchants with no phone numbers configured
+- Phone numbers with less than 4 digits
+- International formats with country codes
+- Multiple valid PINs (different last 4 digits across phones)
+- Session expiry during active use
+- Concurrent login attempts
+- Network failures during authentication
+
+### Rollout Strategy
+1. **Phase 1**: Implement and test in development environment
+2. **Phase 2**: Deploy to staging with select test merchants
+3. **Phase 3**: Progressive rollout to production merchants
+4. **Phase 4**: Monitor login metrics and adjust rate limits as needed
+
+---
+
+**Project Status:** 🔄 **IN PROGRESS** - Multiple features in development
+**Last Updated:** 2025-10-03
+**Implementation:** Trainer portal with Salesforce integration, Lark Calendar booking, and PIN authentication
 
 ### Next Steps:
-1. **Fix Lark Calendar Permissions** - Ensure calendar:calendar.event:create is active
-2. **Implement Combined Availability** - Query all trainers and merge availability
-3. **Add Intelligent Assignment** - Auto-assign based on availability with randomization
-4. **Update Booking UI** - Show combined slots and display assigned trainer after booking
-5. **Test End-to-End** - Verify booking creates events in correct trainer's calendar
+1. **Implement PIN Authentication** - Secure merchant portal access
+2. **Fix Lark Calendar Permissions** - Ensure calendar:calendar.event:create is active
+3. **Implement Combined Availability** - Query all trainers and merge availability
+4. **Add Intelligent Assignment** - Auto-assign based on availability with randomization
+5. **Update Booking UI** - Show combined slots and display assigned trainer after booking
+6. **Test End-to-End** - Verify all features work together seamlessly
