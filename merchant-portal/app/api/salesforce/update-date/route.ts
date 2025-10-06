@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     
     if (sfObject === 'Order') {
       // For Order object, we need to find the Order first
-      console.log('📦 Updating Hardware Fulfillment Date in Order object')
+      console.log('Updating Hardware Fulfillment Date in Order object')
       console.log('Looking for trainer with ID:', trainerId)
       
       // Get the OnboardingTrainer to find associated Account
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         .execute()
       
       if (!trainer || trainer.length === 0) {
-        console.log('❌ No trainer found with ID:', trainerId)
+        console.log('No trainer found with ID:', trainerId)
         return NextResponse.json(
           { success: false, message: 'Trainer not found' },
           { status: 404 }
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       )
       
       if (!orders.records || orders.records.length === 0) {
-        console.log('❌ No Order found for Account:', accountId)
+        console.log('No Order found for Account:', accountId)
         return NextResponse.json(
           { success: false, message: 'No Order found for this account' },
           { status: 404 }

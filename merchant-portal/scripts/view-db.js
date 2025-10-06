@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   try {
-    console.log('📊 Database Contents:\n');
+    console.log('Database Contents:\n');
     
     const merchantCount = await prisma.merchant.count();
     console.log(`Total Merchants: ${merchantCount}\n`);

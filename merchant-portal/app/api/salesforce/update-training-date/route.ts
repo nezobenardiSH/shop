@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('📅 Updating training date for trainer:', trainerId)
+    console.log('Updating training date for trainer:', trainerId)
     console.log('   New date:', trainingDate)
 
     const conn = await getSalesforceConnection()

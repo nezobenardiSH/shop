@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import DatePickerModal from '@/components/DatePickerModal'
 import OnboardingTimeline from '@/components/OnboardingTimeline'
 import WhatsAppButton from '@/components/WhatsAppButton'
+import MerchantHeader from '@/components/MerchantHeader'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -85,7 +87,6 @@ export default function TrainerPortal() {
   const [tempFieldValues, setTempFieldValues] = useState<{ [key: string]: string }>({})
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
-  const [loggingOut, setLoggingOut] = useState(false)
 
   const loadTrainerData = async () => {
     setLoading(true)
@@ -140,7 +141,7 @@ export default function TrainerPortal() {
       })
       const result = await response.json()
       if (result.success) {
-        setSuccessMessage(`✅ ${fieldName} updated successfully!`)
+        setSuccessMessage(`${fieldName} updated successfully!`)
         setEditingFields({ ...editingFields, [fieldName]: false })
         await loadTrainerData()
         setTimeout(() => setSuccessMessage(''), 3000)
@@ -158,6 +159,7 @@ export default function TrainerPortal() {
     setEditingFields({ ...editingFields, [fieldName]: false })
     delete tempFieldValues[fieldName]
   }
+
 
   useEffect(() => {
     if (trainerName) {
@@ -210,7 +212,7 @@ export default function TrainerPortal() {
 
   const handleBookingComplete = async (selectedDate?: string) => {
     console.log('Booking completed, refreshing trainer data...')
-    setSuccessMessage('📅 Booking confirmed! Refreshing data...')
+    setSuccessMessage('Booking confirmed! Refreshing data...')
     
     // Refresh the trainer data to show the new training date
     await loadTrainerData()
@@ -220,7 +222,7 @@ export default function TrainerPortal() {
     setCurrentBookingInfo(null)
     
     // Show success message for a few seconds
-    setSuccessMessage('✅ Training date updated successfully!')
+    setSuccessMessage('Training date updated successfully!')
     setTimeout(() => setSuccessMessage(''), 5000)
   }
 
@@ -260,12 +262,12 @@ export default function TrainerPortal() {
       const updateResult = await response.json()
       
       if (updateResult.success) {
-        let message = '✅ Successfully updated Onboarding Trainer!'
+        let message = 'Successfully updated Onboarding Trainer!'
         if (updateResult.permissionWarning) {
-          message += `\n⚠️ ${updateResult.permissionWarning}`
+          message += `\n${updateResult.permissionWarning}`
         }
         if (updateResult.writableFields) {
-          message += `\n✅ Updated fields: ${updateResult.writableFields.join(', ')}`
+          message += `\nUpdated fields: ${updateResult.writableFields.join(', ')}`
         }
         setSuccessMessage(message)
         
@@ -309,93 +311,88 @@ export default function TrainerPortal() {
     }
   }
 
-  const handleLogout = async () => {
-    setLoggingOut(true)
-    try {
-      const response = await fetch('/api/auth/merchant-logout', {
-        method: 'POST'
-      })
-      
-      if (response.ok) {
-        // Redirect to login page
-        router.push(`/login/${trainerName}`)
-        router.refresh()
-      }
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      setLoggingOut(false)
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-[#faf9f6] py-8">
+    <div className="min-h-screen bg-[#faf9f6] py-4">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-[#0b0707]">
-              🎯 {trainerName.replace(/-/g, ' ')}
-            </h1>
-            {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
-              <p className="text-sm text-[#6b6a6a] mt-2">
-                Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleDateString()}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={loadTrainerData}
-              disabled={loading}
-              className="bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white font-medium py-2.5 px-6 rounded-full transition-all duration-200 transform hover:scale-105 flex items-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Refresh
-                </>
-              )}
-            </button>
-            {trainerData?.success && (
-              <div className="text-green-600" title={trainerData.message}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            )}
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="bg-white hover:bg-gray-50 disabled:bg-gray-200 text-[#0b0707] border border-[#e5e7eb] font-medium py-2.5 px-6 rounded-full transition-all duration-200 flex items-center gap-2"
-            >
-            {loggingOut ? (
-              <>
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Logging out...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Logout
-              </>
-            )}
-          </button>
-          </div>
+        <div className="mb-4">
+          <MerchantHeader
+            onRefresh={loadTrainerData}
+            loading={loading}
+            merchantName={trainerName}
+          />
         </div>
+        
+        {/* Page Title Section */}
+        <div className="mb-6 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-[#0b0707]">
+            {trainerName.replace(/-/g, ' ')}
+          </h1>
+          {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
+            <p className="text-sm text-[#6b6a6a]">
+              Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleString()}
+            </p>
+          )}
+        </div>
+        
+        {/* Navigation Menu */}
+        <div className="mb-6 border-b border-[#e5e7eb]">
+          <nav className="flex space-x-8">
+            <Link
+              href={`/merchant/${trainerName}`}
+              className="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-[#ff630f] text-[#ff630f]"
+            >
+              Onboarding Progress
+            </Link>
+            <Link
+              href={`/merchant/${trainerName}/details`}
+              className="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]"
+            >
+              Merchant Details
+            </Link>
+          </nav>
+        </div>
+        
+        {/* Expected Go Live Date - Highlighted at the top */}
+        {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0] && (
+          <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-orange-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-orange-600 uppercase tracking-wider">Expected Go Live Date</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate 
+                      ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })
+                      : 'Not Set'}
+                  </div>
+                </div>
+              </div>
+              {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate && (
+                <div className="text-right">
+                  <div className="text-sm text-gray-600">Days until go-live</div>
+                  <div className="text-3xl font-bold text-orange-600">
+                    {(() => {
+                      const today = new Date();
+                      const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
+                      const diffTime = goLive.getTime() - today.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      return diffDays > 0 ? diffDays : 'Overdue';
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         <div>
           {successMessage && (
@@ -406,7 +403,7 @@ export default function TrainerPortal() {
 
           {editingTrainer && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="text-blue-900 font-semibold mb-3">✏️ Editing: {editingTrainer.name}</h4>
+              <h4 className="text-blue-900 font-semibold mb-3">Editing: {editingTrainer.name}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-1">
@@ -416,28 +413,28 @@ export default function TrainerPortal() {
                     type="text"
                     value={editData.name || ''}
                     onChange={(e) => handleFieldChange('name', e.target.value)}
-                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-[#e5e7eb] rounded-full focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent transition-all"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-1">
-                    📅 First Revised EGLD
+                    First Revised EGLD
                   </label>
                   <input
                     type="date"
                     value={formatDate(editData.firstRevisedEGLD)}
                     onChange={(e) => handleFieldChange('firstRevisedEGLD', e.target.value)}
-                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-[#e5e7eb] rounded-full focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent transition-all"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-1">
-                    🎯 Onboarding Trainer Stage
+                    Onboarding Trainer Stage
                   </label>
                   <select
                     value={editData.onboardingTrainerStage || ''}
                     onChange={(e) => handleFieldChange('onboardingTrainerStage', e.target.value)}
-                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-[#e5e7eb] rounded-full focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent transition-all"
                   >
                     <option value="">Select a stage...</option>
                     {availableStages.map((stage) => (
@@ -449,42 +446,42 @@ export default function TrainerPortal() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-1">
-                    📞 Phone Number
+                    Phone Number
                   </label>
                   <input
                     type="tel"
                     value={editData.phoneNumber || ''}
                     onChange={(e) => handleFieldChange('phoneNumber', e.target.value)}
-                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-[#e5e7eb] rounded-full focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent transition-all"
                     placeholder="Enter phone number"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-1">
-                    📞 Merchant PIC Contact Number
+                    Merchant PIC Contact Number
                   </label>
                   <input
                     type="tel"
                     value={editData.merchantPICContactNumber || ''}
                     onChange={(e) => handleFieldChange('merchantPICContactNumber', e.target.value)}
-                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-[#e5e7eb] rounded-full focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent transition-all"
                     placeholder="Enter merchant PIC contact number"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-1">
-                    🔧 Installation Date
+                    Installation Date
                   </label>
                   <input
                     type="date"
                     value={formatDate(editData.installationDate)}
                     onChange={(e) => handleFieldChange('installationDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-[#e5e7eb] rounded-full focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent transition-all"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-1">
-                    🎓 Training Date
+                    Training Date
                   </label>
                   <div className="flex gap-2">
                     {editData.trainingDate ? (
@@ -495,18 +492,18 @@ export default function TrainerPortal() {
                         <button
                           type="button"
                           onClick={() => handleOpenBookingModal(editData)}
-                          className="px-4 py-2 bg-[#ff630f] text-white rounded-full hover:bg-[#fe5b25] transition-all duration-200"
+                          className="bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-4 py-2 transition-all duration-200 transform hover:scale-105"
                         >
-                          📅 Reschedule
+                          Reschedule
                         </button>
                       </>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleOpenBookingModal(editData)}
-                        className="w-full px-4 py-2.5 bg-[#ff630f] text-white rounded-full hover:bg-[#fe5b25] transition-all duration-200 transform hover:scale-105"
+                        className="w-full bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105"
                       >
-                        📅 Book Training via Lark
+                        Book Training via Lark
                       </button>
                     )}
                   </div>
@@ -516,14 +513,14 @@ export default function TrainerPortal() {
                 <button
                   onClick={saveTrainer}
                   disabled={saving}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                  className="bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {saving ? '💾 Saving...' : '💾 Save to Salesforce'}
+                  {saving ? 'Saving...' : 'Save to Salesforce'}
                 </button>
                 <button
                   onClick={cancelEditing}
                   disabled={saving}
-                  className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                  className="bg-white hover:bg-gray-50 text-[#0b0707] font-medium rounded-full px-6 py-2.5 border border-[#e5e7eb] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
@@ -538,7 +535,7 @@ export default function TrainerPortal() {
 
                 {trainerData.availableTrainers && (
                   <div className="mt-4">
-                    <p className="text-sm font-medium">🔍 Debug Information:</p>
+                    <p className="text-sm font-medium">Debug Information:</p>
                     <p className="text-xs mt-1">Searched for: {trainerData.searchedFor}</p>
                     {trainerData.searchedVariations && (
                       <p className="text-xs">Tried variations: {trainerData.searchedVariations.join(', ')}</p>
@@ -562,7 +559,7 @@ export default function TrainerPortal() {
 
           {/* Onboarding Timeline Section */}
           {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
-            <div className="mt-6">
+            <div className="mt-4">
               <OnboardingTimeline 
                 currentStage={trainerData.onboardingTrainerData.trainers[0].onboardingTrainerStage}
                 stageData={trainerData.onboardingTrainerData.trainers[0]}
@@ -573,245 +570,28 @@ export default function TrainerPortal() {
             </div>
           )}
 
-          {/* Merchant Details Section - FIRST SECTION */}
-          {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
-            <div className="mt-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">📋 Merchant Details</h3>
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  {(() => {
-                    const trainer = trainerData.onboardingTrainerData.trainers[0];
-                    const formatAddress = () => {
-                      const parts = [
-                        trainer.shippingStreet,
-                        trainer.shippingCity,
-                        trainer.shippingState && trainer.shippingZipPostalCode 
-                          ? `${trainer.shippingState} ${trainer.shippingZipPostalCode}`
-                          : trainer.shippingState || trainer.shippingZipPostalCode,
-                        trainer.shippingCountry
-                      ].filter(Boolean);
-                      return parts.length > 0 ? parts : ['N/A'];
-                    };
 
-                    return (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                        {/* Left Column */}
-                        <div className="space-y-4">
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Trainer Name</div>
-                            <div className="text-gray-900">{trainer.name || 'N/A'}</div>
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Account Name</div>
-                            <div className="text-gray-900">{trainer.accountName || 'N/A'}</div>
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
-                            <div className="text-gray-900">
-                              {formatAddress().map((line, index) => (
-                                <div key={index}>{line}</div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Sub-Industry</div>
-                            <div className="text-gray-900">{trainer.subIndustry || 'N/A'}</div>
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Preferred Language</div>
-                            <div className="text-gray-900">{trainer.preferredLanguage || 'N/A'}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
-                            <div className="text-gray-900">{trainer.onboardingServicesBought || 'N/A'}</div>
-                          </div>
-                        </div>
-
-                        {/* Right Column */}
-                        <div className="space-y-4">
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Business Owner Contact</div>
-                            <div className="text-gray-900">
-                              {trainer.businessOwnerContact ? (
-                                <>
-                                  <div>{trainer.businessOwnerContact.name}</div>
-                                  {trainer.businessOwnerContact.phone && (
-                                    <div className="text-gray-600">{trainer.businessOwnerContact.phone}</div>
-                                  )}
-                                </>
-                              ) : 'N/A'}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Merchant PIC Contact</div>
-                            <div className="text-gray-900">{trainer.merchantPICContactNumber || 'N/A'}</div>
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Operation Manager</div>
-                            <div className="text-gray-900">
-                              {trainer.operationManagerContact ? (
-                                <>
-                                  <div>{trainer.operationManagerContact.name}</div>
-                                  {trainer.operationManagerContact.phone && (
-                                    <div className="text-gray-600">{trainer.operationManagerContact.phone}</div>
-                                  )}
-                                </>
-                              ) : 'N/A'}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Planned Go-Live Date</div>
-                            <div className="text-gray-900">
-                              {trainer.plannedGoLiveDate ? new Date(trainer.plannedGoLiveDate).toLocaleDateString() : 'N/A'}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Required Features</div>
-                            <div className="text-gray-900 text-sm">
-                              {trainer.requiredFeaturesByMerchant || 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-            </div>
-          )}
-
-          {/* Product Section */}
-          {trainerData && trainerData.success && ((trainerData.orderItems && trainerData.orderItems.length > 0) || (trainerData.onboardingTrainerData?.trainers?.[0])) ? (() => {
-            // Group products by order type
-            const groupedProducts = trainerData.orderItems ? trainerData.orderItems.reduce((acc: any, item: any) => {
-              const orderType = item.orderType || 'Other'
-              if (!acc[orderType]) {
-                acc[orderType] = []
-              }
-              acc[orderType].push(item)
-              return acc
-            }, {}) : {}
-
-            // Get currency info once for all products
-            const trainer = trainerData.onboardingTrainerData?.trainers?.[0]
-            const shippingCountry = trainer?.shippingCountry || ''
-            const currencyInfo = getCurrencyInfo(shippingCountry)
-
-            return (
-              <div className="mt-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">📦 Products & Payment</h3>
-                <div className="space-y-6">
-                  {/* Payment Summary at the top */}
-                  {trainer && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Quote Total Amount */}
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">
-                            Quote Total Amount
-                          </div>
-                          <div className="text-2xl font-bold text-blue-900">
-                            {trainer.syncedQuoteTotalAmount !== null && trainer.syncedQuoteTotalAmount !== undefined 
-                              ? formatCurrency(trainer.syncedQuoteTotalAmount, currencyInfo)
-                              : 'Not Available'}
-                          </div>
-                          <div className="text-sm text-blue-600 mt-1">
-                            Synced from quote
-                          </div>
-                        </div>
-                        
-                        {/* Pending Payment */}
-                        <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-                          <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
-                            Pending Payment
-                          </div>
-                          <div className="text-2xl font-bold text-amber-900">
-                            {trainer.pendingPayment !== null && trainer.pendingPayment !== undefined
-                              ? formatCurrency(trainer.pendingPayment, currencyInfo)
-                              : 'Not Available'}
-                          </div>
-                          <div className="text-sm text-amber-600 mt-1">
-                            Amount outstanding
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {Object.entries(groupedProducts).map(([orderType, items]: [string, any]) => (
-                    <div key={orderType} className="bg-white border border-gray-200 rounded-lg p-6">
-                      {/* Order Type as Subsection Header */}
-                      <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                          {orderType}
-                        </span>
-                        <span className="ml-2 text-sm text-gray-500">({items.length} items)</span>
-                      </h4>
-                      
-                      {/* Products Table List */}
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
-                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
-                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Price</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {items.map((item: any, index: number) => (
-                              <tr key={item.id || index} className="hover:bg-gray-50">
-                                <td className="px-4 py-2 text-sm text-gray-900">{item.productName || 'N/A'}</td>
-                                <td className="px-4 py-2 text-sm text-gray-900 text-right">{item.quantity || 1}</td>
-                                <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatCurrency(item.unitPrice, currencyInfo)}</td>
-                                <td className="px-4 py-2 text-sm font-semibold text-gray-900 text-right">{formatCurrency(item.totalPrice, currencyInfo)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr className="bg-gray-50">
-                              <td colSpan={3} className="px-4 py-2 text-sm font-medium text-gray-900 text-right">Order Total:</td>
-                              <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
-                                {formatCurrency(items.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0), currencyInfo)}
-                              </td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })() : null}
-
-      </div>
-
-      {/* Booking Modal */}
-      {bookingModalOpen && currentBookingInfo && (
-        <DatePickerModal
-          isOpen={bookingModalOpen}
-          onClose={() => setBookingModalOpen(false)}
-          merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
-          merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
-          merchantAddress={currentBookingInfo.merchantAddress}
-          merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
-          merchantContactPerson={currentBookingInfo.merchantContactPerson}
-          trainerName={currentBookingInfo.trainerName}
-          bookingType={currentBookingInfo.bookingType}
-          currentBooking={currentBookingInfo.existingBooking}
-          onBookingComplete={handleBookingComplete}
-        />
-      )}
-      
-      {/* WhatsApp Floating Button */}
-      <WhatsAppButton />
+        </div>
+        
+        {/* Booking Modal */}
+        {bookingModalOpen && currentBookingInfo && (
+          <DatePickerModal
+            isOpen={bookingModalOpen}
+            onClose={() => setBookingModalOpen(false)}
+            merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
+            merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
+            merchantAddress={currentBookingInfo.merchantAddress}
+            merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
+            merchantContactPerson={currentBookingInfo.merchantContactPerson}
+            trainerName={currentBookingInfo.trainerName}
+            bookingType={currentBookingInfo.bookingType}
+            currentBooking={currentBookingInfo.existingBooking}
+            onBookingComplete={handleBookingComplete}
+          />
+        )}
+        
+        {/* WhatsApp Floating Button */}
+        <WhatsAppButton />
       </div>
     </div>
   )

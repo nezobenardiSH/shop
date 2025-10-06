@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       available = slotResult.available
       availableTrainers = slotResult.availableTrainers
     } else {
-      console.log('📝 MOCK MODE: Skipping availability check')
+      console.log('MOCK MODE: Skipping availability check')
     }
     
     if (!available || availableTrainers.length === 0) {
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     
     if (mockMode) {
       // Mock mode for testing without Lark permissions
-      console.log('📝 MOCK MODE: Simulating calendar event creation')
+      console.log('MOCK MODE: Simulating calendar event creation')
       eventId = `mock-event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       console.log('Mock event created:', eventId)
     } else {
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     try {
       const conn = await getSalesforceConnection()
       
-      console.log(`📅 Updating Salesforce ${bookingType} date:`, {
+      console.log(`Updating Salesforce ${bookingType} date:`, {
         trainerId: merchantId,
         date: date,
         eventId: eventId,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       
       // First check if we have a valid connection
       if (!conn) {
-        console.error('❌ No Salesforce connection available')
+        console.error('No Salesforce connection available')
         throw new Error('No Salesforce connection available')
       }
       
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       
       if (mapping.object === 'Order') {
         // For Order object, we need to find the Order first
-        console.log('📦 Updating Hardware Fulfillment Date in Order object')
+        console.log('Updating Hardware Fulfillment Date in Order object')
         const trainer = await conn.sobject('Onboarding_Trainer__c')
           .select('Id, Account_Name__c')
           .where({ Id: merchantId })
@@ -165,10 +165,10 @@ export async function POST(request: NextRequest) {
             
             console.log('Order update result:', updateResult)
           } else {
-            console.log('❌ No Order found for Account:', accountId)
+            console.log('No Order found for Account:', accountId)
           }
         } else {
-          console.log('❌ No Trainer found with ID:', merchantId)
+          console.log('No Trainer found with ID:', merchantId)
         }
       } else {
         // Update Onboarding_Trainer__c record
@@ -178,19 +178,19 @@ export async function POST(request: NextRequest) {
         })
       }
       
-      console.log('✅ Salesforce update result:', updateResult)
+      console.log('Salesforce update result:', updateResult)
       
       // Check if update was successful
       if (updateResult.success || updateResult.id) {
         salesforceUpdated = true
-        console.log('✅ Training date updated successfully in Salesforce')
+        console.log('Training date updated successfully in Salesforce')
       } else {
-        console.error('❌ Salesforce update failed:', updateResult.errors)
+        console.error('Salesforce update failed:', updateResult.errors)
         salesforceUpdated = false
       }
     } catch (sfError: any) {
       const errorMessage = sfError.message || sfError
-      console.error('❌ Failed to update Salesforce:', errorMessage)
+      console.error('Failed to update Salesforce:', errorMessage)
       salesforceUpdated = false
       
       // If it's a permission/validation error for hardware fulfillment, provide clearer feedback

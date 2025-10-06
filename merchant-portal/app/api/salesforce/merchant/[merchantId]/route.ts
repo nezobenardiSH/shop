@@ -101,7 +101,7 @@ export async function GET(
                trainerNameNormalized === originalNameNormalized
         
         if (matches) {
-          console.log(`✅ Match found: "${trainer.Name}"`)
+          console.log(`Match found: "${trainer.Name}"`)
         }
         
         return matches

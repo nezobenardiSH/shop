@@ -35,6 +35,30 @@ export function validatePIN(
   return false
 }
 
+export function validatePINWithUser(
+  submittedPIN: string,
+  phoneData: Array<{ phone: string | null | undefined; name: string | null | undefined }>
+): { isValid: boolean; userName: string } {
+  // Clean submitted PIN
+  const cleanPIN = submittedPIN.replace(/\D/g, '')
+  
+  if (cleanPIN.length !== 4) {
+    return { isValid: false, userName: 'User' }
+  }
+  
+  // Check against all available phone numbers and their associated names
+  for (const { phone, name } of phoneData) {
+    const validPIN = extractPINFromPhone(phone)
+    if (validPIN && validPIN === cleanPIN) {
+      // Return the actual name from the database, or a default name
+      const userName = name || 'User'
+      return { isValid: true, userName }
+    }
+  }
+  
+  return { isValid: false, userName: 'User' }
+}
+
 export function generateToken(payload: any): string {
   return jwt.sign(payload, JWT_SECRET, { 
     expiresIn: '24h'

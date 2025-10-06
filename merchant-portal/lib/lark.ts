@@ -323,18 +323,18 @@ class LarkService {
     switch(bookingType) {
       case 'hardware-fulfillment':
         eventTitle = `Hardware Delivery: ${merchantInfo.name}`
-        description = `📦 Hardware Fulfillment\n\n`
-        description += `📍 Merchant: ${merchantInfo.name}\n`
+        description = `Hardware Fulfillment\n\n`
+        description += `Merchant: ${merchantInfo.name}\n`
         if (merchantInfo.address) {
-          description += `📮 Delivery Address: ${merchantInfo.address}\n`
+          description += `Delivery Address: ${merchantInfo.address}\n`
         }
         if (merchantInfo.phone) {
-          description += `📞 Phone: ${merchantInfo.phone}\n`
+          description += `Phone: ${merchantInfo.phone}\n`
         }
         if (merchantInfo.contactPerson) {
-          description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
+          description += `Contact Person: ${merchantInfo.contactPerson}\n`
         }
-        description += `\n📋 Hardware Delivery Checklist:\n`
+        description += `\nHardware Delivery Checklist:\n`
         description += `• POS terminals\n`
         description += `• Receipt printers\n`
         description += `• Cash drawers\n`
@@ -343,18 +343,18 @@ class LarkService {
         
       case 'installation':
         eventTitle = `Installation: ${merchantInfo.name}`
-        description = `🔧 Hardware Installation\n\n`
-        description += `📍 Merchant: ${merchantInfo.name}\n`
+        description = `Hardware Installation\n\n`
+        description += `Merchant: ${merchantInfo.name}\n`
         if (merchantInfo.address) {
-          description += `📮 Installation Site: ${merchantInfo.address}\n`
+          description += `Installation Site: ${merchantInfo.address}\n`
         }
         if (merchantInfo.phone) {
-          description += `📞 Phone: ${merchantInfo.phone}\n`
+          description += `Phone: ${merchantInfo.phone}\n`
         }
         if (merchantInfo.contactPerson) {
-          description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
+          description += `Contact Person: ${merchantInfo.contactPerson}\n`
         }
-        description += `\n📋 Installation Tasks:\n`
+        description += `\nInstallation Tasks:\n`
         description += `• Hardware setup and configuration\n`
         description += `• Network connectivity\n`
         description += `• System integration\n`
@@ -363,18 +363,18 @@ class LarkService {
         
       case 'go-live':
         eventTitle = `Go-Live: ${merchantInfo.name}`
-        description = `🚀 Go-Live Session\n\n`
-        description += `📍 Merchant: ${merchantInfo.name}\n`
+        description = `Go-Live Session\n\n`
+        description += `Merchant: ${merchantInfo.name}\n`
         if (merchantInfo.address) {
-          description += `📮 Address: ${merchantInfo.address}\n`
+          description += `Address: ${merchantInfo.address}\n`
         }
         if (merchantInfo.phone) {
-          description += `📞 Phone: ${merchantInfo.phone}\n`
+          description += `Phone: ${merchantInfo.phone}\n`
         }
         if (merchantInfo.contactPerson) {
-          description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
+          description += `Contact Person: ${merchantInfo.contactPerson}\n`
         }
-        description += `\n📋 Go-Live Checklist:\n`
+        description += `\nGo-Live Checklist:\n`
         description += `• Final system checks\n`
         description += `• Live transaction testing\n`
         description += `• Staff readiness verification\n`
@@ -384,21 +384,21 @@ class LarkService {
       case 'training':
       default:
         eventTitle = `Training: ${merchantInfo.name}`
-        description = `🏪 Onboarding Training Session\n\n`
-        description += `📍 Merchant: ${merchantInfo.name}\n`
+        description = `Onboarding Training Session\n\n`
+        description += `Merchant: ${merchantInfo.name}\n`
         if (merchantInfo.address) {
-          description += `📮 Address: ${merchantInfo.address}\n`
+          description += `Address: ${merchantInfo.address}\n`
         }
         if (merchantInfo.phone) {
-          description += `📞 Phone: ${merchantInfo.phone}\n`
+          description += `Phone: ${merchantInfo.phone}\n`
         }
         if (merchantInfo.contactPerson) {
-          description += `👤 Contact Person: ${merchantInfo.contactPerson}\n`
+          description += `Contact Person: ${merchantInfo.contactPerson}\n`
         }
         if (merchantInfo.businessType) {
-          description += `🏢 Business Type: ${merchantInfo.businessType}\n`
+          description += `Business Type: ${merchantInfo.businessType}\n`
         }
-        description += `\n📋 Training Topics:\n`
+        description += `\nTraining Topics:\n`
         description += `• System setup and configuration\n`
         description += `• POS operations training\n`
         description += `• Payment processing\n`

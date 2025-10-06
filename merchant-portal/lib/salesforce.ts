@@ -52,13 +52,13 @@ export async function getSalesforceConnection() {
       )
     }
 
-    console.log('✅ Salesforce connection established successfully')
+    console.log('Salesforce connection established successfully')
     connectionError = null
     return connection
 
   } catch (error) {
     connectionError = `Salesforce connection failed: ${error}`
-    console.error('❌ Salesforce connection error:', error)
+    console.error('Salesforce connection error:', error)
     connection = null
     return null
   }
@@ -96,7 +96,7 @@ export async function syncToSalesforce(merchant: any) {
       })
 
       if (result.success) {
-        console.log('✅ Salesforce Account updated successfully')
+        console.log('Salesforce Account updated successfully')
         return { success: true, message: 'Account updated', salesforceId: merchant.salesforceId }
       } else {
         throw new Error(`Update failed: ${result.errors?.join(', ')}`)
@@ -113,7 +113,7 @@ export async function syncToSalesforce(merchant: any) {
           data: { salesforceId: result.id }
         })
 
-        console.log('✅ Created Salesforce Account with ID:', result.id)
+        console.log('Created Salesforce Account with ID:', result.id)
         return { success: true, message: 'Account created', salesforceId: result.id }
       } else {
         throw new Error(`Creation failed: ${result.errors?.join(', ')}`)
@@ -121,7 +121,7 @@ export async function syncToSalesforce(merchant: any) {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Salesforce sync failed:', errorMessage)
+    console.error('Salesforce sync failed:', errorMessage)
     return { success: false, message: errorMessage }
   }
 }
@@ -266,7 +266,7 @@ export async function testSalesforceConnection() {
 
     return {
       success: true,
-      message: `✅ Connected to Salesforce ${environment}`,
+      message: `Connected to Salesforce ${environment}`,
       environment: environment,
       orgName: org?.Name,
       accountCount: accountResult.totalSize,
@@ -278,7 +278,7 @@ export async function testSalesforceConnection() {
   } catch (error) {
     return {
       success: false,
-      message: `❌ Connection failed: ${error}`,
+      message: `Connection failed: ${error}`,
       environment: 'Connection failed'
     }
   }

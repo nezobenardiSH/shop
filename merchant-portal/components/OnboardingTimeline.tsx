@@ -284,180 +284,96 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
 
   return (
-    <div className="bg-white border border-[#e5e7eb] rounded-2xl p-6">
-      <h3 className="text-xl font-bold text-[#0b0707] mb-6">🚀 Onboarding Timeline</h3>
+    <div className="bg-white border border-[#e5e7eb] rounded-lg p-3">
+      <h3 className="text-lg font-bold text-[#0b0707] mb-3">Onboarding Progress</h3>
       
-      {/* Desktop Timeline (Horizontal) */}
-      <div className="hidden lg:block overflow-x-auto">
-        <div className="relative min-w-max">
-          <div className="flex items-center justify-between">
-            {stages.map((stage, index) => (
-              <div key={stage.id} className="flex items-center">
-                <div 
-                  className="relative flex flex-col items-center px-4 cursor-pointer hover:opacity-90 transition-all hover:scale-105"
-                  onClick={() => setSelectedStage(stage.id)}
-                >
-                  {/* Step Number */}
-                  <div className="text-xs text-[#6b6a6a] mb-2">Step {index + 1}</div>
-                  
-                  {/* Stage Icon */}
-                  <div className="relative z-10">
-                    {getStageIcon(stage, index)}
-                  </div>
-                  
-                  {/* Stage Label */}
-                  <div className="mt-3 text-center max-w-[120px]">
-                    <div className={`text-sm font-semibold ${
-                      selectedStage === stage.id ? 'text-[#ff630f]' :
-                      stage.status === 'completed' ? 'text-[#0b0707]' :
-                      stage.status === 'current' ? 'text-[#ff630f]' :
-                      'text-[#6b6a6a]'
-                    }`}>
-                      {stage.label}
-                    </div>
-                    {stage.id === 'implementation' && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {stage.completedCount}/{stage.totalCount} completed
-                      </div>
-                    )}
-                    <div className="mt-1">
-                      {getStatusText(stage)}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Connector Line */}
-                {index < stages.length - 1 && (
-                  <div className="w-16 h-1 relative -top-5">
-                    <div className={`h-0.5 ${getConnectorColor(stage)} rounded-full`} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      
-      {/* Tablet Timeline (Single row for 4 stages) */}
-      <div className="hidden md:block lg:hidden">
-        <div className="flex items-center justify-between">
+      {/* Compact Progress Bar Timeline with Implementation Status */}
+      <div className="bg-gray-50 rounded-lg p-2 mb-3">
+        <div className="flex items-center justify-between mb-2">
           {stages.map((stage, index) => (
-              <div key={stage.id} className="flex-1 flex items-center">
-                <div 
-                  className="relative flex flex-col items-center cursor-pointer hover:opacity-90 transition-all hover:scale-105"
-                  onClick={() => setSelectedStage(stage.id)}
-                >
-                  {/* Step Number */}
-                  <div className="text-xs text-gray-500 mb-1">Step {index + 1}</div>
+            <div key={stage.id} className="flex-1 relative">
+              <div 
+                className="cursor-pointer"
+                onClick={() => setSelectedStage(stage.id)}
+              >
+                {/* Progress Bar Section */}
+                <div className="relative">
+                  <div className={`h-2 rounded-full transition-all ${
+                    stage.status === 'completed' ? 'bg-green-500' :
+                    stage.status === 'current' ? 'bg-orange-400' :
+                    'bg-gray-300'
+                  } ${index < stages.length - 1 ? 'mr-1' : ''}`} />
                   
-                  {/* Stage Icon */}
-                  <div className="relative z-10">
-                    {getStageIcon(stage, index)}
-                  </div>
-                  
-                  {/* Stage Label */}
-                  <div className="mt-2 text-center">
-                    <div className={`text-xs font-semibold ${
-                      selectedStage === stage.id ? 'text-purple-700' :
-                      stage.status === 'completed' ? 'text-gray-800' :
-                      stage.status === 'current' ? 'text-purple-700' :
-                      'text-gray-600'
+                  {/* Stage Label Below */}
+                  <div className="mt-1.5 text-center">
+                    <div className={`text-[10px] font-semibold ${
+                      selectedStage === stage.id ? 'text-[#ff630f]' :
+                      stage.status === 'completed' ? 'text-green-700' :
+                      stage.status === 'current' ? 'text-[#ff630f]' :
+                      'text-gray-500'
                     }`}>
                       {stage.label}
                     </div>
                     {stage.id === 'implementation' && (
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {stage.completedCount}/{stage.totalCount} completed
-                      </div>
-                    )}
-                    <div className="mt-1">
-                      {getStatusText(stage)}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Connector Line */}
-                {index < 3 && (
-                  <div className="flex-1 h-0.5 mx-2">
-                    <div className={`h-full ${getConnectorColor(stage)}`} />
-                  </div>
-                )}
-              </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Mobile Timeline (Horizontal Scrollable - Compact) */}
-      <div className="block md:hidden overflow-x-auto pb-1">
-        <div className="relative min-w-max">
-          <div className="flex items-center justify-between" style={{ minWidth: '500px' }}>
-            {stages.map((stage, index) => (
-              <div key={stage.id} className="flex items-center">
-                <div 
-                  className="relative flex flex-col items-center px-2 cursor-pointer hover:opacity-90 transition-all"
-                  onClick={() => setSelectedStage(stage.id)}
-                >
-                  {/* Stage Icon with Step Number */}
-                  <div className="relative z-10">
-                    <div className="transform scale-75">
-                      {getStageIcon(stage, index)}
-                    </div>
-                    <div className="absolute -top-1 -right-1 text-[10px] bg-white rounded-full w-4 h-4 flex items-center justify-center font-bold text-gray-600 border border-gray-300">
-                      {index + 1}
-                    </div>
-                  </div>
-                  
-                  {/* Stage Label - Compact */}
-                  <div className="mt-2 text-center max-w-[80px]">
-                    <div className={`text-[11px] font-semibold leading-tight ${
-                      selectedStage === stage.id ? 'text-purple-700' :
-                      stage.status === 'completed' ? 'text-gray-800' :
-                      stage.status === 'current' ? 'text-purple-700' :
-                      'text-gray-600'
-                    }`}>
-                      {stage.label}
-                    </div>
-                    {stage.id === 'implementation' && (
-                      <div className="text-[10px] text-gray-500 mt-0.5">
+                      <div className="text-[9px] text-gray-500">
                         {stage.completedCount}/{stage.totalCount}
                       </div>
                     )}
                   </div>
                 </div>
-                
-                {/* Connector Line */}
-                {index < stages.length - 1 && (
-                  <div className="w-8 h-0.5 relative -top-3">
-                    <div className={`h-full ${getConnectorColor(stage)} rounded-full`} />
-                  </div>
-                )}
               </div>
-            ))}
+            </div>
+          ))}
+        </div>
+        
+        {/* Implementation Sub-stages Status Banner */}
+        {selectedStage === 'implementation' && (
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <div className="flex items-center justify-between text-[10px]">
+              <div className="flex items-center gap-1">
+                {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') ? 
+                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
+                }
+                <span className={trainerData?.productSetupStatus?.includes('Completed') ? 'text-green-700' : 'text-gray-600'}>Setup</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {(trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') ?
+                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
+                }
+                <span className={trainerData?.hardwareDeliveryStatus?.includes('Delivered') ? 'text-green-700' : 'text-gray-600'}>Hardware</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') ?
+                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
+                }
+                <span className={trainerData?.hardwareInstallationStatus?.includes('Completed') ? 'text-green-700' : 'text-gray-600'}>Install</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') ?
+                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
+                }
+                <span className={trainerData?.trainingStatus?.includes('Completed') ? 'text-green-700' : 'text-gray-600'}>Training</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {(trainerData?.videoProofLink || uploadedVideoUrl) ?
+                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
+                }
+                <span className={trainerData?.videoProofLink ? 'text-green-700' : 'text-gray-600'}>Ready</span>
+              </div>
+            </div>
           </div>
-        </div>
-        {/* Scroll indicator - smaller */}
-        <div className="text-center mt-1 md:hidden">
-          <span className="text-[10px] text-gray-400">← Swipe →</span>
-        </div>
+        )}
       </div>
       
-      {/* Current Stage Info */}
-      {currentStage && (
-        <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="text-sm text-blue-700">
-            <span className="font-medium">Current Stage:</span> {currentStage}
-          </div>
-        </div>
-      )}
 
       {/* Stage Details Section - Shows only selected stage */}
-      <div className="mt-6">
+      <div className="mt-2">
         {selectedStage === 'welcome-call' && (
-          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
-            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center">
-              <span className="mr-2">📞</span> Welcome Call Details
+          <div className="bg-gray-50 rounded-lg p-3">
+            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center">
+              Welcome Call Details
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <div>
                 <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Call Status</div>
                 <div className="text-sm font-medium text-gray-900">
@@ -483,81 +399,19 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         )}
 
         {selectedStage === 'implementation' && (
-          <div className="space-y-4">
-            {/* Implementation Progress Overview */}
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
-              <h4 className="text-sm font-semibold text-blue-800 mb-2">Implementation Progress</h4>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <div className="flex items-center gap-2">
-                  {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') ? 
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg> :
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  }
-                  <span className="text-xs">Product Setup</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {(trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') ?
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg> :
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  }
-                  <span className="text-xs">Hardware Delivery</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') ?
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg> :
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  }
-                  <span className="text-xs">Installation</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') ?
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg> :
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  }
-                  <span className="text-xs">Training</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {(trainerData?.videoProofLink || uploadedVideoUrl) ?
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg> :
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  }
-                  <span className="text-xs">Store Readiness</span>
-                </div>
-              </div>
-            </div>
-            
+          <div className="space-y-3">
             {/* Product Setup */}
-          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
-            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
               <span className="flex items-center">
-                <span className="mr-2">⚙️</span> Product Setup
+                Product Setup
               </span>
               {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') &&
                 <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Product Setup Status</div>
                   <div className="text-sm font-medium text-gray-900">
@@ -636,17 +490,17 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
 
             {/* Hardware Fulfillment */}
-          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
-            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
               <span className="flex items-center">
-                <span className="mr-2">📦</span> Hardware Fulfillment
+                Hardware Fulfillment
               </span>
               {(trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') &&
                 <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Hardware Delivery Status</div>
                   <div className="text-sm font-medium text-gray-900">
@@ -690,17 +544,17 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
 
             {/* Hardware Installation */}
-          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
-            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
               <span className="flex items-center">
-                <span className="mr-2">🔧</span> Hardware Installation
+                Hardware Installation
               </span>
               {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') &&
                 <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Status</div>
                   <div className="text-sm font-medium text-gray-900">
@@ -728,7 +582,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Actual Installation Date</div>
                   <div className="text-sm font-medium text-gray-900">
@@ -751,16 +605,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
 
             {/* Training */}
-          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
-            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
               <span className="flex items-center">
-                <span className="mr-2">🎓</span> Training
+                Training
               </span>
               {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') &&
                 <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <div>
                 <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Training Status</div>
                 <div className="text-sm font-medium text-gray-900">
@@ -815,16 +669,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
 
             {/* Store Readiness */}
-          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
-            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center justify-between">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
               <span className="flex items-center">
-                <span className="mr-2">📹</span> Store Readiness
+                Store Readiness
               </span>
               {(trainerData?.videoProofLink || uploadedVideoUrl) &&
                 <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
               }
             </h4>
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div>
                 <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Video Proof</div>
                 {trainerData?.videoProofLink || uploadedVideoUrl ? (
@@ -921,9 +775,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         )}
 
         {selectedStage === 'go-live' && (
-          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
-            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center">
-              <span className="mr-2">🚀</span> Go Live
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center">
+              Go Live
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1002,9 +856,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         )}
 
         {selectedStage === 'post-go-live' && (
-          <div className="bg-white rounded-2xl p-4 border border-[#e5e7eb]">
-            <h4 className="text-sm font-semibold text-[#0b0707] mb-3 flex items-center">
-              <span className="mr-2">✅</span> Post Go Live Check In
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center">
+              Post Go Live Check In
             </h4>
             <div className="text-sm text-gray-600">Scheduled after go-live completion</div>
           </div>

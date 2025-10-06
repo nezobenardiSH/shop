@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
-import { validatePIN, generateToken, checkRateLimit, recordLoginAttempt } from '@/lib/auth-utils'
+import { validatePIN, validatePINWithUser, generateToken, checkRateLimit, recordLoginAttempt } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
@@ -44,8 +44,10 @@ export async function POST(request: NextRequest) {
     const query = `
       SELECT Id, Name,
              Business_Owner_Contact__r.Phone,
+             Business_Owner_Contact__r.Name,
              Merchant_PIC_Contact_Number__c,
-             Operation_Manager_Contact__r.Phone
+             Operation_Manager_Contact__r.Phone,
+             Operation_Manager_Contact__r.Name
       FROM Onboarding_Trainer__c
       WHERE Name = '${escapedMerchantId}'
       LIMIT 1
@@ -66,23 +68,33 @@ export async function POST(request: NextRequest) {
     
     const trainer = result.records[0] as any
     
-    // Extract phone numbers
-    const phoneNumbers = [
-      trainer.Business_Owner_Contact__r?.Phone,
-      trainer.Merchant_PIC_Contact_Number__c,
-      trainer.Operation_Manager_Contact__r?.Phone
-    ].filter(Boolean) // Remove null/undefined values
+    // Extract phone numbers with associated contact names
+    const phoneData = [
+      { 
+        phone: trainer.Business_Owner_Contact__r?.Phone, 
+        name: trainer.Business_Owner_Contact__r?.Name 
+      },
+      { 
+        phone: trainer.Merchant_PIC_Contact_Number__c, 
+        name: 'Merchant PIC' // This field doesn't have a name, so use a generic label
+      },
+      { 
+        phone: trainer.Operation_Manager_Contact__r?.Phone, 
+        name: trainer.Operation_Manager_Contact__r?.Name 
+      }
+    ].filter(({ phone }) => phone) // Remove entries without phone numbers
     
     // Check if we have any phone numbers
-    if (phoneNumbers.length === 0) {
+    if (phoneData.length === 0) {
       return NextResponse.json(
         { error: 'No phone numbers configured for this merchant. Please contact support.' },
         { status: 400 }
       )
     }
     
-    // Validate PIN
-    if (!validatePIN(pin, phoneNumbers)) {
+    // Validate PIN and get the user name
+    const validationResult = validatePINWithUser(pin, phoneData)
+    if (!validationResult.isValid) {
       recordLoginAttempt(merchantId, false)
       const updatedRateLimit = checkRateLimit(merchantId)
       
@@ -102,7 +114,9 @@ export async function POST(request: NextRequest) {
     const token = generateToken({
       merchantId: merchantId,
       trainerId: trainer.Id,
-      trainerName: trainer.Name
+      trainerName: trainer.Name,
+      userName: validationResult.userName,
+      pin: pin
     })
     
     // Set httpOnly cookie

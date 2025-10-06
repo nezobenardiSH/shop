@@ -356,7 +356,7 @@ export default function BookingModal({
                   <div className="whitespace-pre-line">{message}</div>
                   {assignedTrainer && bookingStatus === 'success' && (
                     <div className="mt-2 text-sm font-semibold">
-                      🎯 Trainer: {assignedTrainer}
+                      Trainer: {assignedTrainer}
                     </div>
                   )}
                 </div>
