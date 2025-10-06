@@ -35,6 +35,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/salesforce/merchant/[merchantId]/route.js"
+    ],
+    "/merchant/[merchantId]/details/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/merchant/[merchantId]/details/page.js"
     ]
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { salesforceApi } from '@/lib/salesforce'
+import { getSalesforceConnection } from '@/lib/salesforce'
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +19,14 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer())
     
     // Upload to Salesforce Files
-    const conn = await salesforceApi.getConnection()
+    const conn = await getSalesforceConnection()
+    
+    if (!conn) {
+      return NextResponse.json(
+        { error: 'Salesforce connection not available' },
+        { status: 500 }
+      )
+    }
     
     // Create a ContentVersion (file upload)
     const contentVersion = await conn.sobject('ContentVersion').create({
