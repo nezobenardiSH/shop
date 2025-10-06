@@ -30,6 +30,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   const [goLiveDateValue, setGoLiveDateValue] = useState('')
   const [uploadingVideo, setUploadingVideo] = useState(false)
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null)
+  const [expandedItems, setExpandedItems] = useState<{[key: string]: boolean}>({
+    'product-setup': false,
+    'hardware-fulfillment': false,
+    'installation': false,
+    'training': false,
+    'store-readiness': false
+  })
 
   // Define the main 4 stages with sub-stages
   const mainStages = [
@@ -246,6 +253,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       })
     }
   }
+
+  const toggleItemExpansion = (itemKey: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [itemKey]: !prev[itemKey]
+    }))
+  }
   
   const handleGoLiveDateSave = async () => {
     if (!goLiveDateValue || !trainerData?.id) return
@@ -287,9 +301,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     <div className="bg-white border border-[#e5e7eb] rounded-lg p-3">
       <h3 className="text-lg font-bold text-[#0b0707] mb-3">Onboarding Progress</h3>
       
-      {/* Compact Progress Bar Timeline with Implementation Status */}
+      {/* Compact Progress Bar Timeline */}
       <div className="bg-gray-50 rounded-lg p-2 mb-3">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between">
           {stages.map((stage, index) => (
             <div key={stage.id} className="flex-1 relative">
               <div 
@@ -314,56 +328,488 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     }`}>
                       {stage.label}
                     </div>
-                    {stage.id === 'implementation' && (
-                      <div className="text-[9px] text-gray-500">
-                        {stage.completedCount}/{stage.totalCount}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        
-        {/* Implementation Sub-stages Status Banner */}
-        {selectedStage === 'implementation' && (
-          <div className="mt-2 pt-2 border-t border-gray-200">
-            <div className="flex items-center justify-between text-[10px]">
-              <div className="flex items-center gap-1">
-                {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') ? 
-                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
-                }
-                <span className={trainerData?.productSetupStatus?.includes('Completed') ? 'text-green-700' : 'text-gray-600'}>Setup</span>
+      </div>
+
+      {/* Implementation Status Overview - Prominent */}
+      {selectedStage === 'implementation' && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-base font-semibold text-gray-900">Implementation Status</h4>
+            <div className="text-sm text-gray-500">
+              {(() => {
+                const completed = [
+                  trainerData?.productSetupStatus?.includes('Completed'),
+                  trainerData?.hardwareDeliveryStatus?.includes('Delivered'),
+                  trainerData?.hardwareInstallationStatus?.includes('Completed'),
+                  trainerData?.trainingStatus?.includes('Completed'),
+                  trainerData?.videoProofLink || uploadedVideoUrl
+                ].filter(Boolean).length;
+                return `${completed}/5 Complete`;
+              })()}
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {/* Product Setup */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') ? (
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="text-sm font-medium text-gray-900">Product Setup</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`text-sm font-medium ${
+                      trainerData?.productSetupStatus?.includes('Completed') 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {trainerData?.productSetupStatus || 'Not Started'}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('product-setup')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['product-setup'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Expanded Details */}
+                {expandedItems['product-setup'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</div>
+                      <div className="text-sm text-gray-900">{trainerData?.productSetupStatus || 'Not Started'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed Date</div>
+                      <div className="text-sm text-gray-900">
+                        {trainerData?.completedProductSetup 
+                          ? new Date(trainerData.completedProductSetup).toLocaleDateString() 
+                          : 'Not Completed'}
+                      </div>
+                    </div>
+                    {trainerData?.boAccountName && (
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">StoreHub Account</div>
+                        <a
+                          href={`https://${trainerData.boAccountName}.storehubhq.com/`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
+                        >
+                          {trainerData.boAccountName}
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1">
-                {(trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') ?
-                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
-                }
-                <span className={trainerData?.hardwareDeliveryStatus?.includes('Delivered') ? 'text-green-700' : 'text-gray-600'}>Hardware</span>
+            </div>
+
+            {/* Hardware Fulfillment */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') ? (
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="text-sm font-medium text-gray-900">Hardware</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`text-sm font-medium ${
+                      trainerData?.hardwareDeliveryStatus?.includes('Delivered') 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {trainerData?.hardwareDeliveryStatus || 'Not Started'}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('hardware-fulfillment')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['hardware-fulfillment'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {expandedItems['hardware-fulfillment'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Delivery Status</div>
+                      <div className="text-sm text-gray-900">{trainerData?.hardwareDeliveryStatus || 'Not Started'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fulfillment Date</div>
+                      <div className="text-sm text-gray-900">
+                        {trainerData?.hardwareFulfillmentDate 
+                          ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString() 
+                          : 'Not Scheduled'}
+                      </div>
+                    </div>
+                    {trainerData?.trackingLink && (
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tracking</div>
+                        <a 
+                          href={trainerData.trackingLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
+                        >
+                          Track Shipment
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1">
-                {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') ?
-                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
-                }
-                <span className={trainerData?.hardwareInstallationStatus?.includes('Completed') ? 'text-green-700' : 'text-gray-600'}>Install</span>
+            </div>
+
+            {/* Installation */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') ? (
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="text-sm font-medium text-gray-900">Installation</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`text-sm font-medium ${
+                      trainerData?.hardwareInstallationStatus?.includes('Completed') 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {trainerData?.hardwareInstallationStatus || 'Not Started'}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('installation')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['installation'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {expandedItems['installation'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Status</div>
+                      <div className="text-sm text-gray-900">{trainerData?.hardwareInstallationStatus || 'Not Started'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Scheduled Date</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm text-gray-900">
+                          {trainerData?.installationDate 
+                            ? new Date(trainerData.installationDate).toLocaleDateString() 
+                            : 'Not Scheduled'}
+                        </div>
+                        <button
+                          onClick={() => handleBookingClick('installation', trainerData?.installationDate)}
+                          className="text-[#ff630f] hover:text-[#fe5b25] text-sm transition-colors"
+                          title="Book Installation"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Actual Date</div>
+                      <div className="text-sm text-gray-900">
+                        {trainerData?.actualInstallationDate 
+                          ? new Date(trainerData.actualInstallationDate).toLocaleDateString() 
+                          : 'Not Completed'}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1">
-                {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') ?
-                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
-                }
-                <span className={trainerData?.trainingStatus?.includes('Completed') ? 'text-green-700' : 'text-gray-600'}>Training</span>
+            </div>
+
+            {/* Training */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') ? (
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="text-sm font-medium text-gray-900">Training</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`text-sm font-medium ${
+                      trainerData?.trainingStatus?.includes('Completed') 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {trainerData?.trainingStatus || 'Not Started'}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('training')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['training'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {expandedItems['training'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Status</div>
+                      <div className="text-sm text-gray-900">{trainerData?.trainingStatus || 'Not Started'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">BackOffice Training</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm text-gray-900">
+                          {trainerData?.backOfficeTrainingDate 
+                            ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString() 
+                            : 'Not Scheduled'}
+                        </div>
+                        <button
+                          onClick={() => handleBookingClick('training-backoffice', trainerData?.backOfficeTrainingDate)}
+                          className="text-blue-600 hover:text-blue-700 text-sm"
+                          title="Book BackOffice Training"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">POS Training</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm text-gray-900">
+                          {trainerData?.posTrainingDate 
+                            ? new Date(trainerData.posTrainingDate).toLocaleDateString() 
+                            : 'Not Scheduled'}
+                        </div>
+                        <button
+                          onClick={() => handleBookingClick('training-pos', trainerData?.posTrainingDate)}
+                          className="text-blue-600 hover:text-blue-700 text-sm"
+                          title="Book POS Training"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CSM Name</div>
+                      <div className="text-sm text-gray-900">{trainerData?.csmName || 'Not Assigned'}</div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1">
-                {(trainerData?.videoProofLink || uploadedVideoUrl) ?
-                  <span className="text-green-600">✓</span> : <span className="text-gray-400">○</span>
-                }
-                <span className={trainerData?.videoProofLink ? 'text-green-700' : 'text-gray-600'}>Ready</span>
+            </div>
+
+            {/* Store Readiness */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(trainerData?.videoProofLink || uploadedVideoUrl) ? (
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="text-sm font-medium text-gray-900">Store Ready</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`text-sm font-medium ${
+                      (trainerData?.videoProofLink || uploadedVideoUrl) 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {(trainerData?.videoProofLink || uploadedVideoUrl) ? 'Video Uploaded' : 'Pending Video Upload'}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('store-readiness')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['store-readiness'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {expandedItems['store-readiness'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Proof</div>
+                      {trainerData?.videoProofLink || uploadedVideoUrl ? (
+                        <a 
+                          href={uploadedVideoUrl || trainerData?.videoProofLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
+                        >
+                          View Video
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ) : (
+                        <div className="text-sm text-gray-500">No video uploaded</div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Upload Video</div>
+                      <input
+                        id={`video-upload-${trainerData?.id}`}
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          
+                          setUploadingVideo(true)
+                          try {
+                            const formData = new FormData()
+                            formData.append('file', file)
+                            formData.append('trainerId', trainerData?.id || '')
+                            
+                            const response = await fetch('/api/salesforce/upload-video', {
+                              method: 'POST',
+                              body: formData
+                            })
+                            
+                            if (!response.ok) {
+                              const error = await response.json()
+                              throw new Error(error.details || error.error || 'Failed to upload video')
+                            }
+                            
+                            const result = await response.json()
+                            setUploadedVideoUrl(result.fileUrl)
+                            
+                            if (onBookingComplete) {
+                              onBookingComplete()
+                            }
+                          } catch (error) {
+                            console.error('Error uploading video:', error)
+                            alert(error instanceof Error ? error.message : 'Failed to upload video')
+                          } finally {
+                            setUploadingVideo(false)
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => document.getElementById(`video-upload-${trainerData?.id}`)?.click()}
+                        disabled={uploadingVideo}
+                        className="inline-flex items-center px-3 py-1.5 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded-full transition-all duration-200 transform hover:scale-105 disabled:cursor-not-allowed"
+                      >
+                        {uploadingVideo ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Upload
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       
 
       {/* Stage Details Section - Shows only selected stage */}
@@ -398,7 +844,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </div>
         )}
 
-        {selectedStage === 'implementation' && (
+        {selectedStage === 'implementation' && false && (
           <div className="space-y-3">
             {/* Product Setup */}
           <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">

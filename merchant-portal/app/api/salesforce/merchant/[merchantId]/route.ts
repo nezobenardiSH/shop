@@ -51,7 +51,6 @@ export async function GET(
     try {
       const allTrainersQuery = `
         SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
-               BackOffice_Training_Date__c, POS_Training_Date__c,
                Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
                Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
@@ -118,9 +117,48 @@ export async function GET(
         trainerResult = { totalSize: 0, records: [] }
       }
 
-    } catch (error) {
-      console.log('Failed to get all trainers:', error)
-      trainerResult = { totalSize: 0, records: [] }
+    } catch (error: any) {
+      console.log('Failed to get all trainers - ERROR DETAILS:', error)
+      console.log('Error type:', typeof error)
+      console.log('Error message:', error?.message)
+      console.log('Error code:', error?.errorCode)
+      console.log('Error name:', error?.name)
+      console.log('Full error object:', JSON.stringify(error, null, 2))
+      
+      // Try a simplified fallback query
+      console.log('Attempting simplified fallback query...')
+      try {
+        const simpleQuery = `
+          SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c
+          FROM Onboarding_Trainer__c
+          ORDER BY Name LIMIT 20
+        `
+        const simpleResult = await conn.query(simpleQuery)
+        console.log('Simplified query successful, found trainers:', simpleResult.records.map((t: any) => t.Name))
+        
+        // Try to find match with simplified data
+        const matchingTrainer = simpleResult.records.find((trainer: any) => {
+          const normalizeNameForComparison = (name: string) => {
+            return name.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim()
+          }
+          
+          const trainerNameNormalized = normalizeNameForComparison(trainer.Name)
+          const actualNameNormalized = normalizeNameForComparison(actualTrainerName)
+          
+          return trainerNameNormalized === actualNameNormalized || 
+                 trainer.Name.toLowerCase() === actualTrainerName.toLowerCase()
+        })
+        
+        if (matchingTrainer) {
+          console.log('Found match in simplified query:', matchingTrainer.Name)
+          trainerResult = { totalSize: 1, records: [matchingTrainer] }
+        } else {
+          trainerResult = { totalSize: 0, records: [] }
+        }
+      } catch (fallbackError) {
+        console.log('Simplified fallback query also failed:', fallbackError)
+        trainerResult = { totalSize: 0, records: [] }
+      }
     }
 
     // The search logic is now handled above
@@ -318,8 +356,8 @@ export async function GET(
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
         // trainingDate: trainer.Training_Date__c, // This field might not exist
-        backOfficeTrainingDate: trainer.BackOffice_Training_Date__c,
-        posTrainingDate: trainer.POS_Training_Date__c,
+        // backOfficeTrainingDate: trainer.BackOffice_Training_Date__c, // Field doesn't exist
+        // posTrainingDate: trainer.POS_Training_Date__c, // Field doesn't exist
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         hardwareFulfillmentDate: hardwareFulfillmentDate,
         trackingLink: trackingLink,
