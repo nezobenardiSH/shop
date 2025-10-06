@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
       'hardware-fulfillment': { field: 'Hardware_Fulfillment_Date__c', object: 'Order' },
       'installation': { field: 'Installation_Date__c', object: 'Onboarding_Trainer__c' },
       'training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' },
+      'training-backoffice': { field: 'BackOffice_Training_Date__c', object: 'Onboarding_Trainer__c' },
+      'training-pos': { field: 'POS_Training_Date__c', object: 'Onboarding_Trainer__c' },
       'go-live': { field: 'First_Revised_EGLD__c', object: 'Onboarding_Trainer__c' },
       'firstRevisedEGLD': { field: 'First_Revised_EGLD__c', object: 'Onboarding_Trainer__c' },
       'installationDate': { field: 'Installation_Date__c', object: 'Onboarding_Trainer__c' },

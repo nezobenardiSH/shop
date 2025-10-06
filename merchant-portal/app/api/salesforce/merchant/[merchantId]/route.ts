@@ -51,7 +51,8 @@ export async function GET(
     try {
       const allTrainersQuery = `
         SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
-               Training_Date__c, Phone_Number__c, Merchant_PIC_Contact_Number__c,
+               BackOffice_Training_Date__c, POS_Training_Date__c,
+               Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
                Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
                Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c, 
@@ -78,24 +79,32 @@ export async function GET(
       const matchingTrainer = allTrainersResult.records.find((trainer: any) => {
         console.log(`Comparing "${trainer.Name}" with "${actualTrainerName}" and original "${trainerName}"`)
         
-        // Try multiple matching strategies
-        const trainerNameLower = trainer.Name.toLowerCase()
-        const actualNameLower = actualTrainerName.toLowerCase()
-        const originalNameLower = trainerName.toLowerCase()
+        // Normalize both names for comparison
+        const normalizeNameForComparison = (name: string) => {
+          return name
+            .toLowerCase()
+            .replace(/-/g, ' ')  // Replace hyphens with spaces
+            .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+            .trim()
+        }
         
-        // Remove trailing hyphens for comparison
-        const trainerNameClean = trainer.Name.replace(/-$/, '').toLowerCase()
-        const actualNameClean = actualTrainerName.replace(/-$/, '').toLowerCase()
-        const originalNameClean = trainerName.replace(/-$/, '').toLowerCase()
+        const trainerNameNormalized = normalizeNameForComparison(trainer.Name)
+        const actualNameNormalized = normalizeNameForComparison(actualTrainerName)
+        const originalNameNormalized = normalizeNameForComparison(trainerName)
         
-        return trainer.Name === actualTrainerName ||
+        // Check various matching patterns
+        const matches = trainer.Name === actualTrainerName ||
                trainer.Name === trainerName ||
-               trainerNameLower === actualNameLower ||
-               trainerNameLower === originalNameLower ||
-               trainerNameClean === actualNameClean ||
-               trainerNameClean === originalNameClean ||
-               // Also try without any hyphens at all
-               trainer.Name.replace(/-/g, ' ').toLowerCase() === actualTrainerName.replace(/-/g, ' ').toLowerCase()
+               trainer.Name === trainerName.replace(/-/g, ' ') ||  // Direct hyphen to space replacement
+               trainer.Name === actualTrainerName.replace(/-/g, ' ') ||  // Direct hyphen to space replacement
+               trainerNameNormalized === actualNameNormalized ||
+               trainerNameNormalized === originalNameNormalized
+        
+        if (matches) {
+          console.log(`✅ Match found: "${trainer.Name}"`)
+        }
+        
+        return matches
       })
 
       if (matchingTrainer) {
@@ -308,7 +317,9 @@ export async function GET(
         actualInstallationDate: trainer.Actual_Installation_Date__c,
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
-        trainingDate: trainer.Training_Date__c,
+        // trainingDate: trainer.Training_Date__c, // This field might not exist
+        backOfficeTrainingDate: trainer.BackOffice_Training_Date__c,
+        posTrainingDate: trainer.POS_Training_Date__c,
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         hardwareFulfillmentDate: hardwareFulfillmentDate,
         trackingLink: trackingLink,

@@ -21,7 +21,10 @@ interface OnboardingTimelineProps {
 
 export default function OnboardingTimeline({ currentStage, stageData, trainerData, onBookingComplete, onOpenBookingModal }: OnboardingTimelineProps) {
   const [stages, setStages] = useState<TimelineStage[]>([])
-  const [selectedStage, setSelectedStage] = useState<string>('welcome-call')
+  // Initialize selectedStage based on welcome call completion status
+  const initialStage = (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
+                        trainerData?.welcomeCallStatus === 'Completed') ? 'implementation' : 'welcome-call'
+  const [selectedStage, setSelectedStage] = useState<string>(initialStage)
   const [updatingField, setUpdatingField] = useState<string | null>(null)
   const [editingGoLiveDate, setEditingGoLiveDate] = useState(false)
   const [goLiveDateValue, setGoLiveDateValue] = useState('')
@@ -118,6 +121,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               (trainerData?.welcomeCallStatus && trainerData.welcomeCallStatus !== 'Not Started' ? 'current' : 'pending'),
       completedDate: trainerData?.firstCallTimestamp
     })
+    
+    // If welcome call is completed, automatically set selected stage to implementation
+    if (welcomeCallCompleted && selectedStage === 'welcome-call') {
+      setSelectedStage('implementation')
+    }
     
     // 2. Implementation Stage
     // Check if all implementation sub-stages are completed
@@ -760,17 +768,36 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </div>
               </div>
               <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Training Date</div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">BackOffice Training</div>
                 <div className="flex items-center gap-2">
                   <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.trainingDate 
-                      ? new Date(trainerData.trainingDate).toLocaleDateString() 
+                    {trainerData?.backOfficeTrainingDate 
+                      ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString() 
                       : 'Not Scheduled'}
                   </div>
                   <button
-                    onClick={() => handleBookingClick('training', trainerData?.trainingDate)}
+                    onClick={() => handleBookingClick('training-backoffice', trainerData?.backOfficeTrainingDate)}
                     className="text-blue-600 hover:text-blue-700 text-sm"
-                    title="Book with Lark Calendar"
+                    title="Book BackOffice Training"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">POS Training</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-gray-900">
+                    {trainerData?.posTrainingDate 
+                      ? new Date(trainerData.posTrainingDate).toLocaleDateString() 
+                      : 'Not Scheduled'}
+                  </div>
+                  <button
+                    onClick={() => handleBookingClick('training-pos', trainerData?.posTrainingDate)}
+                    className="text-blue-600 hover:text-blue-700 text-sm"
+                    title="Book POS Training"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />

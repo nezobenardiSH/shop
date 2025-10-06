@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import BookingModal from '@/components/BookingModal'
+import DatePickerModal from '@/components/DatePickerModal'
 import OnboardingTimeline from '@/components/OnboardingTimeline'
 import WhatsAppButton from '@/components/WhatsAppButton'
 
@@ -181,18 +181,18 @@ export default function TrainerPortal() {
     // Option 2: Map based on merchant name or other logic
     // For example: Nasi Lemak -> Nezo, Other merchants -> Jia En
     
-    // Determine which date to use based on bookingType
-    let existingDate = null;
-    if (trainer.bookingType === 'installation') {
-      existingDate = trainer.installationDate;
-    } else if (trainer.bookingType === 'hardware-fulfillment') {
-      existingDate = trainer.hardwareFulfillmentDate;
-    } else if (trainer.bookingType === 'go-live') {
-      existingDate = trainer.firstRevisedEGLD;
-    } else {
-      // Default to training
-      existingDate = trainer.trainingDate;
-    }
+    // For future use: Determine which date to use based on bookingType
+    // let existingDate = null;
+    // if (trainer.bookingType === 'installation') {
+    //   existingDate = trainer.installationDate;
+    // } else if (trainer.bookingType === 'hardware-fulfillment') {
+    //   existingDate = trainer.hardwareFulfillmentDate;
+    // } else if (trainer.bookingType === 'go-live') {
+    //   existingDate = trainer.firstRevisedEGLD;
+    // } else {
+    //   // Default to training
+    //   existingDate = trainer.trainingDate;
+    // }
     
     setCurrentBookingInfo({
       trainerId: trainer.id,
@@ -795,7 +795,7 @@ export default function TrainerPortal() {
 
       {/* Booking Modal */}
       {bookingModalOpen && currentBookingInfo && (
-        <BookingModal
+        <DatePickerModal
           isOpen={bookingModalOpen}
           onClose={() => setBookingModalOpen(false)}
           merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}

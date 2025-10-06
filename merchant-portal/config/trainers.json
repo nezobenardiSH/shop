@@ -5,14 +5,16 @@
       "email": "nezo.benardi@storehub.com",
       "larkUserId": "",
       "calendarId": "primary",
-      "salesforceId": ""
+      "salesforceId": "",
+      "languages": ["English", "中文"]
     },
     {
       "name": "Jia En", 
       "email": "jiaen.chai@storehub.com",
       "larkUserId": "",
       "calendarId": "primary",
-      "salesforceId": ""
+      "salesforceId": "",
+      "languages": ["English", "Bahasa Malaysia", "中文"]
     },
     {
       "name": "Nasi Lemak",
