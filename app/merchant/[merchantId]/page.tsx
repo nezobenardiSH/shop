@@ -323,15 +323,30 @@ export default function TrainerPortal() {
         </div>
         
         {/* Page Title Section */}
-        <div className="mb-6 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-[#0b0707]">
-            {trainerName.replace(/-/g, ' ')}
-          </h1>
-          {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
-            <p className="text-sm text-[#6b6a6a]">
-              Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleString()}
-            </p>
-          )}
+        <div className="mb-6">
+          {/* Mobile Layout: Title and timestamp stacked */}
+          <div className="block sm:hidden">
+            <h1 className="text-2xl font-bold text-[#0b0707] mb-1">
+              {trainerName.replace(/-/g, ' ')}
+            </h1>
+            {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
+              <p className="text-xs text-[#6b6a6a]">
+                Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleString()}
+              </p>
+            )}
+          </div>
+
+          {/* Desktop Layout: Title and timestamp side by side */}
+          <div className="hidden sm:flex sm:justify-between sm:items-center">
+            <h1 className="text-3xl font-bold text-[#0b0707]">
+              {trainerName.replace(/-/g, ' ')}
+            </h1>
+            {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
+              <p className="text-sm text-[#6b6a6a]">
+                Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleString()}
+              </p>
+            )}
+          </div>
         </div>
         
         {/* Navigation Menu */}
@@ -354,17 +369,55 @@ export default function TrainerPortal() {
         
         {/* Expected Go Live Date - Highlighted at the top */}
         {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0] && (
-          <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-4">
-            <div className="flex items-center justify-between">
+          <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-3 sm:p-4">
+            {/* Mobile Layout: Title-Value pairs */}
+            <div className="block sm:hidden space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="text-orange-600">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider">Expected Go Live Date</div>
+                </div>
+                <div className="text-sm font-bold text-gray-900">
+                  {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate 
+                    ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                      })
+                    : 'Not Set'}
+                </div>
+              </div>
+              {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate && (
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-600">Days until go-live</div>
+                  <div className="text-lg font-bold text-orange-600">
+                    {(() => {
+                      const today = new Date();
+                      const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
+                      const diffTime = goLive.getTime() - today.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      return diffDays > 0 ? diffDays : 'Overdue';
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Layout: Original horizontal layout */}
+            <div className="hidden sm:flex sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="text-orange-600">
+                <div className="text-orange-600 flex-shrink-0">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-orange-600 uppercase tracking-wider">Expected Go Live Date</div>
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-2xl font-bold text-gray-900 truncate">
                     {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate 
                       ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-US', { 
                           weekday: 'long', 
@@ -377,7 +430,7 @@ export default function TrainerPortal() {
                 </div>
               </div>
               {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate && (
-                <div className="text-right">
+                <div className="text-right flex-shrink-0">
                   <div className="text-sm text-gray-600">Days until go-live</div>
                   <div className="text-3xl font-bold text-orange-600">
                     {(() => {

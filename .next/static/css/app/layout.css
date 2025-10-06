@@ -753,6 +753,9 @@ h1, h2, h3, h4, h5, h6{
 .min-w-full{
   min-width: 100%;
 }
+.min-w-0{
+  min-width: 0px;
+}
 .max-w-4xl{
   max-width: 56rem;
 }
@@ -907,6 +910,11 @@ h1, h2, h3, h4, h5, h6{
 }
 .overflow-y-auto{
   overflow-y: auto;
+}
+.truncate{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .whitespace-nowrap{
   white-space: nowrap;
@@ -1102,6 +1110,14 @@ h1, h2, h3, h4, h5, h6{
   --tw-bg-opacity: 1;
   background-color: rgb(254 252 232 / var(--tw-bg-opacity, 1));
 }
+.bg-orange-100{
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 237 213 / var(--tw-bg-opacity, 1));
+}
+.bg-yellow-100{
+  --tw-bg-opacity: 1;
+  background-color: rgb(254 249 195 / var(--tw-bg-opacity, 1));
+}
 .bg-opacity-50{
   --tw-bg-opacity: 0.5;
 }
@@ -1280,6 +1296,9 @@ h1, h2, h3, h4, h5, h6{
   font-size: 0.75rem;
   line-height: 1rem;
 }
+.text-\[8px\]{
+  font-size: 8px;
+}
 .font-bold{
   font-weight: 700;
 }
@@ -1404,6 +1423,18 @@ h1, h2, h3, h4, h5, h6{
 .text-white{
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+}
+.text-orange-800{
+  --tw-text-opacity: 1;
+  color: rgb(154 52 18 / var(--tw-text-opacity, 1));
+}
+.text-purple-800{
+  --tw-text-opacity: 1;
+  color: rgb(107 33 168 / var(--tw-text-opacity, 1));
+}
+.text-yellow-800{
+  --tw-text-opacity: 1;
+  color: rgb(133 77 14 / var(--tw-text-opacity, 1));
 }
 .underline{
   text-decoration-line: underline;
@@ -1660,6 +1691,26 @@ h1, h2, h3, h4, h5, h6{
 }
 @media (min-width: 640px){
 
+  .sm\:flex{
+    display: flex;
+  }
+
+  .sm\:hidden{
+    display: none;
+  }
+
+  .sm\:h-6{
+    height: 1.5rem;
+  }
+
+  .sm\:w-6{
+    width: 1.5rem;
+  }
+
+  .sm\:grid-cols-2{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .sm\:flex-row{
     flex-direction: row;
   }
@@ -1676,8 +1727,35 @@ h1, h2, h3, h4, h5, h6{
     justify-content: space-between;
   }
 
+  .sm\:gap-3{
+    gap: 0.75rem;
+  }
+
+  .sm\:p-4{
+    padding: 1rem;
+  }
+
   .sm\:pl-0{
     padding-left: 0px;
+  }
+
+  .sm\:text-right{
+    text-align: right;
+  }
+
+  .sm\:text-2xl{
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+
+  .sm\:text-3xl{
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+
+  .sm\:text-sm{
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 }
 @media (min-width: 768px){
@@ -1687,6 +1765,12 @@ h1, h2, h3, h4, h5, h6{
   }
 
   .md\:grid-cols-3{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px){
+
+  .lg\:grid-cols-3{
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

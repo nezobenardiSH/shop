@@ -1,5 +1,3 @@
 {
-  "/api/salesforce/trainer-stages/route": "app/api/salesforce/trainer-stages/route.js",
-  "/api/salesforce/merchant/[merchantId]/route": "app/api/salesforce/merchant/[merchantId]/route.js",
   "/merchant/[merchantId]/page": "app/merchant/[merchantId]/page.js"
 }

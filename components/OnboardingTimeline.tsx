@@ -364,6 +364,30 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     }`}>
                       {stage.label}
                     </div>
+                    {/* Status under stage name */}
+                    <div className="text-[8px] text-gray-500 mt-0.5">
+                      {(() => {
+                        switch(stage.id) {
+                          case 'welcome-call':
+                            return trainerData?.welcomeCallStatus || 'Not Started'
+                          case 'preparation':
+                            if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
+                              return `${stage.completedCount}/${stage.totalCount} Complete`
+                            }
+                            return 'In Progress'
+                          case 'installation':
+                            return trainerData?.hardwareInstallationStatus || 'Not Started'
+                          case 'training':
+                            return trainerData?.trainingStatus || 'Not Started'
+                          case 'go-live':
+                            return trainerData?.firstRevisedEGLD ? 'Date Set' : 'Pending'
+                          case 'post-go-live':
+                            return 'Scheduled'
+                          default:
+                            return ''
+                        }
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
