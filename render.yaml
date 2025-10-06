@@ -4,6 +4,7 @@ services:
     runtime: node
     region: singapore  # Changed to match your database region
     plan: starter   # Or 'free' for testing
+    rootDirectory: .
     buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
