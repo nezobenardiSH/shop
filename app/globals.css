@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* StoreHub Global Styles */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  
+  body {
+    @apply bg-[#faf9f6] text-[#0b0707];
+    line-height: 1.7;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-[#0b0707] font-semibold;
+  }
+}
+
+/* StoreHub Component Styles */
+@layer components {
+  .btn-storehub-primary {
+    @apply bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105;
+  }
+  
+  .btn-storehub-secondary {
+    @apply bg-white hover:bg-gray-50 text-[#0b0707] font-medium rounded-full px-6 py-2.5 border border-[#e5e7eb] transition-all duration-200;
+  }
+  
+  .card-storehub {
+    @apply bg-white rounded-2xl border border-[#e5e7eb] p-6;
+  }
+  
+  .text-storehub-secondary {
+    @apply text-[#6b6a6a];
+  }
+}

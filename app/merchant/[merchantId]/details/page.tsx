@@ -1,0 +1,422 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import DatePickerModal from '@/components/DatePickerModal'
+import WhatsAppButton from '@/components/WhatsAppButton'
+import MerchantHeader from '@/components/MerchantHeader'
+
+// Helper function to get currency based on country
+const getCurrencyInfo = (country: string) => {
+  const countryUpper = (country || '').toUpperCase()
+  
+  // Common country to currency mapping
+  const currencyMap: { [key: string]: { symbol: string, code: string } } = {
+    'MALAYSIA': { symbol: 'RM', code: 'MYR' },
+    'MY': { symbol: 'RM', code: 'MYR' },
+    'PHILIPPINES': { symbol: '₱', code: 'PHP' },
+    'PH': { symbol: '₱', code: 'PHP' },
+    'SINGAPORE': { symbol: 'S$', code: 'SGD' },
+    'SG': { symbol: 'S$', code: 'SGD' },
+    'INDONESIA': { symbol: 'Rp', code: 'IDR' },
+    'ID': { symbol: 'Rp', code: 'IDR' },
+    'THAILAND': { symbol: '฿', code: 'THB' },
+    'TH': { symbol: '฿', code: 'THB' },
+    'VIETNAM': { symbol: '₫', code: 'VND' },
+    'VN': { symbol: '₫', code: 'VND' },
+    'UNITED STATES': { symbol: '$', code: 'USD' },
+    'USA': { symbol: '$', code: 'USD' },
+    'US': { symbol: '$', code: 'USD' },
+    'CHINA': { symbol: '¥', code: 'CNY' },
+    'CN': { symbol: '¥', code: 'CNY' },
+    'JAPAN': { symbol: '¥', code: 'JPY' },
+    'JP': { symbol: '¥', code: 'JPY' },
+    'INDIA': { symbol: '₹', code: 'INR' },
+    'IN': { symbol: '₹', code: 'INR' },
+    'AUSTRALIA': { symbol: 'A$', code: 'AUD' },
+    'AU': { symbol: 'A$', code: 'AUD' },
+    'UNITED KINGDOM': { symbol: '£', code: 'GBP' },
+    'UK': { symbol: '£', code: 'GBP' },
+    'GB': { symbol: '£', code: 'GBP' },
+  }
+  
+  // Check for exact match or partial match
+  for (const [key, value] of Object.entries(currencyMap)) {
+    if (countryUpper.includes(key) || key.includes(countryUpper)) {
+      return value
+    }
+  }
+  
+  // Default to USD if country not found
+  return { symbol: '$', code: 'USD' }
+}
+
+// Helper function to format currency
+const formatCurrency = (amount: number | null | undefined, currencyInfo: { symbol: string, code: string }) => {
+  if (amount === null || amount === undefined) return 'N/A'
+  
+  // For currencies that typically don't use decimals (like IDR, VND, JPY)
+  const noDecimalCurrencies = ['IDR', 'VND', 'JPY']
+  const decimals = noDecimalCurrencies.includes(currencyInfo.code) ? 0 : 2
+  
+  // Format based on currency
+  if (currencyInfo.code === 'IDR' || currencyInfo.code === 'VND') {
+    // For large number currencies, use different formatting
+    return `${currencyInfo.symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
+  } else {
+    return `${currencyInfo.symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
+  }
+}
+
+export default function MerchantDetailsPage() {
+  const params = useParams()
+  const router = useRouter()
+  const trainerName = params.merchantId as string
+  
+  const [trainerData, setTrainerData] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [bookingModalOpen, setBookingModalOpen] = useState(false)
+  const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
+
+  const loadTrainerData = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/salesforce/merchant/${trainerName}`)
+      const data = await response.json()
+      setTrainerData(data)
+    } catch (error) {
+      setTrainerData({ success: false, message: `Error: ${error}` })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (trainerName) {
+      loadTrainerData()
+    }
+  }, [trainerName])
+
+  const handleOpenBookingModal = (trainer: any) => {
+    // For future use: Determine which date to use based on bookingType
+    let actualTrainerName = 'Nezo'; // Default trainer
+    
+    // Option 1: Use Operation Manager name if it matches a configured trainer
+    if (trainer.operationManagerContact?.name) {
+      actualTrainerName = trainer.operationManagerContact.name;
+    }
+    
+    setCurrentBookingInfo({
+      trainerId: trainer.id,
+      trainerName: actualTrainerName, // Use the actual trainer name for Lark
+      merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
+      merchantAddress: trainerData?.account?.billingAddress || '',
+      merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
+      merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
+      displayName: trainer.name, // Keep the Salesforce trainer name for display
+      bookingType: trainer.bookingType || 'training', // Pass the booking type
+      existingBooking: null // Don't pass existing booking for now, let user select new date
+    })
+    setBookingModalOpen(true)
+  }
+
+  const handleBookingComplete = async (selectedDate?: string) => {
+    console.log('Booking completed, refreshing trainer data...')
+    
+    // Refresh the trainer data to show the new training date
+    await loadTrainerData()
+    
+    // Clear booking modal state
+    setBookingModalOpen(false)
+    setCurrentBookingInfo(null)
+  }
+
+  return (
+    <div className="min-h-screen bg-[#faf9f6] py-4">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="mb-4">
+          <MerchantHeader
+            onRefresh={loadTrainerData}
+            loading={loading}
+            merchantName={trainerName}
+          />
+        </div>
+        
+        {/* Page Title Section */}
+        <div className="mb-6 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-[#0b0707]">
+            {trainerName.replace(/-/g, ' ')}
+          </h1>
+          {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
+            <p className="text-sm text-[#6b6a6a]">
+              Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleString()}
+            </p>
+          )}
+        </div>
+        
+        {/* Navigation Menu */}
+        <div className="mb-6 border-b border-[#e5e7eb]">
+          <nav className="flex space-x-8">
+            <Link
+              href={`/merchant/${trainerName}`}
+              className="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]"
+            >
+              Onboarding Progress
+            </Link>
+            <Link
+              href={`/merchant/${trainerName}/details`}
+              className="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-[#ff630f] text-[#ff630f]"
+            >
+              Merchant Details
+            </Link>
+          </nav>
+        </div>
+        
+        <div>
+          {trainerData && !trainerData.success && (
+            <div className="mt-6">
+              <div className="p-4 rounded-lg border bg-red-50 border-red-200 text-red-800">
+                <p className="font-medium">{trainerData.message}</p>
+
+                {trainerData.availableTrainers && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium">Debug Information:</p>
+                    <p className="text-xs mt-1">Searched for: {trainerData.searchedFor}</p>
+                    {trainerData.searchedVariations && (
+                      <p className="text-xs">Tried variations: {trainerData.searchedVariations.join(', ')}</p>
+                    )}
+                    <p className="text-xs mt-2">Total trainers in system: {trainerData.totalTrainersInSystem}</p>
+                    {trainerData.availableTrainers.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium">Available trainer names:</p>
+                        <div className="text-xs bg-gray-100 p-2 rounded mt-1 max-h-32 overflow-y-auto">
+                          {trainerData.availableTrainers.map((name: string, index: number) => (
+                            <div key={index} className="font-mono">"{name}"</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Merchant Details Section */}
+          {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
+            <div className="mt-4">
+                <h3 className="text-xl font-semibold text-[#0b0707] mb-4">Merchant Details</h3>
+                <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+                  {(() => {
+                    const trainer = trainerData.onboardingTrainerData.trainers[0];
+                    const formatAddress = () => {
+                      const parts = [
+                        trainer.shippingStreet,
+                        trainer.shippingCity,
+                        trainer.shippingState && trainer.shippingZipPostalCode 
+                          ? `${trainer.shippingState} ${trainer.shippingZipPostalCode}`
+                          : trainer.shippingState || trainer.shippingZipPostalCode,
+                        trainer.shippingCountry
+                      ].filter(Boolean);
+                      return parts.length > 0 ? parts.join(', ') : 'N/A';
+                    };
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                        {/* Column 1 */}
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Trainer: </span>
+                            <span className="text-gray-900">{trainer.name || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Account: </span>
+                            <span className="text-gray-900">{trainer.accountName || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Address: </span>
+                            <span className="text-gray-900 text-xs">{formatAddress()}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Services: </span>
+                            <span className="text-gray-900">{trainer.onboardingServicesBought || 'N/A'}</span>
+                          </div>
+                        </div>
+
+                        {/* Column 2 */}
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Industry: </span>
+                            <span className="text-gray-900">{trainer.subIndustry || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Language: </span>
+                            <span className="text-gray-900">{trainer.preferredLanguage || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Merchant PIC: </span>
+                            <span className="text-gray-900">{trainer.merchantPICContactNumber || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Features: </span>
+                            <span className="text-gray-900 text-xs">{trainer.requiredFeaturesByMerchant || 'N/A'}</span>
+                          </div>
+                        </div>
+
+                        {/* Column 3 */}
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Owner: </span>
+                            <span className="text-gray-900">
+                              {trainer.businessOwnerContact ? 
+                                `${trainer.businessOwnerContact.name}${trainer.businessOwnerContact.phone ? ` (${trainer.businessOwnerContact.phone})` : ''}` 
+                                : 'N/A'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Op Manager: </span>
+                            <span className="text-gray-900">
+                              {trainer.operationManagerContact ? 
+                                `${trainer.operationManagerContact.name}${trainer.operationManagerContact.phone ? ` (${trainer.operationManagerContact.phone})` : ''}` 
+                                : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+            </div>
+          )}
+
+          {/* Product Section */}
+          {trainerData && trainerData.success && ((trainerData.orderItems && trainerData.orderItems.length > 0) || (trainerData.onboardingTrainerData?.trainers?.[0])) ? (() => {
+            // Group products by order type
+            const groupedProducts = trainerData.orderItems ? trainerData.orderItems.reduce((acc: any, item: any) => {
+              const orderType = item.orderType || 'Other'
+              if (!acc[orderType]) {
+                acc[orderType] = []
+              }
+              acc[orderType].push(item)
+              return acc
+            }, {}) : {}
+
+            // Get currency info once for all products
+            const trainer = trainerData.onboardingTrainerData?.trainers?.[0]
+            const shippingCountry = trainer?.shippingCountry || ''
+            const currencyInfo = getCurrencyInfo(shippingCountry)
+
+            return (
+              <div className="mt-4">
+                <h3 className="text-xl font-semibold text-[#0b0707] mb-4">Products & Payment</h3>
+                <div className="space-y-3">
+                  {/* Payment Summary at the top */}
+                  {trainer && (
+                    <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Quote Total Amount */}
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                            Quote Total Amount
+                          </div>
+                          <div className="text-xl font-bold text-blue-900">
+                            {trainer.syncedQuoteTotalAmount !== null && trainer.syncedQuoteTotalAmount !== undefined 
+                              ? formatCurrency(trainer.syncedQuoteTotalAmount, currencyInfo)
+                              : 'Not Available'}
+                          </div>
+                          <div className="text-xs text-blue-600">
+                            Synced from quote
+                          </div>
+                        </div>
+                        
+                        {/* Pending Payment */}
+                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                          <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider">
+                            Pending Payment
+                          </div>
+                          <div className="text-xl font-bold text-amber-900">
+                            {trainer.pendingPayment !== null && trainer.pendingPayment !== undefined
+                              ? formatCurrency(trainer.pendingPayment, currencyInfo)
+                              : 'Not Available'}
+                          </div>
+                          <div className="text-xs text-amber-600">
+                            Amount outstanding
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {Object.entries(groupedProducts).map(([orderType, items]: [string, any]) => (
+                    <div key={orderType} className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+                      {/* Order Type as Subsection Header */}
+                      <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {orderType}
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">({items.length} items)</span>
+                      </h4>
+                      
+                      {/* Products Table List */}
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
+                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">Unit</th>
+                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {items.map((item: any, index: number) => (
+                              <tr key={item.id || index} className="hover:bg-gray-50">
+                                <td className="px-2 py-1 text-xs text-gray-900">{item.productName || 'N/A'}</td>
+                                <td className="px-2 py-1 text-xs text-gray-900 text-right">{item.quantity || 1}</td>
+                                <td className="px-2 py-1 text-xs text-gray-900 text-right">{formatCurrency(item.unitPrice, currencyInfo)}</td>
+                                <td className="px-2 py-1 text-xs font-semibold text-gray-900 text-right">{formatCurrency(item.totalPrice, currencyInfo)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-gray-50">
+                              <td colSpan={3} className="px-2 py-1 text-xs font-medium text-gray-900 text-right">Total:</td>
+                              <td className="px-2 py-1 text-xs font-bold text-gray-900 text-right">
+                                {formatCurrency(items.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0), currencyInfo)}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })() : null}
+
+        </div>
+        
+        {/* Booking Modal */}
+        {bookingModalOpen && currentBookingInfo && (
+          <DatePickerModal
+            isOpen={bookingModalOpen}
+            onClose={() => setBookingModalOpen(false)}
+            merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
+            merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
+            merchantAddress={currentBookingInfo.merchantAddress}
+            merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
+            merchantContactPerson={currentBookingInfo.merchantContactPerson}
+            trainerName={currentBookingInfo.trainerName}
+            bookingType={currentBookingInfo.bookingType}
+            currentBooking={currentBookingInfo.existingBooking}
+            onBookingComplete={handleBookingComplete}
+          />
+        )}
+        
+        {/* WhatsApp Floating Button */}
+        <WhatsAppButton />
+      </div>
+    </div>
+  )
+}
