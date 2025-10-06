@@ -30,12 +30,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   const [goLiveDateValue, setGoLiveDateValue] = useState('')
   const [uploadingVideo, setUploadingVideo] = useState(false)
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null)
+  const [uploadingSSM, setUploadingSSM] = useState(false)
+  const [uploadedSSMUrl, setUploadedSSMUrl] = useState<string | null>(null)
   const [expandedItems, setExpandedItems] = useState<{[key: string]: boolean}>({
     'product-setup': false,
     'hardware-fulfillment': false,
     'installation': false,
     'training': false,
-    'store-readiness': false
+    'store-readiness': false,
+    'ssm-submission': false
   })
 
   // Define the new 6-stage flow
@@ -53,7 +56,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       subStages: [
         { id: 'product-setup', label: 'Product Setup', sfValue: 'Product Setup' },
         { id: 'hardware-fulfillment', label: 'Hardware Delivery', sfValue: 'Hardware Fulfillment' },
-        { id: 'store-readiness', label: 'Store Readiness Video', sfValue: 'Store Readiness' }
+        { id: 'store-readiness', label: 'Store Readiness Video', sfValue: 'Store Readiness' },
+        { id: 'ssm-submission', label: 'SSM Submission', sfValue: 'SSM Submission' }
       ]
     },
     { 
@@ -151,15 +155,17 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     const hardwareDeliveryCompleted = trainerData?.hardwareDeliveryStatus === 'Delivered' || 
                                       trainerData?.hardwareDeliveryStatus === 'Hardware Delivered'
     const storeReadinessCompleted = trainerData?.videoProofLink || uploadedVideoUrl
+    const ssmSubmissionCompleted = trainerData?.ssmDocumentLink || uploadedSSMUrl
     
     // Count completed preparation sub-stages
     const preparationSubStages = [
       productSetupCompleted,
       hardwareDeliveryCompleted,
-      storeReadinessCompleted
+      storeReadinessCompleted,
+      ssmSubmissionCompleted
     ]
     const completedPreparationCount = preparationSubStages.filter(Boolean).length
-    const totalPreparationStages = 3
+    const totalPreparationStages = 4
     
     const allPreparationCompleted = completedPreparationCount === totalPreparationStages
     
@@ -376,9 +382,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 const completed = [
                   trainerData?.productSetupStatus?.includes('Completed'),
                   trainerData?.hardwareDeliveryStatus?.includes('Delivered'),
-                  trainerData?.videoProofLink || uploadedVideoUrl
+                  trainerData?.videoProofLink || uploadedVideoUrl,
+                  trainerData?.ssmDocumentLink || uploadedSSMUrl
                 ].filter(Boolean).length;
-                return `${completed}/3 Complete`;
+                return `${completed}/4 Complete`;
               })()}
             </div>
           </div>
@@ -706,6 +713,137 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
+            {/* SSM Submission */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    {(trainerData?.ssmDocumentLink || uploadedSSMUrl) ? (
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="text-sm font-medium text-gray-900">SSM Submission</div>
+                  </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
+                    <div className={`text-sm font-medium ${
+                      (trainerData?.ssmDocumentLink || uploadedSSMUrl) 
+                        ? 'text-green-600' 
+                        : 'text-gray-500'
+                    }`}>
+                      {(trainerData?.ssmDocumentLink || uploadedSSMUrl) ? 'Document Uploaded' : 'Pending Document'}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('ssm-submission')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['ssm-submission'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {expandedItems['ssm-submission'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">SSM Document</div>
+                      {trainerData?.ssmDocumentLink || uploadedSSMUrl ? (
+                        <a 
+                          href={uploadedSSMUrl || trainerData?.ssmDocumentLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
+                        >
+                          View Document
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ) : (
+                        <div className="text-sm text-gray-500">No document uploaded</div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Upload SSM Document</div>
+                      <input
+                        id={`ssm-upload-${trainerData?.id}`}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          
+                          setUploadingSSM(true)
+                          try {
+                            const formData = new FormData()
+                            formData.append('file', file)
+                            formData.append('trainerId', trainerData?.id || '')
+                            formData.append('documentType', 'ssm')
+                            
+                            const response = await fetch('/api/salesforce/upload-document', {
+                              method: 'POST',
+                              body: formData
+                            })
+                            
+                            if (!response.ok) {
+                              const error = await response.json()
+                              throw new Error(error.details || error.error || 'Failed to upload document')
+                            }
+                            
+                            const result = await response.json()
+                            setUploadedSSMUrl(result.fileUrl)
+                            
+                            if (onBookingComplete) {
+                              onBookingComplete()
+                            }
+                          } catch (error) {
+                            console.error('Error uploading SSM document:', error)
+                            alert(error instanceof Error ? error.message : 'Failed to upload document')
+                          } finally {
+                            setUploadingSSM(false)
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => document.getElementById(`ssm-upload-${trainerData?.id}`)?.click()}
+                        disabled={uploadingSSM}
+                        className="inline-flex items-center px-3 py-1.5 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded-full transition-all duration-200 transform hover:scale-105 disabled:cursor-not-allowed"
+                      >
+                        {uploadingSSM ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Upload Document
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
           </div>
         </div>
