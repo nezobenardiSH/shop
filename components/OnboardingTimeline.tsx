@@ -413,47 +413,32 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <h4 className="text-lg font-semibold text-gray-900">Preparation Progress</h4>
             <div className="text-sm text-gray-500">
               {(() => {
-                const documentSubmissionCompleted = 
-                  (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
-                  trainerData?.menuSubmissionDate &&
-                  trainerData?.ssmDocumentLink &&
-                  trainerData?.videoProofLink;
-                
-                const hardwareDeliveryCompleted = 
-                  trainerData?.paymentStatus === 'Paid' &&
-                  trainerData?.deliveryAddress &&
-                  trainerData?.trackingLink &&
-                  trainerData?.hardwareFulfillmentDate;
-                
-                const productSetupCompleted = 
-                  trainerData?.menuCollectionFormLink &&
-                  trainerData?.menuSubmissionDate &&
-                  trainerData?.productSetupStatus === 'Completed';
-                
+                const ssmDocumentCompleted = !!trainerData?.ssmDocumentLink;
+                const hardwareDeliveryCompleted = !!trainerData?.trackingLink;
+                const productSetupCompleted = trainerData?.completedProductSetup === 'Yes';
+                const storeSetupCompleted = !!trainerData?.videoProofLink;
+
                 const completed = [
-                  documentSubmissionCompleted,
+                  ssmDocumentCompleted,
                   hardwareDeliveryCompleted,
-                  productSetupCompleted
+                  productSetupCompleted,
+                  storeSetupCompleted
                 ].filter(Boolean).length;
-                return `${completed}/3 Complete`;
+                return `${completed}/4 Complete`;
               })()}
             </div>
           </div>
           
           <div className="space-y-3">
-            {/* Document Submission Section */}
+            {/* 1. Submit SSM Document */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {(() => {
-                      const allDocsComplete = 
-                        (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
-                        trainerData?.menuSubmissionDate &&
-                        trainerData?.ssmDocumentLink &&
-                        trainerData?.videoProofLink;
-                      
-                      return allDocsComplete ? (
+                      const ssmCompleted = !!trainerData?.ssmDocumentLink;
+
+                      return ssmCompleted ? (
                         <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                           <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -467,19 +452,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         </div>
                       );
                     })()}
-                    <div className="text-sm font-medium text-gray-900">Document Submission</div>
+                    <div className="text-sm font-medium text-gray-900">Submit SSM Document</div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
-                      {(() => {
-                        const docs = [
-                          trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed',
-                          trainerData?.menuSubmissionDate,
-                          trainerData?.ssmDocumentLink,
-                          trainerData?.videoProofLink
-                        ].filter(Boolean).length;
-                        return `${docs}/4 Complete`;
-                      })()}
+                      Status: {trainerData?.ssmDocumentLink ? 'Completed' : 'Pending'}
                     </div>
                     <button
                       onClick={() => toggleItemExpansion('document-submission')}
@@ -492,182 +469,89 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </div>
                 </div>
                 
-                {/* Expanded Details for Document Submission */}
+                {/* Expanded Details for SSM Document Submission */}
                 {expandedItems['document-submission'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Welcome Call Status</div>
-                      <div className="text-sm text-gray-900">
-                        {(trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') ? (
-                          <span className="text-green-600">✓ Completed</span>
-                        ) : (
-                          <span className="text-gray-500">Pending</span>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Submission</div>
-                      <div className="text-sm text-gray-900">
-                        {trainerData?.menuSubmissionDate ? (
-                          <span className="text-green-600">✓ Submitted {new Date(trainerData.menuSubmissionDate).toLocaleDateString()}</span>
-                        ) : (
-                          <span className="text-gray-500">Not Submitted</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">SSM Document</div>
-                        {trainerData?.ssmDocumentLink || uploadedSSMUrl ? (
-                          <a 
-                            href={uploadedSSMUrl || trainerData?.ssmDocumentLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
-                          >
-                            View Document
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </a>
-                        ) : (
-                          <div className="space-y-2">
-                            <input
-                              id={`ssm-doc-upload-${trainerData?.id}`}
-                              type="file"
-                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                              className="hidden"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0]
-                                if (!file) return
-                                
-                                setUploadingSSM(true)
-                                try {
-                                  const formData = new FormData()
-                                  formData.append('file', file)
-                                  formData.append('trainerId', trainerData?.id || '')
-                                  formData.append('documentType', 'ssm')
-                                  
-                                  const response = await fetch('/api/salesforce/upload-document', {
-                                    method: 'POST',
-                                    body: formData
-                                  })
-                                  
-                                  if (!response.ok) {
-                                    const error = await response.json()
-                                    throw new Error(error.details || error.error || 'Failed to upload document')
-                                  }
-                                  
-                                  const result = await response.json()
-                                  setUploadedSSMUrl(result.fileUrl)
-                                  
-                                  if (onBookingComplete) {
-                                    onBookingComplete()
-                                  }
-                                } catch (error) {
-                                  console.error('Error uploading SSM document:', error)
-                                  alert(error instanceof Error ? error.message : 'Failed to upload document')
-                                } finally {
-                                  setUploadingSSM(false)
-                                  e.target.value = ''
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">SSM Document</div>
+                      {trainerData?.ssmDocumentLink || uploadedSSMUrl ? (
+                        <a
+                          href={uploadedSSMUrl || trainerData?.ssmDocumentLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                        >
+                          View Document
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            id={`ssm-doc-upload-${trainerData?.id}`}
+                            type="file"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+
+                              setUploadingSSM(true)
+                              try {
+                                const formData = new FormData()
+                                formData.append('file', file)
+                                formData.append('trainerId', trainerData?.id || '')
+                                formData.append('documentType', 'ssm')
+
+                                const response = await fetch('/api/salesforce/upload-document', {
+                                  method: 'POST',
+                                  body: formData
+                                })
+
+                                if (!response.ok) {
+                                  const error = await response.json()
+                                  throw new Error(error.details || error.error || 'Failed to upload document')
                                 }
-                              }}
-                            />
-                            <button
-                              onClick={() => document.getElementById(`ssm-doc-upload-${trainerData?.id}`)?.click()}
-                              disabled={uploadingSSM}
-                              className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
-                            >
-                              {uploadingSSM ? 'Uploading...' : 'Upload SSM'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Store Readiness</div>
-                        {trainerData?.videoProofLink || uploadedVideoUrl ? (
-                          <a 
-                            href={uploadedVideoUrl || trainerData?.videoProofLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
-                          >
-                            View Video
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </a>
-                        ) : (
-                          <div className="space-y-2">
-                            <input
-                              id={`video-doc-upload-${trainerData?.id}`}
-                              type="file"
-                              accept="video/*"
-                              className="hidden"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0]
-                                if (!file) return
-                                
-                                setUploadingVideo(true)
-                                try {
-                                  const formData = new FormData()
-                                  formData.append('file', file)
-                                  formData.append('trainerId', trainerData?.id || '')
-                                  
-                                  const response = await fetch('/api/salesforce/upload-video', {
-                                    method: 'POST',
-                                    body: formData
-                                  })
-                                  
-                                  if (!response.ok) {
-                                    const error = await response.json()
-                                    throw new Error(error.details || error.error || 'Failed to upload video')
-                                  }
-                                  
-                                  const result = await response.json()
-                                  setUploadedVideoUrl(result.fileUrl)
-                                  
-                                  if (onBookingComplete) {
-                                    onBookingComplete()
-                                  }
-                                } catch (error) {
-                                  console.error('Error uploading video:', error)
-                                  alert(error instanceof Error ? error.message : 'Failed to upload video')
-                                } finally {
-                                  setUploadingVideo(false)
-                                  e.target.value = ''
+
+                                const result = await response.json()
+                                setUploadedSSMUrl(result.fileUrl)
+
+                                if (onBookingComplete) {
+                                  onBookingComplete()
                                 }
-                              }}
-                            />
-                            <button
-                              onClick={() => document.getElementById(`video-doc-upload-${trainerData?.id}`)?.click()}
-                              disabled={uploadingVideo}
-                              className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
-                            >
-                              {uploadingVideo ? 'Uploading...' : 'Upload Video'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                              } catch (error) {
+                                console.error('Error uploading SSM document:', error)
+                                alert(error instanceof Error ? error.message : 'Failed to upload document')
+                              } finally {
+                                setUploadingSSM(false)
+                                e.target.value = ''
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => document.getElementById(`ssm-doc-upload-${trainerData?.id}`)?.click()}
+                            disabled={uploadingSSM}
+                            className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
+                          >
+                            {uploadingSSM ? 'Uploading...' : 'Upload SSM Document'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Hardware Delivery */}
+            {/* 2. Hardware Delivery */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {(() => {
-                      const hardwareComplete = 
-                        trainerData?.paymentStatus === 'Paid' &&
-                        trainerData?.deliveryAddress &&
-                        trainerData?.trackingLink &&
-                        trainerData?.hardwareFulfillmentDate;
-                      
+                      const hardwareComplete = !!trainerData?.trackingLink;
+
                       return hardwareComplete ? (
                         <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                           <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -686,15 +570,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
-                      {(() => {
-                        const items = [
-                          trainerData?.paymentStatus === 'Paid',
-                          trainerData?.deliveryAddress,
-                          trainerData?.trackingLink,
-                          trainerData?.hardwareFulfillmentDate
-                        ].filter(Boolean).length;
-                        return `${items}/4 Complete`;
-                      })()}
+                      Status: {trainerData?.trackingLink ? 'Completed' : 'Pending'}
                     </div>
                     <button
                       onClick={() => toggleItemExpansion('hardware-delivery')}
@@ -711,31 +587,42 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 {expandedItems['hardware-delivery'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Payment Status</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Order Status</div>
                       <div className="text-sm text-gray-900">
-                        {trainerData?.paymentStatus === 'Paid' ? (
-                          <span className="text-green-600">✓ Payment Verified</span>
-                        ) : (
-                          <span className="text-orange-600">Pending Payment</span>
-                        )}
+                        {trainerData?.orderNSStatus || 'Not Available'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Delivery Address</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
                       <div className="text-sm text-gray-900">
-                        {trainerData?.deliveryAddress ? (
-                          <span className="text-green-600">✓ Confirmed</span>
-                        ) : (
-                          <span className="text-gray-500">Not Verified</span>
-                        )}
+                        {(() => {
+                          if (!trainerData?.orderShippingAddress) return 'Not Available';
+
+                          // Handle if it's already a string
+                          if (typeof trainerData.orderShippingAddress === 'string') {
+                            return trainerData.orderShippingAddress;
+                          }
+
+                          // Handle if it's an address object
+                          const addr = trainerData.orderShippingAddress;
+                          const parts = [
+                            addr.street,
+                            addr.city,
+                            addr.state || addr.stateCode,
+                            addr.postalCode,
+                            addr.country || addr.countryCode
+                          ].filter(Boolean);
+
+                          return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                        })()}
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tracking</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tracking Link</div>
                         {trainerData?.trackingLink ? (
-                          <a 
+                          <a
                             href={trainerData.trackingLink}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -751,19 +638,12 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         )}
                       </div>
                       <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fulfillment Date</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Hardware Fulfillment Date</div>
                         <div className="text-sm text-gray-900">
-                          {trainerData?.hardwareFulfillmentDate 
-                            ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString() 
+                          {trainerData?.hardwareFulfillmentDate
+                            ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
                             : 'Not Scheduled'}
                         </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Delivery Status</div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {trainerData?.hardwareDeliveryStatus || 'Not Started'}
                       </div>
                     </div>
                   </div>
@@ -771,42 +651,49 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
-            {/* Product Setup */}
+            {/* 3. Product Setup */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {(() => {
-                      const productComplete = 
-                        trainerData?.menuCollectionFormLink &&
-                        trainerData?.menuSubmissionDate &&
-                        trainerData?.productSetupStatus === 'Completed';
-                      
-                      return productComplete ? (
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      );
+                      const productComplete = trainerData?.completedProductSetup === 'Yes';
+                      const inProgress = !!trainerData?.menuCollectionSubmissionTimestamp && !productComplete;
+
+                      if (productComplete) {
+                        return (
+                          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        );
+                      } else if (inProgress) {
+                        return (
+                          <div className="w-5 h-5 bg-orange-400 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        );
+                      }
                     })()}
                     <div className="text-sm font-medium text-gray-900">Product Setup</div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
-                      {(() => {
-                        const items = [
-                          trainerData?.menuCollectionFormLink,
-                          trainerData?.menuSubmissionDate,
-                          trainerData?.productSetupStatus === 'Completed'
-                        ].filter(Boolean).length;
-                        return `${items}/3 Complete`;
+                      Status: {(() => {
+                        if (trainerData?.completedProductSetup === 'Yes') return 'Completed';
+                        if (trainerData?.menuCollectionSubmissionTimestamp) return 'In Progress';
+                        return 'Pending';
                       })()}
                     </div>
                     <button
@@ -824,55 +711,168 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 {expandedItems['product-setup'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Submission Link</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection Form</div>
                       {trainerData?.menuCollectionFormLink ? (
                         <a
                           href={trainerData.menuCollectionFormLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                          className="inline-flex items-center px-3 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-medium rounded transition-all duration-200"
                         >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
-                          Submit Menu
+                          Submit Menu Collection Form
                         </a>
                       ) : (
-                        <span className="text-sm text-gray-500">Link not available</span>
+                        <span className="text-sm text-gray-500">Form link not available</span>
                       )}
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Submission Date</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection Submission Timestamp</div>
                       <div className="text-sm text-gray-900">
-                        {trainerData?.menuSubmissionDate 
-                          ? new Date(trainerData.menuSubmissionDate).toLocaleDateString() 
+                        {trainerData?.menuCollectionSubmissionTimestamp
+                          ? new Date(trainerData.menuCollectionSubmissionTimestamp).toLocaleString()
                           : 'Not Submitted'}
                       </div>
                     </div>
-                    
+
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Setup Status</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed Product Setup</div>
                       <div className="text-sm font-medium text-gray-900">
-                        {trainerData?.productSetupStatus || 'Not Started'}
+                        {trainerData?.completedProductSetup || 'No'}
                       </div>
                     </div>
-                    
-                    {trainerData?.boAccountName && (
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">BackOffice Account</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 4. Store Setup */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const storeSetupComplete = !!trainerData?.videoProofLink;
+
+                      return storeSetupComplete ? (
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      );
+                    })()}
+                    <div className="text-sm font-medium text-gray-900">Store Setup</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium text-gray-500">
+                      Status: {trainerData?.videoProofLink ? 'Completed' : 'Pending'}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('store-setup')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['store-setup'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Details for Store Setup */}
+                {expandedItems['store-setup'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Setup Guide</div>
+                      <div className="text-sm font-medium text-gray-900">
                         <a
-                          href={`https://${trainerData.boAccountName}.storehubhq.com/`}
+                          href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
                         >
-                          {trainerData.boAccountName}
+                          Guide for your store network setup (cabling and wiring)
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
                         </a>
                       </div>
-                    )}
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Proof of Store Readiness</div>
+                      {trainerData?.videoProofLink || uploadedVideoUrl ? (
+                        <a
+                          href={uploadedVideoUrl || trainerData?.videoProofLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                        >
+                          View Video
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            id={`store-video-upload-${trainerData?.id}`}
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+
+                              setUploadingVideo(true)
+                              try {
+                                const formData = new FormData()
+                                formData.append('file', file)
+                                formData.append('trainerId', trainerData?.id || '')
+
+                                const response = await fetch('/api/salesforce/upload-video', {
+                                  method: 'POST',
+                                  body: formData
+                                })
+
+                                if (!response.ok) {
+                                  const error = await response.json()
+                                  throw new Error(error.details || error.error || 'Failed to upload video')
+                                }
+
+                                const result = await response.json()
+                                setUploadedVideoUrl(result.fileUrl)
+
+                                if (onBookingComplete) {
+                                  onBookingComplete()
+                                }
+                              } catch (error) {
+                                console.error('Error uploading video:', error)
+                                alert(error instanceof Error ? error.message : 'Failed to upload video')
+                              } finally {
+                                setUploadingVideo(false)
+                                e.target.value = ''
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => document.getElementById(`store-video-upload-${trainerData?.id}`)?.click()}
+                            disabled={uploadingVideo}
+                            className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
+                          >
+                            {uploadingVideo ? 'Uploading...' : 'Upload Store Setup Video'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -884,7 +884,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       {/* Welcome Stage Details */}
       {selectedStage === 'welcome' && (
         <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Welcome to StoreHub</span>
             {(trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
               <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
@@ -892,34 +892,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </h4>
 
           <div className="space-y-4">
-            {/* Planned Go Live Date */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Planned Go Live Date</div>
-              <div className="text-sm font-medium text-gray-900">
-                {trainerData?.plannedGoLiveDate
-                  ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString()
-                  : 'Not Set'}
-              </div>
-            </div>
-
-            {/* Store Setup Guide */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Setup Guide</div>
-              <div className="text-sm font-medium text-gray-900">
-                <a
-                  href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                >
-                  Guide for your store network setup (cabling and wiring)
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-
             {/* First Call Timestamp */}
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Call Timestamp</div>
@@ -937,6 +909,55 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 {trainerData?.msmName || 'Not Assigned'}
               </div>
             </div>
+
+            {/* Welcome Call Summary */}
+            <div className="mt-6 pt-4 border-t border-gray-300">
+              <h5 className="text-md font-semibold text-gray-900 mb-3">Welcome Call Summary:</h5>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">• Go live date:</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {trainerData?.plannedGoLiveDate
+                      ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">• Hardware delivery date:</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {trainerData?.hardwareFulfillmentDate
+                      ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">• Installation date:</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {trainerData?.installationDate
+                      ? new Date(trainerData.installationDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">• POS Training Date:</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {trainerData?.posTrainingDate
+                      ? new Date(trainerData.posTrainingDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">• BackOffice Training Date:</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {trainerData?.backOfficeTrainingDate
+                      ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+
           </div>
         </div>
       )}

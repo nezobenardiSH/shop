@@ -54,8 +54,8 @@ export async function GET(
                Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
                Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
-               Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c, 
-               Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c, 
+               Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c,
+               Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c,
                Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
                Video_Proof_Link__c, Onboarding_Services_Bought__c,
                Synced_Quote_Total_Amount__c, Pending_Payment__c,
@@ -63,8 +63,9 @@ export async function GET(
                Product_Setup_Status__c, Completed_product_setup__c,
                Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                Installation_Issues_Elaboration__c, Training_Status__c,
+
                CSM_Name__c, CSM_Name__r.Name,
-               Menu_Collection_Form_Link__c, BO_Account_Name__c,
+               Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         ORDER BY Name LIMIT 50
@@ -238,11 +239,13 @@ export async function GET(
     let orderItems: any[] = []
     let hardwareFulfillmentDate: string | null = null
     let trackingLink: string | null = null
+    let orderNSStatus: string | null = null
+    let orderShippingAddress: string | null = null
     if (account) {
       try {
         // First get Orders for this Account with Type field and Hardware Fulfillment Date
         const ordersQuery = `
-          SELECT Id, Type, Hardware_Fulfillment_Date__c
+          SELECT Id, Type, Hardware_Fulfillment_Date__c, NSStatus__c, ShippingAddress
           FROM Order
           WHERE AccountId = '${account.Id}'
           LIMIT 10
@@ -257,6 +260,12 @@ export async function GET(
             orderTypeMap[order.Id] = order.Type || 'N/A'
             if (order.Hardware_Fulfillment_Date__c && !hardwareFulfillmentDate) {
               hardwareFulfillmentDate = order.Hardware_Fulfillment_Date__c
+            }
+            if (order.NSStatus__c && !orderNSStatus) {
+              orderNSStatus = order.NSStatus__c
+            }
+            if (order.ShippingAddress && !orderShippingAddress) {
+              orderShippingAddress = order.ShippingAddress
             }
           })
           
@@ -355,13 +364,15 @@ export async function GET(
         actualInstallationDate: trainer.Actual_Installation_Date__c,
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
-        // trainingDate: trainer.Training_Date__c, // This field might not exist
-        // backOfficeTrainingDate: trainer.BackOffice_Training_Date__c, // Field doesn't exist
-        // posTrainingDate: trainer.POS_Training_Date__c, // Field doesn't exist
+        backOfficeTrainingDate: null, // Field not available in current schema
+        posTrainingDate: null, // Field not available in current schema
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         hardwareFulfillmentDate: hardwareFulfillmentDate,
         trackingLink: trackingLink,
+        orderNSStatus: orderNSStatus,
+        orderShippingAddress: orderShippingAddress,
         menuCollectionFormLink: trainer.Menu_Collection_Form_Link__c,
+        menuCollectionSubmissionTimestamp: trainer.Menu_Collection_Submission_Timestamp__c,
         boAccountName: trainer.BO_Account_Name__c,
         videoProofLink: trainer.Video_Proof_Link__c,
         createdDate: trainer.CreatedDate,
