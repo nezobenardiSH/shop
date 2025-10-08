@@ -23,7 +23,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   const [stages, setStages] = useState<TimelineStage[]>([])
   // Initialize selectedStage based on welcome call completion status
   const initialStage = (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
-                        trainerData?.welcomeCallStatus === 'Completed') ? 'preparation' : 'welcome-call'
+                        trainerData?.welcomeCallStatus === 'Completed') ? 'preparation' : 'welcome'
   const [selectedStage, setSelectedStage] = useState<string>(initialStage)
   const [updatingField, setUpdatingField] = useState<string | null>(null)
   const [editingGoLiveDate, setEditingGoLiveDate] = useState(false)
@@ -33,20 +33,19 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   const [uploadingSSM, setUploadingSSM] = useState(false)
   const [uploadedSSMUrl, setUploadedSSMUrl] = useState<string | null>(null)
   const [expandedItems, setExpandedItems] = useState<{[key: string]: boolean}>({
+    'document-submission': false,
+    'hardware-delivery': false,
     'product-setup': false,
-    'hardware-fulfillment': false,
     'installation': false,
-    'training': false,
-    'store-readiness': false,
-    'ssm-submission': false
+    'training': false
   })
 
   // Define the new 6-stage flow
   const mainStages = [
     { 
-      id: 'welcome-call', 
-      label: 'Welcome Call', 
-      sfValue: 'Welcome Call',
+      id: 'welcome', 
+      label: 'Welcome to StoreHub', 
+      sfValue: 'Welcome to StoreHub',
       subStages: []
     },
     { 
@@ -54,16 +53,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       label: 'Preparation', 
       sfValue: 'Preparation',
       subStages: [
-        { id: 'product-setup', label: 'Product Setup', sfValue: 'Product Setup' },
-        { id: 'hardware-fulfillment', label: 'Hardware Delivery', sfValue: 'Hardware Fulfillment' },
-        { id: 'store-readiness', label: 'Store Readiness Video', sfValue: 'Store Readiness' },
-        { id: 'ssm-submission', label: 'SSM Submission', sfValue: 'SSM Submission' }
+        { id: 'document-submission', label: 'Document Submission', sfValue: 'Document Submission' },
+        { id: 'hardware-delivery', label: 'Hardware Delivery', sfValue: 'Hardware Delivery' },
+        { id: 'product-setup', label: 'Product Setup', sfValue: 'Product Setup' }
       ]
     },
     { 
       id: 'installation', 
       label: 'Installation', 
-      sfValue: 'Hardware Installation',
+      sfValue: 'Installation',
       subStages: []
     },
     { 
@@ -73,15 +71,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       subStages: []
     },
     { 
-      id: 'go-live', 
-      label: 'Go Live', 
-      sfValue: 'Go Live',
+      id: 'ready-go-live', 
+      label: 'Ready to go live', 
+      sfValue: 'Ready to go live',
       subStages: []
     },
     { 
-      id: 'post-go-live', 
-      label: 'Post Go Live', 
-      sfValue: 'Post Go Live Check In',
+      id: 'live', 
+      label: 'Live', 
+      sfValue: 'Live',
       subStages: []
     },
   ]
@@ -99,31 +97,39 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
   // Map Salesforce stages to our timeline stages
   const stageMapping: { [key: string]: string } = {
-    'New': 'welcome-call',
-    'Welcome Call': 'welcome-call',
-    'Welcome Call Scheduled': 'welcome-call',
-    'Welcome Call Completed': 'welcome-call',
-    'Product Setup': 'product-setup',
-    'Product Setup In Progress': 'product-setup',
-    'Product Setup Completed': 'product-setup',
-    'Hardware Fulfillment': 'hardware-fulfillment',
-    'Hardware Ordered': 'hardware-fulfillment',
-    'Hardware Shipped': 'hardware-fulfillment',
-    'Hardware Delivered': 'hardware-fulfillment',
-    'Hardware Installation': 'hardware-installation',
-    'Installation Scheduled': 'hardware-installation',
-    'Installation In Progress': 'hardware-installation',
-    'Installation Completed': 'hardware-installation',
+    'New': 'welcome',
+    'Welcome Call': 'welcome',
+    'Welcome to StoreHub': 'welcome',
+    'Product Setup': 'preparation',
+    'Preparation': 'preparation',
+    'Document Submission': 'preparation',
+    'Hardware Delivery': 'preparation',
+    'Hardware Fulfillment': 'preparation',
+    'Hardware Installation': 'installation',
+    'Installation': 'installation',
     'Training': 'training',
-    'Training Scheduled': 'training',
-    'Training In Progress': 'training',
-    'Training Completed': 'training',
-    'Go Live': 'go-live',
-    'Go Live Scheduled': 'go-live',
-    'Go Live In Progress': 'go-live',
-    'Go Live Completed': 'go-live',
-    'Post Go Live Check In': 'post-go-live',
-    'Onboarding Complete': 'post-go-live',
+    'Go Live': 'ready-go-live',
+    'Ready to go live': 'ready-go-live',
+    'Live': 'live',
+    'Post Go Live Check In': 'live',
+    // Legacy mappings
+    'welcome-call': 'welcome',
+    'product-setup': 'preparation',
+    'hardware-fulfillment': 'preparation',
+    'hardware-installation': 'installation',
+    'training': 'training',
+    'go-live': 'ready-go-live',
+    'post-go-live': 'live',
+    // Additional mappings for various Salesforce stage values
+    'Welcome Call Completed': 'preparation',
+    'Completed': 'preparation',
+    'Product Setup Completed': 'installation',
+    'Hardware Delivered': 'installation',
+    'Installation Completed': 'training',
+    'Training Completed': 'ready-go-live',
+    'Ready to Go Live': 'ready-go-live',
+    'Go Live Completed': 'live',
+    'Post Go Live Completed': 'live',
     // Add more mappings based on actual Salesforce stages
   }
 
@@ -131,106 +137,111 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     // Determine stage statuses based on business rules
     const timelineStages: TimelineStage[] = []
     
-    // 1. Welcome Call Stage
-    const welcomeCallCompleted = trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
-                                 trainerData?.welcomeCallStatus === 'Completed'
+    // Welcome Stage
+    const welcomeCompleted = trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
+                            trainerData?.welcomeCallStatus === 'Completed'
     
     timelineStages.push({
-      id: 'welcome-call',
-      label: 'Welcome Call',
-      status: welcomeCallCompleted ? 'completed' : 
-              (trainerData?.welcomeCallStatus && trainerData.welcomeCallStatus !== 'Not Started' ? 'current' : 'pending'),
+      id: 'welcome',
+      label: 'Welcome to StoreHub',
+      status: welcomeCompleted ? 'completed' : 'current',
       completedDate: trainerData?.firstCallTimestamp
     })
     
-    // If welcome call is completed, automatically set selected stage to preparation
-    if (welcomeCallCompleted && selectedStage === 'welcome-call') {
+    // If welcome is completed, automatically set selected stage to preparation
+    if (welcomeCompleted && selectedStage === 'welcome') {
       setSelectedStage('preparation')
     }
     
-    // 2. Preparation Stage
-    // Check if all preparation sub-stages are completed
-    const productSetupCompleted = trainerData?.productSetupStatus === 'Completed' || 
-                                  trainerData?.productSetupStatus === 'Product Setup Completed'
-    const hardwareDeliveryCompleted = trainerData?.hardwareDeliveryStatus === 'Delivered' || 
-                                      trainerData?.hardwareDeliveryStatus === 'Hardware Delivered'
-    const storeReadinessCompleted = trainerData?.videoProofLink || uploadedVideoUrl
-    const ssmSubmissionCompleted = trainerData?.ssmDocumentLink || uploadedSSMUrl
+    // Preparation Stage - Complex logic for sub-stages
+    const documentSubmissionCompleted = 
+      (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
+      trainerData?.menuSubmissionDate &&
+      trainerData?.ssmDocumentLink &&
+      trainerData?.videoProofLink
     
-    // Count completed preparation sub-stages
-    const preparationSubStages = [
-      productSetupCompleted,
+    const hardwareDeliveryCompleted = 
+      trainerData?.paymentStatus === 'Paid' &&
+      trainerData?.deliveryAddress &&
+      trainerData?.trackingLink &&
+      trainerData?.hardwareFulfillmentDate
+    
+    const productSetupCompleted = 
+      trainerData?.menuCollectionFormLink &&
+      trainerData?.menuSubmissionDate &&
+      trainerData?.productSetupStatus === 'Completed'
+    
+    const preparationSubStagesCompleted = [
+      documentSubmissionCompleted,
       hardwareDeliveryCompleted,
-      storeReadinessCompleted,
-      ssmSubmissionCompleted
-    ]
-    const completedPreparationCount = preparationSubStages.filter(Boolean).length
-    const totalPreparationStages = 4
+      productSetupCompleted
+    ].filter(Boolean).length
     
-    const allPreparationCompleted = completedPreparationCount === totalPreparationStages
+    const totalPreparationStages = 3
     
-    const preparationInProgress = welcomeCallCompleted && !allPreparationCompleted
+    let preparationStatus: 'completed' | 'current' | 'pending' = 'pending'
+    if (welcomeCompleted) {
+      if (preparationSubStagesCompleted === totalPreparationStages) {
+        preparationStatus = 'completed'
+      } else {
+        preparationStatus = 'current'
+      }
+    }
     
     timelineStages.push({
       id: 'preparation',
       label: 'Preparation',
-      status: allPreparationCompleted ? 'completed' : 
-              (preparationInProgress ? 'current' : 'pending'),
-      completedDate: undefined,
-      // Add custom properties for the completion count
-      completedCount: completedPreparationCount,
+      status: preparationStatus,
+      completedDate: preparationStatus === 'completed' ? trainerData?.productSetupCompletedDate : undefined,
+      completedCount: preparationSubStagesCompleted,
       totalCount: totalPreparationStages
     })
     
-    // 3. Installation Stage
+    // Installation Stage
     const installationCompleted = trainerData?.hardwareInstallationStatus === 'Completed' || 
-                                  trainerData?.hardwareInstallationStatus === 'Installation Completed'
-    const installationInProgress = allPreparationCompleted && !installationCompleted
+                                 trainerData?.hardwareInstallationStatus === 'Installation Completed'
     
     timelineStages.push({
       id: 'installation',
       label: 'Installation',
-      status: installationCompleted ? 'completed' : 
-              (installationInProgress ? 'current' : 'pending'),
+      status: preparationStatus === 'completed' ? (installationCompleted ? 'completed' : 'current') : 'pending',
       completedDate: trainerData?.actualInstallationDate
     })
     
-    // 4. Training Stage
+    // Training Stage
     const trainingCompleted = trainerData?.trainingStatus === 'Completed' || 
                              trainerData?.trainingStatus === 'Training Completed'
-    const trainingInProgress = installationCompleted && !trainingCompleted
     
     timelineStages.push({
       id: 'training',
       label: 'Training',
-      status: trainingCompleted ? 'completed' : 
-              (trainingInProgress ? 'current' : 'pending'),
+      status: installationCompleted ? (trainingCompleted ? 'completed' : 'current') : 'pending',
       completedDate: trainerData?.backOfficeTrainingDate || trainerData?.posTrainingDate
     })
     
-    // 5. Go Live Stage
-    const goLiveInProgress = trainingCompleted && 
-                            (!trainerData?.firstRevisedEGLD || new Date(trainerData.firstRevisedEGLD) > new Date())
-    const goLiveCompleted = trainingCompleted && 
-                           trainerData?.firstRevisedEGLD && 
-                           new Date(trainerData.firstRevisedEGLD) <= new Date()
+    // Ready to Go Live Stage
+    const readyToGoLive = trainingCompleted &&
+                         trainerData?.hardwareDeliveryStatus === 'Delivered' &&
+                         trainerData?.productSetupStatus === 'Completed' &&
+                         trainerData?.hardwareInstallationStatus === 'Completed' &&
+                         trainerData?.boAccountName
     
     timelineStages.push({
-      id: 'go-live',
-      label: 'Go Live',
-      status: goLiveCompleted ? 'completed' : 
-              (goLiveInProgress ? 'current' : 'pending'),
-      completedDate: trainerData?.firstRevisedEGLD
+      id: 'ready-go-live',
+      label: 'Ready to go live',
+      status: trainingCompleted ? (readyToGoLive ? 'completed' : 'current') : 'pending',
+      completedDate: undefined
     })
     
-    // 6. Post Go Live Stage
-    const postGoLiveActive = goLiveCompleted
+    // Live Stage
+    const isLive = trainerData?.firstRevisedEGLD && 
+                  new Date(trainerData.firstRevisedEGLD) <= new Date()
     
     timelineStages.push({
-      id: 'post-go-live',
-      label: 'Post Go Live',
-      status: postGoLiveActive ? 'current' : 'pending',
-      completedDate: undefined
+      id: 'live',
+      label: 'Live',
+      status: readyToGoLive ? (isLive ? 'completed' : 'current') : 'pending',
+      completedDate: trainerData?.firstRevisedEGLD
     })
 
     setStages(timelineStages)
@@ -247,7 +258,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       )
     } else if (stage.status === 'current') {
       return (
-        <div className="w-10 h-10 bg-[#ff630f] rounded-full flex items-center justify-center text-white shadow-md ring-4 ring-[#ff630f]/20">
+        <div className="w-10 h-10 bg-[#ff630f] rounded-full flex items-center justify-center shadow-lg">
           <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
             <span className="text-[#ff630f] font-bold text-sm">{index + 1}</span>
           </div>
@@ -332,7 +343,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     }
   }
 
-
   return (
     <div className="bg-white border border-[#e5e7eb] rounded-lg p-3">
       <h3 className="text-lg font-bold text-[#0b0707] mb-3">Onboarding Progress</h3>
@@ -358,8 +368,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   <div className="mt-1.5 text-center">
                     <div className={`text-[10px] font-semibold ${
                       selectedStage === stage.id ? 'text-[#ff630f]' :
-                      stage.status === 'completed' ? 'text-green-700' :
-                      stage.status === 'current' ? 'text-[#ff630f]' :
+                      stage.status === 'completed' ? 'text-green-600' :
+                      stage.status === 'current' ? 'text-orange-600' :
                       'text-gray-500'
                     }`}>
                       {stage.label}
@@ -368,21 +378,21 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <div className="text-[8px] text-gray-500 mt-0.5">
                       {(() => {
                         switch(stage.id) {
-                          case 'welcome-call':
-                            return trainerData?.welcomeCallStatus || 'Not Started'
+                          case 'welcome':
+                            return stage.status === 'completed' ? 'Complete' : 'In Progress'
                           case 'preparation':
                             if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
                               return `${stage.completedCount}/${stage.totalCount} Complete`
                             }
                             return 'In Progress'
                           case 'installation':
-                            return trainerData?.hardwareInstallationStatus || 'Not Started'
+                            return stage.status === 'completed' ? 'Complete' : stage.status === 'current' ? 'In Progress' : 'Pending'
                           case 'training':
-                            return trainerData?.trainingStatus || 'Not Started'
-                          case 'go-live':
-                            return trainerData?.firstRevisedEGLD ? 'Date Set' : 'Pending'
-                          case 'post-go-live':
-                            return 'Scheduled'
+                            return stage.status === 'completed' ? 'Complete' : stage.status === 'current' ? 'In Progress' : 'Pending'
+                          case 'ready-go-live':
+                            return stage.status === 'completed' ? 'Ready' : stage.status === 'current' ? 'Preparing' : 'Pending'
+                          case 'live':
+                            return stage.status === 'completed' ? 'Live' : stage.status === 'current' ? 'Going Live' : 'Pending'
                           default:
                             return ''
                         }
@@ -400,48 +410,404 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       {selectedStage === 'preparation' && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-base font-semibold text-gray-900">Preparation Status</h4>
+            <h4 className="text-lg font-semibold text-gray-900">Preparation Progress</h4>
             <div className="text-sm text-gray-500">
               {(() => {
+                const documentSubmissionCompleted = 
+                  (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
+                  trainerData?.menuSubmissionDate &&
+                  trainerData?.ssmDocumentLink &&
+                  trainerData?.videoProofLink;
+                
+                const hardwareDeliveryCompleted = 
+                  trainerData?.paymentStatus === 'Paid' &&
+                  trainerData?.deliveryAddress &&
+                  trainerData?.trackingLink &&
+                  trainerData?.hardwareFulfillmentDate;
+                
+                const productSetupCompleted = 
+                  trainerData?.menuCollectionFormLink &&
+                  trainerData?.menuSubmissionDate &&
+                  trainerData?.productSetupStatus === 'Completed';
+                
                 const completed = [
-                  trainerData?.productSetupStatus?.includes('Completed'),
-                  trainerData?.hardwareDeliveryStatus?.includes('Delivered'),
-                  trainerData?.videoProofLink || uploadedVideoUrl,
-                  trainerData?.ssmDocumentLink || uploadedSSMUrl
+                  documentSubmissionCompleted,
+                  hardwareDeliveryCompleted,
+                  productSetupCompleted
                 ].filter(Boolean).length;
-                return `${completed}/4 Complete`;
+                return `${completed}/3 Complete`;
               })()}
             </div>
           </div>
           
           <div className="space-y-3">
+            {/* Document Submission Section */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const allDocsComplete = 
+                        (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
+                        trainerData?.menuSubmissionDate &&
+                        trainerData?.ssmDocumentLink &&
+                        trainerData?.videoProofLink;
+                      
+                      return allDocsComplete ? (
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      );
+                    })()}
+                    <div className="text-sm font-medium text-gray-900">Document Submission</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium text-gray-500">
+                      {(() => {
+                        const docs = [
+                          trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed',
+                          trainerData?.menuSubmissionDate,
+                          trainerData?.ssmDocumentLink,
+                          trainerData?.videoProofLink
+                        ].filter(Boolean).length;
+                        return `${docs}/4 Complete`;
+                      })()}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('document-submission')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['document-submission'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Expanded Details for Document Submission */}
+                {expandedItems['document-submission'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Welcome Call Status</div>
+                      <div className="text-sm text-gray-900">
+                        {(trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') ? (
+                          <span className="text-green-600">✓ Completed</span>
+                        ) : (
+                          <span className="text-gray-500">Pending</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Submission</div>
+                      <div className="text-sm text-gray-900">
+                        {trainerData?.menuSubmissionDate ? (
+                          <span className="text-green-600">✓ Submitted {new Date(trainerData.menuSubmissionDate).toLocaleDateString()}</span>
+                        ) : (
+                          <span className="text-gray-500">Not Submitted</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">SSM Document</div>
+                        {trainerData?.ssmDocumentLink || uploadedSSMUrl ? (
+                          <a 
+                            href={uploadedSSMUrl || trainerData?.ssmDocumentLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                          >
+                            View Document
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        ) : (
+                          <div className="space-y-2">
+                            <input
+                              id={`ssm-doc-upload-${trainerData?.id}`}
+                              type="file"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                
+                                setUploadingSSM(true)
+                                try {
+                                  const formData = new FormData()
+                                  formData.append('file', file)
+                                  formData.append('trainerId', trainerData?.id || '')
+                                  formData.append('documentType', 'ssm')
+                                  
+                                  const response = await fetch('/api/salesforce/upload-document', {
+                                    method: 'POST',
+                                    body: formData
+                                  })
+                                  
+                                  if (!response.ok) {
+                                    const error = await response.json()
+                                    throw new Error(error.details || error.error || 'Failed to upload document')
+                                  }
+                                  
+                                  const result = await response.json()
+                                  setUploadedSSMUrl(result.fileUrl)
+                                  
+                                  if (onBookingComplete) {
+                                    onBookingComplete()
+                                  }
+                                } catch (error) {
+                                  console.error('Error uploading SSM document:', error)
+                                  alert(error instanceof Error ? error.message : 'Failed to upload document')
+                                } finally {
+                                  setUploadingSSM(false)
+                                  e.target.value = ''
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => document.getElementById(`ssm-doc-upload-${trainerData?.id}`)?.click()}
+                              disabled={uploadingSSM}
+                              className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
+                            >
+                              {uploadingSSM ? 'Uploading...' : 'Upload SSM'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Store Readiness</div>
+                        {trainerData?.videoProofLink || uploadedVideoUrl ? (
+                          <a 
+                            href={uploadedVideoUrl || trainerData?.videoProofLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                          >
+                            View Video
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        ) : (
+                          <div className="space-y-2">
+                            <input
+                              id={`video-doc-upload-${trainerData?.id}`}
+                              type="file"
+                              accept="video/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                
+                                setUploadingVideo(true)
+                                try {
+                                  const formData = new FormData()
+                                  formData.append('file', file)
+                                  formData.append('trainerId', trainerData?.id || '')
+                                  
+                                  const response = await fetch('/api/salesforce/upload-video', {
+                                    method: 'POST',
+                                    body: formData
+                                  })
+                                  
+                                  if (!response.ok) {
+                                    const error = await response.json()
+                                    throw new Error(error.details || error.error || 'Failed to upload video')
+                                  }
+                                  
+                                  const result = await response.json()
+                                  setUploadedVideoUrl(result.fileUrl)
+                                  
+                                  if (onBookingComplete) {
+                                    onBookingComplete()
+                                  }
+                                } catch (error) {
+                                  console.error('Error uploading video:', error)
+                                  alert(error instanceof Error ? error.message : 'Failed to upload video')
+                                } finally {
+                                  setUploadingVideo(false)
+                                  e.target.value = ''
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => document.getElementById(`video-doc-upload-${trainerData?.id}`)?.click()}
+                              disabled={uploadingVideo}
+                              className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
+                            >
+                              {uploadingVideo ? 'Uploading...' : 'Upload Video'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Hardware Delivery */}
+            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const hardwareComplete = 
+                        trainerData?.paymentStatus === 'Paid' &&
+                        trainerData?.deliveryAddress &&
+                        trainerData?.trackingLink &&
+                        trainerData?.hardwareFulfillmentDate;
+                      
+                      return hardwareComplete ? (
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      );
+                    })()}
+                    <div className="text-sm font-medium text-gray-900">Hardware Delivery</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium text-gray-500">
+                      {(() => {
+                        const items = [
+                          trainerData?.paymentStatus === 'Paid',
+                          trainerData?.deliveryAddress,
+                          trainerData?.trackingLink,
+                          trainerData?.hardwareFulfillmentDate
+                        ].filter(Boolean).length;
+                        return `${items}/4 Complete`;
+                      })()}
+                    </div>
+                    <button
+                      onClick={() => toggleItemExpansion('hardware-delivery')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <svg className={`w-4 h-4 transition-transform ${expandedItems['hardware-delivery'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Details for Hardware Delivery */}
+                {expandedItems['hardware-delivery'] && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Payment Status</div>
+                      <div className="text-sm text-gray-900">
+                        {trainerData?.paymentStatus === 'Paid' ? (
+                          <span className="text-green-600">✓ Payment Verified</span>
+                        ) : (
+                          <span className="text-orange-600">Pending Payment</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Delivery Address</div>
+                      <div className="text-sm text-gray-900">
+                        {trainerData?.deliveryAddress ? (
+                          <span className="text-green-600">✓ Confirmed</span>
+                        ) : (
+                          <span className="text-gray-500">Not Verified</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tracking</div>
+                        {trainerData?.trackingLink ? (
+                          <a 
+                            href={trainerData.trackingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                          >
+                            Track Package
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-500">No tracking available</span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fulfillment Date</div>
+                        <div className="text-sm text-gray-900">
+                          {trainerData?.hardwareFulfillmentDate 
+                            ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString() 
+                            : 'Not Scheduled'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Delivery Status</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {trainerData?.hardwareDeliveryStatus || 'Not Started'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Product Setup */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') ? (
-                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
+                    {(() => {
+                      const productComplete = 
+                        trainerData?.menuCollectionFormLink &&
+                        trainerData?.menuSubmissionDate &&
+                        trainerData?.productSetupStatus === 'Completed';
+                      
+                      return productComplete ? (
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      );
+                    })()}
                     <div className="text-sm font-medium text-gray-900">Product Setup</div>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
-                    <div className={`text-sm font-medium ${
-                      trainerData?.productSetupStatus?.includes('Completed') 
-                        ? 'text-green-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {trainerData?.productSetupStatus || 'Not Started'}
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium text-gray-500">
+                      {(() => {
+                        const items = [
+                          trainerData?.menuCollectionFormLink,
+                          trainerData?.menuSubmissionDate,
+                          trainerData?.productSetupStatus === 'Completed'
+                        ].filter(Boolean).length;
+                        return `${items}/3 Complete`;
+                      })()}
                     </div>
                     <button
                       onClick={() => toggleItemExpansion('product-setup')}
@@ -453,30 +819,52 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     </button>
                   </div>
                 </div>
-                
-                {/* Expanded Details */}
+
+                {/* Expanded Details for Product Setup */}
                 {expandedItems['product-setup'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</div>
-                      <div className="text-sm text-gray-900">{trainerData?.productSetupStatus || 'Not Started'}</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Submission Link</div>
+                      {trainerData?.menuCollectionFormLink ? (
+                        <a
+                          href={trainerData.menuCollectionFormLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          Submit Menu
+                        </a>
+                      ) : (
+                        <span className="text-sm text-gray-500">Link not available</span>
+                      )}
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed Date</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Submission Date</div>
                       <div className="text-sm text-gray-900">
-                        {trainerData?.completedProductSetup 
-                          ? new Date(trainerData.completedProductSetup).toLocaleDateString() 
-                          : 'Not Completed'}
+                        {trainerData?.menuSubmissionDate 
+                          ? new Date(trainerData.menuSubmissionDate).toLocaleDateString() 
+                          : 'Not Submitted'}
                       </div>
                     </div>
+                    
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Setup Status</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {trainerData?.productSetupStatus || 'Not Started'}
+                      </div>
+                    </div>
+                    
                     {trainerData?.boAccountName && (
                       <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">StoreHub Account</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">BackOffice Account</div>
                         <a
                           href={`https://${trainerData.boAccountName}.storehubhq.com/`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
                         >
                           {trainerData.boAccountName}
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -485,1035 +873,85 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         </a>
                       </div>
                     )}
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection</div>
-                      {(() => {
-                        // Check if the link exists and is a complete, valid URL
-                        const link = trainerData?.menuCollectionFormLink
-                        const isValidLink = link && 
-                          link.trim() !== '' && 
-                          !link.endsWith('prefill_Account+Name=') && // Not just the base URL with empty prefill
-                          (link.startsWith('http://') || link.startsWith('https://')) &&
-                          link.length > 50 // A reasonable minimum length for a valid form URL
-                        
-                        if (isValidLink) {
-                          return (
-                            <a
-                              href={link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-                            >
-                              <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                              </svg>
-                              Upload Menu
-                            </a>
-                          )
-                        } else {
-                          return (
-                            <button
-                              disabled
-                              className="inline-flex items-center px-3 py-1.5 bg-gray-400 cursor-not-allowed text-white text-xs font-medium rounded-lg"
-                              title="Menu collection form link not configured in Salesforce"
-                            >
-                              <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                              </svg>
-                              Upload Menu (Link Not Available)
-                            </button>
-                          )
-                        }
-                      })()}
-                    </div>
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Hardware Delivery */}
-            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
-              <div className="p-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    {(trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') ? (
-                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="text-sm font-medium text-gray-900">Hardware Delivery</div>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
-                    <div className={`text-sm font-medium ${
-                      trainerData?.hardwareDeliveryStatus?.includes('Delivered') 
-                        ? 'text-green-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {trainerData?.hardwareDeliveryStatus || 'Not Started'}
-                    </div>
-                    <button
-                      onClick={() => toggleItemExpansion('hardware-fulfillment')}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <svg className={`w-4 h-4 transition-transform ${expandedItems['hardware-fulfillment'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded Details */}
-                {expandedItems['hardware-fulfillment'] && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Delivery Status</div>
-                      <div className="text-sm text-gray-900">{trainerData?.hardwareDeliveryStatus || 'Not Started'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fulfillment Date</div>
-                      <div className="text-sm text-gray-900">
-                        {trainerData?.hardwareFulfillmentDate 
-                          ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString() 
-                          : 'Not Scheduled'}
-                      </div>
-                    </div>
-                    {trainerData?.trackingLink && (
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tracking</div>
-                        <a 
-                          href={trainerData.trackingLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                        >
-                          Track Shipment
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Store Readiness Video */}
-            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
-              <div className="p-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    {(trainerData?.videoProofLink || uploadedVideoUrl) ? (
-                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="text-sm font-medium text-gray-900">Store Readiness Video</div>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
-                    <div className={`text-sm font-medium ${
-                      (trainerData?.videoProofLink || uploadedVideoUrl) 
-                        ? 'text-green-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {(trainerData?.videoProofLink || uploadedVideoUrl) ? 'Video Uploaded' : 'Pending Video'}
-                    </div>
-                    <button
-                      onClick={() => toggleItemExpansion('store-readiness')}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <svg className={`w-4 h-4 transition-transform ${expandedItems['store-readiness'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded Details */}
-                {expandedItems['store-readiness'] && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Proof</div>
-                      {trainerData?.videoProofLink || uploadedVideoUrl ? (
-                        <a 
-                          href={uploadedVideoUrl || trainerData?.videoProofLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                        >
-                          View Video
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      ) : (
-                        <div className="text-sm text-gray-500">No video uploaded</div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Upload Video</div>
-                      <input
-                        id={`video-upload-${trainerData?.id}`}
-                        type="file"
-                        accept="video/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          
-                          setUploadingVideo(true)
-                          try {
-                            const formData = new FormData()
-                            formData.append('file', file)
-                            formData.append('trainerId', trainerData?.id || '')
-                            
-                            const response = await fetch('/api/salesforce/upload-video', {
-                              method: 'POST',
-                              body: formData
-                            })
-                            
-                            if (!response.ok) {
-                              const error = await response.json()
-                              throw new Error(error.details || error.error || 'Failed to upload video')
-                            }
-                            
-                            const result = await response.json()
-                            setUploadedVideoUrl(result.fileUrl)
-                            
-                            if (onBookingComplete) {
-                              onBookingComplete()
-                            }
-                          } catch (error) {
-                            console.error('Error uploading video:', error)
-                            alert(error instanceof Error ? error.message : 'Failed to upload video')
-                          } finally {
-                            setUploadingVideo(false)
-                            e.target.value = ''
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => document.getElementById(`video-upload-${trainerData?.id}`)?.click()}
-                        disabled={uploadingVideo}
-                        className="inline-flex items-center px-3 py-1.5 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded-full transition-all duration-200 transform hover:scale-105 disabled:cursor-not-allowed"
-                      >
-                        {uploadingVideo ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            Upload
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* SSM Submission */}
-            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
-              <div className="p-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    {(trainerData?.ssmDocumentLink || uploadedSSMUrl) ? (
-                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 border-2 border-gray-300 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="text-sm font-medium text-gray-900">SSM Submission</div>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
-                    <div className={`text-sm font-medium ${
-                      (trainerData?.ssmDocumentLink || uploadedSSMUrl) 
-                        ? 'text-green-600' 
-                        : 'text-gray-500'
-                    }`}>
-                      {(trainerData?.ssmDocumentLink || uploadedSSMUrl) ? 'Document Uploaded' : 'Pending Document'}
-                    </div>
-                    <button
-                      onClick={() => toggleItemExpansion('ssm-submission')}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <svg className={`w-4 h-4 transition-transform ${expandedItems['ssm-submission'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded Details */}
-                {expandedItems['ssm-submission'] && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">SSM Document</div>
-                      {trainerData?.ssmDocumentLink || uploadedSSMUrl ? (
-                        <a 
-                          href={uploadedSSMUrl || trainerData?.ssmDocumentLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                        >
-                          View Document
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      ) : (
-                        <div className="text-sm text-gray-500">No document uploaded</div>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Upload SSM Document</div>
-                      <input
-                        id={`ssm-upload-${trainerData?.id}`}
-                        type="file"
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          
-                          setUploadingSSM(true)
-                          try {
-                            const formData = new FormData()
-                            formData.append('file', file)
-                            formData.append('trainerId', trainerData?.id || '')
-                            formData.append('documentType', 'ssm')
-                            
-                            const response = await fetch('/api/salesforce/upload-document', {
-                              method: 'POST',
-                              body: formData
-                            })
-                            
-                            if (!response.ok) {
-                              const error = await response.json()
-                              throw new Error(error.details || error.error || 'Failed to upload document')
-                            }
-                            
-                            const result = await response.json()
-                            setUploadedSSMUrl(result.fileUrl)
-                            
-                            if (onBookingComplete) {
-                              onBookingComplete()
-                            }
-                          } catch (error) {
-                            console.error('Error uploading SSM document:', error)
-                            alert(error instanceof Error ? error.message : 'Failed to upload document')
-                          } finally {
-                            setUploadingSSM(false)
-                            e.target.value = ''
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => document.getElementById(`ssm-upload-${trainerData?.id}`)?.click()}
-                        disabled={uploadingSSM}
-                        className="inline-flex items-center px-3 py-1.5 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded-full transition-all duration-200 transform hover:scale-105 disabled:cursor-not-allowed"
-                      >
-                        {uploadingSSM ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            Upload Document
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
           </div>
         </div>
       )}
       
+      {/* Welcome Stage Details */}
+      {selectedStage === 'welcome' && (
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span>Welcome to StoreHub</span>
+            {(trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
+              <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
+            }
+          </h4>
 
-      {/* Stage Details Section - Shows only selected stage */}
-      <div className="mt-2">
-        {selectedStage === 'welcome-call' && (
-          <div className="bg-gray-50 rounded-lg p-3">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center">
-              Welcome Call Details
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Call Status</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.welcomeCallStatus || 'Not Started'}
-                </div>
+          <div className="space-y-4">
+            {/* Planned Go Live Date */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Planned Go Live Date</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.plannedGoLiveDate
+                  ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString()
+                  : 'Not Set'}
               </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">First Call Timestamp</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.firstCallTimestamp 
-                    ? new Date(trainerData.firstCallTimestamp).toLocaleString() 
-                    : 'Not Scheduled'}
-                </div>
+            </div>
+
+            {/* Store Setup Guide */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Setup Guide</div>
+              <div className="text-sm font-medium text-gray-900">
+                <a
+                  href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
+                >
+                  Guide for your store network setup (cabling and wiring)
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
               </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">MSM Name</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.msmName || 'Not Assigned'}
-                </div>
+            </div>
+
+            {/* First Call Timestamp */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Call Timestamp</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.firstCallTimestamp
+                  ? new Date(trainerData.firstCallTimestamp).toLocaleString()
+                  : 'Not Recorded'}
+              </div>
+            </div>
+
+            {/* MSM Name */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">MSM Name</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.msmName || 'Not Assigned'}
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {selectedStage === 'installation' && (
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
-              <span className="flex items-center">
-                Installation
-              </span>
-              {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') &&
-                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-              }
-            </h4>
-            
-            {/* Important Installation Information */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-              <div className="flex items-start gap-2">
-                <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <div className="text-sm font-medium text-blue-800 mb-1">Important Information</div>
-                  <div className="text-sm text-blue-700">
-                    Ensure you have pulled LAN cable to the printer and register, connected to power and internet is available
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Status</div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.hardwareInstallationStatus || 'Not Started'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Scheduled Date</div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-gray-900">
-                      {trainerData?.installationDate 
-                        ? new Date(trainerData.installationDate).toLocaleDateString() 
-                        : 'Not Scheduled'}
-                    </div>
-                    <button
-                      onClick={() => handleBookingClick('installation', trainerData?.installationDate)}
-                      className="text-[#ff630f] hover:text-[#fe5b25] text-sm transition-colors"
-                      title="Book Installation"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Actual Installation Date</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.actualInstallationDate 
-                    ? new Date(trainerData.actualInstallationDate).toLocaleDateString() 
-                    : 'Not Completed'}
-                </div>
-              </div>
-              
-              {trainerData?.installationIssuesElaboration && (
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Issues</div>
-                  <div className="text-sm text-gray-900 bg-yellow-50 p-2 rounded border border-yellow-200">
-                    {trainerData.installationIssuesElaboration}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {selectedStage === 'training' && (
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
-              <span className="flex items-center">
-                Training
-              </span>
-              {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') &&
-                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-              }
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Training Status</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.trainingStatus || 'Not Started'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">BackOffice Training</div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.backOfficeTrainingDate 
-                      ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString() 
-                      : 'Not Scheduled'}
-                  </div>
-                  <button
-                    onClick={() => handleBookingClick('training-backoffice', trainerData?.backOfficeTrainingDate)}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
-                    title="Book BackOffice Training"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">POS Training</div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.posTrainingDate 
-                      ? new Date(trainerData.posTrainingDate).toLocaleDateString() 
-                      : 'Not Scheduled'}
-                  </div>
-                  <button
-                    onClick={() => handleBookingClick('training-pos', trainerData?.posTrainingDate)}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
-                    title="Book POS Training"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">CSM Name</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.csmName || 'Not Assigned'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {selectedStage === 'preparation' && false && (
-          <div className="space-y-3">
-            {/* Product Setup */}
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
-              <span className="flex items-center">
-                Product Setup
-              </span>
-              {(trainerData?.productSetupStatus === 'Completed' || trainerData?.productSetupStatus === 'Product Setup Completed') &&
-                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-              }
-            </h4>
-            <div className="space-y-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Product Setup Status</div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.productSetupStatus || 'Not Started'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Completed Product Setup</div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.completedProductSetup 
-                      ? new Date(trainerData.completedProductSetup).toLocaleDateString() 
-                      : 'Not Completed'}
-                  </div>
-                </div>
-              </div>
-              
-              {trainerData?.boAccountName && (
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">StoreHub Account</div>
-                  <a
-                    href={`https://${trainerData.boAccountName}.storehubhq.com/`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                  >
-                    {trainerData.boAccountName}
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                </div>
-              )}
-              
-              <div className="pt-2 border-t border-gray-200">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Menu Collection</div>
-                {(() => {
-                  // Check if the link exists and is a complete, valid URL
-                  const link = trainerData?.menuCollectionFormLink
-                  const isValidLink = link && 
-                    link.trim() !== '' && 
-                    !link.endsWith('prefill_Account+Name=') && // Not just the base URL with empty prefill
-                    (link.startsWith('http://') || link.startsWith('https://')) &&
-                    link.length > 50 // A reasonable minimum length for a valid form URL
-                  
-                  if (isValidLink) {
-                    return (
-                      <a
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Upload Menu
-                      </a>
-                    )
-                  } else {
-                    return (
-                      <button
-                        disabled
-                        className="inline-flex items-center px-4 py-2 bg-gray-400 cursor-not-allowed text-white text-sm font-medium rounded-lg"
-                        title="Menu collection form link not configured in Salesforce"
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Upload Menu (Link Not Available)
-                      </button>
-                    )
-                  }
-                })()}
-              </div>
-            </div>
-          </div>
-
-            {/* Hardware Fulfillment */}
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
-              <span className="flex items-center">
-                Hardware Fulfillment
-              </span>
-              {(trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.hardwareDeliveryStatus === 'Hardware Delivered') &&
-                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-              }
-            </h4>
-            <div className="space-y-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Hardware Delivery Status</div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.hardwareDeliveryStatus || 'Not Started'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Hardware Fulfillment Date</div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-gray-900">
-                      {trainerData?.hardwareFulfillmentDate 
-                        ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString() 
-                        : 'Not Scheduled'}
-                    </div>
-                    <div className="text-xs text-gray-500 italic ml-2">
-                      (Managed by CSM/MSM)
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="pt-2 border-t border-gray-200">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Tracking Link</div>
-                {trainerData?.trackingLink ? (
-                  <a 
-                    href={trainerData.trackingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                  >
-                    Track Shipment
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                ) : (
-                  <div className="text-sm text-gray-500 italic">No tracking available</div>
-                )}
-              </div>
-            </div>
-          </div>
-
-            {/* Hardware Installation */}
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
-              <span className="flex items-center">
-                Hardware Installation
-              </span>
-              {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') &&
-                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-              }
-            </h4>
-            <div className="space-y-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Status</div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.hardwareInstallationStatus || 'Not Started'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Date</div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-gray-900">
-                      {trainerData?.installationDate 
-                        ? new Date(trainerData.installationDate).toLocaleDateString() 
-                        : 'Not Scheduled'}
-                    </div>
-                    <button
-                      onClick={() => handleBookingClick('installation', trainerData?.installationDate)}
-                      className="text-[#ff630f] hover:text-[#fe5b25] text-sm transition-colors"
-                      title="Book with Lark Calendar"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Actual Installation Date</div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.actualInstallationDate 
-                      ? new Date(trainerData.actualInstallationDate).toLocaleDateString() 
-                      : 'Not Completed'}
-                  </div>
-                </div>
-              </div>
-              
-              {trainerData?.installationIssuesElaboration && (
-                <div>
-                  <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Installation Issues</div>
-                  <div className="text-sm text-gray-900 bg-yellow-50 p-2 rounded border border-yellow-200">
-                    {trainerData.installationIssuesElaboration}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-            {/* Training */}
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
-              <span className="flex items-center">
-                Training
-              </span>
-              {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed') &&
-                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-              }
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Training Status</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.trainingStatus || 'Not Started'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">BackOffice Training</div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.backOfficeTrainingDate 
-                      ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString() 
-                      : 'Not Scheduled'}
-                  </div>
-                  <button
-                    onClick={() => handleBookingClick('training-backoffice', trainerData?.backOfficeTrainingDate)}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
-                    title="Book BackOffice Training"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">POS Training</div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium text-gray-900">
-                    {trainerData?.posTrainingDate 
-                      ? new Date(trainerData.posTrainingDate).toLocaleDateString() 
-                      : 'Not Scheduled'}
-                  </div>
-                  <button
-                    onClick={() => handleBookingClick('training-pos', trainerData?.posTrainingDate)}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
-                    title="Book POS Training"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">CSM Name</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.csmName || 'Not Assigned'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-            {/* Store Readiness */}
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center justify-between">
-              <span className="flex items-center">
-                Store Readiness
-              </span>
-              {(trainerData?.videoProofLink || uploadedVideoUrl) &&
-                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-              }
-            </h4>
-            <div className="space-y-2">
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Video Proof</div>
-                {trainerData?.videoProofLink || uploadedVideoUrl ? (
-                  <div className="flex items-center gap-2">
-                    <a 
-                      href={uploadedVideoUrl || trainerData?.videoProofLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                    >
-                      View Uploaded Video
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 italic">No video uploaded</div>
-                )}
-              </div>
-              
-              <div className="pt-2 border-t border-gray-200">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Upload Store Video</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="video-upload"
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      
-                      setUploadingVideo(true)
-                      try {
-                        const formData = new FormData()
-                        formData.append('file', file)
-                        formData.append('trainerId', trainerData?.id || '')
-                        
-                        const response = await fetch('/api/salesforce/upload-video', {
-                          method: 'POST',
-                          body: formData
-                        })
-                        
-                        if (!response.ok) {
-                          const error = await response.json()
-                          throw new Error(error.details || error.error || 'Failed to upload video')
-                        }
-                        
-                        const result = await response.json()
-                        setUploadedVideoUrl(result.fileUrl)
-                        
-                        // Refresh the page data
-                        if (onBookingComplete) {
-                          onBookingComplete()
-                        }
-                      } catch (error) {
-                        console.error('Error uploading video:', error)
-                        alert(error instanceof Error ? error.message : 'Failed to upload video')
-                      } finally {
-                        setUploadingVideo(false)
-                        // Reset the input
-                        e.target.value = ''
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => document.getElementById('video-upload')?.click()}
-                    disabled={uploadingVideo}
-                    className="inline-flex items-center px-6 py-2.5 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white font-medium rounded-full transition-all duration-200 transform hover:scale-105 disabled:cursor-not-allowed"
-                  >
-                    {uploadingVideo ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Upload Video
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          </div>
-        )}
-
-        {selectedStage === 'go-live' && (
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center">
-              Go Live
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">Planned Go-Live Date</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.plannedGoLiveDate 
-                    ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString() 
-                    : 'Not Set'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-[#6b6a6a] uppercase tracking-wider mb-1">First Revised EGLD</div>
-                {editingGoLiveDate ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      value={goLiveDateValue}
-                      onChange={(e) => setGoLiveDateValue(e.target.value)}
-                      className="text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                    <button
-                      onClick={handleGoLiveDateSave}
-                      disabled={updatingField === 'go-live'}
-                      className="text-green-600 hover:text-green-700 disabled:text-gray-400"
-                    >
-                      {updatingField === 'go-live' ? (
-                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingGoLiveDate(false)
-                        setGoLiveDateValue('')
-                      }}
-                      className="text-gray-600 hover:text-gray-700"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium text-gray-900">
-                      {trainerData?.firstRevisedEGLD 
-                        ? new Date(trainerData.firstRevisedEGLD).toLocaleDateString() 
-                        : 'Not Set'}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setEditingGoLiveDate(true)
-                        setGoLiveDateValue(trainerData?.firstRevisedEGLD 
-                          ? new Date(trainerData.firstRevisedEGLD).toISOString().split('T')[0]
-                          : new Date().toISOString().split('T')[0])
-                      }}
-                      className="text-[#ff630f] hover:text-[#fe5b25] text-sm transition-colors"
-                      title="Set Go-Live Date"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {selectedStage === 'post-go-live' && (
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <h4 className="text-xs font-semibold text-[#0b0707] mb-2 flex items-center">
-              Post Go Live Check In
-            </h4>
-            <div className="text-sm text-gray-600">Scheduled after go-live completion</div>
-          </div>
-        )}
-      </div>
-      
+      {/* Simple placeholder for other stages */}
+      {selectedStage !== 'preparation' && selectedStage !== 'welcome' && (
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-900 mb-2">
+            {stages.find(s => s.id === selectedStage)?.label || 'Stage Details'}
+          </h4>
+          <p className="text-sm text-gray-600">
+            Detailed view for {selectedStage} stage will be implemented here.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
