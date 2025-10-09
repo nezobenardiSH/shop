@@ -91,6 +91,13 @@ export async function POST(request: Request) {
     const instanceUrl = conn.instanceUrl
     const downloadUrl = `${instanceUrl}/sfc/servlet.shepherd/version/download/${contentVersion.id}`
 
+    // Check if there's an existing video URL to determine if this is a replacement
+    const existingTrainer = await conn.sobject('Onboarding_Trainer__c').findOne({
+      Id: trainerId
+    }, ['Video_Proof_Link__c'])
+
+    const isReplacement = existingTrainer && existingTrainer.Video_Proof_Link__c
+
     // Update the Onboarding_Trainer__c record with the video URL
     const updateResult = await conn.sobject('Onboarding_Trainer__c').update({
       Id: trainerId,
@@ -99,17 +106,21 @@ export async function POST(request: Request) {
 
     if (!updateResult.success) {
       console.error('Failed to update Video_Proof_Link__c field')
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'File uploaded but failed to update Video_Proof_Link__c field',
-        fileUrl: downloadUrl 
+        fileUrl: downloadUrl
       }, { status: 500 })
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    console.log(`✅ Successfully ${isReplacement ? 'replaced' : 'uploaded'} video for trainer: ${trainerId}`)
+
+    return NextResponse.json({
+      success: true,
       fileUrl: downloadUrl,
       contentVersionId: contentVersion.id,
-      contentDocumentId: contentDocumentId
+      contentDocumentId: contentDocumentId,
+      message: `Video ${isReplacement ? 'replaced' : 'uploaded'} successfully`,
+      isReplacement: isReplacement
     })
 
   } catch (error) {

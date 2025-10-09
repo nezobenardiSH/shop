@@ -52,6 +52,7 @@ export default function BookingModal({
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [assignedTrainer, setAssignedTrainer] = useState<string>('')
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['English'])
 
   useEffect(() => {
     if (isOpen) {
@@ -104,7 +105,8 @@ export default function BookingModal({
           date: selectedDate,
           startTime: selectedSlot.start,
           endTime: selectedSlot.end,
-          bookingType: bookingType
+          bookingType: bookingType,
+          languages: (bookingType === 'pos-training' || bookingType === 'backoffice-training') ? selectedLanguages : undefined
         })
       })
 
@@ -326,20 +328,59 @@ export default function BookingModal({
               )}
 
               {selectedDate && selectedSlot && (
-                <div className="bg-[#faf9f6] rounded-xl p-4">
-                  <h4 className="font-semibold text-[#0b0707] mb-2">Booking Summary</h4>
-                  <p className="text-sm text-[#6b6a6a]">
-                    Date: <span className="font-medium text-[#0b0707]">{formatDate(selectedDate)}</span>
-                  </p>
-                  <p className="text-sm text-[#6b6a6a]">
-                    Time: <span className="font-medium text-[#0b0707]">
-                      {formatTime(selectedSlot.start)} - {formatTime(selectedSlot.end)}
-                    </span>
-                  </p>
-                  <p className="text-sm text-[#6b6a6a]">
-                    Trainer: <span className="font-medium text-[#0b0707]">{trainerName}</span>
-                  </p>
-                </div>
+                <>
+                  {/* Language Selection for Training */}
+                  {(bookingType === 'pos-training' || bookingType === 'backoffice-training') && (
+                    <div className="bg-[#fff4ed] rounded-xl p-4 border border-[#ff630f]/20">
+                      <h4 className="font-semibold text-[#0b0707] mb-3">Select Training Language(s)</h4>
+                      <div className="space-y-2">
+                        {['English', 'Bahasa Malaysia', 'Chinese'].map((language) => (
+                          <label
+                            key={language}
+                            className="flex items-center gap-3 cursor-pointer hover:bg-white/50 p-2 rounded-lg transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedLanguages.includes(language)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedLanguages([...selectedLanguages, language])
+                                } else {
+                                  setSelectedLanguages(selectedLanguages.filter(l => l !== language))
+                                }
+                              }}
+                              className="w-4 h-4 text-[#ff630f] border-gray-300 rounded focus:ring-[#ff630f]"
+                            />
+                            <span className="text-sm font-medium text-[#0b0707]">{language}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {selectedLanguages.length === 0 && (
+                        <p className="text-xs text-red-600 mt-2">Please select at least one language</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="bg-[#faf9f6] rounded-xl p-4">
+                    <h4 className="font-semibold text-[#0b0707] mb-2">Booking Summary</h4>
+                    <p className="text-sm text-[#6b6a6a]">
+                      Date: <span className="font-medium text-[#0b0707]">{formatDate(selectedDate)}</span>
+                    </p>
+                    <p className="text-sm text-[#6b6a6a]">
+                      Time: <span className="font-medium text-[#0b0707]">
+                        {formatTime(selectedSlot.start)} - {formatTime(selectedSlot.end)}
+                      </span>
+                    </p>
+                    <p className="text-sm text-[#6b6a6a]">
+                      Trainer: <span className="font-medium text-[#0b0707]">{trainerName}</span>
+                    </p>
+                    {(bookingType === 'pos-training' || bookingType === 'backoffice-training') && selectedLanguages.length > 0 && (
+                      <p className="text-sm text-[#6b6a6a] mt-1">
+                        Language(s): <span className="font-medium text-[#0b0707]">{selectedLanguages.join(', ')}</span>
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -375,8 +416,13 @@ export default function BookingModal({
           {!currentBooking && (
             <button
               onClick={handleBooking}
-              disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading'}
-              className="bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105 disabled:bg-gray-400"
+              disabled={
+                !selectedDate || 
+                !selectedSlot || 
+                bookingStatus === 'loading' ||
+                ((bookingType === 'pos-training' || bookingType === 'backoffice-training') && selectedLanguages.length === 0)
+              }
+              className="bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}
             </button>

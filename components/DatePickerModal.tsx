@@ -113,7 +113,7 @@ export default function DatePickerModal({
           startTime: selectedSlot.start,
           endTime: selectedSlot.end,
           bookingType: bookingType,
-          ...(bookingType === 'training' && { trainerLanguages: selectedLanguages })
+          ...((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && { trainerLanguages: selectedLanguages })
         })
       })
 
@@ -209,7 +209,7 @@ export default function DatePickerModal({
     console.log('Booking type:', bookingType)
     
     // Only filter for training bookings
-    if (bookingType !== 'training') {
+    if (bookingType !== 'training' && bookingType !== 'pos-training' && bookingType !== 'backoffice-training') {
       const availableSlots = allSlots.filter(slot => slot.available)
       console.log('Non-training booking - available slots:', availableSlots)
       return availableSlots
@@ -250,9 +250,9 @@ export default function DatePickerModal({
         return 'Installation'
       case 'training':
         return 'Training'
-      case 'training-backoffice':
+      case 'backoffice-training':
         return 'BackOffice Training'
-      case 'training-pos':
+      case 'pos-training':
         return 'POS Training'
       case 'go-live':
         return 'Go-Live'
@@ -279,7 +279,7 @@ export default function DatePickerModal({
               <X className="h-6 w-6" />
             </button>
           </div>
-          {(bookingType === 'training' || bookingType === 'training-backoffice' || bookingType === 'training-pos') && (
+          {(bookingType === 'training' || bookingType === 'backoffice-training' || bookingType === 'pos-training') && (
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Globe className="inline h-4 w-4 mr-1" />
@@ -413,12 +413,19 @@ export default function DatePickerModal({
                                 {formatTime(slot.start)} - {formatTime(slot.end)}
                               </span>
                             </div>
-                            {bookingType === 'training' && slot.availableLanguages && slot.availableLanguages.length > 0 && (
+                            {(bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && slot.availableLanguages && slot.availableLanguages.length > 0 && (
                               <div className="flex items-center gap-2 mt-2">
                                 <Globe className="h-3 w-3 text-gray-400" />
                                 <div className="flex flex-wrap gap-1">
                                   {slot.availableLanguages.map((lang) => (
-                                    <span key={lang} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                                    <span 
+                                      key={lang} 
+                                      className={`px-2 py-0.5 text-xs rounded font-medium ${
+                                        selectedLanguages.includes(lang)
+                                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                          : 'bg-gray-100 text-gray-600'
+                                      }`}
+                                    >
                                       {lang}
                                     </span>
                                   ))}
@@ -439,7 +446,7 @@ export default function DatePickerModal({
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    {bookingType === 'training' && selectedLanguages.length === 0 
+                    {(bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && selectedLanguages.length === 0 
                       ? 'Please select at least one language'
                       : 'No available slots for this date'}
                   </div>
