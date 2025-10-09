@@ -472,13 +472,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </svg>
               </button>
               {expandedItems['mobile-ssm'] && (
-                <div className="px-4 pb-4 space-y-3 border-t border-gray-100">
-                  <div className="text-sm text-gray-600 pt-3">
+                <div className="pl-12 pr-4 pb-4 space-y-3">
+                  <div className="text-base text-gray-600 pt-3">
                     Status: {trainerData?.ssmDocument || uploadedSSMUrl ? 'Uploaded' : 'Pending Upload'}
                   </div>
                   {(trainerData?.ssmDocument || uploadedSSMUrl) && (
                     <a href={uploadedSSMUrl || trainerData?.ssmDocument} target="_blank" rel="noopener noreferrer" 
-                       className="text-xs text-blue-600 hover:text-blue-700">
+                       className="inline-block text-base text-blue-600 hover:text-blue-700">
                       View Document
                     </a>
                   )}
@@ -522,7 +522,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <button
                       onClick={() => document.getElementById(`mobile-ssm-upload-${trainerData?.id}`)?.click()}
                       disabled={uploadingSSM}
-                      className="px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200"
+                      className="px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-all duration-200"
                     >
                       {uploadingSSM ? 'Uploading...' : (trainerData?.ssmDocument || uploadedSSMUrl ? 'Replace' : 'Upload')}
                     </button>
@@ -585,14 +585,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </svg>
               </button>
               {expandedItems['mobile-hardware'] && (
-                <div className="px-3 pb-3 space-y-2">
+                <div className="pl-12 pr-4 pb-4 space-y-3 pt-3">
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Order Status</div>
-                    <div className="text-xs text-gray-900">{trainerData?.orderNSStatus || 'Not Available'}</div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Order Status</div>
+                    <div className="text-base text-gray-900">{trainerData?.orderNSStatus || 'Not Available'}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
-                    <div className="text-xs text-gray-900">
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
+                    <div className="text-base text-gray-900">
                       {(() => {
                         if (!trainerData?.orderShippingAddress) return 'Not Available';
                         if (typeof trainerData.orderShippingAddress === 'string') {
@@ -605,25 +605,23 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                       })()}
                     </div>
                   </div>
-                  <div className="flex justify-between">
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tracking Link</div>
-                      {trainerData?.trackingLink ? (
-                        <a href={trainerData.trackingLink} target="_blank" rel="noopener noreferrer"
-                           className="text-xs text-blue-600 hover:text-blue-700">
-                          Track Package
-                        </a>
-                      ) : (
-                        <span className="text-xs text-gray-500">No tracking</span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fulfillment Date</div>
-                      <div className="text-xs text-gray-900">
-                        {trainerData?.hardwareFulfillmentDate
-                          ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
-                          : 'Not Scheduled'}
-                      </div>
+                  <div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Tracking Link</div>
+                    {trainerData?.trackingLink ? (
+                      <a href={trainerData.trackingLink} target="_blank" rel="noopener noreferrer"
+                         className="inline-block text-base text-blue-600 hover:text-blue-700">
+                        Track Package
+                      </a>
+                    ) : (
+                      <span className="text-base text-gray-500">No tracking available</span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Fulfillment Date</div>
+                    <div className="text-base text-gray-900">
+                      {trainerData?.hardwareFulfillmentDate
+                        ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                        : 'Not Scheduled'}
                     </div>
                   </div>
                 </div>
@@ -682,29 +680,29 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </svg>
               </button>
               {expandedItems['mobile-product'] && (
-                <div className="px-3 pb-3 space-y-2">
+                <div className="pl-12 pr-4 pb-4 space-y-3 pt-3">
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection Form</div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Menu Collection Form</div>
                     {trainerData?.menuCollectionFormLink ? (
                       <a href={trainerData.menuCollectionFormLink} target="_blank" rel="noopener noreferrer"
                          className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200">
                         Submit Form
                       </a>
                     ) : (
-                      <span className="text-xs text-gray-500">Form not available</span>
+                      <span className="text-base text-gray-500">Form not available</span>
                     )}
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Submission Timestamp</div>
-                    <div className="text-xs text-gray-900">
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Submission Timestamp</div>
+                    <div className="text-base text-gray-900">
                       {trainerData?.menuCollectionSubmissionTimestamp
                         ? new Date(trainerData.menuCollectionSubmissionTimestamp).toLocaleString()
                         : 'Not Submitted'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed Product Setup</div>
-                    <div className="text-xs font-medium text-gray-900">
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Completed Product Setup</div>
+                    <div className="text-base font-medium text-gray-900">
                       {trainerData?.completedProductSetup || 'No'}
                     </div>
                   </div>
@@ -745,18 +743,18 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </svg>
               </button>
               {expandedItems['mobile-video'] && (
-                <div className="px-3 pb-3 space-y-2">
+                <div className="pl-12 pr-4 pb-4 space-y-3 pt-3">
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Setup Guide</div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Store Setup Guide</div>
                     <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
                        target="_blank" rel="noopener noreferrer"
-                       className="text-xs text-blue-600 hover:text-blue-700">
+                       className="inline-block text-base text-blue-600 hover:text-blue-700">
                       View Setup Guide
                     </a>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Proof Status</div>
-                    <div className="text-xs text-gray-900">
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Video Proof Status</div>
+                    <div className="text-base text-gray-900">
                       {trainerData?.videoProofLink || uploadedVideoUrl ? 'Uploaded' : 'Pending Upload'}
                     </div>
                   </div>

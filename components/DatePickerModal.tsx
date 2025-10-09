@@ -269,9 +269,9 @@ export default function DatePickerModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[calc(100vh-2rem)] flex flex-col">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 md:p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">{getBookingTypeTitle()}</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{getBookingTypeTitle()}</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -328,35 +328,39 @@ export default function DatePickerModal({
           )}
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          <div className="flex-1 p-6 border-r border-gray-200 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={() => navigateMonth('prev')}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5 text-gray-600" />
-              </button>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {currentMonth.getFullYear()} {MONTHS[currentMonth.getMonth()].slice(0, 3).toUpperCase()}
-              </h3>
-              <button
-                onClick={() => navigateMonth('next')}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ChevronRight className="h-5 w-5 text-gray-600" />
-              </button>
-            </div>
+        {/* Mobile: Vertical layout, Desktop: Horizontal layout */}
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+          {/* Calendar Section - Full width on mobile */}
+          <div className="flex-1 p-4 md:p-6 md:border-r border-gray-200 overflow-y-auto">
+            {/* Desktop: Traditional calendar grid */}
+            <div className="hidden md:block">
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => navigateMonth('prev')}
+                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-600" />
+                </button>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {currentMonth.getFullYear()} {MONTHS[currentMonth.getMonth()].slice(0, 3).toUpperCase()}
+                </h3>
+                <button
+                  onClick={() => navigateMonth('next')}
+                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ChevronRight className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
 
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {WEEKDAYS.map(day => (
-                <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {WEEKDAYS.map(day => (
+                  <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
 
-            <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1">
               {days.map((date, index) => {
                 const available = isDateAvailable(date)
                 const selected = isSelectedDate(date)
@@ -380,21 +384,64 @@ export default function DatePickerModal({
                   </button>
                 )
               })}
+              </div>
             </div>
 
+            {/* Mobile: Horizontal scrollable date row */}
+            <div className="block md:hidden">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Date</h3>
+              <div className="overflow-x-auto pb-2">
+                <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
+                  {/* Show next 30 days */}
+                  {Array.from({ length: 30 }, (_, i) => {
+                    const date = new Date()
+                    date.setDate(date.getDate() + i)
+                    const available = isDateAvailable(date)
+                    const selected = isSelectedDate(date)
+                    const isToday = i === 0
+                    
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => available && setSelectedDate(date)}
+                        disabled={!available}
+                        className={`
+                          flex flex-col items-center justify-center px-4 py-3 rounded-lg min-w-[70px]
+                          ${selected ? 'bg-blue-600 text-white' : ''}
+                          ${!selected && available ? 'bg-gray-50 hover:bg-gray-100 text-gray-900' : ''}
+                          ${!selected && !available ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
+                          ${isToday && !selected ? 'ring-2 ring-blue-400' : ''}
+                        `}
+                      >
+                        <div className="text-xs font-medium">
+                          {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                        </div>
+                        <div className="text-lg font-bold">
+                          {date.getDate()}
+                        </div>
+                        <div className="text-xs">
+                          {date.toLocaleDateString('en-US', { month: 'short' })}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="w-96 bg-gray-50 flex flex-col">
-            <div className="p-6 flex-1 overflow-y-auto">
+          {/* Time Slots Section - Full width on mobile, sidebar on desktop */}
+          <div className="w-full md:w-96 bg-gray-50 flex flex-col border-t md:border-t-0 md:border-l border-gray-200">
+            <div className="p-4 md:p-6 flex-1 overflow-y-auto">
             {loading || isFilteringSlots ? (
               <div className="flex justify-center items-center h-full">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
             ) : selectedDate ? (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 sticky top-0 bg-gray-50 pb-2">Available Slots</h3>
+                <h3 className="text-lg font-semibold text-gray-900 sticky top-0 bg-gray-50 pb-2">Available Time Slots</h3>
                 {filteredSlots.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-3">
                     {filteredSlots.map((slot, index) => (
                       <button
                         key={index}
@@ -473,17 +520,17 @@ export default function DatePickerModal({
             </div>
             
             {/* Fixed bottom buttons */}
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-3 bg-white">
+            <div className="p-4 md:p-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3 bg-white">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                className="w-full sm:w-auto px-6 py-2.5 text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors order-2 sm:order-1"
               >
                 Cancel
               </button>
               <button
                 onClick={handleBooking}
                 disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading'}
-                className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed order-1 sm:order-2"
               >
                 {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}
               </button>
