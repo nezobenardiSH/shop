@@ -304,7 +304,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     } else if (stage.status === 'current') {
       return <span className="text-purple-600 text-xs">In Progress</span>
     } else {
-      return <span className="text-gray-400 text-xs">Pending</span>
+      return <span className="text-gray-400 text-xs">Not Started</span>
     }
   }
 
@@ -371,61 +371,61 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     switch(stageId) {
       case 'welcome':
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Call Timestamp</div>
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">First Call Timestamp</div>
+              <div className="text-base font-medium text-gray-900">
                 {trainerData?.firstCallTimestamp
                   ? new Date(trainerData.firstCallTimestamp).toLocaleString()
                   : 'Not Recorded'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">MSM Name</div>
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">MSM Name</div>
+              <div className="text-base font-medium text-gray-900">
                 {trainerData?.msmName || 'Not Assigned'}
               </div>
             </div>
             
             {/* Welcome Call Summary */}
-            <div className="pt-2 border-t border-gray-200">
-              <h5 className="text-xs font-semibold text-gray-900 mb-2">Welcome Call Summary:</h5>
-              <div className="space-y-1">
+            <div className="pt-3 border-t border-gray-200">
+              <h5 className="text-sm font-semibold text-gray-900 mb-3">Welcome Call Summary:</h5>
+              <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Go live date:</span>
-                  <span className="text-xs font-medium text-gray-900">
+                  <span className="text-sm text-gray-600">Go live date:</span>
+                  <span className="text-sm font-medium text-gray-900">
                     {trainerData?.plannedGoLiveDate
                       ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString()
                       : 'Not Set'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Hardware delivery:</span>
-                  <span className="text-xs font-medium text-gray-900">
+                  <span className="text-sm text-gray-600">Hardware delivery:</span>
+                  <span className="text-sm font-medium text-gray-900">
                     {trainerData?.hardwareFulfillmentDate
                       ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
                       : 'Not Set'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Installation:</span>
-                  <span className="text-xs font-medium text-gray-900">
+                  <span className="text-sm text-gray-600">Installation:</span>
+                  <span className="text-sm font-medium text-gray-900">
                     {trainerData?.installationDate
                       ? new Date(trainerData.installationDate).toLocaleDateString()
                       : 'Not Set'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">POS Training:</span>
-                  <span className="text-xs font-medium text-gray-900">
+                  <span className="text-sm text-gray-600">POS Training:</span>
+                  <span className="text-sm font-medium text-gray-900">
                     {trainerData?.posTrainingDate
                       ? new Date(trainerData.posTrainingDate).toLocaleDateString()
                       : 'Not Set'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">BO Training:</span>
-                  <span className="text-xs font-medium text-gray-900">
+                  <span className="text-sm text-gray-600">BO Training:</span>
+                  <span className="text-sm font-medium text-gray-900">
                     {trainerData?.backOfficeTrainingDate
                       ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString()
                       : 'Not Set'}
@@ -438,27 +438,42 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       
       case 'preparation':
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {/* SSM Document - Expandable */}
             <div className="border border-gray-200 rounded-lg">
               <button
                 onClick={() => toggleItemExpansion('mobile-ssm')}
-                className="w-full flex items-center justify-between p-2"
+                className="w-full flex items-center justify-between p-4"
               >
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium ${trainerData?.ssmDocument ? 'text-green-600' : 'text-gray-700'}`}>
-                    {trainerData?.ssmDocument ? '✓' : '○'} SSM Document
-                  </span>
+                <div className="flex items-center gap-3 flex-1">
+                  {/* Status Icon */}
+                  {trainerData?.ssmDocument || uploadedSSMUrl ? (
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="text-base font-medium text-gray-900">SSM Document</div>
+                    <div className="text-sm text-gray-500">
+                      {trainerData?.ssmDocument || uploadedSSMUrl ? 'Document Uploaded' : 'Pending Upload'}
+                    </div>
+                  </div>
                 </div>
-                <svg className={`w-4 h-4 text-gray-400 transition-transform ${
+                <svg className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${
                   expandedItems['mobile-ssm'] ? 'rotate-180' : ''
                 }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
               {expandedItems['mobile-ssm'] && (
-                <div className="px-3 pb-3 space-y-2">
-                  <div className="text-xs text-gray-600">
+                <div className="px-4 pb-4 space-y-3 border-t border-gray-100">
+                  <div className="text-sm text-gray-600 pt-3">
                     Status: {trainerData?.ssmDocument || uploadedSSMUrl ? 'Uploaded' : 'Pending Upload'}
                   </div>
                   {(trainerData?.ssmDocument || uploadedSSMUrl) && (
@@ -520,14 +535,50 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div className="border border-gray-200 rounded-lg">
               <button
                 onClick={() => toggleItemExpansion('mobile-hardware')}
-                className="w-full flex items-center justify-between p-2"
+                className="w-full flex items-center justify-between p-4"
               >
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium ${trainerData?.trackingLink ? 'text-green-600' : 'text-gray-700'}`}>
-                    {trainerData?.trackingLink ? '✓' : '○'} Hardware Delivery
-                  </span>
+                <div className="flex items-center gap-3 flex-1">
+                  {/* Status Icon */}
+                  {(() => {
+                    const isDelivered = trainerData?.hardwareDeliveryStatus === 'Delivered' || 
+                                       trainerData?.trackingLink;
+                    const isInProgress = trainerData?.hardwareFulfillmentDate && !isDelivered;
+                    
+                    if (isDelivered) {
+                      return (
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      );
+                    } else if (isInProgress) {
+                      return (
+                        <div className="w-5 h-5 bg-orange-400 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-2 h-2 bg-white rounded-full" />
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                        </div>
+                      );
+                    }
+                  })()}
+                  <div className="flex-1">
+                    <div className="text-base font-medium text-gray-900">Hardware Delivery</div>
+                    <div className="text-sm text-gray-500">
+                      {(() => {
+                        if (trainerData?.hardwareDeliveryStatus === 'Delivered') return 'Delivered';
+                        if (trainerData?.trackingLink) return 'In Transit';
+                        if (trainerData?.hardwareFulfillmentDate) return 'Scheduled';
+                        return 'Pending';
+                      })()}
+                    </div>
+                  </div>
                 </div>
-                <svg className={`w-4 h-4 text-gray-400 transition-transform ${
+                <svg className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${
                   expandedItems['mobile-hardware'] ? 'rotate-180' : ''
                 }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -583,14 +634,48 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div className="border border-gray-200 rounded-lg">
               <button
                 onClick={() => toggleItemExpansion('mobile-product')}
-                className="w-full flex items-center justify-between p-2"
+                className="w-full flex items-center justify-between p-4"
               >
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium ${trainerData?.completedProductSetup === 'Yes' ? 'text-green-600' : 'text-gray-700'}`}>
-                    {trainerData?.completedProductSetup === 'Yes' ? '✓' : '○'} Product Setup
-                  </span>
+                <div className="flex items-center gap-3 flex-1">
+                  {/* Status Icon */}
+                  {(() => {
+                    const productComplete = trainerData?.completedProductSetup === 'Yes';
+                    const inProgress = !!trainerData?.menuCollectionSubmissionTimestamp && !productComplete;
+
+                    if (productComplete) {
+                      return (
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      );
+                    } else if (inProgress) {
+                      return (
+                        <div className="w-5 h-5 bg-orange-400 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-2 h-2 bg-white rounded-full" />
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                        </div>
+                      );
+                    }
+                  })()}
+                  <div className="flex-1">
+                    <div className="text-base font-medium text-gray-900">Product Setup</div>
+                    <div className="text-sm text-gray-500">
+                      {(() => {
+                        if (trainerData?.completedProductSetup === 'Yes') return 'Completed';
+                        if (trainerData?.menuCollectionSubmissionTimestamp) return 'In Progress';
+                        return 'Pending';
+                      })()}
+                    </div>
+                  </div>
                 </div>
-                <svg className={`w-4 h-4 text-gray-400 transition-transform ${
+                <svg className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${
                   expandedItems['mobile-product'] ? 'rotate-180' : ''
                 }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -631,14 +716,29 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div className="border border-gray-200 rounded-lg">
               <button
                 onClick={() => toggleItemExpansion('mobile-video')}
-                className="w-full flex items-center justify-between p-2"
+                className="w-full flex items-center justify-between p-4"
               >
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium ${trainerData?.videoProofLink ? 'text-green-600' : 'text-gray-700'}`}>
-                    {trainerData?.videoProofLink ? '✓' : '○'} Store Setup Video
-                  </span>
+                <div className="flex items-center gap-3 flex-1">
+                  {/* Status Icon */}
+                  {(trainerData?.videoProofLink || uploadedVideoUrl) ? (
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="text-base font-medium text-gray-900">Store Setup</div>
+                    <div className="text-sm text-gray-500">
+                      {trainerData?.videoProofLink || uploadedVideoUrl ? 'Video Uploaded' : 'Pending Upload'}
+                    </div>
+                  </div>
                 </div>
-                <svg className={`w-4 h-4 text-gray-400 transition-transform ${
+                <svg className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${
                   expandedItems['mobile-video'] ? 'rotate-180' : ''
                 }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -718,18 +818,18 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       
       case 'installation':
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Scheduled Installation Date</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Scheduled Installation Date</div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-base font-medium text-gray-900">
                   {trainerData?.installationDate
                     ? new Date(trainerData.installationDate).toLocaleDateString()
                     : 'Not Scheduled'}
                 </span>
                 <button
                   onClick={() => handleBookingClick('installation', trainerData?.installationDate)}
-                  className="px-3 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200"
+                  className="px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-medium rounded-lg transition-all duration-200"
                 >
                   {trainerData?.installationDate ? 'Reschedule' : 'Schedule'}
                 </button>
@@ -737,15 +837,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             </div>
             
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation ST Ticket No</div>
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Installation ST Ticket No</div>
+              <div className="text-base font-medium text-gray-900">
                 {trainerData?.installationSTTicketNo || 'Not Available'}
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Store Address</div>
+              <div className="text-base font-medium text-gray-900">
                 {(() => {
                   if (!trainerData?.orderShippingAddress) return 'Not Available';
                   if (typeof trainerData.orderShippingAddress === 'string') {
@@ -793,18 +893,18 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       
       case 'training':
         return (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">POS Training Date</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">POS Training Date</div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-base font-medium text-gray-900">
                   {trainerData?.posTrainingDate
                     ? new Date(trainerData.posTrainingDate).toLocaleDateString()
                     : 'Not Scheduled'}
                 </span>
                 <button
                   onClick={() => handleBookingClick('pos-training', trainerData?.posTrainingDate)}
-                  className="px-3 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200"
+                  className="px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-medium rounded-lg transition-all duration-200"
                 >
                   {trainerData?.posTrainingDate ? 'Reschedule' : 'Schedule'}
                 </button>
@@ -812,16 +912,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             </div>
             
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">BackOffice Training Date</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">BackOffice Training Date</div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-base font-medium text-gray-900">
                   {trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
                     ? new Date(trainerData.backOfficeTrainingDate || trainerData.trainingDate).toLocaleDateString()
                     : 'Not Scheduled'}
                 </span>
                 <button
                   onClick={() => handleBookingClick('backoffice-training', trainerData?.backOfficeTrainingDate || trainerData?.trainingDate)}
-                  className="px-3 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200"
+                  className="px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-medium rounded-lg transition-all duration-200"
                 >
                   {trainerData?.backOfficeTrainingDate || trainerData?.trainingDate ? 'Reschedule' : 'Schedule'}
                 </button>
@@ -982,13 +1082,24 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                             }
                             return 'In Progress'
                           case 'installation':
-                            return stage.status === 'completed' ? 'Complete' : stage.status === 'current' ? 'In Progress' : 'Pending'
+                            if (stage.status === 'completed') return 'Complete'
+                            if (stage.status === 'current') return 'In Progress'
+                            // Show "Not Started" with date if scheduled
+                            return trainerData?.installationDate 
+                              ? `Not Started • ${new Date(trainerData.installationDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}`
+                              : 'Not Started • Not Scheduled'
                           case 'training':
-                            return stage.status === 'completed' ? 'Complete' : stage.status === 'current' ? 'In Progress' : 'Pending'
+                            if (stage.status === 'completed') return 'Complete'
+                            if (stage.status === 'current') return 'In Progress'
+                            // Show "Not Started" with date if scheduled
+                            const trainingDate = trainerData?.posTrainingDate || trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
+                            return trainingDate 
+                              ? `Not Started • ${new Date(trainingDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}`
+                              : 'Not Started • Not Scheduled'
                           case 'ready-go-live':
-                            return stage.status === 'completed' ? 'Ready' : stage.status === 'current' ? 'Preparing' : 'Pending'
+                            return stage.status === 'completed' ? 'Ready' : stage.status === 'current' ? 'Preparing' : 'Not Started'
                           case 'live':
-                            return stage.status === 'completed' ? 'Live' : stage.status === 'current' ? 'Going Live' : 'Pending'
+                            return stage.status === 'completed' ? 'Live' : stage.status === 'current' ? 'Going Live' : 'Not Started'
                           default:
                             return ''
                         }
@@ -1004,50 +1115,50 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
       {/* Mobile: Vertical Timeline with Expandable Drawers */}
       <div className="md:hidden">
-        <div className="space-y-3">
+        <div className="space-y-4">
           {stages.map((stage, index) => (
             <div key={stage.id} className="relative">
               {/* Connector Line */}
               {index < stages.length - 1 && (
-                <div className="absolute left-[14px] top-10 bottom-0 w-0.5 bg-gray-300" />
+                <div className="absolute left-[16px] top-12 bottom-0 w-0.5 bg-gray-300" />
               )}
               
               {/* Stage Item */}
               <div className="relative">
                 <button
                   onClick={() => toggleMobileStage(stage.id)}
-                  className="w-full text-left"
+                  className="w-full text-left py-2 px-1 -mx-1 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-start gap-3">
-                    {/* Stage Icon/Circle - Smaller */}
-                    <div className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center shadow-sm ${
+                  <div className="flex items-start gap-4">
+                    {/* Stage Icon/Circle - Medium size for balance */}
+                    <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center shadow-md ${
                       stage.status === 'completed' ? 'bg-green-500' :
                       stage.status === 'current' ? 'bg-orange-500' :
                       'bg-gray-300'
                     }`}>
                       {stage.status === 'completed' ? (
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
                       ) : stage.status === 'current' ? (
-                        <div className="w-2 h-2 bg-white rounded-full" />
+                        <div className="w-2.5 h-2.5 bg-white rounded-full" />
                       ) : (
-                        <div className="w-2 h-2 bg-gray-100 rounded-full" />
+                        <div className="w-2.5 h-2.5 bg-gray-100 rounded-full" />
                       )}
                     </div>
                     
                     {/* Stage Content */}
-                    <div className="flex-1">
+                    <div className="flex-1 pr-2">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className={`font-semibold text-sm ${
+                        <div className="flex-1">
+                          <h4 className={`font-semibold text-base ${
                             stage.status === 'completed' ? 'text-gray-900' :
                             stage.status === 'current' ? 'text-gray-900' :
-                            'text-gray-500'
+                            'text-gray-600'
                           }`}>
                             {stage.label}
                           </h4>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-sm text-gray-500 mt-1">
                             {(() => {
                               if (stage.id === 'welcome') {
                                 return (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
@@ -1059,18 +1170,38 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                               if (stage.completedDate) {
                                 return new Date(stage.completedDate).toLocaleDateString()
                               }
-                              return stage.status === 'current' ? 'In Progress' : 
-                                     stage.status === 'pending' ? 'Pending' : ''
+                              // Show scheduled dates for Not Started stages
+                              if (stage.status === 'pending') {
+                                let dateStr = 'Not Started'
+                                if (stage.id === 'installation') {
+                                  if (trainerData?.installationDate) {
+                                    dateStr += ` • ${new Date(trainerData.installationDate).toLocaleDateString()}`
+                                  } else {
+                                    dateStr += ' • Not Scheduled'
+                                  }
+                                } else if (stage.id === 'training') {
+                                  const trainingDate = trainerData?.posTrainingDate || trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
+                                  if (trainingDate) {
+                                    dateStr += ` • ${new Date(trainingDate).toLocaleDateString()}`
+                                  } else {
+                                    dateStr += ' • Not Scheduled'
+                                  }
+                                }
+                                return dateStr
+                              }
+                              return stage.status === 'current' ? 'In Progress' : ''
                             })()}
                           </p>
                         </div>
                         
-                        {/* Expand/Collapse Arrow */}
-                        <svg className={`w-5 h-5 text-gray-400 transition-transform ${
-                          expandedMobileStages[stage.id] ? 'rotate-180' : ''
-                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        {/* Expand/Collapse Arrow - Larger tap target */}
+                        <div className="p-1">
+                          <svg className={`w-6 h-6 text-gray-400 transition-transform ${
+                            expandedMobileStages[stage.id] ? 'rotate-180' : ''
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1078,10 +1209,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 
                 {/* Expandable Content Drawer */}
                 {expandedMobileStages[stage.id] && (
-                  <div className="ml-13 mt-3 pb-3">
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      {getMobileStageContent(stage.id)}
-                    </div>
+                  <div className="ml-12 mt-3 pb-3">
+                    {getMobileStageContent(stage.id)}
                   </div>
                 )}
               </div>
