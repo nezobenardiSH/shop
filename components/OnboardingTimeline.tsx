@@ -39,6 +39,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     'installation': false,
     'training': false
   })
+  const [expandedMobileStages, setExpandedMobileStages] = useState<{[key: string]: boolean}>({
+    'welcome': false,
+    'preparation': false,
+    'installation': false,
+    'training': false,
+    'ready-go-live': false,
+    'live': false
+  })
 
   // Define the new 6-stage flow
   const mainStages = [
@@ -245,6 +253,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     })
 
     setStages(timelineStages)
+    
+    // Automatically open the current stage drawer on mobile
+    const currentStageObj = timelineStages.find(s => s.status === 'current')
+    if (currentStageObj) {
+      setExpandedMobileStages(prev => ({
+        ...prev,
+        [currentStageObj.id]: true
+      }))
+    }
   }, [trainerData])
 
   const getStageIcon = (stage: TimelineStage, index: number) => {
@@ -343,12 +360,591 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     }
   }
 
+  const toggleMobileStage = (stageId: string) => {
+    setExpandedMobileStages(prev => ({
+      ...prev,
+      [stageId]: !prev[stageId]
+    }))
+  }
+
+  const getMobileStageContent = (stageId: string) => {
+    switch(stageId) {
+      case 'welcome':
+        return (
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Call Timestamp</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.firstCallTimestamp
+                  ? new Date(trainerData.firstCallTimestamp).toLocaleString()
+                  : 'Not Recorded'}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">MSM Name</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.msmName || 'Not Assigned'}
+              </div>
+            </div>
+            
+            {/* Welcome Call Summary */}
+            <div className="pt-2 border-t border-gray-200">
+              <h5 className="text-xs font-semibold text-gray-900 mb-2">Welcome Call Summary:</h5>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600">Go live date:</span>
+                  <span className="text-xs font-medium text-gray-900">
+                    {trainerData?.plannedGoLiveDate
+                      ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600">Hardware delivery:</span>
+                  <span className="text-xs font-medium text-gray-900">
+                    {trainerData?.hardwareFulfillmentDate
+                      ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600">Installation:</span>
+                  <span className="text-xs font-medium text-gray-900">
+                    {trainerData?.installationDate
+                      ? new Date(trainerData.installationDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600">POS Training:</span>
+                  <span className="text-xs font-medium text-gray-900">
+                    {trainerData?.posTrainingDate
+                      ? new Date(trainerData.posTrainingDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600">BO Training:</span>
+                  <span className="text-xs font-medium text-gray-900">
+                    {trainerData?.backOfficeTrainingDate
+                      ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString()
+                      : 'Not Set'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      
+      case 'preparation':
+        return (
+          <div className="space-y-2">
+            {/* SSM Document - Expandable */}
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleItemExpansion('mobile-ssm')}
+                className="w-full flex items-center justify-between p-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${trainerData?.ssmDocument ? 'text-green-600' : 'text-gray-700'}`}>
+                    {trainerData?.ssmDocument ? '✓' : '○'} SSM Document
+                  </span>
+                </div>
+                <svg className={`w-4 h-4 text-gray-400 transition-transform ${
+                  expandedItems['mobile-ssm'] ? 'rotate-180' : ''
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {expandedItems['mobile-ssm'] && (
+                <div className="px-3 pb-3 space-y-2">
+                  <div className="text-xs text-gray-600">
+                    Status: {trainerData?.ssmDocument || uploadedSSMUrl ? 'Uploaded' : 'Pending Upload'}
+                  </div>
+                  {(trainerData?.ssmDocument || uploadedSSMUrl) && (
+                    <a href={uploadedSSMUrl || trainerData?.ssmDocument} target="_blank" rel="noopener noreferrer" 
+                       className="text-xs text-blue-600 hover:text-blue-700">
+                      View Document
+                    </a>
+                  )}
+                  <div>
+                    <input
+                      id={`mobile-ssm-upload-${trainerData?.id}`}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setUploadingSSM(true)
+                        try {
+                          const formData = new FormData()
+                          formData.append('file', file)
+                          formData.append('trainerId', trainerData?.id || '')
+                          formData.append('documentType', 'ssm')
+                          const response = await fetch('/api/salesforce/upload-document', {
+                            method: 'POST',
+                            body: formData
+                          })
+                          if (!response.ok) {
+                            const error = await response.json()
+                            throw new Error(error.details || error.error || 'Failed to upload')
+                          }
+                          const result = await response.json()
+                          setUploadedSSMUrl(result.fileUrl)
+                          if (onBookingComplete) {
+                            onBookingComplete()
+                          }
+                        } catch (error) {
+                          console.error('Error uploading SSM:', error)
+                          alert(error instanceof Error ? error.message : 'Failed to upload')
+                        } finally {
+                          setUploadingSSM(false)
+                          e.target.value = ''
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => document.getElementById(`mobile-ssm-upload-${trainerData?.id}`)?.click()}
+                      disabled={uploadingSSM}
+                      className="px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200"
+                    >
+                      {uploadingSSM ? 'Uploading...' : (trainerData?.ssmDocument || uploadedSSMUrl ? 'Replace' : 'Upload')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Hardware Delivery - Expandable */}
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleItemExpansion('mobile-hardware')}
+                className="w-full flex items-center justify-between p-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${trainerData?.trackingLink ? 'text-green-600' : 'text-gray-700'}`}>
+                    {trainerData?.trackingLink ? '✓' : '○'} Hardware Delivery
+                  </span>
+                </div>
+                <svg className={`w-4 h-4 text-gray-400 transition-transform ${
+                  expandedItems['mobile-hardware'] ? 'rotate-180' : ''
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {expandedItems['mobile-hardware'] && (
+                <div className="px-3 pb-3 space-y-2">
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Order Status</div>
+                    <div className="text-xs text-gray-900">{trainerData?.orderNSStatus || 'Not Available'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
+                    <div className="text-xs text-gray-900">
+                      {(() => {
+                        if (!trainerData?.orderShippingAddress) return 'Not Available';
+                        if (typeof trainerData.orderShippingAddress === 'string') {
+                          return trainerData.orderShippingAddress;
+                        }
+                        const addr = trainerData.orderShippingAddress;
+                        const parts = [addr.street, addr.city, addr.state || addr.stateCode, 
+                                     addr.postalCode, addr.country || addr.countryCode].filter(Boolean);
+                        return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                      })()}
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tracking Link</div>
+                      {trainerData?.trackingLink ? (
+                        <a href={trainerData.trackingLink} target="_blank" rel="noopener noreferrer"
+                           className="text-xs text-blue-600 hover:text-blue-700">
+                          Track Package
+                        </a>
+                      ) : (
+                        <span className="text-xs text-gray-500">No tracking</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fulfillment Date</div>
+                      <div className="text-xs text-gray-900">
+                        {trainerData?.hardwareFulfillmentDate
+                          ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                          : 'Not Scheduled'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Product Setup - Expandable */}
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleItemExpansion('mobile-product')}
+                className="w-full flex items-center justify-between p-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${trainerData?.completedProductSetup === 'Yes' ? 'text-green-600' : 'text-gray-700'}`}>
+                    {trainerData?.completedProductSetup === 'Yes' ? '✓' : '○'} Product Setup
+                  </span>
+                </div>
+                <svg className={`w-4 h-4 text-gray-400 transition-transform ${
+                  expandedItems['mobile-product'] ? 'rotate-180' : ''
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {expandedItems['mobile-product'] && (
+                <div className="px-3 pb-3 space-y-2">
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection Form</div>
+                    {trainerData?.menuCollectionFormLink ? (
+                      <a href={trainerData.menuCollectionFormLink} target="_blank" rel="noopener noreferrer"
+                         className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200">
+                        Submit Form
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-500">Form not available</span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Submission Timestamp</div>
+                    <div className="text-xs text-gray-900">
+                      {trainerData?.menuCollectionSubmissionTimestamp
+                        ? new Date(trainerData.menuCollectionSubmissionTimestamp).toLocaleString()
+                        : 'Not Submitted'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed Product Setup</div>
+                    <div className="text-xs font-medium text-gray-900">
+                      {trainerData?.completedProductSetup || 'No'}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Store Setup Video - Expandable */}
+            <div className="border border-gray-200 rounded-lg">
+              <button
+                onClick={() => toggleItemExpansion('mobile-video')}
+                className="w-full flex items-center justify-between p-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${trainerData?.videoProofLink ? 'text-green-600' : 'text-gray-700'}`}>
+                    {trainerData?.videoProofLink ? '✓' : '○'} Store Setup Video
+                  </span>
+                </div>
+                <svg className={`w-4 h-4 text-gray-400 transition-transform ${
+                  expandedItems['mobile-video'] ? 'rotate-180' : ''
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {expandedItems['mobile-video'] && (
+                <div className="px-3 pb-3 space-y-2">
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Setup Guide</div>
+                    <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
+                       target="_blank" rel="noopener noreferrer"
+                       className="text-xs text-blue-600 hover:text-blue-700">
+                      View Setup Guide
+                    </a>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Proof Status</div>
+                    <div className="text-xs text-gray-900">
+                      {trainerData?.videoProofLink || uploadedVideoUrl ? 'Uploaded' : 'Pending Upload'}
+                    </div>
+                  </div>
+                  {(trainerData?.videoProofLink || uploadedVideoUrl) && (
+                    <a href={uploadedVideoUrl || trainerData?.videoProofLink} target="_blank" rel="noopener noreferrer"
+                       className="text-xs text-blue-600 hover:text-blue-700">
+                      View Video
+                    </a>
+                  )}
+                  <div>
+                    <input
+                      id={`mobile-video-upload-${trainerData?.id}`}
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setUploadingVideo(true)
+                        try {
+                          const formData = new FormData()
+                          formData.append('file', file)
+                          formData.append('trainerId', trainerData?.id || '')
+                          const response = await fetch('/api/salesforce/upload-video', {
+                            method: 'POST',
+                            body: formData
+                          })
+                          if (!response.ok) {
+                            const error = await response.json()
+                            throw new Error(error.details || error.error || 'Failed to upload')
+                          }
+                          const result = await response.json()
+                          setUploadedVideoUrl(result.fileUrl)
+                          if (onBookingComplete) {
+                            onBookingComplete()
+                          }
+                        } catch (error) {
+                          console.error('Error uploading video:', error)
+                          alert(error instanceof Error ? error.message : 'Failed to upload')
+                        } finally {
+                          setUploadingVideo(false)
+                          e.target.value = ''
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => document.getElementById(`mobile-video-upload-${trainerData?.id}`)?.click()}
+                      disabled={uploadingVideo}
+                      className="px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200"
+                    >
+                      {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      
+      case 'installation':
+        return (
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Scheduled Installation Date</div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-900">
+                  {trainerData?.installationDate
+                    ? new Date(trainerData.installationDate).toLocaleDateString()
+                    : 'Not Scheduled'}
+                </span>
+                <button
+                  onClick={() => handleBookingClick('installation', trainerData?.installationDate)}
+                  className="px-3 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200"
+                >
+                  {trainerData?.installationDate ? 'Reschedule' : 'Schedule'}
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation ST Ticket No</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.installationSTTicketNo || 'Not Available'}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
+              <div className="text-sm font-medium text-gray-900">
+                {(() => {
+                  if (!trainerData?.orderShippingAddress) return 'Not Available';
+                  if (typeof trainerData.orderShippingAddress === 'string') {
+                    return trainerData.orderShippingAddress;
+                  }
+                  const addr = trainerData.orderShippingAddress;
+                  const parts = [addr.street, addr.city, addr.state || addr.stateCode,
+                               addr.postalCode, addr.country || addr.countryCode].filter(Boolean);
+                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                })()}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Actual Installation Date</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.actualInstallationDate
+                  ? new Date(trainerData.actualInstallationDate).toLocaleDateString()
+                  : 'Not Completed'}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Status</div>
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                trainerData?.installationStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+                trainerData?.installationStatus === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                trainerData?.installationStatus === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {trainerData?.installationStatus || 'Not Started'}
+              </span>
+            </div>
+
+            {trainerData?.installationIssuesElaboration && (
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Issues</div>
+                <div className="text-sm text-gray-900 bg-red-50 border border-red-200 rounded p-2">
+                  {trainerData.installationIssuesElaboration}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      
+      case 'training':
+        return (
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">POS Training Date</div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-900">
+                  {trainerData?.posTrainingDate
+                    ? new Date(trainerData.posTrainingDate).toLocaleDateString()
+                    : 'Not Scheduled'}
+                </span>
+                <button
+                  onClick={() => handleBookingClick('pos-training', trainerData?.posTrainingDate)}
+                  className="px-3 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200"
+                >
+                  {trainerData?.posTrainingDate ? 'Reschedule' : 'Schedule'}
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">BackOffice Training Date</div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-900">
+                  {trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
+                    ? new Date(trainerData.backOfficeTrainingDate || trainerData.trainingDate).toLocaleDateString()
+                    : 'Not Scheduled'}
+                </span>
+                <button
+                  onClick={() => handleBookingClick('backoffice-training', trainerData?.backOfficeTrainingDate || trainerData?.trainingDate)}
+                  className="px-3 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200"
+                >
+                  {trainerData?.backOfficeTrainingDate || trainerData?.trainingDate ? 'Reschedule' : 'Schedule'}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CSM Name</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.csmName || 'Not Assigned'}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Location</div>
+              <div className="text-sm font-medium text-gray-900">
+                {(() => {
+                  if (!trainerData?.orderShippingAddress) return 'Not Available';
+                  if (typeof trainerData.orderShippingAddress === 'string') {
+                    return trainerData.orderShippingAddress;
+                  }
+                  const addr = trainerData.orderShippingAddress;
+                  const parts = [addr.street, addr.city, addr.state || addr.stateCode,
+                               addr.postalCode, addr.country || addr.countryCode].filter(Boolean);
+                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                })()}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Required Features by Merchant</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.requiredFeaturesByMerchant || 'None Specified'}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.onboardingServicesBought || 'Standard Package'}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Completion Status</div>
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                trainerData?.completedTraining === 'Yes' ? 'bg-green-100 text-green-800' :
+                trainerData?.completedTraining === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                trainerData?.completedTraining === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {trainerData?.completedTraining === 'Yes' ? 'Completed' : 
+                 trainerData?.completedTraining || 'Not Started'}
+              </span>
+            </div>
+          </div>
+        )
+      
+      case 'ready-go-live':
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-700">✓ Hardware Delivered</span>
+              <span className={`text-xs ${trainerData?.hardwareFulfillmentDate ? 'text-green-600' : 'text-gray-400'}`}>
+                {trainerData?.hardwareFulfillmentDate ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-700">✓ Product Setup</span>
+              <span className={`text-xs ${trainerData?.completedProductSetup === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>
+                {trainerData?.completedProductSetup === 'Yes' ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-700">✓ Installation</span>
+              <span className={`text-xs ${trainerData?.installationStatus === 'Completed' ? 'text-green-600' : 'text-gray-400'}`}>
+                {trainerData?.installationStatus === 'Completed' ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-700">✓ Training</span>
+              <span className={`text-xs ${trainerData?.completedTraining === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>
+                {trainerData?.completedTraining === 'Yes' ? 'Yes' : 'No'}
+              </span>
+            </div>
+          </div>
+        )
+      
+      case 'live':
+        return (
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Go-Live Date</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.firstRevisedEGLD
+                  ? new Date(trainerData.firstRevisedEGLD).toLocaleDateString()
+                  : 'Not Yet Live'}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</div>
+              <div className="text-sm font-medium">
+                {trainerData?.firstRevisedEGLD && new Date(trainerData.firstRevisedEGLD) <= new Date() ? (
+                  <span className="text-green-600">✅ Merchant is Live</span>
+                ) : (
+                  <span className="text-gray-500">⏳ Awaiting Go-Live</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      
+      default:
+        return <div className="text-xs text-gray-500">No details available</div>
+    }
+  }
+
   return (
     <div className="bg-white border border-[#e5e7eb] rounded-lg p-3">
       <h3 className="text-lg font-bold text-[#0b0707] mb-3">Onboarding Progress</h3>
       
-      {/* Compact Progress Bar Timeline */}
-      <div className="bg-gray-50 rounded-lg p-2 mb-3">
+      {/* Desktop: Horizontal Progress Bar Timeline */}
+      <div className="hidden md:block bg-gray-50 rounded-lg p-2 mb-3">
         <div className="flex items-center justify-between">
           {stages.map((stage, index) => (
             <div key={stage.id} className="flex-1 relative">
@@ -406,9 +1002,97 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         </div>
       </div>
 
-      {/* Preparation Status Overview - Prominent */}
+      {/* Mobile: Vertical Timeline with Expandable Drawers */}
+      <div className="md:hidden">
+        <div className="space-y-3">
+          {stages.map((stage, index) => (
+            <div key={stage.id} className="relative">
+              {/* Connector Line */}
+              {index < stages.length - 1 && (
+                <div className="absolute left-[14px] top-10 bottom-0 w-0.5 bg-gray-300" />
+              )}
+              
+              {/* Stage Item */}
+              <div className="relative">
+                <button
+                  onClick={() => toggleMobileStage(stage.id)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Stage Icon/Circle - Smaller */}
+                    <div className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center shadow-sm ${
+                      stage.status === 'completed' ? 'bg-green-500' :
+                      stage.status === 'current' ? 'bg-orange-500' :
+                      'bg-gray-300'
+                    }`}>
+                      {stage.status === 'completed' ? (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : stage.status === 'current' ? (
+                        <div className="w-2 h-2 bg-white rounded-full" />
+                      ) : (
+                        <div className="w-2 h-2 bg-gray-100 rounded-full" />
+                      )}
+                    </div>
+                    
+                    {/* Stage Content */}
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className={`font-semibold text-sm ${
+                            stage.status === 'completed' ? 'text-gray-900' :
+                            stage.status === 'current' ? 'text-gray-900' :
+                            'text-gray-500'
+                          }`}>
+                            {stage.label}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {(() => {
+                              if (stage.id === 'welcome') {
+                                return (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
+                                       trainerData?.welcomeCallStatus === 'Completed') ? 'Completed' : 'In Progress'
+                              }
+                              if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
+                                return `${stage.completedCount}/${stage.totalCount} Complete`
+                              }
+                              if (stage.completedDate) {
+                                return new Date(stage.completedDate).toLocaleDateString()
+                              }
+                              return stage.status === 'current' ? 'In Progress' : 
+                                     stage.status === 'pending' ? 'Pending' : ''
+                            })()}
+                          </p>
+                        </div>
+                        
+                        {/* Expand/Collapse Arrow */}
+                        <svg className={`w-5 h-5 text-gray-400 transition-transform ${
+                          expandedMobileStages[stage.id] ? 'rotate-180' : ''
+                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+                
+                {/* Expandable Content Drawer */}
+                {expandedMobileStages[stage.id] && (
+                  <div className="ml-13 mt-3 pb-3">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      {getMobileStageContent(stage.id)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop Only: Preparation Status Overview - Prominent */}
       {selectedStage === 'preparation' && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+        <div className="hidden md:block bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-lg font-semibold text-gray-900">Preparation Progress</h4>
             <div className="text-sm text-gray-500">
@@ -910,9 +1594,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         </div>
       )}
       
-      {/* Welcome Stage Details */}
+      {/* Desktop Only: Welcome Stage Details */}
       {selectedStage === 'welcome' && (
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+        <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Welcome to StoreHub</span>
             {(trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
@@ -991,9 +1675,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         </div>
       )}
 
-      {/* Installation Stage Details */}
+      {/* Desktop Only: Installation Stage Details */}
       {selectedStage === 'installation' && (
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+        <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Installation</span>
             {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') &&
@@ -1096,9 +1780,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         </div>
       )}
 
-      {/* Training Stage Details */}
+      {/* Desktop Only: Training Stage Details */}
       {selectedStage === 'training' && (
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+        <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Training</span>
             {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed' || trainerData?.completedTraining === 'Yes') &&
@@ -1219,9 +1903,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         </div>
       )}
 
-      {/* Ready to Go Live Stage Details */}
+      {/* Desktop Only: Ready to Go Live Stage Details */}
       {selectedStage === 'ready-go-live' && (
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+        <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Ready to Go Live</span>
             {(() => {
@@ -1321,23 +2005,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </div>
               </div>
             </div>
-
-            {/* Go-Live Date Section */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Finalised Go-Live Date</div>
-              <div className="text-sm font-medium text-gray-900">
-                {trainerData?.firstRevisedEGLD || trainerData?.plannedGoLiveDate
-                  ? new Date(trainerData.firstRevisedEGLD || trainerData.plannedGoLiveDate).toLocaleDateString()
-                  : 'Not Set'}
-              </div>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Live Stage Details */}
+      {/* Desktop Only: Live Stage Details */}
       {selectedStage === 'live' && (
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+        <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Live</span>
             {trainerData?.firstRevisedEGLD && new Date(trainerData.firstRevisedEGLD) <= new Date() &&
@@ -1369,10 +2043,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         </div>
       )}
 
-      {/* Simple placeholder for other stages */}
+      {/* Desktop Only: Simple placeholder for other stages */}
       {selectedStage !== 'preparation' && selectedStage !== 'welcome' && selectedStage !== 'installation' && 
        selectedStage !== 'training' && selectedStage !== 'ready-go-live' && selectedStage !== 'live' && (
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+        <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900 mb-2">
             {stages.find(s => s.id === selectedStage)?.label || 'Stage Details'}
           </h4>

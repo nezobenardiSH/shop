@@ -7,6 +7,7 @@ import DatePickerModal from '@/components/DatePickerModal'
 import OnboardingTimeline from '@/components/OnboardingTimeline'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import MerchantHeader from '@/components/MerchantHeader'
+import PageHeader from '@/components/PageHeader'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -322,50 +323,11 @@ export default function TrainerPortal() {
           />
         </div>
         
-        {/* Page Title Section */}
-        <div className="mb-6">
-          {/* Mobile Layout: Title and timestamp stacked */}
-          <div className="block sm:hidden">
-            <h1 className="text-2xl font-bold text-[#0b0707] mb-1">
-              {trainerName.replace(/-/g, ' ')}
-            </h1>
-            {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
-              <p className="text-xs text-[#6b6a6a]">
-                Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleString()}
-              </p>
-            )}
-          </div>
-
-          {/* Desktop Layout: Title and timestamp side by side */}
-          <div className="hidden sm:flex sm:justify-between sm:items-center">
-            <h1 className="text-3xl font-bold text-[#0b0707]">
-              {trainerName.replace(/-/g, ' ')}
-            </h1>
-            {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
-              <p className="text-sm text-[#6b6a6a]">
-                Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleString()}
-              </p>
-            )}
-          </div>
-        </div>
-        
-        {/* Navigation Menu */}
-        <div className="mb-6 border-b border-[#e5e7eb]">
-          <nav className="flex space-x-8">
-            <Link
-              href={`/merchant/${trainerName}`}
-              className="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-[#ff630f] text-[#ff630f]"
-            >
-              Onboarding Progress
-            </Link>
-            <Link
-              href={`/merchant/${trainerName}/details`}
-              className="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]"
-            >
-              Merchant Details
-            </Link>
-          </nav>
-        </div>
+        <PageHeader 
+          merchantName={trainerName}
+          lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
+          currentPage="progress"
+        />
         
         {/* Expected Go Live Date - Highlighted at the top */}
         {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0] && (

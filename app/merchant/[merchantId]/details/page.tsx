@@ -6,6 +6,7 @@ import Link from 'next/link'
 import DatePickerModal from '@/components/DatePickerModal'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import MerchantHeader from '@/components/MerchantHeader'
+import PageHeader from '@/components/PageHeader'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -143,35 +144,11 @@ export default function MerchantDetailsPage() {
           />
         </div>
         
-        {/* Page Title Section */}
-        <div className="mb-6 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-[#0b0707]">
-            {trainerName.replace(/-/g, ' ')}
-          </h1>
-          {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate && (
-            <p className="text-sm text-[#6b6a6a]">
-              Last Modified: {new Date(trainerData.onboardingTrainerData.trainers[0].lastModifiedDate).toLocaleString()}
-            </p>
-          )}
-        </div>
-        
-        {/* Navigation Menu */}
-        <div className="mb-6 border-b border-[#e5e7eb]">
-          <nav className="flex space-x-8">
-            <Link
-              href={`/merchant/${trainerName}`}
-              className="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]"
-            >
-              Onboarding Progress
-            </Link>
-            <Link
-              href={`/merchant/${trainerName}/details`}
-              className="py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 border-[#ff630f] text-[#ff630f]"
-            >
-              Merchant Details
-            </Link>
-          </nav>
-        </div>
+        <PageHeader 
+          merchantName={trainerName}
+          lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
+          currentPage="details"
+        />
         
         <div>
           {trainerData && !trainerData.success && (

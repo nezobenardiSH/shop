@@ -245,19 +245,19 @@ export default function DatePickerModal({
   const getBookingTypeTitle = () => {
     switch(bookingType) {
       case 'hardware-fulfillment':
-        return 'Hardware Fulfillment'
+        return 'Schedule Hardware Fulfillment'
       case 'installation':
-        return 'Installation'
+        return 'Schedule Installation'
       case 'training':
-        return 'Training'
+        return 'Schedule Training'
       case 'backoffice-training':
-        return 'BackOffice Training'
+        return 'Schedule BackOffice Training'
       case 'pos-training':
-        return 'POS Training'
+        return 'Schedule POS Training'
       case 'go-live':
-        return 'Go-Live'
+        return 'Schedule Go-Live'
       default:
-        return 'Schedule'
+        return 'Schedule Appointment'
     }
   }
 
@@ -271,7 +271,7 @@ export default function DatePickerModal({
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[calc(100vh-2rem)] flex flex-col">
         <div className="p-6 border-b border-gray-200">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">Schedule {getBookingTypeTitle()}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{getBookingTypeTitle()}</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
