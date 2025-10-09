@@ -1,6 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
 
+// Helper function to fix Salesforce file URLs
+async function fixSalesforceFileUrl(url: string | null, conn: any): Promise<string | null> {
+  if (!url || !conn) return url
+
+  try {
+    // Check if it's the old format that needs fixing
+    if (url.includes('/servlet/servlet.FileDownload?file=')) {
+      // Extract ContentDocument ID from old URL
+      const contentDocumentId = url.split('file=')[1]
+
+      // Query for the latest ContentVersion for this ContentDocument
+      const contentVersions = await conn.query(`
+        SELECT Id FROM ContentVersion
+        WHERE ContentDocumentId = '${contentDocumentId}'
+        AND IsLatest = true
+        LIMIT 1
+      `)
+
+      if (contentVersions.records && contentVersions.records.length > 0) {
+        const contentVersionId = contentVersions.records[0].Id
+        return `${conn.instanceUrl}/sfc/servlet.shepherd/version/download/${contentVersionId}`
+      }
+    }
+
+    // Return original URL if it's already in the correct format or couldn't be fixed
+    return url
+  } catch (error) {
+    console.log('Error fixing Salesforce file URL:', error)
+    return url // Return original URL if there's an error
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ merchantId: string }> }
@@ -66,6 +98,7 @@ export async function GET(
 
                CSM_Name__c, CSM_Name__r.Name,
                Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
+               SSM__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         ORDER BY Name LIMIT 50
@@ -319,6 +352,9 @@ export async function GET(
       }
     }
 
+    // Fix SSM document URL if needed
+    const fixedSsmDocumentUrl = await fixSalesforceFileUrl(trainer.SSM__c, conn)
+
     // Return the specific trainer data (not all trainers)
     const onboardingTrainerData = {
       totalCount: 1,
@@ -375,6 +411,7 @@ export async function GET(
         menuCollectionSubmissionTimestamp: trainer.Menu_Collection_Submission_Timestamp__c,
         boAccountName: trainer.BO_Account_Name__c,
         videoProofLink: trainer.Video_Proof_Link__c,
+        ssmDocument: fixedSsmDocumentUrl,
         createdDate: trainer.CreatedDate,
         lastModifiedDate: trainer.LastModifiedDate
       }]

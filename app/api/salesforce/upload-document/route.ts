@@ -45,28 +45,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the ContentDocument ID for the download link
-    const contentVersionRecord = await conn.sobject('ContentVersion').findOne({
-      Id: contentVersion.id
-    }, ['ContentDocumentId'])
+    // Generate the public download URL using the same format as video upload
+    const downloadUrl = `${conn.instanceUrl}/sfc/servlet.shepherd/version/download/${contentVersion.id}`
 
-    const downloadUrl = `${conn.instanceUrl}/servlet/servlet.FileDownload?file=${contentVersionRecord.ContentDocumentId}`
+    // Check if there's an existing document
+    const existingTrainer = await conn.sobject('Onboarding_Trainer__c').findOne({
+      Id: trainerId
+    }, ['SSM__c'])
+
+    const isReplacement = existingTrainer && existingTrainer.SSM__c
 
     // Update the trainer record with the document link
-    const updateField = documentType === 'ssm' ? 'SSM_Document_Link__c' : 'Document_Link__c'
-    
-    await conn.sobject('Trainer__c').update({
+    const updateField = documentType === 'ssm' ? 'SSM__c' : 'Document_Link__c'
+
+    await conn.sobject('Onboarding_Trainer__c').update({
       Id: trainerId,
       [updateField]: downloadUrl
     })
 
-    console.log(`✅ Successfully uploaded ${documentType} document for trainer:`, trainerId)
+    console.log(`✅ Successfully ${isReplacement ? 'replaced' : 'uploaded'} ${documentType} document for trainer:`, trainerId)
 
     return NextResponse.json({
       success: true,
       fileId: contentVersion.id,
       fileUrl: downloadUrl,
-      message: `${documentType.toUpperCase()} document uploaded successfully`
+      message: `${documentType.toUpperCase()} document ${isReplacement ? 'replaced' : 'uploaded'} successfully`,
+      isReplacement: isReplacement
     })
 
   } catch (error) {

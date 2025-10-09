@@ -157,7 +157,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     const documentSubmissionCompleted = 
       (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
       trainerData?.menuSubmissionDate &&
-      trainerData?.ssmDocumentLink &&
+      trainerData?.ssmDocument &&
       trainerData?.videoProofLink
     
     const hardwareDeliveryCompleted = 
@@ -413,7 +413,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <h4 className="text-lg font-semibold text-gray-900">Preparation Progress</h4>
             <div className="text-sm text-gray-500">
               {(() => {
-                const ssmDocumentCompleted = !!trainerData?.ssmDocumentLink;
+                const ssmDocumentCompleted = !!trainerData?.ssmDocument;
                 const hardwareDeliveryCompleted = !!trainerData?.trackingLink;
                 const productSetupCompleted = trainerData?.completedProductSetup === 'Yes';
                 const storeSetupCompleted = !!trainerData?.videoProofLink;
@@ -436,7 +436,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {(() => {
-                      const ssmCompleted = !!trainerData?.ssmDocumentLink;
+                      const ssmCompleted = !!trainerData?.ssmDocument;
 
                       return ssmCompleted ? (
                         <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
@@ -456,7 +456,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
-                      Status: {trainerData?.ssmDocumentLink ? 'Completed' : 'Pending'}
+                      Status: {trainerData?.ssmDocument ? 'Completed' : 'Pending'}
                     </div>
                     <button
                       onClick={() => toggleItemExpansion('document-submission')}
@@ -471,23 +471,36 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 
                 {/* Expanded Details for SSM Document Submission */}
                 {expandedItems['document-submission'] && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">SSM Document</div>
-                      {trainerData?.ssmDocumentLink || uploadedSSMUrl ? (
-                        <a
-                          href={uploadedSSMUrl || trainerData?.ssmDocumentLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
-                        >
-                          View Document
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      ) : (
-                        <div className="space-y-2">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">SSM Document Status</div>
+                      <div className="text-sm text-gray-900 mb-2">
+                        {trainerData?.ssmDocument || uploadedSSMUrl ? (
+                          <span className="text-green-600 font-medium">✓ Document Uploaded</span>
+                        ) : (
+                          <span className="text-orange-600 font-medium">⏳ Pending Upload</span>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {/* Show existing document if available */}
+                        {(trainerData?.ssmDocument || uploadedSSMUrl) && (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={uploadedSSMUrl || trainerData?.ssmDocument}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                            >
+                              View Current Document
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Always show upload button for new upload or replacement */}
+                        <div className="flex items-center gap-2">
                           <input
                             id={`ssm-doc-upload-${trainerData?.id}`}
                             type="file"
@@ -534,11 +547,21 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                             disabled={uploadingSSM}
                             className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
                           >
-                            {uploadingSSM ? 'Uploading...' : 'Upload SSM Document'}
+                            {uploadingSSM ? 'Uploading...' : (trainerData?.ssmDocument || uploadedSSMUrl ? 'Replace Document' : 'Upload SSM Document')}
                           </button>
                         </div>
-                      )}
+                      </div>
                     </div>
+
+                    {/* Show SSM Document Field Value */}
+                    {trainerData?.ssmDocument && (
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Salesforce SSM Field</div>
+                        <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
+                          <code className="text-xs break-all">{trainerData.ssmDocument}</code>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
