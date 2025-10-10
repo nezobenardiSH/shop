@@ -22,3 +22,20 @@ model Merchant {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
+
+model LarkAuthToken {
+  id           String   @id @default(cuid())
+  userEmail    String   @unique
+  userName     String?
+  larkUserId   String?
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiresAt    DateTime
+  calendarId   String?
+  scopes       String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([userEmail])
+  @@index([expiresAt])
+}

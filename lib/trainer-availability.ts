@@ -95,7 +95,7 @@ export async function getCombinedAvailability(
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
       const dateStr = current.toISOString().split('T')[0]
       
-      // For simplicity in testing, let's create mock slots with different languages
+      // Create slots based on real trainer availability
       const slots: TimeSlot[] = []
       
       TIME_SLOTS.forEach(slot => {
@@ -104,6 +104,7 @@ export async function getCombinedAvailability(
         
         // Check which trainers are available for this slot
         const availableTrainers: string[] = []
+        const availableLanguagesSet = new Set<string>()
         
         trainerAvailabilities.forEach((trainerInfo, trainerName) => {
           const isBusy = trainerInfo.busySlots.some(busy => {
@@ -114,6 +115,12 @@ export async function getCombinedAvailability(
           
           if (!isBusy) {
             availableTrainers.push(trainerName)
+            
+            // Add this trainer's languages to the available languages
+            const trainer = trainers.find(t => t.name === trainerName)
+            if (trainer && trainer.languages) {
+              trainer.languages.forEach(lang => availableLanguagesSet.add(lang))
+            }
           }
         })
         
@@ -125,36 +132,18 @@ export async function getCombinedAvailability(
             available: false
           })
         } else {
-          // Create mock slots with different language combinations for testing
-          // This simulates having multiple trainers with different language capabilities
-          if (slot.start === '09:00' || slot.start === '13:00') {
-            // Some slots have only Chinese
-            slots.push({
-              start: slot.start,
-              end: slot.end,
-              available: true,
-              availableTrainers: [availableTrainers[0] || 'Trainer A'],
-              availableLanguages: ['中文']
-            })
-          } else if (slot.start === '11:00') {
-            // Some slots have English and Bahasa Malaysia
-            slots.push({
-              start: slot.start,
-              end: slot.end,
-              available: true,
-              availableTrainers: [availableTrainers[0] || 'Trainer B'],
-              availableLanguages: ['English', 'Bahasa Malaysia']
-            })
-          } else {
-            // Most slots have all languages
-            slots.push({
-              start: slot.start,
-              end: slot.end,
-              available: true,
-              availableTrainers: availableTrainers,
-              availableLanguages: ['中文', 'Bahasa Malaysia', 'English']
-            })
-          }
+          // Slot is available with real trainer and language data
+          const availableLanguages = Array.from(availableLanguagesSet)
+          
+          slots.push({
+            start: slot.start,
+            end: slot.end,
+            available: true,
+            availableTrainers: availableTrainers,
+            availableLanguages: availableLanguages.length > 0 
+              ? availableLanguages 
+              : ['English'] // Default to English if no languages specified
+          })
         }
       })
       

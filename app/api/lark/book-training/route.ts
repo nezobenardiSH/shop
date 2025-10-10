@@ -60,7 +60,19 @@ export async function POST(request: NextRequest) {
     
     // Step 3: Get the assigned trainer's details
     const trainer = getTrainerDetails(assignment.assigned)
-    const calendarId = trainer.calendarId
+    let calendarId = trainer.calendarId
+    
+    // If calendar ID is still 'primary' or not set, try to fetch the real calendar ID
+    if (!calendarId || calendarId === 'primary') {
+      try {
+        console.log(`Fetching real calendar ID for ${trainer.email}`)
+        calendarId = await larkService.getPrimaryCalendarId(trainer.email)
+        console.log(`Got calendar ID: ${calendarId}`)
+      } catch (error) {
+        console.log('Could not fetch calendar ID, using fallback:', trainer.calendarId || 'primary')
+        calendarId = trainer.calendarId || 'primary'
+      }
+    }
     
     console.log('Booking training with:', {
       merchantName,

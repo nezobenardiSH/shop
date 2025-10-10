@@ -96,4 +96,4 @@ coverage
 
 # Temporary folders
 tmp/
-temp/
+temp/.env.development

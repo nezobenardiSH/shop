@@ -53,15 +53,70 @@ class LarkService {
   private appSecret: string
   private accessToken: string | null = null
   private tokenExpiry: number = 0
+  private userTokens: Map<string, string> = new Map()
 
   constructor() {
     this.baseUrl = process.env.LARK_DOMAIN || 'https://open.larksuite.com'
     this.appId = process.env.LARK_APP_ID || ''
     this.appSecret = process.env.LARK_APP_SECRET || ''
     
+    // Load manual user tokens from environment
+    this.loadManualTokens()
+    
     if (!this.appId || !this.appSecret) {
       console.error('Lark credentials not configured in environment')
     }
+  }
+
+  /**
+   * Load manual user access tokens from environment
+   */
+  private loadManualTokens() {
+    // Support multiple user tokens in format:
+    // LARK_USER_TOKEN_email@domain.com=u-xxxxx
+    Object.keys(process.env).forEach(key => {
+      if (key.startsWith('LARK_USER_TOKEN_')) {
+        const email = key.replace('LARK_USER_TOKEN_', '').replace(/_/g, '.')
+        const token = process.env[key]
+        if (token) {
+          this.userTokens.set(email, token)
+          console.log(`Loaded user token for ${email}`)
+        }
+      }
+    })
+
+    // Also support a default user token
+    if (process.env.LARK_USER_ACCESS_TOKEN) {
+      const defaultEmail = process.env.LARK_DEFAULT_USER_EMAIL || 'default'
+      this.userTokens.set(defaultEmail, process.env.LARK_USER_ACCESS_TOKEN)
+      console.log(`Loaded default user token`)
+    }
+  }
+
+  /**
+   * Get user access token for a specific user
+   */
+  async getUserToken(userEmail: string): Promise<string | null> {
+    // First check manual tokens (for development/testing)
+    const manualToken = this.userTokens.get(userEmail) || this.userTokens.get('default')
+    if (manualToken) {
+      console.log(`Using manual token for ${userEmail}`)
+      return manualToken
+    }
+
+    // Production: Get from OAuth service
+    try {
+      const { larkOAuthService } = await import('./lark-oauth-service')
+      const token = await larkOAuthService.getValidAccessToken(userEmail)
+      if (token) {
+        console.log(`Using OAuth token for ${userEmail}`)
+        return token
+      }
+    } catch (error) {
+      console.log(`Failed to get OAuth token for ${userEmail}:`, error)
+    }
+
+    return null
   }
 
   /**
@@ -105,8 +160,24 @@ class LarkService {
   /**
    * Make authenticated request to Lark API
    */
-  private async makeRequest(endpoint: string, options: RequestInit = {}) {
-    const token = await this.getAccessToken()
+  private async makeRequest(endpoint: string, options: RequestInit & { userEmail?: string } = {}) {
+    let token: string
+    
+    // Check if we should use a user token for this request
+    if (options.userEmail) {
+      const userToken = await this.getUserToken(options.userEmail)
+      if (userToken) {
+        token = userToken
+        console.log(`Using user token for ${options.userEmail}`)
+      } else {
+        // Fallback to app token
+        token = await this.getAccessToken()
+        console.log(`No user token for ${options.userEmail}, using app token`)
+      }
+    } else {
+      // Use app token by default
+      token = await this.getAccessToken()
+    }
     
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
@@ -138,7 +209,7 @@ class LarkService {
   }
 
   /**
-   * Get available time slots for a trainer
+   * Get available time slots for a trainer using FreeBusy API
    */
   async getAvailableSlots(
     trainerEmail: string,
@@ -151,13 +222,21 @@ class LarkService {
     let busyTimes: Array<{start_time: string; end_time: string}> = []
     
     try {
-      const freeBusyResponse = await this.queryFreeBusy({
-        time_min: timeMin,
-        time_max: timeMax,
-        user_id_list: [trainerEmail]
-      })
+      // Use the new FreeBusy API method
+      const freeBusyResponse = await this.getFreeBusySchedule(
+        [trainerEmail],
+        startDate,
+        endDate,
+        trainerEmail
+      )
       
-      busyTimes = freeBusyResponse.data?.freebusy_list[0]?.busy_time || []
+      if (freeBusyResponse.data?.freebusy_list && freeBusyResponse.data.freebusy_list.length > 0) {
+        const trainerData = freeBusyResponse.data.freebusy_list[0]
+        busyTimes = trainerData.busy_time || []
+        console.log(`Found ${busyTimes.length} busy slots for ${trainerEmail}`)
+      } else {
+        console.log(`No busy times found for ${trainerEmail}, calendar might be free`)
+      }
     } catch (error) {
       console.log('Could not fetch busy times, assuming all slots are available:', error)
       // Continue with empty busy times array (all slots will show as available)
@@ -213,20 +292,30 @@ class LarkService {
    */
   async createCalendarEvent(
     calendarId: string,
-    event: LarkEvent
+    event: LarkEvent,
+    userEmail?: string
   ): Promise<{ event_id: string }> {
     console.log('Creating calendar event:', {
       calendarId,
       event
     })
     
-    // If calendarId is 'primary', we need to get the actual calendar ID for the user
-    // For now, let's try using the user's email as the calendar_id
-    const actualCalendarId = calendarId === 'primary' ? 'primary_calendar' : calendarId
+    // If calendarId is 'primary' and we have an email, try to get the real calendar ID
+    let actualCalendarId = calendarId
+    if (calendarId === 'primary' && userEmail) {
+      try {
+        actualCalendarId = await this.getPrimaryCalendarId(userEmail)
+        console.log(`Using fetched calendar ID: ${actualCalendarId}`)
+      } catch (error) {
+        console.log('Could not fetch calendar ID, using primary')
+        actualCalendarId = 'primary'
+      }
+    }
     
     const response = await this.makeRequest(`/open-apis/calendar/v4/calendars/${actualCalendarId}/events`, {
       method: 'POST',
-      body: JSON.stringify(event)
+      body: JSON.stringify(event),
+      userEmail: userEmail
     })
 
     return response.data
@@ -291,6 +380,123 @@ class LarkService {
     return {
       user_id: email,
       name: email.split('@')[0]
+    }
+  }
+
+  /**
+   * Get list of calendars for a user
+   */
+  async getCalendarList(userEmail: string): Promise<any[]> {
+    try {
+      console.log('Fetching calendar list for:', userEmail)
+      
+      // First get user ID from email
+      const user = await this.getUserByEmail(userEmail)
+      
+      // Get calendar list - using the calendars endpoint with user token
+      const response = await this.makeRequest('/open-apis/calendar/v4/calendars', {
+        method: 'GET',
+        userEmail: userEmail,
+        headers: {
+          'X-Lark-User-Id': user.user_id
+        }
+      })
+      
+      console.log('Calendar list response:', response)
+      
+      return response.data?.calendar_list || []
+    } catch (error) {
+      console.error('Failed to get calendar list:', error)
+      // Return empty array if we can't get calendars
+      return []
+    }
+  }
+
+  /**
+   * Get primary calendar ID for a user
+   */
+  async getPrimaryCalendarId(userEmail: string): Promise<string> {
+    try {
+      const calendars = await this.getCalendarList(userEmail)
+      
+      // Look for primary calendar
+      const primaryCalendar = calendars.find(cal => 
+        cal.type === 'primary' || 
+        cal.role === 'owner' ||
+        cal.summary?.toLowerCase().includes('primary')
+      )
+      
+      if (primaryCalendar) {
+        console.log(`Found primary calendar for ${userEmail}:`, primaryCalendar.calendar_id)
+        return primaryCalendar.calendar_id
+      }
+      
+      // If no primary found, use the first calendar
+      if (calendars.length > 0) {
+        console.log(`Using first calendar for ${userEmail}:`, calendars[0].calendar_id)
+        return calendars[0].calendar_id
+      }
+      
+      // Fallback to 'primary' string
+      console.log(`No calendars found for ${userEmail}, using 'primary' as fallback`)
+      return 'primary'
+    } catch (error) {
+      console.error('Failed to get primary calendar ID:', error)
+      // Fallback to 'primary' if there's an error
+      return 'primary'
+    }
+  }
+
+  /**
+   * Get free/busy information for multiple users
+   */
+  async getFreeBusySchedule(
+    userEmails: string[],
+    startTime: Date,
+    endTime: Date,
+    requestingUserEmail?: string
+  ): Promise<FreeBusyResponse> {
+    try {
+      console.log('Fetching FreeBusy for users:', userEmails);
+      
+      // Get user IDs for all emails
+      const userPromises = userEmails.map(email => this.getUserByEmail(email));
+      const users = await Promise.all(userPromises);
+      
+      const userIds = users.map(u => u.user_id).filter(id => id);
+      
+      if (userIds.length === 0) {
+        console.log('No valid user IDs found');
+        return {
+          code: 0,
+          msg: 'success',
+          data: { freebusy_list: [] }
+        };
+      }
+      
+      const requestBody = {
+        time_min: startTime.toISOString(),
+        time_max: endTime.toISOString(),
+        user_id_list: userIds
+      };
+      
+      console.log('FreeBusy request:', requestBody);
+      
+      const response = await this.makeRequest('/open-apis/calendar/v4/freebusy/query', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+        userEmail: requestingUserEmail || userEmails[0]
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('Failed to get FreeBusy schedule:', error);
+      // Return empty freebusy list on error
+      return {
+        code: 0,
+        msg: 'error',
+        data: { freebusy_list: [] }
+      };
     }
   }
 
@@ -427,7 +633,7 @@ class LarkService {
       ]
     }
     
-    const result = await this.createCalendarEvent(trainerCalendarId, event)
+    const result = await this.createCalendarEvent(trainerCalendarId, event, trainerEmail)
     
     try {
       const user = await this.getUserByEmail(trainerEmail)
