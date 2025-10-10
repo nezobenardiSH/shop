@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       mode: 'combined',
       trainers: trainersConfig.trainers
         .filter(t => t.email && t.name !== 'Nasi Lemak')
-        .map(t => ({ name: t.name, email: t.email })),
+        .map(t => ({ name: t.name, email: t.email, languages: t.languages })),
       availability,
       timezone: trainersConfig.timezone,
       message: 'Showing combined availability from all trainers'

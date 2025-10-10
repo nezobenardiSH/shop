@@ -53,24 +53,58 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Step 2: Intelligently assign a trainer
-    console.log('Available trainers for slot:', availableTrainers)
-    const assignment = assignTrainer(availableTrainers)
+    // Step 2: Filter to only trainers with OAuth tokens (for real booking)
+    let trainersWithAuth = availableTrainers
+    if (!mockMode) {
+      const { larkOAuthService } = await import('@/lib/lark-oauth-service')
+      const authCheckPromises = availableTrainers.map(async (trainerName) => {
+        const trainer = getTrainerDetails(trainerName)
+        const hasAuth = await larkOAuthService.isUserAuthorized(trainer.email)
+        return hasAuth ? trainerName : null
+      })
+      const authResults = await Promise.all(authCheckPromises)
+      trainersWithAuth = authResults.filter((t): t is string => t !== null)
+      
+      console.log('Trainers with OAuth tokens:', trainersWithAuth)
+      
+      if (trainersWithAuth.length === 0) {
+        console.log('⚠️ No trainers with OAuth tokens available')
+        return NextResponse.json(
+          { 
+            error: 'No authorized trainers available',
+            details: 'Available trainers have not yet connected their Lark calendars. Please contact support.'
+          },
+          { status: 503 }
+        )
+      }
+    }
+    
+    // Step 3: Intelligently assign a trainer
+    console.log('Available trainers for slot:', trainersWithAuth)
+    const assignment = assignTrainer(trainersWithAuth)
     console.log('Assigned trainer:', assignment)
     
     // Step 3: Get the assigned trainer's details
     const trainer = getTrainerDetails(assignment.assigned)
     let calendarId = trainer.calendarId
     
-    // If calendar ID is still 'primary' or not set, try to fetch the real calendar ID
-    if (!calendarId || calendarId === 'primary') {
+    // Get the calendar ID from the OAuth token in the database
+    if (!mockMode) {
       try {
-        console.log(`Fetching real calendar ID for ${trainer.email}`)
-        calendarId = await larkService.getPrimaryCalendarId(trainer.email)
-        console.log(`Got calendar ID: ${calendarId}`)
+        console.log(`Getting calendar ID from database for ${trainer.email}`)
+        const { larkOAuthService } = await import('@/lib/lark-oauth-service')
+        const authorizedTrainers = await larkOAuthService.getAuthorizedTrainers()
+        const authTrainer = authorizedTrainers.find(t => t.email === trainer.email)
+        
+        if (authTrainer && authTrainer.calendarId) {
+          calendarId = authTrainer.calendarId
+          console.log(`Using OAuth calendar ID: ${calendarId}`)
+        } else {
+          console.log('No OAuth calendar ID found, using config:', calendarId)
+        }
       } catch (error) {
-        console.log('Could not fetch calendar ID, using fallback:', trainer.calendarId || 'primary')
-        calendarId = trainer.calendarId || 'primary'
+        console.log('Error getting OAuth calendar ID:', error)
+        console.log('Using config calendar ID:', calendarId)
       }
     }
     
@@ -92,6 +126,13 @@ export async function POST(request: NextRequest) {
       console.log('Mock event created:', eventId)
     } else {
       try {
+        console.log('🎯 NOT IN MOCK MODE - Attempting real calendar booking')
+        console.log('Trainer details:', {
+          name: trainer.name,
+          email: trainer.email,
+          calendarId: calendarId
+        })
+        
         eventId = await larkService.bookTraining(
           {
             name: merchantName,
@@ -108,8 +149,14 @@ export async function POST(request: NextRequest) {
           endTime,
           bookingType
         )
+        
+        console.log('✅ Real calendar event created successfully:', eventId)
       } catch (bookingError: any) {
-        console.error('Lark booking failed:', bookingError)
+        console.error('❌ Lark booking failed with error:', {
+          message: bookingError.message,
+          stack: bookingError.stack,
+          name: bookingError.name
+        })
         
         // Fallback to mock mode if calendar creation fails
         console.log('⚠️ Falling back to mock mode due to Lark error')

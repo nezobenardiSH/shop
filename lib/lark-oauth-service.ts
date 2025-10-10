@@ -55,10 +55,15 @@ export class LarkOAuthService {
       this.redirectUri = `${baseUrl}/lark-callback`
     }
     
-    console.log('OAuth redirect URI:', this.redirectUri)
+    console.log('Lark OAuth Service initialized:')
+    console.log('- App ID:', this.appId ? `${this.appId.substring(0, 10)}...` : 'NOT SET')
+    console.log('- App Secret:', this.appSecret ? 'SET' : 'NOT SET')
+    console.log('- Redirect URI:', this.redirectUri)
+    console.log('- Base URL:', this.baseUrl)
     
     if (!this.appId || !this.appSecret) {
-      console.warn('Lark OAuth credentials not configured')
+      console.error('ERROR: Lark OAuth credentials not configured properly!')
+      console.error('Please check LARK_APP_ID and LARK_APP_SECRET in .env.local')
     }
   }
 
@@ -81,22 +86,50 @@ export class LarkOAuthService {
    * Exchange authorization code for tokens and store in database
    */
   async exchangeCodeForTokens(code: string): Promise<string> {
+    // Check credentials before making the request
+    if (!this.appId || !this.appSecret) {
+      console.error('Missing credentials:', {
+        appId: this.appId ? 'SET' : 'MISSING',
+        appSecret: this.appSecret ? 'SET' : 'MISSING'
+      })
+      throw new Error('Failed to exchange code: missing app id or app secret')
+    }
+    
+    // Lark OAuth uses 'app_id' and 'app_secret' not 'client_id' and 'client_secret'
+    const requestBody = {
+      grant_type: 'authorization_code',
+      app_id: this.appId,
+      app_secret: this.appSecret,
+      code: code,
+      redirect_uri: this.redirectUri
+    }
+    
+    console.log('Exchanging code for tokens with:', {
+      appId: this.appId,
+      appSecretLength: this.appSecret.length,
+      redirectUri: this.redirectUri,
+      codePrefix: code.substring(0, 10) + '...',
+      url: `${this.baseUrl}/open-apis/authen/v1/access_token`,
+      requestBody: JSON.stringify(requestBody)
+    })
+    
     // Exchange code for tokens
     const response = await fetch(`${this.baseUrl}/open-apis/authen/v1/access_token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        grant_type: 'authorization_code',
-        client_id: this.appId,
-        client_secret: this.appSecret,
-        code: code,
-        redirect_uri: this.redirectUri
-      })
+      body: JSON.stringify(requestBody)
     })
 
     const tokenData: LarkTokenResponse = await response.json()
     
+    console.log('Lark token exchange response:', {
+      code: tokenData.code,
+      msg: tokenData.msg,
+      hasData: !!tokenData.data
+    })
+    
     if (tokenData.code !== 0) {
+      console.error('Full error response from Lark:', JSON.stringify(tokenData, null, 2))
       throw new Error(`Failed to exchange code: ${tokenData.msg}`)
     }
 
@@ -199,7 +232,9 @@ export class LarkOAuthService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         grant_type: 'refresh_token',
-        refresh_token: refreshToken
+        refresh_token: refreshToken,
+        app_id: this.appId,
+        app_secret: this.appSecret
       })
     })
 
@@ -313,4 +348,13 @@ export class LarkOAuthService {
   }
 }
 
-export const larkOAuthService = new LarkOAuthService()
+// Create a getter function to ensure environment variables are loaded
+function getLarkOAuthService() {
+  // In Next.js, we need to ensure env vars are loaded before instantiation
+  if (!global.larkOAuthServiceInstance) {
+    global.larkOAuthServiceInstance = new LarkOAuthService()
+  }
+  return global.larkOAuthServiceInstance as LarkOAuthService
+}
+
+export const larkOAuthService = getLarkOAuthService()

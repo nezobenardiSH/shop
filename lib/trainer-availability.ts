@@ -42,6 +42,21 @@ export async function getCombinedAvailability(
   
   for (const trainer of trainers) {
     try {
+      // First check if trainer has OAuth token
+      const { larkOAuthService } = await import('./lark-oauth-service')
+      const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
+      
+      if (!hasToken) {
+        console.log(`⚠️ ${trainer.name} has no OAuth token - assuming available`)
+        // If trainer hasn't authorized, assume they're available
+        trainerAvailabilities.set(trainer.name, {
+          trainerName: trainer.name,
+          trainerEmail: trainer.email,
+          busySlots: []
+        })
+        continue
+      }
+      
       const availability = await larkService.getAvailableSlots(
         trainer.email,
         startDate,
@@ -140,9 +155,7 @@ export async function getCombinedAvailability(
             end: slot.end,
             available: true,
             availableTrainers: availableTrainers,
-            availableLanguages: availableLanguages.length > 0 
-              ? availableLanguages 
-              : ['English'] // Default to English if no languages specified
+            availableLanguages: availableLanguages
           })
         }
       })
@@ -175,6 +188,17 @@ export async function getSlotAvailability(
   
   for (const trainer of trainers) {
     try {
+      // First check if trainer has OAuth token
+      const { larkOAuthService } = await import('./lark-oauth-service')
+      const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
+      
+      if (!hasToken) {
+        console.log(`⚠️ ${trainer.name} has no OAuth token - assuming available`)
+        // If trainer hasn't authorized, assume they're available
+        availableTrainers.push(trainer.name)
+        continue
+      }
+      
       const startDate = new Date(date)
       const endDate = new Date(date)
       endDate.setDate(endDate.getDate() + 1)

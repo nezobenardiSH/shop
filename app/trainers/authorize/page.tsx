@@ -28,6 +28,16 @@ export default function TrainerAuthorizePage() {
     fetchTrainerStatus()
   }, [success])
 
+  // Clean up URL after processing
+  useEffect(() => {
+    if (processing && code) {
+      // Remove the processing params from URL after a moment
+      setTimeout(() => {
+        window.history.replaceState({}, '', '/trainers/authorize')
+      }, 1000)
+    }
+  }, [processing, code])
+
   const fetchTrainerStatus = async () => {
     try {
       const response = await fetch('/api/trainers/authorization-status')
