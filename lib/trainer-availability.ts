@@ -2,16 +2,12 @@ import { larkService } from './lark'
 import trainersConfig from '@/config/trainers.json'
 
 /**
- * Create a date in the local timezone
- * This ensures all date comparisons use the server's local timezone
+ * Create a date in Singapore timezone
+ * This ensures all date comparisons use Singapore timezone consistently
  */
 function createLocalDate(dateStr: string, timeStr: string): Date {
-  // Parse the date components
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const [hour, minute] = timeStr.split(':').map(Number)
-  
-  // Create date in local timezone (month is 0-indexed in JS)
-  return new Date(year, month - 1, day, hour, minute, 0)
+  // Create date in Singapore timezone (+08:00)
+  return new Date(`${dateStr}T${timeStr}:00+08:00`)
 }
 
 export interface TimeSlot {
