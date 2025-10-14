@@ -428,7 +428,7 @@ class LarkService {
     endDate: Date
   ): Array<{ date: string; slots: Array<{ start: string; end: string; available: boolean }> }> {
     const result: Array<{ date: string; slots: Array<{ start: string; end: string; available: boolean }> }> = []
-    
+
     const TIME_SLOTS = [
       { start: '09:00', end: '11:00' },
       { start: '11:00', end: '13:00' },
@@ -439,25 +439,29 @@ class LarkService {
     const current = new Date(startDate)
     while (current <= endDate) {
       const dayOfWeek = current.getDay()
-      
+
       if (dayOfWeek >= 1 && dayOfWeek <= 5) {
         const dateStr = current.toISOString().split('T')[0]
         const slots = TIME_SLOTS.map(slot => {
-          // Create dates in local timezone
-          const year = current.getFullYear()
-          const month = current.getMonth()
-          const day = current.getDate()
-          
-          const [startHour, startMin] = slot.start.split(':').map(Number)
-          const [endHour, endMin] = slot.end.split(':').map(Number)
-          
-          const slotStart = new Date(year, month, day, startHour, startMin, 0)
-          const slotEnd = new Date(year, month, day, endHour, endMin, 0)
-          
+          // Create slot times as Singapore timezone dates
+          const slotStart = new Date(`${dateStr}T${slot.start}:00+08:00`)
+          const slotEnd = new Date(`${dateStr}T${slot.end}:00+08:00`)
+
+          console.log(`🔍 Checking slot ${slot.start}-${slot.end} on ${dateStr}`)
+          console.log(`  Slot range: ${slotStart.toISOString()} to ${slotEnd.toISOString()}`)
+
           const isAvailable = !busyTimes.some(busy => {
             const busyStart = new Date(busy.start_time)
             const busyEnd = new Date(busy.end_time)
-            return (slotStart < busyEnd && slotEnd > busyStart)
+            const overlaps = (slotStart < busyEnd && slotEnd > busyStart)
+
+            if (overlaps) {
+              console.log(`  🚫 OVERLAP FOUND with busy time:`)
+              console.log(`    Busy: ${busyStart.toISOString()} to ${busyEnd.toISOString()}`)
+              console.log(`    Slot: ${slotStart.toISOString()} to ${slotEnd.toISOString()}`)
+            }
+
+            return overlaps
           })
           
           return {
