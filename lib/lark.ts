@@ -588,7 +588,55 @@ class LarkService {
         console.log(`📅 Found ${allEvents.length} calendar events for ${trainerEmail}`)
 
         for (const event of allEvents) {
-          if (event.start_time?.timestamp && event.end_time?.timestamp && event.status !== 'cancelled') {
+          // Check if this is a recurring event DEFINITION (has recurrence rule)
+          if (event.recurrence && event.event_id) {
+            console.log(`🔁 RECURRING EVENT DEFINITION: "${event.summary || 'No title'}"`)
+            console.log(`   Recurrence rule: ${event.recurrence}`)
+            console.log(`   Event ID: ${event.event_id}`)
+            console.log(`   🔍 Fetching instances for this recurring event...`)
+
+            // For recurring events, we MUST fetch the instances using the /instances endpoint
+            try {
+              const instancesResponse = await this.makeRequest(
+                `/open-apis/calendar/v4/calendars/${calendarId}/events/${event.event_id}/instances?start_time=${timeMin}&end_time=${timeMax}`,
+                {
+                  method: 'GET',
+                  userEmail: trainerEmail
+                }
+              )
+
+              if (instancesResponse.data?.items?.length > 0) {
+                console.log(`   ✅ Found ${instancesResponse.data.items.length} instances of recurring event`)
+
+                for (const instance of instancesResponse.data.items) {
+                  if (instance.start_time?.timestamp && instance.end_time?.timestamp && instance.status !== 'cancelled') {
+                    const startMs = parseInt(instance.start_time.timestamp) * 1000
+                    const endMs = parseInt(instance.end_time.timestamp) * 1000
+
+                    const instanceStart = new Date(startMs)
+                    const instanceEnd = new Date(endMs)
+
+                    const withinRange = instanceEnd >= startDate && instanceStart <= endDate
+
+                    console.log(`   📍 Instance: ${instanceStart.toISOString()} to ${instanceEnd.toISOString()}`)
+
+                    if (withinRange) {
+                      busyTimes.push({
+                        start_time: instanceStart.toISOString(),
+                        end_time: instanceEnd.toISOString()
+                      })
+                      console.log(`      ✅ Added instance to busy times`)
+                    }
+                  }
+                }
+              } else {
+                console.log(`   ⚠️ No instances returned for recurring event`)
+              }
+            } catch (error) {
+              console.error(`   ❌ Error fetching instances for recurring event:`, error)
+            }
+          } else if (event.start_time?.timestamp && event.end_time?.timestamp && event.status !== 'cancelled') {
+            // Non-recurring event (one-time event)
             const startMs = parseInt(event.start_time.timestamp) * 1000
             const endMs = parseInt(event.end_time.timestamp) * 1000
 
@@ -598,13 +646,9 @@ class LarkService {
             // Check if event is within our date range
             const withinRange = eventEnd >= startDate && eventStart <= endDate
 
-            const isRecurring = event.recurrence || event.recurring_event_id
-            console.log(`${isRecurring ? '🔁' : '🔍'} Event: "${event.summary || 'No title'}"`)
+            console.log(`🔍 One-time Event: "${event.summary || 'No title'}"`)
             console.log(`   Time: ${eventStart.toISOString()} to ${eventEnd.toISOString()}`)
             console.log(`   Status: ${event.status}`)
-            if (isRecurring) {
-              console.log(`   Recurring: ${event.recurrence || 'instance of ' + event.recurring_event_id}`)
-            }
             console.log(`   Within range (${startDate.toISOString()} to ${endDate.toISOString()}): ${withinRange}`)
 
             if (withinRange) {
