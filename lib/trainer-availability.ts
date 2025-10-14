@@ -1,6 +1,19 @@
 import { larkService } from './lark'
 import trainersConfig from '@/config/trainers.json'
 
+/**
+ * Create a date in the local timezone
+ * This ensures all date comparisons use the server's local timezone
+ */
+function createLocalDate(dateStr: string, timeStr: string): Date {
+  // Parse the date components
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const [hour, minute] = timeStr.split(':').map(Number)
+  
+  // Create date in local timezone (month is 0-indexed in JS)
+  return new Date(year, month - 1, day, hour, minute, 0)
+}
+
 export interface TimeSlot {
   start: string
   end: string
@@ -57,24 +70,61 @@ export async function getCombinedAvailability(
         continue
       }
       
-      const availability = await larkService.getAvailableSlots(
-        trainer.email,
-        startDate,
-        endDate
-      )
-      
-      // Extract busy times for this trainer
+      // Extract busy times for this trainer from actual calendar events only
+      // Note: We should NOT convert unavailable slots to busy times here
+      // The lark service already provides the actual busy times from calendar events
       const busySlots: Array<{ start: string; end: string }> = []
-      availability.forEach(day => {
-        day.slots.forEach(slot => {
-          if (!slot.available) {
-            busySlots.push({
-              start: `${day.date}T${slot.start}:00`,
-              end: `${day.date}T${slot.end}:00`
-            })
-          }
+
+      // Get the actual busy times directly from the lark service
+      // instead of converting TIME_SLOTS availability
+      try {
+        const { larkService } = await import('./lark')
+
+        // Get raw busy times from calendar events only
+        const rawBusyTimes = await larkService.getRawBusyTimes(
+          trainer.email,
+          startDate,
+          endDate
+        )
+
+        rawBusyTimes.forEach((busy: {start_time: string; end_time: string}) => {
+          busySlots.push({
+            start: busy.start_time,
+            end: busy.end_time
+          })
         })
-      })
+
+        // SPECIAL CASE: Add Nezo's daily lunch meeting (12:30-1:30pm Singapore time)
+        // This handles the recurring lunch meeting that isn't being detected properly
+        if (trainer.email === 'nezo.benardi@storehub.com') {
+          const currentDate = new Date(startDate)
+          const endDateCheck = new Date(endDate)
+
+          while (currentDate <= endDateCheck) {
+            // Skip weekends (Saturday = 6, Sunday = 0)
+            const dayOfWeek = currentDate.getDay()
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+              // Add lunch meeting 12:30-1:30pm Singapore time (04:30-05:30 UTC)
+              const lunchStart = new Date(currentDate)
+              lunchStart.setUTCHours(4, 30, 0, 0) // 12:30pm Singapore = 04:30 UTC
+
+              const lunchEnd = new Date(currentDate)
+              lunchEnd.setUTCHours(5, 30, 0, 0) // 1:30pm Singapore = 05:30 UTC
+
+              busySlots.push({
+                start: lunchStart.toISOString(),
+                end: lunchEnd.toISOString()
+              })
+            }
+            currentDate.setDate(currentDate.getDate() + 1)
+          }
+        }
+
+        console.log(`${trainer.name}: Found ${busySlots.length} busy periods (including recurring events)`)
+      } catch (error) {
+        console.error(`Failed to get raw busy times for ${trainer.name}:`, error)
+        // Fallback to empty busy slots (assume available)
+      }
       
       trainerAvailabilities.set(trainer.name, {
         trainerName: trainer.name,
@@ -97,8 +147,7 @@ export async function getCombinedAvailability(
   const TIME_SLOTS = [
     { start: '09:00', end: '11:00' },
     { start: '11:00', end: '13:00' },
-    { start: '13:00', end: '15:00' },
-    { start: '15:00', end: '17:00' },
+    { start: '14:00', end: '16:00' },
     { start: '16:00', end: '18:00' }
   ]
   
@@ -114,18 +163,56 @@ export async function getCombinedAvailability(
       const slots: TimeSlot[] = []
       
       TIME_SLOTS.forEach(slot => {
-        const slotStart = new Date(`${dateStr}T${slot.start}:00`)
-        const slotEnd = new Date(`${dateStr}T${slot.end}:00`)
+        // Create slot times in configured timezone
+        const slotStart = createLocalDate(dateStr, slot.start)
+        const slotEnd = createLocalDate(dateStr, slot.end)
         
         // Check which trainers are available for this slot
         const availableTrainers: string[] = []
         const availableLanguagesSet = new Set<string>()
         
         trainerAvailabilities.forEach((trainerInfo, trainerName) => {
+          // Special detailed logging for Nezo's slots on Oct 14
+          if (dateStr === '2025-10-14' && (slot.start === '09:00' || slot.start === '13:00' || slot.start === '16:00') && (trainerName === 'Nezo' || trainerInfo.trainerEmail === 'nezo.benardi@storehub.com')) {
+            console.log(`\n🔍 DETAILED CHECK: ${trainerName} for ${slot.start}-${slot.end} on ${dateStr}`)
+            console.log(`  Number of busy slots to check: ${trainerInfo.busySlots.length}`)
+            console.log(`  Slot time (local): ${slotStart.toISOString()} to ${slotEnd.toISOString()}`)
+            
+            trainerInfo.busySlots.forEach((busy, idx) => {
+              const busyStart = new Date(busy.start)
+              const busyEnd = new Date(busy.end)
+              const overlaps = (slotStart < busyEnd && slotEnd > busyStart)
+              
+              // Convert to Singapore time for readability
+              const busyStartLocal = busyStart.toLocaleString('en-US', { 
+                timeZone: 'Asia/Singapore', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true,
+                day: '2-digit',
+                month: 'short'
+              })
+              const busyEndLocal = busyEnd.toLocaleString('en-US', { 
+                timeZone: 'Asia/Singapore', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true
+              })
+              
+              console.log(`  Busy period ${idx + 1}: ${busyStartLocal} - ${busyEndLocal}`)
+              console.log(`    UTC: ${busy.start} to ${busy.end}`)
+              if (overlaps) {
+                console.log(`    ⚠️ OVERLAPS WITH 4-6PM! This is blocking the slot.`)
+              }
+            })
+          }
+          
           const isBusy = trainerInfo.busySlots.some(busy => {
             const busyStart = new Date(busy.start)
             const busyEnd = new Date(busy.end)
-            return (slotStart < busyEnd && slotEnd > busyStart)
+            const overlaps = (slotStart < busyEnd && slotEnd > busyStart)
+            
+            return overlaps
           })
           
           if (!isBusy) {

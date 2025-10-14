@@ -261,9 +261,56 @@ export default function BookingModal({
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-[#0b0707] mb-4">Select Date</h3>
+                {/* Language Selection for Training - moved up for better UX */}
+                {(bookingType === 'pos-training' || bookingType === 'backoffice-training' || bookingType === 'training') && (
+                  <div className="bg-[#fff4ed] rounded-xl p-4 border border-[#ff630f]/20 mb-4">
+                    <h4 className="font-semibold text-[#0b0707] mb-3">Select Training Language</h4>
+                    <div className="space-y-2">
+                      {['English', 'Bahasa Malaysia', 'Chinese'].map((language) => (
+                        <label
+                          key={language}
+                          className="flex items-center gap-3 cursor-pointer hover:bg-white/50 p-2 rounded-lg transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedLanguages.includes(language)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedLanguages([...selectedLanguages, language])
+                              } else {
+                                setSelectedLanguages(selectedLanguages.filter(l => l !== language))
+                              }
+                              // Reset selected date and slot when language changes
+                              setSelectedDate('')
+                              setSelectedSlot(null)
+                            }}
+                            className="w-4 h-4 text-[#ff630f] border-gray-300 rounded focus:ring-[#ff630f]"
+                          />
+                          <span className="text-sm font-medium text-[#0b0707]">{language}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedLanguages.length === 0 && (
+                      <p className="text-xs text-red-600 mt-2">Please select at least one language</p>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-7 gap-2">
                   {availability.slice(0, 28).map((day) => {
-                    const hasAvailableSlots = day.slots.some(slot => slot.available)
+                    // Check if day has slots available in selected language
+                    const isTrainingBooking = bookingType === 'pos-training' || bookingType === 'backoffice-training' || bookingType === 'training'
+                    let hasAvailableSlots = day.slots.some(slot => slot.available)
+                    
+                    if (isTrainingBooking && selectedLanguages.length > 0) {
+                      hasAvailableSlots = day.slots.some(slot => {
+                        if (!slot.available || !slot.availableLanguages) return false
+                        return selectedLanguages.some(lang => 
+                          slot.availableLanguages.includes(lang) || 
+                          (lang === 'Chinese' && slot.availableLanguages.includes('中文'))
+                        )
+                      })
+                    }
+                    
                     return (
                       <button
                         key={day.date}
@@ -293,74 +340,70 @@ export default function BookingModal({
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {availability
                       .find(day => day.date === selectedDate)
-                      ?.slots.map((slot: any) => (
-                        <button
-                          key={`${slot.start}-${slot.end}`}
-                          onClick={() => setSelectedSlot(slot)}
-                          disabled={!slot.available}
-                          className={`
-                            p-3 rounded-xl flex flex-col items-start gap-1 transition-colors
-                            ${selectedSlot === slot
-                              ? 'bg-[#ff630f] text-white'
-                              : slot.available
-                              ? 'bg-gray-100 hover:bg-[#fff4ed] text-[#0b0707]'
-                              : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                            }
-                          `}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            <span className="text-sm font-medium">
-                              {formatTime(slot.start)} - {formatTime(slot.end)}
-                            </span>
-                          </div>
-                          {slot.availableTrainers && slot.availableTrainers.length > 0 && (
-                            <span className="text-xs opacity-75">
-                              {slot.availableTrainers.length === 1 
-                                ? `${slot.availableTrainers[0]} available`
-                                : `${slot.availableTrainers.length} trainers available`}
-                            </span>
-                          )}
-                        </button>
-                      ))}
+                      ?.slots.map((slot: any) => {
+                        // Filter slots based on selected language for training bookings
+                        const isTrainingBooking = bookingType === 'pos-training' || bookingType === 'backoffice-training' || bookingType === 'training'
+                        let isSlotAvailable = slot.available
+                        let relevantTrainers = slot.availableTrainers || []
+                        
+                        if (isTrainingBooking && selectedLanguages.length > 0 && slot.availableLanguages) {
+                          // Check if any selected language is available in this slot
+                          const hasSelectedLanguage = selectedLanguages.some(lang => 
+                            slot.availableLanguages.includes(lang) || 
+                            (lang === 'Chinese' && slot.availableLanguages.includes('中文'))
+                          )
+                          
+                          if (!hasSelectedLanguage) {
+                            isSlotAvailable = false
+                          } else {
+                            // Filter trainers to only show those who speak the selected languages
+                            // This would require trainer language mapping, for now we keep all
+                            relevantTrainers = slot.availableTrainers || []
+                          }
+                        }
+                        
+                        return (
+                          <button
+                            key={`${slot.start}-${slot.end}`}
+                            onClick={() => setSelectedSlot(slot)}
+                            disabled={!isSlotAvailable}
+                            className={`
+                              p-3 rounded-xl flex flex-col items-start gap-1 transition-colors
+                              ${selectedSlot === slot
+                                ? 'bg-[#ff630f] text-white'
+                                : isSlotAvailable
+                                ? 'bg-gray-100 hover:bg-[#fff4ed] text-[#0b0707]'
+                                : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                              }
+                            `}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              <span className="text-sm font-medium">
+                                {formatTime(slot.start)} - {formatTime(slot.end)}
+                              </span>
+                            </div>
+                            {relevantTrainers.length > 0 && isSlotAvailable && (
+                              <span className="text-xs opacity-75">
+                                {relevantTrainers.length === 1 
+                                  ? `${relevantTrainers[0]} available`
+                                  : `${relevantTrainers.length} trainers available`}
+                              </span>
+                            )}
+                            {!isSlotAvailable && isTrainingBooking && selectedLanguages.length > 0 && (
+                              <span className="text-xs opacity-75">
+                                No {selectedLanguages.join('/')} trainer
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
                   </div>
                 </div>
               )}
 
               {selectedDate && selectedSlot && (
                 <>
-                  {/* Language Selection for Training */}
-                  {(bookingType === 'pos-training' || bookingType === 'backoffice-training') && (
-                    <div className="bg-[#fff4ed] rounded-xl p-4 border border-[#ff630f]/20">
-                      <h4 className="font-semibold text-[#0b0707] mb-3">Select Training Language(s)</h4>
-                      <div className="space-y-2">
-                        {['English', 'Bahasa Malaysia', 'Chinese'].map((language) => (
-                          <label
-                            key={language}
-                            className="flex items-center gap-3 cursor-pointer hover:bg-white/50 p-2 rounded-lg transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedLanguages.includes(language)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedLanguages([...selectedLanguages, language])
-                                } else {
-                                  setSelectedLanguages(selectedLanguages.filter(l => l !== language))
-                                }
-                              }}
-                              className="w-4 h-4 text-[#ff630f] border-gray-300 rounded focus:ring-[#ff630f]"
-                            />
-                            <span className="text-sm font-medium text-[#0b0707]">{language}</span>
-                          </label>
-                        ))}
-                      </div>
-                      {selectedLanguages.length === 0 && (
-                        <p className="text-xs text-red-600 mt-2">Please select at least one language</p>
-                      )}
-                    </div>
-                  )}
-
                   <div className="bg-[#faf9f6] rounded-xl p-4">
                     <h4 className="font-semibold text-[#0b0707] mb-2">Booking Summary</h4>
                     <p className="text-sm text-[#6b6a6a]">

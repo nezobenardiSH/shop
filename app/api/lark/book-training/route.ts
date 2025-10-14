@@ -86,24 +86,17 @@ export async function POST(request: NextRequest) {
     
     // Step 3: Get the assigned trainer's details
     const trainer = getTrainerDetails(assignment.assigned)
-    let calendarId = trainer.calendarId
-    
-    // Get the calendar ID from the OAuth token in the database
+
+    // Get calendar ID using centralized Calendar ID Manager
+    let calendarId = trainer.calendarId // fallback
     if (!mockMode) {
       try {
-        console.log(`Getting calendar ID from database for ${trainer.email}`)
-        const { larkOAuthService } = await import('@/lib/lark-oauth-service')
-        const authorizedTrainers = await larkOAuthService.getAuthorizedTrainers()
-        const authTrainer = authorizedTrainers.find(t => t.email === trainer.email)
-        
-        if (authTrainer && authTrainer.calendarId) {
-          calendarId = authTrainer.calendarId
-          console.log(`Using OAuth calendar ID: ${calendarId}`)
-        } else {
-          console.log('No OAuth calendar ID found, using config:', calendarId)
-        }
+        console.log(`🔍 Resolving calendar ID for booking using CalendarIdManager...`)
+        const { CalendarIdManager } = await import('@/lib/calendar-id-manager')
+        calendarId = await CalendarIdManager.getResolvedCalendarId(trainer.email)
+        console.log(`📅 Using resolved calendar ID for booking: ${calendarId}`)
       } catch (error) {
-        console.log('Error getting OAuth calendar ID:', error)
+        console.log('⚠️ CalendarIdManager failed, using config calendar ID:', error)
         console.log('Using config calendar ID:', calendarId)
       }
     }

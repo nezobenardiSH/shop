@@ -249,6 +249,11 @@ class LarkService {
         const interval = parseInt(rules.INTERVAL || '1')
         const until = rules.UNTIL ? new Date(rules.UNTIL.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/, '$1-$2-$3T$4:$5:$6Z')) : rangeEnd
         
+        if (event.summary?.includes('Design MY')) {
+          console.log(`    📝 Weekly recurrence: interval=${interval}, until=${until.toISOString()}`)
+          console.log(`    📝 BYDAY rule: ${rules.BYDAY || 'none (using original day)'}`)
+        }
+        
         // Parse BYDAY if present (e.g., "MO,TU,WE,TH,FR")
         let targetDays: number[] = []
         if (rules.BYDAY) {
@@ -261,6 +266,10 @@ class LarkService {
           targetDays = [originalStart.getDay()]
         }
         
+        if (event.summary?.includes('Design MY')) {
+          console.log(`    📝 Target days: ${targetDays.join(', ')} (0=Sun, 1=Mon, ..., 6=Sat)`)
+        }
+        
         // Process each day in the range
         const current = new Date(rangeStart)
         current.setHours(0, 0, 0, 0)
@@ -270,6 +279,10 @@ class LarkService {
           if (targetDays.includes(current.getDay())) {
             // Check if this occurrence follows the interval pattern
             const weeksSinceOriginal = Math.floor((current.getTime() - originalStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
+            
+            if (event.summary?.includes('Design MY') && current.toISOString().startsWith('2025-10-14')) {
+              console.log(`    📝 Checking Oct 14: weeksSinceOriginal=${weeksSinceOriginal}, interval=${interval}, valid=${weeksSinceOriginal >= 0 && weeksSinceOriginal % interval === 0}`)
+            }
             
             if (weeksSinceOriginal >= 0 && weeksSinceOriginal % interval === 0) {
               const occurrenceStart = new Date(current)
@@ -281,6 +294,15 @@ class LarkService {
                   start_time: occurrenceStart.toISOString(),
                   end_time: occurrenceEnd.toISOString()
                 })
+                
+                // Debug Oct 14 occurrence for Design meeting
+                if (event.summary?.includes('Design MY') && 
+                    occurrenceStart.toISOString().startsWith('2025-10-14')) {
+                  console.log('  ✅ Found Oct 14 occurrence for Design meeting at 3pm:', {
+                    start: occurrenceStart.toISOString(),
+                    end: occurrenceEnd.toISOString()
+                  })
+                }
               }
             }
           }
@@ -398,13 +420,172 @@ class LarkService {
   }
 
   /**
+   * Convert busy times to availability format
+   */
+  private convertBusyTimesToAvailability(
+    busyTimes: Array<{start_time: string; end_time: string}>,
+    startDate: Date,
+    endDate: Date
+  ): Array<{ date: string; slots: Array<{ start: string; end: string; available: boolean }> }> {
+    const result: Array<{ date: string; slots: Array<{ start: string; end: string; available: boolean }> }> = []
+    
+    const TIME_SLOTS = [
+      { start: '09:00', end: '11:00' },
+      { start: '11:00', end: '13:00' },
+      { start: '14:00', end: '16:00' },
+      { start: '16:00', end: '18:00' }
+    ]
+
+    const current = new Date(startDate)
+    while (current <= endDate) {
+      const dayOfWeek = current.getDay()
+      
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        const dateStr = current.toISOString().split('T')[0]
+        const slots = TIME_SLOTS.map(slot => {
+          // Create dates in local timezone
+          const year = current.getFullYear()
+          const month = current.getMonth()
+          const day = current.getDate()
+          
+          const [startHour, startMin] = slot.start.split(':').map(Number)
+          const [endHour, endMin] = slot.end.split(':').map(Number)
+          
+          const slotStart = new Date(year, month, day, startHour, startMin, 0)
+          const slotEnd = new Date(year, month, day, endHour, endMin, 0)
+          
+          const isAvailable = !busyTimes.some(busy => {
+            const busyStart = new Date(busy.start_time)
+            const busyEnd = new Date(busy.end_time)
+            return (slotStart < busyEnd && slotEnd > busyStart)
+          })
+          
+          return {
+            start: slot.start,
+            end: slot.end,
+            available: isAvailable
+          }
+        })
+        
+        result.push({
+          date: dateStr,
+          slots
+        })
+      }
+      
+      current.setDate(current.getDate() + 1)
+    }
+    
+    return result
+  }
+
+  /**
    * Query free/busy times for users
    */
   async queryFreeBusy(query: FreeBusyQuery): Promise<FreeBusyResponse> {
-    return await this.makeRequest('/open-apis/calendar/v4/freebusy/query', {
+    // Note: The correct endpoint is 'list' not 'query' according to Lark docs
+    return await this.makeRequest('/open-apis/calendar/v4/freebusy/list', {
       method: 'POST',
       body: JSON.stringify(query)
     })
+  }
+
+  /**
+   * Get raw busy times from calendar events only (no TIME_SLOTS conversion)
+   */
+  async getRawBusyTimes(
+    trainerEmail: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<Array<{start_time: string; end_time: string}>> {
+    console.log(`\n=== Getting RAW busy times for ${trainerEmail} ===`)
+    console.log(`Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`)
+
+    let busyTimes: Array<{start_time: string; end_time: string}> = []
+
+    try {
+      // Try using FreeBusy API first
+      const freeBusyResponse = await this.getFreeBusySchedule(
+        [trainerEmail],
+        startDate,
+        endDate,
+        trainerEmail
+      )
+
+      if (freeBusyResponse.data?.freebusy_list && freeBusyResponse.data.freebusy_list.length > 0) {
+        const userFreeBusy = freeBusyResponse.data.freebusy_list[0]
+        if (userFreeBusy.busy_time && userFreeBusy.busy_time.length > 0) {
+          busyTimes = userFreeBusy.busy_time.map(busy => ({
+            start_time: busy.start_time,
+            end_time: busy.end_time
+          }))
+          console.log(`FreeBusy API returned ${busyTimes.length} busy periods`)
+          return busyTimes
+        }
+      }
+
+      // Fallback to calendar events
+      console.log('FreeBusy API failed, falling back to calendar events')
+
+      // Use centralized Calendar ID Manager for consistency
+      let calendarId: string
+      try {
+        console.log(`🔍 Resolving calendar ID for availability checking using CalendarIdManager...`)
+        const { CalendarIdManager } = await import('@/lib/calendar-id-manager')
+        calendarId = await CalendarIdManager.getResolvedCalendarId(trainerEmail)
+        console.log(`📅 Using resolved calendar ID for availability: ${calendarId}`)
+      } catch (error) {
+        console.log(`⚠️ CalendarIdManager failed, using fallback logic:`, error)
+        // Fallback to old logic if CalendarIdManager fails
+        const tokenData = await import('@/lib/lark-oauth-service').then(m =>
+          m.larkOAuthService.getAuthorizedTrainers()
+        )
+        const trainer = tokenData.find(t => t.email === trainerEmail)
+        calendarId = trainer?.calendarId || 'primary'
+      }
+
+      const timeMin = Math.floor(startDate.getTime() / 1000)
+      const timeMax = Math.floor(endDate.getTime() / 1000)
+
+      const eventsResponse = await this.makeRequest(
+        `/open-apis/calendar/v4/calendars/${calendarId}/events?start_time=${timeMin}&end_time=${timeMax}`,
+        {
+          method: 'GET',
+          userEmail: trainerEmail
+        }
+      )
+
+      if (eventsResponse.data?.items?.length > 0) {
+        const allEvents = eventsResponse.data.items
+        console.log(`Found ${allEvents.length} calendar events`)
+
+        for (const event of allEvents) {
+          if (event.start_time?.timestamp && event.end_time?.timestamp) {
+            const startMs = parseInt(event.start_time.timestamp) * 1000
+            const endMs = parseInt(event.end_time.timestamp) * 1000
+
+            const eventStart = new Date(startMs)
+            const eventEnd = new Date(endMs)
+
+            if (eventEnd >= startDate && eventStart <= endDate) {
+              busyTimes.push({
+                start_time: eventStart.toISOString(),
+                end_time: eventEnd.toISOString()
+              })
+            }
+          }
+        }
+
+        console.log(`Extracted ${busyTimes.length} busy periods from calendar events`)
+      } else {
+        console.log('No calendar events found')
+      }
+
+    } catch (error) {
+      console.error('Error getting raw busy times:', error)
+    }
+
+    return busyTimes
   }
 
   /**
@@ -416,18 +597,77 @@ class LarkService {
     endDate: Date
   ): Promise<Array<{ date: string; slots: Array<{ start: string; end: string; available: boolean }> }>> {
     console.log(`\n=== Getting availability for ${trainerEmail} ===`)
+    console.log(`Date range requested: ${startDate.toISOString()} to ${endDate.toISOString()}`)
     
     let busyTimes: Array<{start_time: string; end_time: string}> = []
     
     try {
-      // Get calendar ID from database
-      const tokenData = await import('@/lib/lark-oauth-service').then(m => 
-        m.larkOAuthService.getAuthorizedTrainers()
+      // Try using FreeBusy API first to get ALL busy times across all calendars
+      console.log(`Using FreeBusy API to get all busy times for ${trainerEmail}`)
+      
+      const freeBusyResponse = await this.getFreeBusySchedule(
+        [trainerEmail],
+        startDate,
+        endDate,
+        trainerEmail
       )
-      const trainer = tokenData.find(t => t.email === trainerEmail)
-      const calendarId = trainer?.calendarId || 'primary'
+      
+      if (freeBusyResponse.code === 0 && freeBusyResponse.data?.freebusy_list?.length > 0) {
+        // The freebusy_list is directly an array of busy times, not user objects
+        console.log(`FreeBusy API returned ${freeBusyResponse.data.freebusy_list.length} busy periods`)
+        busyTimes = freeBusyResponse.data.freebusy_list
+          
+        // Debug log for Oct 14
+        if (trainerEmail === 'nezo.benardi@storehub.com') {
+          const oct14Busy = busyTimes.filter(busy => {
+            const start = new Date(busy.start_time)
+            return start.toISOString().includes('2025-10-14')
+          })
+          console.log(`\n📅 Oct 14 busy times from FreeBusy (${oct14Busy.length} total):`)
+          oct14Busy.forEach((busy, i) => {
+            const start = new Date(busy.start_time)
+            const end = new Date(busy.end_time)
+            const startLocal = start.toLocaleString('en-US', { 
+              timeZone: 'Asia/Singapore', 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: true 
+            })
+            const endLocal = end.toLocaleString('en-US', { 
+              timeZone: 'Asia/Singapore', 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: true 
+            })
+            console.log(`  ${i+1}. ${startLocal} - ${endLocal}`)
+          })
+        }
+        
+        return this.convertBusyTimesToAvailability(busyTimes, startDate, endDate)
+      }
+      
+      // Fallback to calendar events if FreeBusy fails
+      console.log('FreeBusy API failed or returned no data, falling back to calendar events')
+      
+      // Use centralized Calendar ID Manager for consistency
+      let calendarId: string
+      try {
+        console.log(`🔍 Resolving calendar ID for getAvailableSlots using CalendarIdManager...`)
+        const { CalendarIdManager } = await import('@/lib/calendar-id-manager')
+        calendarId = await CalendarIdManager.getResolvedCalendarId(trainerEmail)
+        console.log(`📅 Using resolved calendar ID for getAvailableSlots: ${calendarId}`)
+      } catch (error) {
+        console.log(`⚠️ CalendarIdManager failed, using fallback logic:`, error)
+        // Fallback to old logic if CalendarIdManager fails
+        const tokenData = await import('@/lib/lark-oauth-service').then(m =>
+          m.larkOAuthService.getAuthorizedTrainers()
+        )
+        const trainer = tokenData.find(t => t.email === trainerEmail)
+        calendarId = trainer?.calendarId || 'primary'
+      }
       
       console.log(`Using calendar ID: ${calendarId}`)
+      console.log(`Fetching events from ${startDate.toISOString()} to ${endDate.toISOString()}`)
       
       // Get events from calendar to determine busy times
       // Lark expects Unix timestamp in seconds
@@ -446,33 +686,169 @@ class LarkService {
         const allEvents = eventsResponse.data.items.filter((event: any) => event.status !== 'cancelled')
         busyTimes = []
         
+        // Debug logging - always log for Nezo to debug the issue
+        if (trainerEmail === 'nezo.benardi@storehub.com') {
+          console.log(`\n📅 ALL events for ${trainerEmail} (${allEvents.length} total):`)
+          
+          // Filter events for Oct 14
+          const oct14Events = allEvents.filter((event: any) => {
+            const start = event.start_time?.timestamp ? new Date(parseInt(event.start_time.timestamp) * 1000) : null
+            return start && start.toISOString().includes('2025-10-14')
+          })
+          
+          console.log(`\n🗓️ October 14 events (${oct14Events.length} total):`)
+          oct14Events.forEach((event: any, index) => {
+            const start = event.start_time?.timestamp ? new Date(parseInt(event.start_time.timestamp) * 1000) : null
+            const end = event.end_time?.timestamp ? new Date(parseInt(event.end_time.timestamp) * 1000) : null
+            const startLocal = start?.toLocaleString('en-US', { 
+              timeZone: 'Asia/Singapore', 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              hour12: true,
+              day: '2-digit',
+              month: 'short'
+            })
+            const endLocal = end?.toLocaleString('en-US', { 
+              timeZone: 'Asia/Singapore', 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              hour12: true 
+            })
+            
+            const duration = end && start ? (end.getTime() - start.getTime()) / (1000 * 60) : 0
+            const emoji = event.summary?.includes('Design') ? '🎯' : 
+                        event.summary?.includes('Training') ? '🏋️' :
+                        event.summary?.includes('Lunch') ? '🍽️' : '📌'
+            
+            console.log(`  ${index + 1}. ${emoji} ${event.summary || 'Untitled'}`)
+            console.log(`     Time: ${startLocal} - ${endLocal} (${duration} min)`)
+            console.log(`     UTC: ${start?.toISOString()} to ${end?.toISOString()}`)
+          })
+          
+          if (oct14Events.length === 0) {
+            console.log('  ⚠️ No events found for October 14!')
+          }
+        }
+        
         // Process each event
         for (const event of allEvents) {
-          if (event.recurrence) {
-            // This is a recurring event - need to calculate occurrences
-            const occurrences = this.getRecurringEventOccurrences(event, startDate, endDate)
-            busyTimes.push(...occurrences)
-          } else {
-            // Single event - just use the timestamps
-            const startMs = event.start_time?.timestamp ? parseInt(event.start_time.timestamp) * 1000 : null
-            const endMs = event.end_time?.timestamp ? parseInt(event.end_time.timestamp) * 1000 : null
+          // First, always add the event itself if it's within the date range
+          // This ensures we capture single-instance events AND instances of recurring events returned by the API
+          const startMs = event.start_time?.timestamp ? parseInt(event.start_time.timestamp) * 1000 : null
+          const endMs = event.end_time?.timestamp ? parseInt(event.end_time.timestamp) * 1000 : null
+          
+          if (startMs && endMs) {
+            const eventStart = new Date(startMs)
+            const eventEnd = new Date(endMs)
             
-            if (startMs && endMs) {
-              // Check if this event is within our date range
-              const eventStart = new Date(startMs)
-              const eventEnd = new Date(endMs)
+            // Debug the Design meeting specifically
+            if (event.summary?.includes('Design')) {
+              console.log('🎯 Processing event instance: Design meeting')
+              console.log('  summary:', event.summary)
+              console.log('  start:', eventStart.toISOString())
+              console.log('  end:', eventEnd.toISOString())
+              console.log('  has recurrence?:', !!event.recurrence)
+              console.log('  within range?:', eventEnd >= startDate && eventStart <= endDate)
+            }
+            
+            // Add this event instance if it's within our date range
+            if (eventEnd >= startDate && eventStart <= endDate) {
+              busyTimes.push({
+                start_time: eventStart.toISOString(),
+                end_time: eventEnd.toISOString()
+              })
               
-              if (eventEnd >= startDate && eventStart <= endDate) {
-                busyTimes.push({
-                  start_time: eventStart.toISOString(),
-                  end_time: eventEnd.toISOString()
-                })
+              console.log(`✅ Added event to busy times: ${event.summary || 'Untitled'} at ${eventStart.toISOString()}`)
+              
+              // Special debug for Oct 14 Design meeting
+              if (eventStart.toISOString().includes('2025-10-14T07:00')) {
+                console.log('📅 Successfully added Oct 14 Design meeting to busy times!')
               }
             }
+          }
+          
+          // Then, if it's a recurring event, also calculate future occurrences
+          // (but skip the instance we just added to avoid duplicates)
+          if (event.recurrence && startMs && endMs) {
+            console.log(`📅 Processing recurrence pattern for: ${event.summary}`)
+            if (event.summary?.includes('Design MY')) {
+              console.log(`  🔍 Design meeting recurrence rule: ${event.recurrence}`)
+              console.log(`  🔍 Original start: ${new Date(parseInt(event.start_time.timestamp) * 1000).toISOString()}`)
+            }
+            
+            // Get occurrences from the recurrence rule
+            const occurrences = this.getRecurringEventOccurrences(event, startDate, endDate)
+            
+            // Filter out the occurrence we already added (the event instance itself)
+            const eventStartTime = new Date(startMs).toISOString()
+            const additionalOccurrences = occurrences.filter(occ => 
+              occ.start_time !== eventStartTime
+            )
+            
+            console.log(`  Generated ${occurrences.length} occurrences, ${additionalOccurrences.length} new ones to add`)
+            
+            if (event.summary?.includes('Design MY') && additionalOccurrences.length > 0) {
+              console.log(`  🔍 Additional Design meeting occurrences:`)
+              additionalOccurrences.forEach(occ => {
+                console.log(`    - ${occ.start_time} to ${occ.end_time}`)
+              })
+            }
+            
+            busyTimes.push(...additionalOccurrences)
           }
         }
         
         console.log(`Found ${allEvents.length} calendar events, ${busyTimes.length} busy periods in date range`)
+
+        // Debug lunch meetings for Nezo
+        if (trainerEmail === 'nezo.benardi@storehub.com') {
+          console.log(`\n🍽️ Lunch meeting debug for ${trainerEmail}`)
+          const lunchEvents = allEvents.filter(event =>
+            event.summary?.toLowerCase().includes('lunch') ||
+            event.summary?.includes('🍱')
+          )
+          console.log(`Found ${lunchEvents.length} lunch events in calendar`)
+
+          lunchEvents.forEach((event: any, i: number) => {
+            console.log(`  Lunch ${i+1}: "${event.summary}"`)
+            console.log(`    Has recurrence: ${!!event.recurrence}`)
+            if (event.recurrence) {
+              console.log(`    Recurrence rule: ${event.recurrence}`)
+            }
+          })
+        }
+
+        // Final debug: Show all busy times for Oct 14
+        if (trainerEmail === 'nezo.benardi@storehub.com') {
+          const oct14BusyFinal = busyTimes.filter(busy => 
+            busy.start_time.includes('2025-10-14')
+          )
+          console.log(`\n📌 FINAL busy times for Oct 14 (${oct14BusyFinal.length} total):`)
+          oct14BusyFinal.forEach((busy, i) => {
+            const start = new Date(busy.start_time)
+            const end = new Date(busy.end_time)
+            const startLocal = start.toLocaleString('en-US', { 
+              timeZone: 'Asia/Singapore', 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: true 
+            })
+            const endLocal = end.toLocaleString('en-US', { 
+              timeZone: 'Asia/Singapore', 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: true 
+            })
+            console.log(`  ${i+1}. ${startLocal} - ${endLocal} (UTC: ${busy.start_time} to ${busy.end_time})`)
+            
+            // Check if this overlaps with 4-6pm (08:00-10:00 UTC)
+            const fourPmStart = new Date('2025-10-14T08:00:00.000Z')
+            const sixPmEnd = new Date('2025-10-14T10:00:00.000Z')
+            if (start < sixPmEnd && end > fourPmStart) {
+              console.log(`     ⚠️ This overlaps with 4-6pm slot!`)
+            }
+          })
+        }
       } else {
         console.log(`No events found, calendar is free`)
       }
@@ -486,8 +862,7 @@ class LarkService {
     const TIME_SLOTS = [
       { start: '09:00', end: '11:00' },
       { start: '11:00', end: '13:00' },
-      { start: '13:00', end: '15:00' },
-      { start: '15:00', end: '17:00' },
+      { start: '14:00', end: '16:00' },
       { start: '16:00', end: '18:00' }
     ]
 
@@ -498,13 +873,37 @@ class LarkService {
       if (dayOfWeek >= 1 && dayOfWeek <= 5) {
         const dateStr = current.toISOString().split('T')[0]
         const slots = TIME_SLOTS.map(slot => {
-          const slotStart = new Date(`${dateStr}T${slot.start}:00`)
-          const slotEnd = new Date(`${dateStr}T${slot.end}:00`)
+          // ALWAYS use local timezone - don't hardcode offsets
+          // This creates the date in the server's local timezone
+          const year = current.getFullYear()
+          const month = current.getMonth()
+          const day = current.getDate()
+          
+          // Parse hours and minutes from slot times
+          const [startHour, startMin] = slot.start.split(':').map(Number)
+          const [endHour, endMin] = slot.end.split(':').map(Number)
+          
+          // Create dates in local timezone
+          const slotStart = new Date(year, month, day, startHour, startMin, 0)
+          const slotEnd = new Date(year, month, day, endHour, endMin, 0)
           
           const isAvailable = !busyTimes.some(busy => {
             const busyStart = new Date(busy.start_time)
             const busyEnd = new Date(busy.end_time)
-            return (slotStart < busyEnd && slotEnd > busyStart)
+            const overlaps = (slotStart < busyEnd && slotEnd > busyStart)
+            
+            // Debug logging for 3-5pm slot on Oct 14
+            if (dateStr === '2025-10-14' && slot.start === '15:00') {
+              // Only log when we find an overlap
+              if (overlaps) {
+                console.log(`\n🚫 Found overlap for ${slot.start}-${slot.end} on ${dateStr}:`)
+                console.log(`  Slot: ${slotStart.toISOString()} to ${slotEnd.toISOString()}`)
+                console.log(`  Busy: ${busyStart.toISOString()} to ${busyEnd.toISOString()}`)
+                console.log(`  This slot should be marked as BUSY`)
+              }
+            }
+            
+            return overlaps
           })
           
           return {
@@ -692,36 +1091,56 @@ class LarkService {
     requestingUserEmail?: string
   ): Promise<FreeBusyResponse> {
     try {
-      console.log('Fetching FreeBusy for users:', userEmails);
+      console.log('Fetching FreeBusy for user:', userEmails[0]);
       
-      // Get user IDs for all emails
-      const userPromises = userEmails.map(email => this.getUserByEmail(email));
-      const users = await Promise.all(userPromises);
+      // For organizational accounts, we can try using the email directly
+      // Lark might accept the email as user_id
+      const userId = userEmails[0]
       
-      const userIds = users.map(u => u.user_id).filter(id => id);
-      
-      if (userIds.length === 0) {
-        console.log('No valid user IDs found');
-        return {
-          code: 0,
-          msg: 'success',
-          data: { freebusy_list: [] }
-        };
+      // Format times in RFC 3339 with timezone offset for Singapore (GMT+8)
+      const formatRFC3339 = (date: Date): string => {
+        // Get Singapore time components
+        const sgTime = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Singapore"}))
+        const year = sgTime.getFullYear()
+        const month = String(sgTime.getMonth() + 1).padStart(2, '0')
+        const day = String(sgTime.getDate()).padStart(2, '0')
+        const hours = String(sgTime.getHours()).padStart(2, '0')
+        const minutes = String(sgTime.getMinutes()).padStart(2, '0')
+        const seconds = String(sgTime.getSeconds()).padStart(2, '0')
+        
+        // Singapore is GMT+8
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+08:00`
       }
       
+      // FreeBusy API only supports querying one user at a time
+      // For now, we'll query the first user
       const requestBody = {
-        time_min: startTime.toISOString(),
-        time_max: endTime.toISOString(),
-        user_id_list: userIds
+        time_min: formatRFC3339(startTime),
+        time_max: formatRFC3339(endTime),
+        user_id: userId, // Use user_id, not user_id_list
+        only_busy: true,
+        include_external_calendar: true
       };
       
       console.log('FreeBusy request:', requestBody);
       
-      const response = await this.makeRequest('/open-apis/calendar/v4/freebusy/query', {
+      const response = await this.makeRequest('/open-apis/calendar/v4/freebusy/list', {
         method: 'POST',
         body: JSON.stringify(requestBody),
         userEmail: requestingUserEmail || userEmails[0]
       });
+      
+      // Log the response for debugging
+      if (response.code === 0 && response.data?.freebusy_list) {
+        console.log(`FreeBusy response: ${response.data.freebusy_list.length} busy periods`)
+        // The response format is different - freebusy_list is an array of busy times directly
+        response.data.freebusy_list.slice(0, 5).forEach((busy: any, idx: number) => {
+          const start = new Date(busy.start_time)
+          const end = new Date(busy.end_time)
+          console.log(`  ${idx + 1}. ${start.toISOString()} to ${end.toISOString()}`)
+          console.log(`     (Local: ${start.toLocaleString('en-US', { timeZone: 'Asia/Singapore' })} to ${end.toLocaleString('en-US', { timeZone: 'Asia/Singapore' })})`)
+        })
+      }
       
       return response;
     } catch (error) {

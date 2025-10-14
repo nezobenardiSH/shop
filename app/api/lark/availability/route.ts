@@ -8,9 +8,13 @@ export async function GET(request: NextRequest) {
     const mode = searchParams.get('mode') || 'combined' // 'combined' or 'single'
     const trainerName = searchParams.get('trainerName')
     
+    // Start from midnight of current day to include events that started earlier today
     const startDate = new Date()
+    startDate.setHours(0, 0, 0, 0) // Set to midnight
+
     const endDate = new Date()
     endDate.setDate(endDate.getDate() + 30)
+    endDate.setHours(23, 59, 59, 999) // Set to end of day
 
     // Get combined availability from all trainers
     const availability = await getCombinedAvailability(startDate, endDate)
