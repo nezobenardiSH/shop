@@ -86,8 +86,19 @@ export async function GET(request: NextRequest) {
       const eventDateStr = eventDate.toISOString().split('T')[0]
       return eventDateStr === '2025-10-15'
     })
-    
+
     results.steps.push(`📅 Found ${oct15Events.length} events on October 15th`)
+
+    // Log all events with their recurrence info
+    results.steps.push('\n📋 ALL EVENTS DETAILS:')
+    for (const event of allEvents) {
+      const startTime = event.start_time?.timestamp ? new Date(parseInt(event.start_time.timestamp) * 1000).toISOString() : 'N/A'
+      results.steps.push(`  - "${event.summary || 'No title'}"`)
+      results.steps.push(`    Start: ${startTime}`)
+      results.steps.push(`    Status: ${event.status}`)
+      results.steps.push(`    Recurrence: ${event.recurrence || 'none'}`)
+      results.steps.push(`    Event ID: ${event.event_id}`)
+    }
     
     // Compare results
     results.steps.push('\n📊 COMPARISON:')
