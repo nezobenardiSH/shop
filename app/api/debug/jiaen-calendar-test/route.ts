@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
     }
     
     const tokenData = await larkOAuthService.getValidAccessToken(trainerEmail)
-    results.steps.push(`✅ OAuth token found. Expired: ${!tokenData}`)
+    results.steps.push(`✅ OAuth token found: ${!!tokenData}`)
     if (tokenData) {
-      results.steps.push(`📝 Token expires: ${new Date(tokenData.expiresAt).toISOString()}`)
+      results.steps.push(`📝 Token is a string of length: ${tokenData.length}`)
     }
     
     // Get calendar ID
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     
     const response = await fetch(apiUrl, {
       headers: {
-        'Authorization': `Bearer ${tokenData?.accessToken}`,
+        'Authorization': `Bearer ${tokenData}`,
         'Content-Type': 'application/json'
       }
     })

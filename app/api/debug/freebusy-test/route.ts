@@ -20,18 +20,18 @@ export async function GET(request: NextRequest) {
     
     // Get OAuth token
     const { larkOAuthService } = await import('@/lib/lark-oauth-service')
-    const tokenData = await larkOAuthService.getValidAccessToken(trainerEmail)
-    
-    if (!tokenData) {
+    const accessToken = await larkOAuthService.getValidAccessToken(trainerEmail)
+
+    if (!accessToken) {
       results.error = 'No valid token'
       return NextResponse.json(results, { status: 401 })
     }
-    
+
     // Get calendar ID
     const { CalendarIdManager } = await import('@/lib/calendar-id-manager')
     const calendarId = await CalendarIdManager.getResolvedCalendarId(trainerEmail)
     results.steps.push(`📝 Calendar ID: ${calendarId}`)
-    
+
     // Test 1: FreeBusy API
     results.steps.push('\n🔍 TEST 1: FreeBusy API')
     const freeBusyUrl = 'https://open.larksuite.com/open-apis/calendar/v4/freebusy/list'
@@ -40,11 +40,11 @@ export async function GET(request: NextRequest) {
       start_time: startDate.toISOString(),
       end_time: endDate.toISOString()
     }
-    
+
     const freeBusyResponse = await fetch(freeBusyUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${tokenData.accessToken}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(freeBusyBody)
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     
     const eventsResponse = await fetch(eventsUrl, {
       headers: {
-        'Authorization': `Bearer ${tokenData.accessToken}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       }
     })

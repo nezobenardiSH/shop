@@ -508,13 +508,50 @@ class LarkService {
     let busyTimes: Array<{start_time: string; end_time: string}> = []
 
     try {
-      // IMPORTANT: We need to use Calendar Events API instead of FreeBusy API
-      // because FreeBusy API does NOT properly expand recurring events.
-      // This was causing recurring events to be missed.
-      console.log('⚠️ Skipping FreeBusy API - it does not expand recurring events properly')
-      console.log('Using Calendar Events API instead for accurate recurring event detection')
+      // STRATEGY: Combine results from BOTH APIs to get complete busy times
+      // 1. FreeBusy API - Gets busy times from ALL calendars (external, group meetings, etc.)
+      // 2. Calendar Events API - Gets events from primary calendar (including recurring events)
+      // We need BOTH because:
+      //    - FreeBusy API might miss recurring events
+      //    - Calendar Events API only shows primary calendar
+      console.log('📊 Using COMBINED approach: FreeBusy API + Calendar Events API')
 
-      // Use centralized Calendar ID Manager for consistency
+      let freeBusyTimes: Array<{start_time: string; end_time: string}> = []
+
+      // Step 1: Try FreeBusy API first (gets ALL calendars)
+      try {
+        console.log('🔍 Step 1: Querying FreeBusy API for all calendar busy times...')
+        const freeBusyResponse = await this.getFreeBusySchedule(
+          [trainerEmail],
+          startDate,
+          endDate,
+          trainerEmail
+        )
+
+        if (freeBusyResponse.data?.freebusy_list && freeBusyResponse.data.freebusy_list.length > 0) {
+          const userFreeBusy = freeBusyResponse.data.freebusy_list[0]
+          if (userFreeBusy.busy_time && userFreeBusy.busy_time.length > 0) {
+            freeBusyTimes = userFreeBusy.busy_time.map(busy => ({
+              start_time: busy.start_time,
+              end_time: busy.end_time
+            }))
+            console.log(`✅ FreeBusy API returned ${freeBusyTimes.length} busy periods`)
+          } else {
+            console.log('⚠️ FreeBusy API returned no busy times')
+          }
+        } else {
+          console.log('⚠️ FreeBusy API returned empty response')
+        }
+      } catch (error) {
+        console.error('❌ FreeBusy API failed:', error)
+      }
+
+      // Add FreeBusy times to our collection
+      busyTimes.push(...freeBusyTimes)
+
+      // Step 2: Query Calendar Events API (gets primary calendar with recurring events)
+      console.log('🔍 Step 2: Querying Calendar Events API for primary calendar events...')
+
       let calendarId: string
       try {
         console.log(`🔍 Resolving calendar ID for availability checking using CalendarIdManager...`)
@@ -543,7 +580,7 @@ class LarkService {
         }
       )
 
-      console.log(`📅 Total events returned: ${eventsResponse.data?.items?.length || 0}`)
+      console.log(`📅 Calendar Events API returned: ${eventsResponse.data?.items?.length || 0} events`)
       console.log(`📅 First 3 events:`, JSON.stringify(eventsResponse.data?.items?.slice(0, 3), null, 2))
 
       if (eventsResponse.data?.items?.length > 0) {
@@ -584,9 +621,46 @@ class LarkService {
           }
         }
 
-        console.log(`📊 Extracted ${busyTimes.length} busy periods from ${allEvents.length} calendar events`)
+        console.log(`📊 Calendar Events API added ${busyTimes.length - freeBusyTimes.length} additional busy periods`)
       } else {
-        console.log('No calendar events found')
+        console.log('⚠️ Calendar Events API returned no events')
+      }
+
+      // Step 3: Deduplicate and merge overlapping busy times
+      console.log(`🔍 Step 3: Deduplicating and merging ${busyTimes.length} busy periods...`)
+
+      if (busyTimes.length > 0) {
+        // Sort by start time
+        busyTimes.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+        // Merge overlapping periods
+        const merged: Array<{start_time: string; end_time: string}> = []
+        let current = busyTimes[0]
+
+        for (let i = 1; i < busyTimes.length; i++) {
+          const next = busyTimes[i]
+          const currentEnd = new Date(current.end_time).getTime()
+          const nextStart = new Date(next.start_time).getTime()
+
+          // If overlapping or adjacent, merge
+          if (nextStart <= currentEnd) {
+            const nextEnd = new Date(next.end_time).getTime()
+            if (nextEnd > currentEnd) {
+              current = {
+                start_time: current.start_time,
+                end_time: next.end_time
+              }
+            }
+          } else {
+            // No overlap, save current and move to next
+            merged.push(current)
+            current = next
+          }
+        }
+        merged.push(current)
+
+        busyTimes = merged
+        console.log(`✅ After deduplication: ${busyTimes.length} unique busy periods`)
       }
 
     } catch (error) {
@@ -601,7 +675,8 @@ class LarkService {
       })
     }
 
-    console.log(`📊 getRawBusyTimes returning ${busyTimes.length} busy periods for ${trainerEmail}`)
+    console.log(`\n📊 FINAL RESULT: Returning ${busyTimes.length} busy periods for ${trainerEmail}`)
+    console.log(`   Sources: FreeBusy API + Calendar Events API (combined & deduplicated)`)
     return busyTimes
   }
 
