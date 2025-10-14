@@ -307,8 +307,7 @@ export default function BookingModal({
                       hasAvailableSlots = day.slots.some(slot => {
                         if (!slot.available || !slot.availableLanguages) return false
                         return selectedLanguages.some(lang =>
-                          slot.availableLanguages!.includes(lang) ||
-                          (lang === 'Chinese' && slot.availableLanguages!.includes('中文'))
+                          slot.availableLanguages!.includes(lang)
                         )
                       })
                     }
@@ -350,9 +349,8 @@ export default function BookingModal({
                         
                         if (isTrainingBooking && selectedLanguages.length > 0 && slot.availableLanguages) {
                           // Check if any selected language is available in this slot
-                          const hasSelectedLanguage = selectedLanguages.some(lang => 
-                            slot.availableLanguages.includes(lang) || 
-                            (lang === 'Chinese' && slot.availableLanguages.includes('中文'))
+                          const hasSelectedLanguage = selectedLanguages.some(lang =>
+                            slot.availableLanguages.includes(lang)
                           )
                           
                           if (!hasSelectedLanguage) {

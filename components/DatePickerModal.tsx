@@ -57,7 +57,7 @@ export default function DatePickerModal({
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['中文', 'Bahasa Malaysia', 'English'])
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['Chinese', 'Bahasa Malaysia', 'English'])
   const [isFilteringSlots, setIsFilteringSlots] = useState(false)
 
   useEffect(() => {
@@ -286,7 +286,7 @@ export default function DatePickerModal({
                 Training Language (Select all that apply)
               </label>
               <div className="flex gap-3">
-                {['中文', 'Bahasa Malaysia', 'English'].map((lang) => (
+                {['Chinese', 'Bahasa Malaysia', 'English'].map((lang) => (
                   <label key={lang} className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-all ${
                     selectedLanguages.includes(lang) 
                       ? 'border-blue-500 bg-blue-50' 
