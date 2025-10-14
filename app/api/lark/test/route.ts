@@ -34,28 +34,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(results, { status: 500 })
   }
 
-  // Test 3: Try to get available slots
+  // Test 3: Try to get raw busy times
   try {
     const startDate = new Date()
     const endDate = new Date()
     endDate.setDate(endDate.getDate() + 7) // Just test 1 week
 
-    const slots = await larkService.getAvailableSlots(
+    const busyTimes = await larkService.getRawBusyTimes(
       'nezo.benardi@storehub.com',
       startDate,
       endDate
     )
-    
+
     results.tests.push({
-      name: 'Calendar Availability',
+      name: 'Calendar Busy Times',
       status: 'success',
-      message: 'Successfully fetched availability',
-      daysReturned: slots.length,
-      firstDay: slots[0]
+      message: 'Successfully fetched busy times (FreeBusy + Calendar Events + Recurring)',
+      busyPeriodsFound: busyTimes.length,
+      firstBusyPeriod: busyTimes[0]
     })
   } catch (error: any) {
     results.tests.push({
-      name: 'Calendar Availability',
+      name: 'Calendar Busy Times',
       status: 'failed',
       error: error.message,
       stack: error.stack

@@ -257,50 +257,70 @@ export async function getCombinedAvailability(
 
 /**
  * Check availability for a specific slot across all trainers
+ * Uses the same logic as getCombinedAvailability() for consistency
  */
 export async function getSlotAvailability(
   date: string,
   startTime: string,
   endTime: string
 ): Promise<{ available: boolean; availableTrainers: string[] }> {
-  const trainers = trainersConfig.trainers.filter(t => 
+  console.log(`\n=== Checking slot availability for ${date} ${startTime}-${endTime} ===`)
+
+  const trainers = trainersConfig.trainers.filter(t =>
     t.email && t.name !== 'Nasi Lemak'
   )
-  
+
   const availableTrainers: string[] = []
-  
+
+  // Create slot time range in Singapore timezone
+  const slotStart = new Date(`${date}T${startTime}:00+08:00`)
+  const slotEnd = new Date(`${date}T${endTime}:00+08:00`)
+
+  console.log(`Slot range: ${slotStart.toISOString()} to ${slotEnd.toISOString()}`)
+
   for (const trainer of trainers) {
     try {
       // First check if trainer has OAuth token
       const { larkOAuthService } = await import('./lark-oauth-service')
       const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
-      
+
       if (!hasToken) {
         console.log(`⚠️ ${trainer.name} has no OAuth token - assuming available`)
         // If trainer hasn't authorized, assume they're available
         availableTrainers.push(trainer.name)
         continue
       }
-      
+
+      // Use getRawBusyTimes() - same logic as getCombinedAvailability()
+      // This includes FreeBusy + Calendar Events + Recurring Events expansion
       const startDate = new Date(date)
       const endDate = new Date(date)
       endDate.setDate(endDate.getDate() + 1)
-      
-      const availability = await larkService.getAvailableSlots(
+
+      const busyTimes = await larkService.getRawBusyTimes(
         trainer.email,
         startDate,
         endDate
       )
-      
-      // Check if this specific slot is available
-      const dayAvailability = availability.find(d => d.date === date)
-      if (dayAvailability) {
-        const slot = dayAvailability.slots.find(s => 
-          s.start === startTime && s.end === endTime
-        )
-        if (slot?.available) {
-          availableTrainers.push(trainer.name)
+
+      console.log(`${trainer.name}: ${busyTimes.length} busy periods`)
+
+      // Check if any busy time overlaps with the requested slot
+      const isAvailable = !busyTimes.some(busy => {
+        const busyStart = new Date(busy.start_time)
+        const busyEnd = new Date(busy.end_time)
+        const overlaps = (slotStart < busyEnd && slotEnd > busyStart)
+
+        if (overlaps) {
+          console.log(`  ❌ ${trainer.name} is BUSY: ${busyStart.toISOString()} to ${busyEnd.toISOString()}`)
         }
+
+        return overlaps
+      })
+
+      if (isAvailable) {
+        console.log(`  ✅ ${trainer.name} is AVAILABLE`)
+        availableTrainers.push(trainer.name)
       }
     } catch (error) {
       console.error(`Error checking ${trainer.name}:`, error)
@@ -308,7 +328,10 @@ export async function getSlotAvailability(
       availableTrainers.push(trainer.name)
     }
   }
-  
+
+  console.log(`\n📊 Slot availability result: ${availableTrainers.length > 0 ? 'AVAILABLE' : 'NOT AVAILABLE'}`)
+  console.log(`Available trainers: ${availableTrainers.join(', ') || 'None'}`)
+
   return {
     available: availableTrainers.length > 0,
     availableTrainers
