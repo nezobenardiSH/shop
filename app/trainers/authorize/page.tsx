@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle, XCircle, Calendar, RefreshCw, LogIn } from 'lucide-react'
 
@@ -11,7 +11,7 @@ interface AuthorizedTrainer {
   authorized: boolean
 }
 
-export default function TrainerAuthorizePage() {
+function TrainerAuthorizeContent() {
   const searchParams = useSearchParams()
   const [trainers, setTrainers] = useState<AuthorizedTrainer[]>([])
   const [loading, setLoading] = useState(true)
@@ -234,5 +234,17 @@ export default function TrainerAuthorizePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TrainerAuthorizePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#fffaf5] to-[#fff4ed] p-8 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 text-[#ff630f] animate-spin" />
+      </div>
+    }>
+      <TrainerAuthorizeContent />
+    </Suspense>
   )
 }

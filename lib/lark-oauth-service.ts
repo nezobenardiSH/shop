@@ -348,6 +348,11 @@ export class LarkOAuthService {
   }
 }
 
+// Extend global type to include our service instance
+declare global {
+  var larkOAuthServiceInstance: LarkOAuthService | undefined
+}
+
 // Create a getter function to ensure environment variables are loaded
 function getLarkOAuthService() {
   // In Next.js, we need to ensure env vars are loaded before instantiation

@@ -25,6 +25,8 @@ interface TimeSlot {
   start: string
   end: string
   available: boolean
+  availableTrainers?: string[]
+  availableLanguages?: string[]
 }
 
 interface DayAvailability {
@@ -304,9 +306,9 @@ export default function BookingModal({
                     if (isTrainingBooking && selectedLanguages.length > 0) {
                       hasAvailableSlots = day.slots.some(slot => {
                         if (!slot.available || !slot.availableLanguages) return false
-                        return selectedLanguages.some(lang => 
-                          slot.availableLanguages.includes(lang) || 
-                          (lang === 'Chinese' && slot.availableLanguages.includes('中文'))
+                        return selectedLanguages.some(lang =>
+                          slot.availableLanguages!.includes(lang) ||
+                          (lang === 'Chinese' && slot.availableLanguages!.includes('中文'))
                         )
                       })
                     }

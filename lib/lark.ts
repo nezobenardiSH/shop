@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+
 
 interface LarkTokenResponse {
   code: number
@@ -612,10 +612,10 @@ class LarkService {
         trainerEmail
       )
       
-      if (freeBusyResponse.code === 0 && freeBusyResponse.data?.freebusy_list?.length > 0) {
-        // The freebusy_list is directly an array of busy times, not user objects
-        console.log(`FreeBusy API returned ${freeBusyResponse.data.freebusy_list.length} busy periods`)
-        busyTimes = freeBusyResponse.data.freebusy_list
+      if (freeBusyResponse.code === 0 && freeBusyResponse.data?.freebusy_list && freeBusyResponse.data.freebusy_list.length > 0) {
+        // Extract busy times from the freebusy_list structure
+        console.log(`FreeBusy API returned ${freeBusyResponse.data.freebusy_list.length} user entries`)
+        busyTimes = freeBusyResponse.data.freebusy_list.flatMap(entry => entry.busy_time)
           
         // Debug log for Oct 14
         if (trainerEmail === 'nezo.benardi@storehub.com') {
@@ -697,7 +697,7 @@ class LarkService {
           })
           
           console.log(`\n🗓️ October 14 events (${oct14Events.length} total):`)
-          oct14Events.forEach((event: any, index) => {
+          oct14Events.forEach((event: any, index: number) => {
             const start = event.start_time?.timestamp ? new Date(parseInt(event.start_time.timestamp) * 1000) : null
             const end = event.end_time?.timestamp ? new Date(parseInt(event.end_time.timestamp) * 1000) : null
             const startLocal = start?.toLocaleString('en-US', { 
@@ -803,7 +803,7 @@ class LarkService {
         // Debug lunch meetings for Nezo
         if (trainerEmail === 'nezo.benardi@storehub.com') {
           console.log(`\n🍽️ Lunch meeting debug for ${trainerEmail}`)
-          const lunchEvents = allEvents.filter(event =>
+          const lunchEvents = allEvents.filter((event: any) =>
             event.summary?.toLowerCase().includes('lunch') ||
             event.summary?.includes('🍱')
           )
