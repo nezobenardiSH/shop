@@ -606,7 +606,7 @@ class LarkService {
               )
 
               if (instancesResponse.data?.items?.length > 0) {
-                console.log(`   ✅ Found ${instancesResponse.data.items.length} instances of recurring event`)
+                console.log(`   ✅ Found ${instancesResponse.data.items.length} instances of recurring event "${event.summary}"`)
 
                 for (const instance of instancesResponse.data.items) {
                   if (instance.start_time?.timestamp && instance.end_time?.timestamp && instance.status !== 'cancelled') {
@@ -618,7 +618,24 @@ class LarkService {
 
                     const withinRange = instanceEnd >= startDate && instanceStart <= endDate
 
-                    console.log(`   📍 Instance: ${instanceStart.toISOString()} to ${instanceEnd.toISOString()}`)
+                    // Log in Singapore time for readability
+                    const startSGT = instanceStart.toLocaleString('en-US', {
+                      timeZone: 'Asia/Singapore',
+                      month: 'short',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })
+                    const endSGT = instanceEnd.toLocaleString('en-US', {
+                      timeZone: 'Asia/Singapore',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })
+
+                    console.log(`   📍 Instance: ${startSGT} - ${endSGT} (UTC: ${instanceStart.toISOString()})`)
+                    console.log(`      Status: ${instance.status}, Within range: ${withinRange}`)
 
                     if (withinRange) {
                       busyTimes.push({
@@ -626,6 +643,8 @@ class LarkService {
                         end_time: instanceEnd.toISOString()
                       })
                       console.log(`      ✅ Added instance to busy times`)
+                    } else {
+                      console.log(`      ⏭️  Skipped (outside range)`)
                     }
                   }
                 }
