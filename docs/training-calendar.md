@@ -1,5 +1,26 @@
 # Training Calendar System Documentation
 
+## ⚠️ Quick Reference - Common Issues
+
+### 🔴 CRITICAL: Language Configuration Must Match Documentation
+- **Nezo**: English, Bahasa Malaysia (NO Chinese)
+- **Jia En**: Bahasa Malaysia, Chinese (NO English)
+- **Source of Truth**: `docs/trainer-information.md`
+- **Configuration File**: `config/trainers.json`
+
+### 🔴 CRITICAL: All Times Must Use Singapore Timezone
+- **Standard**: `Asia/Singapore` (UTC+8)
+- **Date Format**: `2025-10-15T14:00:00+08:00`
+- **Common Error**: Using server local time instead of Singapore time
+- **Fix**: All date calculations must use `+08:00` timezone
+
+### 🔴 CRITICAL: Calendar ID Consistency
+- **Problem**: Events created but not detected
+- **Cause**: Different calendar IDs for read vs write operations
+- **Solution**: Use `CalendarIdManager.getResolvedCalendarId()`
+
+---
+
 ## Table of Contents
 1. [Calendar ID Management](#calendar-id-management)
 2. [Core Functions Reference](#core-functions-reference)
@@ -195,7 +216,98 @@ const calendarId = await CalendarIdManager.getResolvedCalendarId('nezo.benardi@s
 - **Nezo Benardi**: English, Bahasa Malaysia
 - **Jia En Chai**: Bahasa Malaysia, Chinese
 
-*See `training-information.md` for complete trainer details*
+*See `docs/trainer-information.md` for complete trainer details*
+
+### Language Selection and Assignment Rules
+
+#### Language Capabilities (CRITICAL - Must Match Documentation)
+**⚠️ IMPORTANT**: Trainer language capabilities must EXACTLY match `docs/trainer-information.md`
+
+**Nezo Benardi** (`nezo.benardi@storehub.com`):
+- ✅ **English** (Primary)
+- ✅ **Bahasa Malaysia**
+- ❌ **Chinese** (NOT supported)
+
+**Jia En Chai** (`jiaen.chai@storehub.com`):
+- ❌ **English** (NOT supported)
+- ✅ **Bahasa Malaysia** (Primary)
+- ✅ **Chinese** (Mandarin)
+
+#### Language Assignment Logic
+1. **Slot Availability**: A time slot is available if ANY trainer is free
+2. **Language Aggregation**: Available languages = languages of ALL available trainers
+3. **Auto-Assignment**: When merchant selects a slot, system assigns to one available trainer
+4. **Language Matching**: Assigned trainer MUST support the merchant's selected language
+
+#### Common Language Configuration Errors
+❌ **WRONG**: Both trainers showing all three languages
+❌ **WRONG**: Jia En showing English capability
+❌ **WRONG**: Nezo showing Chinese capability
+✅ **CORRECT**: Each trainer shows only their documented languages
+
+**Fix**: Verify `config/trainers.json` matches `docs/trainer-information.md` exactly
+
+### Timezone Handling (CRITICAL - Recurring Issue)
+
+#### System Timezone Standard
+**⚠️ ALL TIMES MUST USE SINGAPORE TIMEZONE**: `Asia/Singapore` (UTC+8)
+
+#### Timezone Consistency Rules
+1. **API Endpoints**: All date ranges must use Singapore timezone
+2. **Calendar Functions**: All date calculations must use Singapore timezone
+3. **Database Storage**: Store UTC timestamps, display in Singapore time
+4. **User Interface**: Always show Singapore time to users
+5. **Calendar Integration**: Convert to Singapore time for Lark API calls
+
+#### Common Timezone Errors and Fixes
+
+##### Error 1: Server Local Time vs Singapore Time
+❌ **WRONG**:
+```typescript
+const startDate = new Date()
+startDate.setHours(0, 0, 0, 0) // Uses server timezone
+```
+
+✅ **CORRECT**:
+```typescript
+const now = new Date()
+const singaporeNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}))
+const startDate = new Date(`${singaporeNow.getFullYear()}-${String(singaporeNow.getMonth() + 1).padStart(2, '0')}-${String(singaporeNow.getDate()).padStart(2, '0')}T00:00:00+08:00`)
+```
+
+##### Error 2: Inconsistent Date Creation
+❌ **WRONG**:
+```typescript
+// Mixing timezone approaches
+const date1 = new Date(year, month - 1, day, hour, minute) // Local timezone
+const date2 = new Date(`${dateStr}T${timeStr}:00+08:00`)  // Singapore timezone
+```
+
+✅ **CORRECT**:
+```typescript
+// Always use Singapore timezone
+function createLocalDate(dateStr: string, timeStr: string): Date {
+  return new Date(`${dateStr}T${timeStr}:00+08:00`)
+}
+```
+
+##### Error 3: Debug Endpoint vs Production API Mismatch
+❌ **PROBLEM**: Debug endpoint uses single-day range, production API uses 30-day range with different timezone calculations
+
+✅ **SOLUTION**: Both must use identical Singapore timezone date range calculations
+
+#### Files That Must Use Singapore Timezone
+- `app/api/lark/availability/route.ts` - Date range calculation
+- `lib/trainer-availability.ts` - `createLocalDate()` function
+- `lib/lark.ts` - `convertBusyTimesToAvailability()` function
+- `app/api/debug/calendar-test/route.ts` - Debug date ranges
+
+#### Timezone Debugging Checklist
+1. ✅ All date ranges start with `+08:00` timezone
+2. ✅ `createLocalDate()` uses Singapore timezone format
+3. ✅ API endpoints use consistent timezone calculations
+4. ✅ Debug tools use same timezone as production
+5. ✅ Calendar slot times match busy time timezones
 
 ## Solutions Implemented
 
@@ -490,7 +602,60 @@ const overlaps = (slotStart < busyEnd && slotEnd > busyStart)
 
 ### Common Issues and Solutions
 
-#### Issue 1: System can't detect events it created
+#### Issue 1: Incorrect Language Configuration
+**Symptoms**:
+- Both trainers showing all three languages (English, Bahasa Malaysia, Chinese)
+- Jia En showing English capability when he doesn't support it
+- Nezo showing Chinese capability when he doesn't support it
+- Language mismatch between API response and documentation
+
+**Root Cause**: `config/trainers.json` doesn't match `docs/trainer-information.md`
+
+**Diagnosis**:
+```bash
+# Check current trainer configuration
+curl "https://onboarding-portal-b0ay.onrender.com/api/lark/availability" | jq '.trainers'
+
+# Should show:
+# Nezo: ["English", "Bahasa Malaysia"]
+# Jia En: ["Bahasa Malaysia", "Chinese"]
+```
+
+**Solution**:
+1. Verify `config/trainers.json` exactly matches `docs/trainer-information.md`
+2. Restart application after configuration changes
+3. Clear any caches that might store old language data
+
+#### Issue 2: Timezone Inconsistency
+**Symptoms**:
+- Calendar events not detected despite being visible in calendar
+- Availability API shows different results than debug endpoints
+- Events from earlier in the day not being detected
+- Date range mismatches between functions
+
+**Root Cause**: Mixed timezone handling between server local time and Singapore time
+
+**Diagnosis**:
+```bash
+# Check if debug endpoint finds events but availability API doesn't
+curl "https://onboarding-portal-b0ay.onrender.com/api/debug/calendar-test"
+curl "https://onboarding-portal-b0ay.onrender.com/api/lark/availability"
+
+# Look for timezone inconsistencies in date ranges
+```
+
+**Solution**:
+1. Ensure ALL date calculations use Singapore timezone (`+08:00`)
+2. Update `createLocalDate()` function to use Singapore timezone
+3. Fix API endpoint date range calculations
+4. Verify debug tools use same timezone as production
+
+**Critical Files to Check**:
+- `app/api/lark/availability/route.ts` - Date range calculation
+- `lib/trainer-availability.ts` - `createLocalDate()` function
+- `app/api/debug/calendar-test/route.ts` - Debug date ranges
+
+#### Issue 3: System can't detect events it created
 **Symptoms**:
 - Bookings show as successful but slots still appear available
 - Double-booking occurs
