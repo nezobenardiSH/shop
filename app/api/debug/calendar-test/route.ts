@@ -115,8 +115,8 @@ export async function GET(request: NextRequest) {
       results.steps.push('🔍 Step 5: Testing full availability logic...')
 
       // Test the trainer availability function directly
-      const { getTrainerAvailability } = await import('@/lib/trainer-availability')
-      const availability = await getTrainerAvailability(startDate, endDate)
+      const { getCombinedAvailability } = await import('@/lib/trainer-availability')
+      const availability = await getCombinedAvailability(startDate, endDate)
 
       // Find Oct 15th data
       const oct15Availability = availability.find(day => day.date === '2025-10-15')
