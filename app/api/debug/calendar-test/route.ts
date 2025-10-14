@@ -111,6 +111,21 @@ export async function GET(request: NextRequest) {
 
       results.steps.push(`📊 getRawBusyTimes returned ${busyTimes.length} busy periods`)
 
+      // Step 5: Test the full availability API logic
+      results.steps.push('🔍 Step 5: Testing full availability logic...')
+
+      // Test the trainer availability function directly
+      const { getTrainerAvailability } = await import('@/lib/trainer-availability')
+      const availability = await getTrainerAvailability(startDate, endDate)
+
+      // Find Oct 15th data
+      const oct15Availability = availability.find(day => day.date === '2025-10-15')
+      const slot1400 = oct15Availability?.slots.find(slot => slot.start === '14:00')
+
+      results.steps.push(`📅 Oct 15th availability found: ${!!oct15Availability}`)
+      results.steps.push(`🕐 14:00-16:00 slot available: ${slot1400?.available}`)
+      results.steps.push(`👥 Available trainers for 14:00 slot: ${slot1400?.availableTrainers?.join(', ') || 'none'}`)
+
       results.success = true
       results.summary = {
         trainerEmail,
@@ -120,7 +135,12 @@ export async function GET(request: NextRequest) {
         oct15Events: oct15Events.length,
         busyTimesFromFunction: busyTimes.length,
         oct15EventDetails: oct15Events,
-        busyTimesDetails: busyTimes
+        busyTimesDetails: busyTimes,
+        availabilityTest: {
+          oct15Found: !!oct15Availability,
+          slot1400Available: slot1400?.available,
+          slot1400Trainers: slot1400?.availableTrainers || []
+        }
       }
 
     } catch (funcError) {
