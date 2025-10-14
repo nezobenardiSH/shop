@@ -8,13 +8,15 @@ export async function GET(request: NextRequest) {
     const mode = searchParams.get('mode') || 'combined' // 'combined' or 'single'
     const trainerName = searchParams.get('trainerName')
     
-    // Start from midnight of current day to include events that started earlier today
-    const startDate = new Date()
-    startDate.setHours(0, 0, 0, 0) // Set to midnight
+    // Start from midnight of current day in Singapore timezone
+    const now = new Date()
+    const singaporeNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}))
 
-    const endDate = new Date()
-    endDate.setDate(endDate.getDate() + 30)
-    endDate.setHours(23, 59, 59, 999) // Set to end of day
+    const startDate = new Date(`${singaporeNow.getFullYear()}-${String(singaporeNow.getMonth() + 1).padStart(2, '0')}-${String(singaporeNow.getDate()).padStart(2, '0')}T00:00:00+08:00`)
+
+    const endDateSingapore = new Date(singaporeNow)
+    endDateSingapore.setDate(endDateSingapore.getDate() + 30)
+    const endDate = new Date(`${endDateSingapore.getFullYear()}-${String(endDateSingapore.getMonth() + 1).padStart(2, '0')}-${String(endDateSingapore.getDate()).padStart(2, '0')}T23:59:59+08:00`)
 
     // Get combined availability from all trainers
     const availability = await getCombinedAvailability(startDate, endDate)
