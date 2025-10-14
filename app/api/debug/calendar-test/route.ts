@@ -114,34 +114,55 @@ export async function GET(request: NextRequest) {
       // Step 5: Test the full availability API logic
       results.steps.push('🔍 Step 5: Testing full availability logic...')
 
-      // Test the trainer availability function directly
-      const { getCombinedAvailability } = await import('@/lib/trainer-availability')
-      const availability = await getCombinedAvailability(startDate, endDate)
+      try {
+        // Test the trainer availability function directly
+        const { getCombinedAvailability } = await import('@/lib/trainer-availability')
+        const availability = await getCombinedAvailability(startDate, endDate)
 
-      // Find Oct 15th data
-      const oct15Availability = availability.find(day => day.date === '2025-10-15')
-      const slot1400 = oct15Availability?.slots.find(slot => slot.start === '14:00')
+        // Find Oct 15th data
+        const oct15Availability = availability.find(day => day.date === '2025-10-15')
+        const slot1400 = oct15Availability?.slots.find(slot => slot.start === '14:00')
 
-      results.steps.push(`📅 Oct 15th availability found: ${!!oct15Availability}`)
-      results.steps.push(`🕐 14:00-16:00 slot available: ${slot1400?.available}`)
-      results.steps.push(`👥 Available trainers for 14:00 slot: ${slot1400?.availableTrainers?.join(', ') || 'none'}`)
+        results.steps.push(`📅 Oct 15th availability found: ${!!oct15Availability}`)
+        results.steps.push(`🕐 14:00-16:00 slot available: ${slot1400?.available}`)
+        results.steps.push(`👥 Available trainers for 14:00 slot: ${slot1400?.availableTrainers?.join(', ') || 'none'}`)
+        results.steps.push(`🌐 Available languages for 14:00 slot: ${slot1400?.availableLanguages?.join(', ') || 'none'}`)
 
-      results.success = true
-      results.summary = {
-        trainerEmail,
-        tokenValid: !isExpired,
-        calendarId: token.calendarId,
-        totalEvents: events.length,
-        oct15Events: oct15Events.length,
-        busyTimesFromFunction: busyTimes.length,
-        oct15EventDetails: oct15Events,
-        busyTimesDetails: busyTimes,
-        availabilityTest: {
-          oct15Found: !!oct15Availability,
-          slot1400Available: slot1400?.available,
-          slot1400Trainers: slot1400?.availableTrainers || []
+        results.summary = {
+          trainerEmail,
+          tokenValid: !isExpired,
+          calendarId: token.calendarId,
+          totalEvents: events.length,
+          oct15Events: oct15Events.length,
+          busyTimesFromFunction: busyTimes.length,
+          oct15EventDetails: oct15Events,
+          busyTimesDetails: busyTimes,
+          availabilityTest: {
+            oct15Found: !!oct15Availability,
+            slot1400Available: slot1400?.available,
+            slot1400Trainers: slot1400?.availableTrainers || [],
+            slot1400Languages: slot1400?.availableLanguages || []
+          }
+        }
+
+      } catch (availabilityError) {
+        results.steps.push(`❌ getCombinedAvailability failed: ${availabilityError instanceof Error ? availabilityError.message : 'Unknown error'}`)
+        results.error = `getCombinedAvailability error: ${availabilityError instanceof Error ? availabilityError.message : 'Unknown error'}`
+
+        results.summary = {
+          trainerEmail,
+          tokenValid: !isExpired,
+          calendarId: token.calendarId,
+          totalEvents: events.length,
+          oct15Events: oct15Events.length,
+          busyTimesFromFunction: busyTimes.length,
+          oct15EventDetails: oct15Events,
+          busyTimesDetails: busyTimes,
+          availabilityError: availabilityError instanceof Error ? availabilityError.message : 'Unknown error'
         }
       }
+
+      results.success = true
 
     } catch (funcError) {
       results.steps.push(`❌ getRawBusyTimes failed: ${funcError instanceof Error ? funcError.message : 'Unknown error'}`)
