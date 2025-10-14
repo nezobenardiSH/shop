@@ -561,34 +561,56 @@ class LarkService {
 
       if (eventsResponse.data?.items?.length > 0) {
         const allEvents = eventsResponse.data.items
-        console.log(`Found ${allEvents.length} calendar events`)
+        console.log(`📅 Found ${allEvents.length} calendar events for ${trainerEmail}`)
 
         for (const event of allEvents) {
-          if (event.start_time?.timestamp && event.end_time?.timestamp) {
+          if (event.start_time?.timestamp && event.end_time?.timestamp && event.status !== 'cancelled') {
             const startMs = parseInt(event.start_time.timestamp) * 1000
             const endMs = parseInt(event.end_time.timestamp) * 1000
 
             const eventStart = new Date(startMs)
             const eventEnd = new Date(endMs)
 
-            if (eventEnd >= startDate && eventStart <= endDate) {
+            // Check if event is within our date range
+            const withinRange = eventEnd >= startDate && eventStart <= endDate
+
+            console.log(`🔍 Event: "${event.summary || 'No title'}"`)
+            console.log(`   Time: ${eventStart.toISOString()} to ${eventEnd.toISOString()}`)
+            console.log(`   Status: ${event.status}`)
+            console.log(`   Within range (${startDate.toISOString()} to ${endDate.toISOString()}): ${withinRange}`)
+
+            if (withinRange) {
               busyTimes.push({
                 start_time: eventStart.toISOString(),
                 end_time: eventEnd.toISOString()
               })
+              console.log(`   ✅ Added to busy times`)
+            } else {
+              console.log(`   ❌ Skipped (outside date range)`)
             }
+          } else {
+            console.log(`🔍 Skipping event: "${event.summary || 'No title'}" (missing timestamp or cancelled)`)
           }
         }
 
-        console.log(`Extracted ${busyTimes.length} busy periods from calendar events`)
+        console.log(`📊 Extracted ${busyTimes.length} busy periods from ${allEvents.length} calendar events`)
       } else {
         console.log('No calendar events found')
       }
 
     } catch (error) {
-      console.error('Error getting raw busy times:', error)
+      console.error('❌ CRITICAL ERROR in getRawBusyTimes:', error)
+      console.error('❌ This error causes trainer to appear available when they should be busy!')
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        trainerEmail,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      })
     }
 
+    console.log(`📊 getRawBusyTimes returning ${busyTimes.length} busy periods for ${trainerEmail}`)
     return busyTimes
   }
 
