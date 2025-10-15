@@ -161,30 +161,29 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       setSelectedStage('preparation')
     }
     
-    // Preparation Stage - Complex logic for sub-stages
-    const documentSubmissionCompleted = 
+    // Preparation Stage - Complex logic for sub-stages (SSM Document removed)
+    const documentSubmissionCompleted =
       (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
       trainerData?.menuSubmissionDate &&
-      trainerData?.ssmDocument &&
       trainerData?.videoProofLink
-    
-    const hardwareDeliveryCompleted = 
+
+    const hardwareDeliveryCompleted =
       trainerData?.paymentStatus === 'Paid' &&
       trainerData?.deliveryAddress &&
       trainerData?.trackingLink &&
       trainerData?.hardwareFulfillmentDate
-    
-    const productSetupCompleted = 
+
+    const productSetupCompleted =
       trainerData?.menuCollectionFormLink &&
       trainerData?.menuSubmissionDate &&
       trainerData?.productSetupStatus === 'Completed'
-    
+
     const preparationSubStagesCompleted = [
       documentSubmissionCompleted,
       hardwareDeliveryCompleted,
       productSetupCompleted
     ].filter(Boolean).length
-    
+
     const totalPreparationStages = 3
     
     let preparationStatus: 'completed' | 'current' | 'pending' = 'pending'
@@ -439,98 +438,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       case 'preparation':
         return (
           <div className="space-y-3">
-            {/* SSM Document - Expandable */}
-            <div className="border border-gray-200 rounded-lg">
-              <button
-                onClick={() => toggleItemExpansion('mobile-ssm')}
-                className="w-full flex items-center justify-between p-4"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  {/* Status Icon */}
-                  {trainerData?.ssmDocument || uploadedSSMUrl ? (
-                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <div className="text-base font-medium text-gray-900">SSM Document</div>
-                    <div className="text-sm text-gray-500">
-                      {trainerData?.ssmDocument || uploadedSSMUrl ? 'Document Uploaded' : 'Pending Upload'}
-                    </div>
-                  </div>
-                </div>
-                <svg className={`w-5 h-5 text-gray-400 transition-transform flex-shrink-0 ${
-                  expandedItems['mobile-ssm'] ? 'rotate-180' : ''
-                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {expandedItems['mobile-ssm'] && (
-                <div className="pl-12 pr-4 pb-4 space-y-3">
-                  <div className="text-base text-gray-600 pt-3">
-                    Status: {trainerData?.ssmDocument || uploadedSSMUrl ? 'Uploaded' : 'Pending Upload'}
-                  </div>
-                  {(trainerData?.ssmDocument || uploadedSSMUrl) && (
-                    <a href={uploadedSSMUrl || trainerData?.ssmDocument} target="_blank" rel="noopener noreferrer" 
-                       className="inline-block text-base text-blue-600 hover:text-blue-700">
-                      View Document
-                    </a>
-                  )}
-                  <div>
-                    <input
-                      id={`mobile-ssm-upload-${trainerData?.id}`}
-                      type="file"
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      className="hidden"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0]
-                        if (!file) return
-                        setUploadingSSM(true)
-                        try {
-                          const formData = new FormData()
-                          formData.append('file', file)
-                          formData.append('trainerId', trainerData?.id || '')
-                          formData.append('documentType', 'ssm')
-                          const response = await fetch('/api/salesforce/upload-document', {
-                            method: 'POST',
-                            body: formData
-                          })
-                          if (!response.ok) {
-                            const error = await response.json()
-                            throw new Error(error.details || error.error || 'Failed to upload')
-                          }
-                          const result = await response.json()
-                          setUploadedSSMUrl(result.fileUrl)
-                          if (onBookingComplete) {
-                            onBookingComplete()
-                          }
-                        } catch (error) {
-                          console.error('Error uploading SSM:', error)
-                          alert(error instanceof Error ? error.message : 'Failed to upload')
-                        } finally {
-                          setUploadingSSM(false)
-                          e.target.value = ''
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => document.getElementById(`mobile-ssm-upload-${trainerData?.id}`)?.click()}
-                      disabled={uploadingSSM}
-                      className="px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-all duration-200"
-                    >
-                      {uploadingSSM ? 'Uploading...' : (trainerData?.ssmDocument || uploadedSSMUrl ? 'Replace' : 'Upload')}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Hardware Delivery - Expandable */}
             <div className="border border-gray-200 rounded-lg">
               <button
@@ -1233,157 +1140,22 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <h4 className="text-lg font-semibold text-gray-900">Preparation Progress</h4>
             <div className="text-sm text-gray-500">
               {(() => {
-                const ssmDocumentCompleted = !!trainerData?.ssmDocument;
                 const hardwareDeliveryCompleted = !!trainerData?.trackingLink;
                 const productSetupCompleted = trainerData?.completedProductSetup === 'Yes';
                 const storeSetupCompleted = !!trainerData?.videoProofLink;
 
                 const completed = [
-                  ssmDocumentCompleted,
                   hardwareDeliveryCompleted,
                   productSetupCompleted,
                   storeSetupCompleted
                 ].filter(Boolean).length;
-                return `${completed}/4 Complete`;
+                return `${completed}/3 Complete`;
               })()}
             </div>
           </div>
           
           <div className="space-y-3">
-            {/* 1. Submit SSM Document */}
-            <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
-              <div className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {(() => {
-                      const ssmCompleted = !!trainerData?.ssmDocument;
-
-                      return ssmCompleted ? (
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      );
-                    })()}
-                    <div className="text-sm font-medium text-gray-900">Submit SSM Document</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm font-medium text-gray-500">
-                      {trainerData?.ssmDocument || uploadedSSMUrl ? (
-                        <span className="text-green-600 font-medium">✓ Document Uploaded</span>
-                      ) : (
-                        <span className="text-orange-600 font-medium">⏳ Pending Upload</span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => toggleItemExpansion('document-submission')}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <svg className={`w-4 h-4 transition-transform ${expandedItems['document-submission'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Expanded Details for SSM Document Submission */}
-                {expandedItems['document-submission'] && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
-                    <div>
-                      <div className="space-y-2">
-                        {/* Show existing document if available */}
-                        {(trainerData?.ssmDocument || uploadedSSMUrl) && (
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={uploadedSSMUrl || trainerData?.ssmDocument}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
-                            >
-                              View Current Document
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </a>
-                          </div>
-                        )}
-
-                        {/* Always show upload button for new upload or replacement */}
-                        <div className="flex items-center gap-2">
-                          <input
-                            id={`ssm-doc-upload-${trainerData?.id}`}
-                            type="file"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                            className="hidden"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0]
-                              if (!file) return
-
-                              setUploadingSSM(true)
-                              try {
-                                const formData = new FormData()
-                                formData.append('file', file)
-                                formData.append('trainerId', trainerData?.id || '')
-                                formData.append('documentType', 'ssm')
-
-                                const response = await fetch('/api/salesforce/upload-document', {
-                                  method: 'POST',
-                                  body: formData
-                                })
-
-                                if (!response.ok) {
-                                  const error = await response.json()
-                                  throw new Error(error.details || error.error || 'Failed to upload document')
-                                }
-
-                                const result = await response.json()
-                                setUploadedSSMUrl(result.fileUrl)
-
-                                if (onBookingComplete) {
-                                  onBookingComplete()
-                                }
-                              } catch (error) {
-                                console.error('Error uploading SSM document:', error)
-                                alert(error instanceof Error ? error.message : 'Failed to upload document')
-                              } finally {
-                                setUploadingSSM(false)
-                                e.target.value = ''
-                              }
-                            }}
-                          />
-                          <button
-                            onClick={() => document.getElementById(`ssm-doc-upload-${trainerData?.id}`)?.click()}
-                            disabled={uploadingSSM}
-                            className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
-                          >
-                            {uploadingSSM ? 'Uploading...' : (trainerData?.ssmDocument || uploadedSSMUrl ? 'Replace Document' : 'Upload SSM Document')}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Show SSM Document Field Value */}
-                    {trainerData?.ssmDocument && (
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Salesforce SSM Field</div>
-                        <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded border">
-                          <code className="text-xs break-all">{trainerData.ssmDocument}</code>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 2. Hardware Delivery */}
+            {/* 1. Hardware Delivery */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
                 <div className="flex items-center justify-between">
@@ -1490,7 +1262,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
-            {/* 3. Product Setup */}
+            {/* 2. Product Setup */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
                 <div className="flex items-center justify-between">
@@ -1587,7 +1359,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
-            {/* 4. Store Setup */}
+            {/* 3. Store Setup */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
                 <div className="flex items-center justify-between">
