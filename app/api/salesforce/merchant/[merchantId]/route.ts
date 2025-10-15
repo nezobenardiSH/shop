@@ -289,7 +289,9 @@ export async function GET(
         `
         
         const ordersResult = await conn.query(ordersQuery)
-        
+        console.log('📦 Orders found:', ordersResult.totalSize)
+        console.log('📦 Order records:', JSON.stringify(ordersResult.records, null, 2))
+
         if (ordersResult.totalSize > 0) {
           // Create a map of order IDs to order types and hardware fulfillment dates
           const orderTypeMap: { [key: string]: string } = {}
@@ -303,6 +305,7 @@ export async function GET(
             }
             if (order.ShippingAddress && !orderShippingAddress) {
               orderShippingAddress = order.ShippingAddress
+              console.log('📍 Order ShippingAddress found:', orderShippingAddress)
             }
           })
           
@@ -420,6 +423,8 @@ export async function GET(
         lastModifiedDate: trainer.LastModifiedDate
       }]
     }
+
+    console.log('✅ Final orderShippingAddress being returned:', orderShippingAddress)
 
     return NextResponse.json({
       success: true,
