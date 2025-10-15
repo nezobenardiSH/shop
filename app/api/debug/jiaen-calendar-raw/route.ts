@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { larkService } from '@/lib/lark'
 import { CalendarIdManager } from '@/lib/calendar-id-manager'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const results: any = {
     timestamp: new Date().toISOString(),
