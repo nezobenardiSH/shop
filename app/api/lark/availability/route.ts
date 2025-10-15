@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(`${singaporeNow.getFullYear()}-${String(singaporeNow.getMonth() + 1).padStart(2, '0')}-${String(singaporeNow.getDate()).padStart(2, '0')}T00:00:00+08:00`)
 
     const endDateSingapore = new Date(singaporeNow)
-    endDateSingapore.setDate(endDateSingapore.getDate() + 30)
+    endDateSingapore.setDate(endDateSingapore.getDate() + 14)
     const endDate = new Date(`${endDateSingapore.getFullYear()}-${String(endDateSingapore.getMonth() + 1).padStart(2, '0')}-${String(endDateSingapore.getDate()).padStart(2, '0')}T23:59:59+08:00`)
 
     // Get combined availability from all trainers (with optional location filtering)
