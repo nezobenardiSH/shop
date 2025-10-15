@@ -416,14 +416,12 @@ export default function DatePickerModal({
                 })}
               </div>
 
-              {/* Service Type Message */}
-              <div className="mt-3 space-y-1">
+              {/* Service Type Label */}
+              <div className="mt-3">
                 {serviceType !== 'none' && (
-                  <div className={`text-xs ${
-                    serviceType === 'onsite' ? 'text-blue-600' : 'text-green-600'
-                  }`}>
-                    ℹ️ {getServiceTypeMessage(serviceType)}
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    {getServiceTypeMessage(serviceType)}
+                  </label>
                 )}
                 {serviceType === 'none' && (
                   <div className="text-xs text-amber-600">
@@ -433,7 +431,7 @@ export default function DatePickerModal({
 
                 {/* Show warning if no trainers available */}
                 {availableLanguages.length === 0 && !loading && (
-                  <div className="text-xs text-amber-600">
+                  <div className="text-xs text-amber-600 mt-1">
                     ⚠️ No trainers available for this location
                   </div>
                 )}
