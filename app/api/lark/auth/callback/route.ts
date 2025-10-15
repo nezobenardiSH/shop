@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
+  // Use production URL for redirects - define at function scope
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://onboarding-portal-b0ay.onrender.com'
+
   try {
     const searchParams = request.nextUrl.searchParams
     const code = searchParams.get('code')
     const state = searchParams.get('state')
-
-    // Use production URL for redirects
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://onboarding-portal-b0ay.onrender.com'
 
     if (!code) {
       return NextResponse.redirect(
