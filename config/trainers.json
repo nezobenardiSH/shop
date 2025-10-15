@@ -9,12 +9,20 @@
       "languages": ["English", "Bahasa Malaysia"]
     },
     {
-      "name": "Jia En", 
+      "name": "Jia En",
       "email": "jiaen.chai@storehub.com",
       "larkUserId": "",
       "calendarId": "primary",
       "salesforceId": "",
       "languages": ["Bahasa Malaysia", "Chinese"]
+    },
+    {
+      "name": "Izzudin",
+      "email": "izzuddin.azizol@storehub.com",
+      "larkUserId": "",
+      "calendarId": "primary",
+      "salesforceId": "",
+      "languages": ["Bahasa Malaysia"]
     },
     {
       "name": "Nasi Lemak",
