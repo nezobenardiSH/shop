@@ -198,6 +198,7 @@ function TrainerPortalContent() {
 
         // Use training location (orderShippingAddress) for location-based trainer filtering
         let merchantAddress = ''
+        let merchantState = ''
         if (trainer.orderShippingAddress) {
           if (typeof trainer.orderShippingAddress === 'string') {
             merchantAddress = trainer.orderShippingAddress
@@ -205,7 +206,13 @@ function TrainerPortalContent() {
             // Extract state from orderShippingAddress object
             merchantAddress = trainer.orderShippingAddress.state ||
                             trainer.orderShippingAddress.stateCode || ''
+            merchantState = trainer.orderShippingAddress.state ||
+                           trainer.orderShippingAddress.stateCode || ''
           }
+        }
+        // Fallback to shippingState if orderShippingAddress doesn't have it
+        if (!merchantState && trainer.shippingState) {
+          merchantState = trainer.shippingState
         }
 
         setCurrentBookingInfo({
@@ -213,6 +220,7 @@ function TrainerPortalContent() {
           trainerName: actualTrainerName,
           merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
           merchantAddress: merchantAddress,
+          merchantState: merchantState,
           merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
           merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
           displayName: trainer.name,
@@ -258,6 +266,7 @@ function TrainerPortalContent() {
 
     // Use training location (orderShippingAddress) for location-based trainer filtering
     let merchantAddress = ''
+    let merchantState = ''
     if (trainer.orderShippingAddress) {
       if (typeof trainer.orderShippingAddress === 'string') {
         merchantAddress = trainer.orderShippingAddress
@@ -265,7 +274,13 @@ function TrainerPortalContent() {
         // Extract state from orderShippingAddress object
         merchantAddress = trainer.orderShippingAddress.state ||
                         trainer.orderShippingAddress.stateCode || ''
+        merchantState = trainer.orderShippingAddress.state ||
+                       trainer.orderShippingAddress.stateCode || ''
       }
+    }
+    // Fallback to shippingState if orderShippingAddress doesn't have it
+    if (!merchantState && trainer.shippingState) {
+      merchantState = trainer.shippingState
     }
 
     setCurrentBookingInfo({
@@ -273,6 +288,7 @@ function TrainerPortalContent() {
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
       merchantAddress: merchantAddress,
+      merchantState: merchantState,
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
@@ -682,6 +698,7 @@ function TrainerPortalContent() {
             merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
             merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
             merchantAddress={currentBookingInfo.merchantAddress}
+            merchantState={currentBookingInfo.merchantState}
             merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
             merchantContactPerson={currentBookingInfo.merchantContactPerson}
             trainerName={currentBookingInfo.trainerName}

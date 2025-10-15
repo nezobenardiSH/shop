@@ -959,7 +959,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.onboardingServicesBought || 'Standard Package'}
+                {(() => {
+                  const servicesBought = trainerData?.onboardingServicesBought || 'Standard Package'
+                  const isOnsite = servicesBought.toLowerCase().includes('onsite')
+                  const state = trainerData?.shippingState
+
+                  if (isOnsite && state) {
+                    return `Training: Onsite, ${state}`
+                  }
+                  return servicesBought
+                })()}
               </div>
             </div>
 
@@ -2007,7 +2016,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.onboardingServicesBought || 'Standard Package'}
+                {(() => {
+                  const servicesBought = trainerData?.onboardingServicesBought || 'Standard Package'
+                  const isOnsite = servicesBought.toLowerCase().includes('onsite')
+                  const state = trainerData?.shippingState
+
+                  if (isOnsite && state) {
+                    return `Training: Onsite, ${state}`
+                  }
+                  return servicesBought
+                })()}
               </div>
             </div>
 

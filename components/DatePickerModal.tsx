@@ -10,6 +10,7 @@ interface DatePickerModalProps {
   merchantId: string
   merchantName: string
   merchantAddress?: string
+  merchantState?: string
   merchantPhone?: string
   merchantContactPerson?: string
   trainerName: string
@@ -45,6 +46,7 @@ export default function DatePickerModal({
   merchantId,
   merchantName,
   merchantAddress,
+  merchantState,
   merchantPhone,
   merchantContactPerson,
   trainerName,
@@ -420,7 +422,7 @@ export default function DatePickerModal({
               <div className="mt-3">
                 {serviceType !== 'none' && (
                   <label className="block text-sm font-medium text-gray-700">
-                    {getServiceTypeMessage(serviceType)}
+                    {getServiceTypeMessage(serviceType, merchantState)}
                   </label>
                 )}
                 {serviceType === 'none' && (

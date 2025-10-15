@@ -34,12 +34,13 @@ export function detectServiceType(onboardingServicesBought: string | null | unde
 /**
  * Get display message for service type
  * @param serviceType - The detected service type
+ * @param state - Optional state/location for onsite training
  * @returns User-friendly message
  */
-export function getServiceTypeMessage(serviceType: ServiceType): string {
+export function getServiceTypeMessage(serviceType: ServiceType, state?: string): string {
   switch (serviceType) {
     case 'onsite':
-      return 'Training: Onsite'
+      return state ? `Training: Onsite, ${state}` : 'Training: Onsite'
     case 'remote':
       return 'Training: Remote'
     case 'none':
