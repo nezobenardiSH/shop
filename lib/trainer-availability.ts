@@ -16,6 +16,7 @@ export interface TimeSlot {
   available: boolean
   availableTrainers?: string[]
   availableLanguages?: string[]
+  availableLocations?: string[]
 }
 
 export interface DayAvailability {
@@ -145,6 +146,7 @@ export async function getCombinedAvailability(
         // Check which trainers are available for this slot
         const availableTrainers: string[] = []
         const availableLanguagesSet = new Set<string>()
+        const availableLocationsSet = new Set<string>()
         
         trainerAvailabilities.forEach((trainerInfo, trainerName) => {
           // Special detailed logging for Nezo's slots on Oct 14
@@ -192,11 +194,16 @@ export async function getCombinedAvailability(
           
           if (!isBusy) {
             availableTrainers.push(trainerName)
-            
-            // Add this trainer's languages to the available languages
+
+            // Add this trainer's languages and locations to the available sets
             const trainer = trainers.find(t => t.name === trainerName)
-            if (trainer && trainer.languages) {
-              trainer.languages.forEach(lang => availableLanguagesSet.add(lang))
+            if (trainer) {
+              if (trainer.languages) {
+                trainer.languages.forEach(lang => availableLanguagesSet.add(lang))
+              }
+              if (trainer.location) {
+                trainer.location.forEach(loc => availableLocationsSet.add(loc))
+              }
             }
           }
         })
@@ -209,15 +216,17 @@ export async function getCombinedAvailability(
             available: false
           })
         } else {
-          // Slot is available with real trainer and language data
+          // Slot is available with real trainer, language, and location data
           const availableLanguages = Array.from(availableLanguagesSet)
-          
+          const availableLocations = Array.from(availableLocationsSet)
+
           slots.push({
             start: slot.start,
             end: slot.end,
             available: true,
             availableTrainers: availableTrainers,
-            availableLanguages: availableLanguages
+            availableLanguages: availableLanguages,
+            availableLocations: availableLocations
           })
         }
       })

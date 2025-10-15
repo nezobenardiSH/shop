@@ -7,6 +7,7 @@ This document explains how trainer information is managed in the Onboarding Port
 All trainer information is stored in **`config/trainers.json`**. This is the single source of truth for:
 - Trainer names and emails
 - Language capabilities
+- Location coverage (states/regions)
 - Lark User IDs and Calendar IDs
 - Salesforce IDs
 
@@ -27,7 +28,8 @@ Add a new trainer object to the `trainers` array:
   "larkUserId": "",
   "calendarId": "primary",
   "salesforceId": "",
-  "languages": ["English", "Bahasa Malaysia", "Chinese"]
+  "languages": ["English", "Bahasa Malaysia", "Chinese"],
+  "location": ["Kuala Lumpur", "Selangor"]
 }
 ```
 
@@ -39,6 +41,9 @@ Add a new trainer object to the `trainers` array:
 - `salesforceId`: Leave empty unless linking to Salesforce
 - `languages`: Array of languages the trainer can conduct training in
   - Options: `"English"`, `"Bahasa Malaysia"`, `"Chinese"`
+- `location`: Array of states/regions the trainer covers
+  - Examples: `"Kuala Lumpur"`, `"Selangor"`, `"Penang"`, `"Johor"`, etc.
+  - Leave empty or omit if trainer can cover all locations
 
 ### Step 2: Authorize Trainer's Lark Calendar
 
@@ -136,16 +141,41 @@ Trainer availability is determined by:
 
 1. **Server Startup**: `config/trainers.json` is loaded into memory
 2. **Authorization Page**: Displays all trainers from config
-3. **Booking Flow**: Filters trainers by language and availability
+3. **Booking Flow**: Filters trainers by language, location, and availability
 4. **Calendar Sync**: Uses trainer email to fetch Lark calendar data
+
+### Location-Based Assignment
+
+The system automatically matches trainers to merchants based on location:
+
+**Current Trainer Coverage:**
+- **Nezo**: Kuala Lumpur, Selangor
+- **Jia En**: Penang
+- **Izzudin**: Johor
+
+**How It Works:**
+1. System extracts state from merchant's address
+2. Filters trainers who cover that state
+3. Only shows availability for matching trainers
+4. Falls back to all trainers if location cannot be determined
+
+**Example:**
+- Merchant address: "123 Jalan Ampang, Kuala Lumpur"
+- Extracted location: "Kuala Lumpur"
+- Matched trainer: Nezo
+- Result: Only Nezo's availability is shown
+
+See [Location-Based Trainer Assignment](./LOCATION-BASED-TRAINER-ASSIGNMENT.md) for detailed documentation.
 
 ### Related Files
 
 - `config/trainers.json` - Trainer configuration (SOURCE OF TRUTH)
 - `lib/lark.ts` - Lark Calendar API integration
 - `lib/trainer-availability.ts` - Availability calculation logic
+- `lib/location-matcher.ts` - Location extraction and matching logic
 - `app/trainers/authorize/page.tsx` - OAuth authorization UI
 - `docs/training-calendar.md` - Calendar integration documentation
+- `docs/LOCATION-BASED-TRAINER-ASSIGNMENT.md` - Location-based assignment documentation
 
 ---
 
@@ -153,9 +183,11 @@ Trainer availability is determined by:
 
 1. **Always update `config/trainers.json` directly** - Don't duplicate data elsewhere
 2. **Use consistent language names** - Exactly: `"English"`, `"Bahasa Malaysia"`, `"Chinese"`
-3. **Test after adding trainers** - Complete OAuth flow and verify booking works
-4. **Keep emails accurate** - Email is used for Lark OAuth and calendar access
-5. **Document changes** - Use clear commit messages when updating trainers
+3. **Use consistent location names** - Use full state names: `"Kuala Lumpur"`, `"Selangor"`, `"Penang"`, `"Johor"`
+4. **Test after adding trainers** - Complete OAuth flow and verify booking works
+5. **Keep emails accurate** - Email is used for Lark OAuth and calendar access
+6. **Document changes** - Use clear commit messages when updating trainers
+7. **Verify location coverage** - Ensure all Malaysian states are covered by at least one trainer
 
 ---
 
