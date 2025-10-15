@@ -14,6 +14,7 @@ interface DatePickerModalProps {
   merchantPhone?: string
   merchantContactPerson?: string
   trainerName: string
+  onboardingTrainerName?: string  // The Salesforce Onboarding_Trainer__c.Name field (e.g., "Nasi Lemak")
   bookingType?: string
   onboardingServicesBought?: string | null
   currentBooking?: {
@@ -50,6 +51,7 @@ export default function DatePickerModal({
   merchantPhone,
   merchantContactPerson,
   trainerName,
+  onboardingTrainerName,
   bookingType = 'training',
   onboardingServicesBought,
   currentBooking,
@@ -175,6 +177,7 @@ export default function DatePickerModal({
           merchantPhone,
           merchantContactPerson,
           trainerName,
+          onboardingTrainerName,  // Pass the Salesforce Onboarding_Trainer__c.Name
           date: dateStr,
           startTime: selectedSlot.start,
           endTime: selectedSlot.end,

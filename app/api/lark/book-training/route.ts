@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       merchantContactPerson,
       merchantBusinessType,
       trainerName,
+      onboardingTrainerName,  // Salesforce Onboarding_Trainer__c.Name (e.g., "Nasi Lemak")
       date,
       startTime,
       endTime,
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
           startTime,
           endTime,
           bookingType,
-          merchantName  // Pass merchant name as trainer name for event title
+          onboardingTrainerName || merchantName  // Use Onboarding Trainer Name (e.g., "Nasi Lemak") for event title
         )
         
         console.log('✅ Real calendar event created successfully:', eventId)

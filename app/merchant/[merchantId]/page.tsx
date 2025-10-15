@@ -702,6 +702,7 @@ function TrainerPortalContent() {
             merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
             merchantContactPerson={currentBookingInfo.merchantContactPerson}
             trainerName={currentBookingInfo.trainerName}
+            onboardingTrainerName={currentBookingInfo.displayName}
             bookingType={currentBookingInfo.bookingType}
             onboardingServicesBought={currentBookingInfo.onboardingServicesBought}
             currentBooking={currentBookingInfo.existingBooking}
