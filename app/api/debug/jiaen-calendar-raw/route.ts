@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { larkService } from '@/lib/lark'
 import { CalendarIdManager } from '@/lib/calendar-id-manager'
+import { larkOAuthService } from '@/lib/lark-oauth-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,32 +15,38 @@ export async function GET() {
 
   try {
     const trainerEmail = 'jiaen.chai@storehub.com'
-    
+
     // Test date: Oct 15, 2025
     const startDate = new Date('2025-10-15T00:00:00+08:00')
     const endDate = new Date('2025-10-15T23:59:59+08:00')
-    
+
     results.steps.push(`Testing date range: ${startDate.toISOString()} to ${endDate.toISOString()}`)
-    
+
     // Get calendar ID
     const calendarId = await CalendarIdManager.getResolvedCalendarId(trainerEmail)
     results.calendarId = calendarId
     results.steps.push(`Using calendar ID: ${calendarId}`)
-    
+
+    // Get access token
+    const accessToken = await larkOAuthService.getValidAccessToken(trainerEmail)
+
     // Get raw calendar events
     const timeMin = Math.floor(startDate.getTime() / 1000)
     const timeMax = Math.floor(endDate.getTime() / 1000)
-    
+
     results.steps.push(`Querying Calendar Events API...`)
     results.steps.push(`Time range: ${timeMin} to ${timeMax}`)
-    
-    const eventsResponse = await larkService.makeRequest(
-      `/open-apis/calendar/v4/calendars/${calendarId}/events?start_time=${timeMin}&end_time=${timeMax}`,
+
+    const eventsResponse = await fetch(
+      `https://open.larksuite.com/open-apis/calendar/v4/calendars/${calendarId}/events?start_time=${timeMin}&end_time=${timeMax}`,
       {
         method: 'GET',
-        userEmail: trainerEmail
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
       }
-    )
+    ).then(res => res.json())
     
     if (eventsResponse.data?.items) {
       const allEvents = eventsResponse.data.items
@@ -100,13 +107,16 @@ export async function GET() {
         results.steps.push(`🔍 Fetching instances for: "${recEvent.summary}"`)
         
         try {
-          const instancesResponse = await larkService.makeRequest(
-            `/open-apis/calendar/v4/calendars/${calendarId}/events/${recEvent.event_id}/instances?start_time=${timeMin}&end_time=${timeMax}`,
+          const instancesResponse = await fetch(
+            `https://open.larksuite.com/open-apis/calendar/v4/calendars/${calendarId}/events/${recEvent.event_id}/instances?start_time=${timeMin}&end_time=${timeMax}`,
             {
               method: 'GET',
-              userEmail: trainerEmail
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+              }
             }
-          )
+          ).then(res => res.json())
           
           if (instancesResponse.data?.items) {
             const instances = instancesResponse.data.items.map((inst: any) => {
