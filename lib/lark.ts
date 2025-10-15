@@ -720,8 +720,8 @@ class LarkService {
         // Sort by start time
         busyTimes.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 
-        // Merge overlapping periods
-        const merged: Array<{start_time: string; end_time: string}> = []
+        // Merge overlapping periods (preserve source metadata)
+        const merged: Array<any> = []
         let current = busyTimes[0]
 
         for (let i = 1; i < busyTimes.length; i++) {
@@ -734,7 +734,7 @@ class LarkService {
             const nextEnd = new Date(next.end_time).getTime()
             if (nextEnd > currentEnd) {
               current = {
-                start_time: current.start_time,
+                ...current,
                 end_time: next.end_time
               }
             }
