@@ -293,11 +293,24 @@ export async function GET(
         
         const ordersResult = await conn.query(ordersQuery)
         console.log('📦 Orders found:', ordersResult.totalSize)
-        console.log('📦 Order records:', JSON.stringify(ordersResult.records, null, 2))
 
         if (ordersResult.totalSize > 0) {
           // Create a map of order IDs to order types and hardware fulfillment dates
           const orderTypeMap: { [key: string]: string } = {}
+
+          // Log all orders to see which one has the updated address
+          ordersResult.records.forEach((order: any, index: number) => {
+            console.log(`📦 Order ${index + 1}:`, {
+              Id: order.Id,
+              Type: order.Type,
+              ShippingStreet: order.ShippingStreet,
+              ShippingCity: order.ShippingCity,
+              ShippingState: order.ShippingState,
+              ShippingPostalCode: order.ShippingPostalCode,
+              ShippingCountry: order.ShippingCountry
+            })
+          })
+
           ordersResult.records.forEach((order: any) => {
             orderTypeMap[order.Id] = order.Type || 'N/A'
             if (order.Hardware_Fulfillment_Date__c && !hardwareFulfillmentDate) {
@@ -307,6 +320,7 @@ export async function GET(
               orderNSStatus = order.NSStatus__c
             }
             // Build shipping address from compound field components
+            // Take the FIRST order (most recent due to ORDER BY CreatedDate DESC)
             if (!orderShippingAddress) {
               // Return as object with individual components for easier state extraction
               if (order.ShippingStreet || order.ShippingCity || order.ShippingState || order.ShippingCountry) {
@@ -319,7 +333,8 @@ export async function GET(
                   country: order.ShippingCountry || '',
                   countryCode: order.ShippingCountry || ''
                 }
-                console.log('📍 Order ShippingAddress built from components:', orderShippingAddress)
+                console.log('📍 Using ShippingAddress from Order:', order.Id)
+                console.log('📍 ShippingAddress:', orderShippingAddress)
               }
             }
           })
