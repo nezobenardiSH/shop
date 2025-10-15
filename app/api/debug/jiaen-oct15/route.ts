@@ -108,10 +108,10 @@ export async function GET() {
     
     // Check overlap with each time slot
     const TIME_SLOTS = [
-      { start: '09:00', end: '11:00', label: '9-11am' },
-      { start: '11:00', end: '13:00', label: '11am-1pm' },
-      { start: '14:00', end: '16:00', label: '2-4pm' },
-      { start: '16:00', end: '18:00', label: '4-6pm' }
+      { start: '10:00', end: '11:00', label: '10-11am' },
+      { start: '12:00', end: '13:00', label: '12pm-1pm' },
+      { start: '14:30', end: '15:30', label: '2:30-3:30pm' },
+      { start: '17:00', end: '18:00', label: '5-6pm' }
     ]
     
     results.slotAnalysis = TIME_SLOTS.map(slot => {

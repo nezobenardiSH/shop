@@ -430,10 +430,10 @@ class LarkService {
     const result: Array<{ date: string; slots: Array<{ start: string; end: string; available: boolean }> }> = []
 
     const TIME_SLOTS = [
-      { start: '09:00', end: '11:00' },
-      { start: '11:00', end: '13:00' },
-      { start: '14:00', end: '16:00' },
-      { start: '16:00', end: '18:00' }
+      { start: '10:00', end: '11:00' },
+      { start: '12:00', end: '13:00' },
+      { start: '14:30', end: '15:30' },
+      { start: '17:00', end: '18:00' }
     ]
 
     const current = new Date(startDate)

@@ -8,11 +8,13 @@ All time comparisons, slot calculations, and availability checks MUST be perform
 ## Implementation Guidelines
 
 ### 1. Time Slot Definitions
-- Time slots (e.g., "09:00", "17:00") are ALWAYS in Singapore time (GMT+8)
+- Time slots are ALWAYS in Singapore time (GMT+8)
+- **Current Training Slots**: 10:00-11:00, 12:00-13:00, 14:30-15:30, 17:00-18:00
 - When creating Date objects from time slots, use ISO 8601 format with explicit timezone:
   ```javascript
   // CORRECT - Explicitly uses Singapore timezone
   const slotStart = new Date(`${dateStr}T${slot.start}:00+08:00`)
+  // Example: new Date('2025-11-07T10:00:00+08:00')
 
   // WRONG - Uses server's local timezone (may not be Singapore)
   const slotStart = new Date(year, month, day, hour, minute, 0)

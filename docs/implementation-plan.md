@@ -1109,11 +1109,10 @@ async function bookTraining(date, timeSlot, merchantInfo) {
 #### Time Slot Configuration
 ```typescript
 const TIME_SLOTS = [
-  { start: '09:00', end: '11:00', label: '9:00 AM - 11:00 AM' },
-  { start: '11:00', end: '13:00', label: '11:00 AM - 1:00 PM' },
-  { start: '13:00', end: '15:00', label: '1:00 PM - 3:00 PM' },
-  { start: '15:00', end: '17:00', label: '3:00 PM - 5:00 PM' },
-  { start: '16:00', end: '18:00', label: '4:00 PM - 6:00 PM' }
+  { start: '10:00', end: '11:00', label: '10:00 AM - 11:00 AM' },
+  { start: '12:00', end: '13:00', label: '12:00 PM - 1:00 PM' },
+  { start: '14:30', end: '15:30', label: '2:30 PM - 3:30 PM' },
+  { start: '17:00', end: '18:00', label: '5:00 PM - 6:00 PM' }
 ]
 
 const WORKING_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -1164,9 +1163,9 @@ LARK_DOMAIN=https://open.larksuite.com
 - [ ] Salesforce Training_Date__c auto-updates with trainer assignment
 - [ ] Trainers receive Lark notifications
 - [ ] No double-booking possible
-- [ ] Weekday 9am-6pm slots only
-- [ ] 2-hour duration per session
-- [ ] Timezone handling works correctly
+- [ ] Weekday slots only (Monday-Friday)
+- [ ] 1-hour duration per training session (10am-11am, 12pm-1pm, 2:30pm-3:30pm, 5pm-6pm)
+- [ ] Timezone handling works correctly (Asia/Singapore GMT+8)
 
 ### Rollout Strategy
 1. **Week 1:** Development and internal testing

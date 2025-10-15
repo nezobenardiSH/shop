@@ -573,17 +573,19 @@ Always check `free_busy_status` field when determining availability. Events can 
 ## Training Schedule Configuration
 
 ### Time Slots Definition
-**Schedule**: 2-hour training sessions, Monday to Friday only
-- **09:00 - 11:00** (Morning Session 1)
-- **11:00 - 13:00** (Morning Session 2)
-- **14:00 - 16:00** (Afternoon Session 1) ← **Lunch break 13:00-14:00**
-- **16:00 - 18:00** (Afternoon Session 2)
+**Schedule**: 1-hour training sessions, Monday to Friday only
+- **10:00 - 11:00** (Morning Session)
+- **12:00 - 13:00** (Lunch Session)
+- **14:30 - 15:30** (Afternoon Session)
+- **17:00 - 18:00** (Evening Session)
 
 **Implementation**:
 - Defined in `TIME_SLOTS` constant in `getCombinedAvailability()` function (`lib/trainer-availability.ts`)
-- Also defined in `getRawBusyTimes()` and `getAvailableSlots()` functions (`lib/lark.ts`)
+- Also defined in `convertBusyTimesToAvailability()` function (`lib/lark.ts`)
 
-**Timezone**: All times in Asia/Singapore timezone, converted to UTC for API calls
+**Timezone**: All times in Asia/Singapore timezone (GMT+8)
+
+**Note**: These are 1-hour slots for both POS Training and Back Office Training. Installation and other booking types may have different durations.
 
 ### Training Booking Criteria
 1. **Service Type**: Remote or On-site onboarding
@@ -933,7 +935,7 @@ For each trainer:
 ### Step 2: Availability Calculation Phase
 ```
 For each day (weekdays only):
-├── Define TIME_SLOTS: [09:00-11:00, 11:00-13:00, 14:00-16:00, 16:00-18:00]
+├── Define TIME_SLOTS: [10:00-11:00, 12:00-13:00, 14:30-15:30, 17:00-18:00]
 ├── For each time slot:
 │   ├── For each trainer:
 │   │   ├── Check if ANY busy period overlaps with this slot

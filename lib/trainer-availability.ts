@@ -90,32 +90,6 @@ export async function getCombinedAvailability(
           })
         })
 
-        // SPECIAL CASE: Add Nezo's daily lunch meeting (12:30-1:30pm Singapore time)
-        // This handles the recurring lunch meeting that isn't being detected properly
-        if (trainer.email === 'nezo.benardi@storehub.com') {
-          const currentDate = new Date(startDate)
-          const endDateCheck = new Date(endDate)
-
-          while (currentDate <= endDateCheck) {
-            // Skip weekends (Saturday = 6, Sunday = 0)
-            const dayOfWeek = currentDate.getDay()
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-              // Add lunch meeting 12:30-1:30pm Singapore time (04:30-05:30 UTC)
-              const lunchStart = new Date(currentDate)
-              lunchStart.setUTCHours(4, 30, 0, 0) // 12:30pm Singapore = 04:30 UTC
-
-              const lunchEnd = new Date(currentDate)
-              lunchEnd.setUTCHours(5, 30, 0, 0) // 1:30pm Singapore = 05:30 UTC
-
-              busySlots.push({
-                start: lunchStart.toISOString(),
-                end: lunchEnd.toISOString()
-              })
-            }
-            currentDate.setDate(currentDate.getDate() + 1)
-          }
-        }
-
         console.log(`${trainer.name}: Found ${busySlots.length} busy periods (including recurring events)`)
       } catch (error) {
         console.error(`Failed to get raw busy times for ${trainer.name}:`, error)
@@ -141,10 +115,10 @@ export async function getCombinedAvailability(
   // Now combine the availabilities
   const combinedAvailability: DayAvailability[] = []
   const TIME_SLOTS = [
-    { start: '09:00', end: '11:00' },
-    { start: '11:00', end: '13:00' },
-    { start: '14:00', end: '16:00' },
-    { start: '16:00', end: '18:00' }
+    { start: '10:00', end: '11:00' },
+    { start: '12:00', end: '13:00' },
+    { start: '14:30', end: '15:30' },
+    { start: '17:00', end: '18:00' }
   ]
   
   const current = new Date(startDate)

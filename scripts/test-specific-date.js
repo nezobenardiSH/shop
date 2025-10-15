@@ -134,10 +134,10 @@ class SpecificDateTester {
         // Check specific training time slots
         console.log(`\n⏰ Checking training time slots:`)
         const timeSlots = [
-          { start: '09:00', end: '11:00', startHour: 9, endHour: 11 },
-          { start: '11:00', end: '13:00', startHour: 11, endHour: 13 },
-          { start: '14:00', end: '16:00', startHour: 14, endHour: 16 },
-          { start: '16:00', end: '18:00', startHour: 16, endHour: 18 }
+          { start: '10:00', end: '11:00', startHour: 10, endHour: 11 },
+          { start: '12:00', end: '13:00', startHour: 12, endHour: 13 },
+          { start: '14:30', end: '15:30', startHour: 14, startMinute: 30, endHour: 15, endMinute: 30 },
+          { start: '17:00', end: '18:00', startHour: 17, endHour: 18 }
         ]
         
         timeSlots.forEach(slot => {
