@@ -73,13 +73,26 @@ export default function DatePickerModal({
       return 'none' // Not a training booking, service type doesn't apply
     }
 
-    return detectServiceType(onboardingServicesBought)
+    const detected = detectServiceType(onboardingServicesBought)
+    console.log('🔍 Service Type Detection:', {
+      bookingType,
+      onboardingServicesBought,
+      detectedServiceType: detected
+    })
+    return detected
   }, [bookingType, onboardingServicesBought])
 
   // Determine if location filtering should be applied
   const filterByLocation = useMemo(() => {
-    return shouldFilterByLocation(serviceType, bookingType)
-  }, [serviceType, bookingType])
+    const shouldFilter = shouldFilterByLocation(serviceType, bookingType)
+    console.log('🔍 Location Filtering:', {
+      serviceType,
+      bookingType,
+      merchantAddress,
+      shouldFilter
+    })
+    return shouldFilter
+  }, [serviceType, bookingType, merchantAddress])
 
   // Calculate available languages from the availability data
   const availableLanguages = useMemo(() => {
@@ -106,7 +119,7 @@ export default function DatePickerModal({
       setSelectedDate(null)
       setSelectedSlot(null)
     }
-  }, [isOpen, trainerName])
+  }, [isOpen, trainerName, filterByLocation, merchantAddress])
 
   const fetchAvailability = async () => {
     setLoading(true)
@@ -117,7 +130,12 @@ export default function DatePickerModal({
 
       if (filterByLocation && merchantAddress) {
         url += `&merchantAddress=${encodeURIComponent(merchantAddress)}`
+        console.log('🌍 Fetching availability WITH location filter:', merchantAddress)
+      } else {
+        console.log('🌍 Fetching availability WITHOUT location filter')
       }
+
+      console.log('📡 API URL:', url)
 
       const response = await fetch(url)
       const data = await response.json()
