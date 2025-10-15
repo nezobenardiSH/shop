@@ -191,19 +191,14 @@ function TrainerPortalContent() {
           actualTrainerName = trainer.operationManagerContact.name
         }
 
-        // Build merchant address from shipping fields
-        const merchantAddress = [
-          trainer.shippingStreet,
-          trainer.shippingCity,
-          trainer.shippingState,
-          trainer.shippingCountry
-        ].filter(Boolean).join(', ')
+        // Use shipping state for location-based trainer filtering
+        const merchantAddress = trainer.shippingState || ''
 
         setCurrentBookingInfo({
           trainerId: trainer.id,
           trainerName: actualTrainerName,
           merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
-          merchantAddress: merchantAddress || '',
+          merchantAddress: merchantAddress,
           merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
           merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
           displayName: trainer.name,
@@ -247,19 +242,14 @@ function TrainerPortalContent() {
     
     const bookingType = trainer.bookingType || 'training'
 
-    // Build merchant address from shipping fields
-    const merchantAddress = [
-      trainer.shippingStreet,
-      trainer.shippingCity,
-      trainer.shippingState,
-      trainer.shippingCountry
-    ].filter(Boolean).join(', ')
+    // Use shipping state for location-based trainer filtering
+    const merchantAddress = trainer.shippingState || ''
 
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
-      merchantAddress: merchantAddress || '',
+      merchantAddress: merchantAddress,
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
