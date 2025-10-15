@@ -39,9 +39,9 @@ export function detectServiceType(onboardingServicesBought: string | null | unde
 export function getServiceTypeMessage(serviceType: ServiceType): string {
   switch (serviceType) {
     case 'onsite':
-      return 'Onsite training - filtered by language and location'
+      return 'Training: Onsite'
     case 'remote':
-      return 'Remote training - all trainers available (filtered by language only)'
+      return 'Training: Remote'
     case 'none':
       return 'Please contact support to set up onboarding service'
   }

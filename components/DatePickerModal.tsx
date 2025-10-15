@@ -431,12 +431,7 @@ export default function DatePickerModal({
                   </div>
                 )}
 
-                {/* Show available trainers info */}
-                {availableLanguages.length > 0 && (
-                  <div className="text-xs text-gray-500">
-                    Available languages: {availableLanguages.join(', ')}
-                  </div>
-                )}
+                {/* Show warning if no trainers available */}
                 {availableLanguages.length === 0 && !loading && (
                   <div className="text-xs text-amber-600">
                     ⚠️ No trainers available for this location
