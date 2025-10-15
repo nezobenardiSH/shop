@@ -1178,12 +1178,18 @@ class LarkService {
       console.error('❌ createCalendarEvent threw error:', createError.message)
       throw createError
     }
-    
-    if (!result || !result.event_id) {
+
+    // The Lark API returns the event inside an 'event' object
+    const eventId = result?.event?.event_id || result?.event_id
+
+    if (!eventId) {
       console.error('Failed to create calendar event - no event_id returned')
+      console.error('Result structure:', JSON.stringify(result, null, 2))
       throw new Error('Calendar event creation failed - no event_id in response')
     }
-    
+
+    console.log('✅ Event created successfully with ID:', eventId)
+
     try {
       const user = await this.getUserByEmail(trainerEmail)
       await this.sendNotification(
@@ -1193,8 +1199,8 @@ class LarkService {
     } catch (notifyError) {
       console.error('Failed to send notification:', notifyError)
     }
-    
-    return result.event_id
+
+    return eventId
   }
 
   /**
