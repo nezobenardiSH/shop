@@ -277,14 +277,17 @@ export async function GET(
     let hardwareFulfillmentDate: string | null = null
     let trackingLink: string | null = null
     let orderNSStatus: string | null = null
-    let orderShippingAddress: string | null = null
+    let orderShippingAddress: any = null
     if (account) {
       try {
         // First get Orders for this Account with Type field and Hardware Fulfillment Date
+        // ShippingAddress is a compound field - query all its components
         const ordersQuery = `
-          SELECT Id, Type, Hardware_Fulfillment_Date__c, NSStatus__c, ShippingAddress
+          SELECT Id, Type, Hardware_Fulfillment_Date__c, NSStatus__c,
+                 ShippingStreet, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry
           FROM Order
           WHERE AccountId = '${account.Id}'
+          ORDER BY CreatedDate DESC
           LIMIT 10
         `
         
@@ -303,9 +306,21 @@ export async function GET(
             if (order.NSStatus__c && !orderNSStatus) {
               orderNSStatus = order.NSStatus__c
             }
-            if (order.ShippingAddress && !orderShippingAddress) {
-              orderShippingAddress = order.ShippingAddress
-              console.log('📍 Order ShippingAddress found:', orderShippingAddress)
+            // Build shipping address from compound field components
+            if (!orderShippingAddress) {
+              // Return as object with individual components for easier state extraction
+              if (order.ShippingStreet || order.ShippingCity || order.ShippingState || order.ShippingCountry) {
+                orderShippingAddress = {
+                  street: order.ShippingStreet || '',
+                  city: order.ShippingCity || '',
+                  state: order.ShippingState || '',
+                  stateCode: order.ShippingState || '',
+                  postalCode: order.ShippingPostalCode || '',
+                  country: order.ShippingCountry || '',
+                  countryCode: order.ShippingCountry || ''
+                }
+                console.log('📍 Order ShippingAddress built from components:', orderShippingAddress)
+              }
             }
           })
           
