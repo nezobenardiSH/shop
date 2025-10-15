@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
 
+// Disable caching for this route - always fetch fresh data from Salesforce
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Helper function to fix Salesforce file URLs
 async function fixSalesforceFileUrl(url: string | null, conn: any): Promise<string | null> {
   if (!url || !conn) return url
@@ -424,17 +428,30 @@ export async function GET(
       account: accountData,
       onboardingTrainerData: onboardingTrainerData,
       orderItems: orderItems
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     })
 
   } catch (error: any) {
     console.error('Merchant data fetch error:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: `Failed to fetch trainer data: ${error.message}`,
         trainerName: trainerName
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
     )
   }
 }
