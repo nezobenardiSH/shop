@@ -23,14 +23,8 @@
       "calendarId": "primary",
       "salesforceId": "",
       "languages": ["Bahasa Malaysia"]
-    },
-    {
-      "name": "Nasi Lemak",
-      "email": "nezo.benardi@storehub.com",
-      "larkUserId": "",
-      "calendarId": "primary",
-      "salesforceId": "a0yBE000002SwCnYAK"
     }
+    
   ],
   "defaultCalendarId": "primary",
   "timezone": "Asia/Singapore",
@@ -39,6 +33,7 @@
     "email": "nezo.benardi@storehub.com",
     "calendarId": "primary",
     "larkUserId": "",
-    "salesforceId": ""
+    "salesforceId": "",
+    "languages": ["English", "Bahasa Malaysia"]
   }
 }
