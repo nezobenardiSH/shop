@@ -308,26 +308,55 @@ Phantom events are busy times that appear in the system but don't actually exist
 
 #### Sources of Phantom Events
 
-##### 1. FreeBusy API Including External Events
-**Most Common Source**
+##### 1. Events Marked as "Free" Time ⭐ **MOST COMMON**
+**Root Cause of Jia En's Phantom Events**
+
+Events can exist in the calendar but be marked as "Free" instead of "Busy":
+- ✅ Event exists in calendar
+- ✅ Event has valid recurrence pattern
+- ✅ Event appears in Calendar Events API
+- ❌ **But `free_busy_status: "free"`** - should NOT block availability
+
+**Common "Free" Events**:
+- Personal reminders (e.g., "Review Jira", "Focus Time")
+- Tentative holds that don't prevent meetings
+- Private events visible only to owner
+- Working time blocks that don't block calendar
+
+**Problem**:
+If you don't check `free_busy_status`, these events will incorrectly block availability.
+
+**Example from Jia En's Calendar**:
+- Event: "👓 AM: Review Jira" at 9:00-9:30 AM
+- Recurrence: Every weekday (BYDAY=MO,TU,WE,TH,FR)
+- Status: `confirmed`
+- **Free/Busy Status**: `free` ← This is the key!
+- Result: Should NOT block Jia En's availability
+
+**Solution**:
+```typescript
+const freeBusyStatus = event.free_busy_status || 'busy'
+if (freeBusyStatus === 'busy') {
+  // Only include events marked as "busy"
+  busyTimes.push(...)
+}
+```
+
+##### 2. FreeBusy API Including External Events
+**Less Common in Our Case**
 
 The FreeBusy API aggregates busy times from:
 - ✅ Primary calendar (trainer's own events)
 - ⚠️ **External calendars** (calendars shared with trainer)
 - ⚠️ **Group meetings** (meetings trainer was invited to)
 - ⚠️ **Declined events** (events trainer declined but still show as busy)
-- ⚠️ **Tentative events** (events marked as "maybe")
 
 **Problem**: If Jia En has view access to another person's calendar, their events might appear in her FreeBusy response.
 
-**Example**:
-- Manager shares calendar with Jia En
-- Manager has meeting at 9:00-9:30 AM on Oct 15
-- FreeBusy API includes this in Jia En's busy times
-- System thinks Jia En is busy at 9:00-9:30 AM
+**Note**: In Jia En's case, FreeBusy API returned 0 events, so this was not the issue.
 
-##### 2. Incorrect Recurrence Rules
-**Less Common**
+##### 3. Incorrect Recurrence Rules
+**Rare**
 
 Recurring events might have incorrect recurrence patterns:
 - Event says "Every weekday" but should be "Mon, Tue, Thu, Fri"
@@ -339,13 +368,17 @@ Recurring events might have incorrect recurrence patterns:
 2. Check the recurrence pattern
 3. Verify it matches the days the event actually appears
 
-##### 3. Lark API Bugs
-**Rare but Possible**
+**Note**: In Jia En's case, recurrence rules were correct. The events DID recur on Wednesday as configured.
+
+##### 4. Lark API Bugs
+**Very Rare**
 
 The `/instances` endpoint might return incorrect instances:
 - Returns instances for days not in recurrence pattern
 - Includes cancelled instances
 - Timezone calculation errors
+
+**Note**: In Jia En's case, the API was working correctly. The issue was the `free_busy_status` field.
 
 #### How to Diagnose Phantom Events
 
@@ -372,15 +405,56 @@ For each recurring event:
 
 #### Solutions for Phantom Events
 
-##### Solution 1: Filter by Event Status
-Only include confirmed events:
+##### Solution 1: Filter by Free/Busy Status ⭐ **IMPLEMENTED**
+**The Correct Solution**
+
+Check the `free_busy_status` field and only include events marked as "busy":
+
+```typescript
+// For recurring event instances
+const freeBusyStatus = instance.free_busy_status || event.free_busy_status || 'busy'
+if (instance.status === 'confirmed' && freeBusyStatus === 'busy') {
+  busyTimes.push({
+    start_time: instanceStart.toISOString(),
+    end_time: instanceEnd.toISOString(),
+    source: `recurring:${event.summary}`,
+    recurrence: event.recurrence
+  })
+}
+
+// For one-time events
+const freeBusyStatus = event.free_busy_status || 'busy'
+if (freeBusyStatus === 'busy') {
+  busyTimes.push({
+    start_time: eventStart.toISOString(),
+    end_time: eventEnd.toISOString(),
+    source: `one-time:${event.summary}`,
+    event_id: event.event_id
+  })
+}
+```
+
+**Why This Works**:
+- Events marked as "free" are personal reminders, focus time, etc.
+- They exist in the calendar but don't block availability
+- Only events marked as "busy" should prevent booking
+
+**Result**:
+- ✅ Correctly excludes "Review Jira" events (marked as "free")
+- ✅ Correctly includes real meetings (marked as "busy")
+- ✅ Trainers show as available during "free" time blocks
+
+##### Solution 2: Filter by Event Status
+Only include confirmed events (already implemented):
 ```typescript
 if (instance.status === 'confirmed' && instance.status !== 'cancelled') {
   busyTimes.push(...)
 }
 ```
 
-##### Solution 2: Use Only Calendar Events API
+**Note**: This alone is not enough. You also need to check `free_busy_status`.
+
+##### Solution 3: Use Only Calendar Events API
 If FreeBusy is unreliable, rely solely on Calendar Events + `/instances`:
 ```typescript
 // Skip FreeBusy API entirely
@@ -393,7 +467,9 @@ const eventsResponse = await this.makeRequest(...)
 
 **Trade-off**: Might miss external calendar events and group meetings.
 
-##### Solution 3: Cross-Reference Both APIs
+**Note**: In our implementation, FreeBusy returned 0 events, so we're effectively using only Calendar Events API.
+
+##### Solution 4: Cross-Reference Both APIs
 Compare FreeBusy and Calendar Events results:
 ```typescript
 // Get both sources
@@ -408,31 +484,81 @@ const confirmedBusyTimes = freeBusyTimes.filter(fbTime =>
 
 **Trade-off**: Might miss legitimate events that only appear in one source.
 
-##### Solution 4: Whitelist Primary Calendar Only
-Configure FreeBusy to only check primary calendar:
+**Note**: Not needed if you filter by `free_busy_status` correctly.
+
+#### Real-World Case Study: Jia En's Calendar (October 15, 2025)
+
+**Problem Discovered:**
+System detected 5 busy times for Jia En on Wednesday, Oct 15, 2025:
+1. ❌ 9:00-9:30 AM - "👓 AM: Review Jira" (phantom)
+2. ✅ 9:45-10:00 AM - "Product Office: Daily Standup" (real)
+3. ✅ 11:00 AM-12:00 PM - "Product x Designer Weekly Review" (real)
+4. ❌ 1:00-1:15 PM - "👓 PM1: Review Jira" (phantom)
+5. ❌ 5:30-5:45 PM - "👓 PM2: Review Jira" (phantom)
+
+**Investigation Process:**
+
+1. **Checked FreeBusy API**: Returned 0 events ❌
+   - Ruled out FreeBusy as the source
+
+2. **Checked Calendar Events API**: Returned 5 events ✅
+   - All 5 events were recurring events
+   - All had valid recurrence patterns including Wednesday
+
+3. **Added Source Tracking**: Modified `getRawBusyTimes()` to tag each busy time with:
+   - `source`: "recurring:EventName" or "one-time:EventName"
+   - `recurrence`: The recurrence rule
+   - `event_id`: The event ID
+
+4. **Root Cause Identified**:
+   - The 3 "Review Jira" events exist in the calendar
+   - They ARE configured to recur on Wednesday (BYDAY=MO,TU,WE,TH,FR)
+   - **BUT they are marked as "Free" time** (`free_busy_status: "free"`)
+   - Events marked as "Free" should NOT block availability
+
+**Why "Free" Events Exist:**
+- Personal reminders (like "Review Jira")
+- Focus time blocks that don't prevent meetings
+- Tentative holds that shouldn't block the calendar
+- Events visible only to the owner, not to others viewing availability
+
+**The Fix:**
+Added filtering in `getRawBusyTimes()` to check `free_busy_status` field:
+
 ```typescript
-// In FreeBusy API request, specify only primary calendar
-const freeBusyResponse = await this.getFreeBusySchedule(
-  [trainerEmail],
-  startDate,
-  endDate,
-  trainerEmail,
-  { only_primary_calendar: true } // If Lark supports this
-)
+// For recurring event instances
+const freeBusyStatus = instance.free_busy_status || event.free_busy_status || 'busy'
+if (instance.status === 'confirmed' && freeBusyStatus === 'busy') {
+  // Include in busy times
+}
+
+// For one-time events
+const freeBusyStatus = event.free_busy_status || 'busy'
+if (freeBusyStatus === 'busy') {
+  // Include in busy times
+}
 ```
 
-**Note**: Check Lark API documentation for this capability.
+**Result After Fix:**
+- ✅ Only 2 busy times detected (9:45-10am, 11am-12pm)
+- ✅ Jia En shows as available during 9-11am (except 9:45-10am)
+- ✅ Jia En shows as available during 2-4pm
+- ✅ Jia En shows as available during 4-6pm
+- ❌ "Review Jira" events excluded (marked as "free")
+
+**Lesson Learned:**
+Always check `free_busy_status` field when determining availability. Events can exist in the calendar but be marked as "free" time, meaning they don't block the user's availability for meetings.
 
 #### Current Implementation Status
 
 **As of October 2025**:
 - ✅ Using combined approach (FreeBusy + Calendar Events + `/instances`)
 - ✅ Expanding recurring events via `/instances` endpoint
+- ✅ Filtering events by `free_busy_status` (only include "busy" events)
 - ✅ Deduplicating overlapping busy times
-- ⚠️ Phantom events still detected from FreeBusy API
-- 🔍 Investigation ongoing to identify source
+- ✅ Phantom events issue resolved
 
-**Debug Endpoint**: `/api/debug/jiaen-oct15` - Shows FreeBusy vs Calendar Events comparison
+**Debug Endpoint**: `/api/debug/jiaen-oct15` - Shows FreeBusy vs Calendar Events comparison with source tracking
 
 #### Best Practices
 
