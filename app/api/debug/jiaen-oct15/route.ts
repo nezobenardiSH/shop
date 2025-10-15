@@ -99,7 +99,10 @@ export async function GET() {
         end_utc: busy.end_time,
         start_sgt: startSGT,
         end_sgt: endSGT,
-        duration_minutes: (end.getTime() - start.getTime()) / (1000 * 60)
+        duration_minutes: (end.getTime() - start.getTime()) / (1000 * 60),
+        source: (busy as any).source || 'unknown',
+        event_id: (busy as any).event_id || null,
+        recurrence: (busy as any).recurrence || null
       }
     })
     

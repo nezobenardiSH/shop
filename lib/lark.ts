@@ -609,7 +609,9 @@ class LarkService {
                 console.log(`   ✅ Found ${instancesResponse.data.items.length} instances of recurring event "${event.summary}"`)
 
                 for (const instance of instancesResponse.data.items) {
-                  if (instance.start_time?.timestamp && instance.end_time?.timestamp && instance.status !== 'cancelled') {
+                  // Only include confirmed events, skip cancelled/tentative/declined
+                  if (instance.start_time?.timestamp && instance.end_time?.timestamp &&
+                      instance.status === 'confirmed') {
                     const startMs = parseInt(instance.start_time.timestamp) * 1000
                     const endMs = parseInt(instance.end_time.timestamp) * 1000
 
@@ -640,12 +642,16 @@ class LarkService {
                     if (withinRange) {
                       busyTimes.push({
                         start_time: instanceStart.toISOString(),
-                        end_time: instanceEnd.toISOString()
-                      })
-                      console.log(`      ✅ Added instance to busy times`)
+                        end_time: instanceEnd.toISOString(),
+                        source: `recurring:${event.summary}`,
+                        recurrence: event.recurrence
+                      } as any)
+                      console.log(`      ✅ Added RECURRING instance to busy times: "${event.summary}"`)
                     } else {
                       console.log(`      ⏭️  Skipped (outside range)`)
                     }
+                  } else if (instance.status && instance.status !== 'confirmed') {
+                    console.log(`   ⏭️  Skipped instance with status: ${instance.status}`)
                   }
                 }
               } else {
@@ -665,17 +671,35 @@ class LarkService {
             // Check if event is within our date range
             const withinRange = eventEnd >= startDate && eventStart <= endDate
 
-            console.log(`🔍 One-time Event: "${event.summary || 'No title'}"`)
-            console.log(`   Time: ${eventStart.toISOString()} to ${eventEnd.toISOString()}`)
+            // Log in Singapore time for readability
+            const startSGT = eventStart.toLocaleString('en-US', {
+              timeZone: 'Asia/Singapore',
+              month: 'short',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            })
+            const endSGT = eventEnd.toLocaleString('en-US', {
+              timeZone: 'Asia/Singapore',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            })
+
+            console.log(`🔍 ONE-TIME Event: "${event.summary || 'No title'}"`)
+            console.log(`   Time: ${startSGT} - ${endSGT} (UTC: ${eventStart.toISOString()})`)
             console.log(`   Status: ${event.status}`)
-            console.log(`   Within range (${startDate.toISOString()} to ${endDate.toISOString()}): ${withinRange}`)
+            console.log(`   Within range: ${withinRange}`)
 
             if (withinRange) {
               busyTimes.push({
                 start_time: eventStart.toISOString(),
-                end_time: eventEnd.toISOString()
-              })
-              console.log(`   ✅ Added to busy times`)
+                end_time: eventEnd.toISOString(),
+                source: `one-time:${event.summary || 'No title'}`,
+                event_id: event.event_id
+              } as any)
+              console.log(`   ✅ Added ONE-TIME event to busy times: "${event.summary || 'No title'}"`)
             } else {
               console.log(`   ❌ Skipped (outside date range)`)
             }
