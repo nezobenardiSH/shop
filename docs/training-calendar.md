@@ -162,15 +162,23 @@ const calendarId = await CalendarIdManager.getResolvedCalendarId('nezo.benardi@s
 **Purpose**: Core function that extracts busy periods from trainer's calendar
 
 **Process**:
-1. **Primary Method**: Try FreeBusy API for efficient bulk retrieval
-2. **Fallback Method**: Use Calendar Events API if FreeBusy fails
-3. **Recurring Events**: Process daily/weekly/monthly patterns
-4. **Special Cases**: Add manual recurring events (lunch meetings)
-5. **Output**: Array of busy time objects with UTC timestamps
+1. **FreeBusy API**: Get busy times from ALL calendars (external, group meetings)
+2. **Calendar Events API**: Get events from primary calendar
+3. **Recurring Event Detection**: Identify events with `recurrence` field
+4. **Recurring Event Expansion**: Call `/instances` endpoint to get all occurrences
+5. **Combine Sources**: Merge FreeBusy + Calendar Events + Recurring instances
+6. **Deduplication**: Sort and merge overlapping time periods
+7. **Output**: Array of unique busy time objects with UTC timestamps
 
 **API Endpoints Used**:
-- `POST /open-apis/calendar/v4/freebusy/list` (primary)
-- `GET /open-apis/calendar/v4/calendars/{calendar_id}/events` (fallback)
+- `POST /open-apis/calendar/v4/freebusy/list` - Gets busy times from all calendars
+- `GET /open-apis/calendar/v4/calendars/{calendar_id}/events` - Gets calendar events
+- `GET /open-apis/calendar/v4/calendars/{calendar_id}/events/{event_id}/instances` - Expands recurring events
+
+**Why We Need All Three**:
+- **FreeBusy API alone**: Misses recurring event instances (doesn't expand them properly)
+- **Calendar Events API alone**: Misses external calendars and group meetings
+- **Combined approach**: Complete picture of trainer availability
 
 #### `convertBusyTimesToAvailability(busyTimes: BusyTime[]): AvailabilitySlot[]`
 **Purpose**: Convert raw busy times into structured availability format
@@ -178,10 +186,263 @@ const calendarId = await CalendarIdManager.getResolvedCalendarId('nezo.benardi@s
 **Input**: Array of busy time periods
 **Output**: Formatted availability slots with trainer and language information
 
-#### `getAvailableSlots(trainerEmail: string, date: string): Promise<AvailableSlot[]>`
-**Purpose**: Get available time slots for a specific trainer on a specific date
+## Recurring Events and Phantom Events
 
-**Used by**: Booking validation and single-trainer availability checks
+### Understanding Recurring Events in Lark Calendar
+
+#### What Are Recurring Events?
+Recurring events are calendar events that repeat on a schedule (daily, weekly, monthly, etc.). In Lark Calendar:
+- **Event Definition**: Stored as 1 event with a recurrence rule (e.g., "Every Monday at 10am")
+- **Event Instances**: Individual occurrences of the recurring event (Oct 6 at 10am, Oct 13 at 10am, etc.)
+
+#### How Lark Stores Recurring Events
+When you query the Calendar Events API (`/calendars/{id}/events`), you get:
+- **The recurring event DEFINITION** with a `recurrence` field
+- **NOT the individual instances** - you must expand them separately
+
+**Example Event Definition**:
+```json
+{
+  "event_id": "abc123",
+  "summary": "Team Meeting",
+  "recurrence": "FREQ=WEEKLY;BYDAY=MO",
+  "start_time": { "timestamp": "1696838400" },
+  "end_time": { "timestamp": "1696842000" }
+}
+```
+
+This represents "Team Meeting every Monday at 10am" but doesn't tell you which specific Mondays.
+
+### The `/instances` Endpoint - Expanding Recurring Events
+
+#### Purpose
+The `/instances` endpoint expands a recurring event definition into individual occurrences within a date range.
+
+#### Endpoint
+```
+GET /open-apis/calendar/v4/calendars/{calendar_id}/events/{event_id}/instances?start_time={unix_timestamp}&end_time={unix_timestamp}
+```
+
+#### Parameters
+- `calendar_id`: The calendar containing the recurring event
+- `event_id`: The ID of the recurring event definition
+- `start_time`: Unix timestamp (seconds) - start of date range
+- `end_time`: Unix timestamp (seconds) - end of date range
+
+#### Response
+Returns an array of event instances that occur within the date range:
+```json
+{
+  "data": {
+    "items": [
+      {
+        "event_id": "instance_1",
+        "start_time": { "timestamp": "1696838400" },
+        "end_time": { "timestamp": "1696842000" },
+        "status": "confirmed"
+      },
+      {
+        "event_id": "instance_2",
+        "start_time": { "timestamp": "1697443200" },
+        "end_time": { "timestamp": "1697446800" },
+        "status": "confirmed"
+      }
+    ]
+  }
+}
+```
+
+#### Implementation in `getRawBusyTimes()`
+```typescript
+// 1. Detect recurring event definition
+if (event.recurrence && event.event_id) {
+  console.log(`🔁 RECURRING EVENT DEFINITION: "${event.summary}"`)
+
+  // 2. Fetch instances for this recurring event
+  const instancesResponse = await this.makeRequest(
+    `/open-apis/calendar/v4/calendars/${calendarId}/events/${event.event_id}/instances?start_time=${timeMin}&end_time=${timeMax}`,
+    { method: 'GET', userEmail: trainerEmail }
+  )
+
+  // 3. Process each instance
+  if (instancesResponse.data?.items?.length > 0) {
+    for (const instance of instancesResponse.data.items) {
+      if (instance.status !== 'cancelled') {
+        busyTimes.push({
+          start_time: instanceStart.toISOString(),
+          end_time: instanceEnd.toISOString()
+        })
+      }
+    }
+  }
+}
+```
+
+#### Why This Is Critical
+**Without `/instances` expansion**:
+- ❌ System only sees "Team Meeting - Every Monday" (the definition)
+- ❌ Doesn't know which specific Mondays the trainer is busy
+- ❌ Trainer appears available when they're actually in recurring meetings
+
+**With `/instances` expansion**:
+- ✅ System sees "Oct 6 at 10am", "Oct 13 at 10am", "Oct 20 at 10am"
+- ✅ Knows exactly when trainer is busy
+- ✅ Correctly blocks those time slots
+
+### Phantom Events Problem
+
+#### What Are Phantom Events?
+Phantom events are busy times that appear in the system but don't actually exist in the trainer's calendar for that specific date.
+
+#### Example
+**Jia En's Calendar on Oct 15, 2025 (Wednesday)**:
+- ✅ **Real Event**: 11:00 AM - 12:00 PM (recurring meeting every Wednesday)
+- ✅ **Real Event**: 9:45-10:00 AM (recurring meeting Mon, Wed, Fri)
+
+**System Detected**:
+- ✅ 11:00 AM - 12:00 PM (correct)
+- ✅ 9:45-10:00 AM (correct)
+- ❌ 9:00-9:30 AM (phantom - doesn't exist)
+- ❌ 1:00-1:15 PM (phantom - doesn't exist)
+- ❌ 5:30-5:45 PM (phantom - doesn't exist)
+
+#### Sources of Phantom Events
+
+##### 1. FreeBusy API Including External Events
+**Most Common Source**
+
+The FreeBusy API aggregates busy times from:
+- ✅ Primary calendar (trainer's own events)
+- ⚠️ **External calendars** (calendars shared with trainer)
+- ⚠️ **Group meetings** (meetings trainer was invited to)
+- ⚠️ **Declined events** (events trainer declined but still show as busy)
+- ⚠️ **Tentative events** (events marked as "maybe")
+
+**Problem**: If Jia En has view access to another person's calendar, their events might appear in her FreeBusy response.
+
+**Example**:
+- Manager shares calendar with Jia En
+- Manager has meeting at 9:00-9:30 AM on Oct 15
+- FreeBusy API includes this in Jia En's busy times
+- System thinks Jia En is busy at 9:00-9:30 AM
+
+##### 2. Incorrect Recurrence Rules
+**Less Common**
+
+Recurring events might have incorrect recurrence patterns:
+- Event says "Every weekday" but should be "Mon, Tue, Thu, Fri"
+- Event includes Wednesday when it shouldn't
+- Recurrence rule doesn't match actual calendar display
+
+**How to Check**:
+1. Click on the recurring event in Lark Calendar
+2. Check the recurrence pattern
+3. Verify it matches the days the event actually appears
+
+##### 3. Lark API Bugs
+**Rare but Possible**
+
+The `/instances` endpoint might return incorrect instances:
+- Returns instances for days not in recurrence pattern
+- Includes cancelled instances
+- Timezone calculation errors
+
+#### How to Diagnose Phantom Events
+
+##### Step 1: Check FreeBusy vs Calendar Events
+Use the debug endpoint to compare sources:
+```bash
+curl "https://your-app.com/api/debug/jiaen-oct15" | jq '.freeBusyTimes'
+```
+
+This shows which busy times come from FreeBusy API vs Calendar Events API.
+
+##### Step 2: Verify Calendar Display
+1. Open trainer's Lark Calendar
+2. Navigate to the specific date
+3. Check if phantom events appear in the calendar view
+4. If they don't appear, they're coming from external sources
+
+##### Step 3: Check Recurring Event Settings
+For each recurring event:
+1. Click on the event
+2. Check "Recurrence" settings
+3. Verify days of week match expected pattern
+4. Check if event is marked as "Busy" or "Free"
+
+#### Solutions for Phantom Events
+
+##### Solution 1: Filter by Event Status
+Only include confirmed events:
+```typescript
+if (instance.status === 'confirmed' && instance.status !== 'cancelled') {
+  busyTimes.push(...)
+}
+```
+
+##### Solution 2: Use Only Calendar Events API
+If FreeBusy is unreliable, rely solely on Calendar Events + `/instances`:
+```typescript
+// Skip FreeBusy API entirely
+const busyTimes = []
+
+// Only use Calendar Events API with /instances expansion
+const eventsResponse = await this.makeRequest(...)
+// Process events and expand recurring ones
+```
+
+**Trade-off**: Might miss external calendar events and group meetings.
+
+##### Solution 3: Cross-Reference Both APIs
+Compare FreeBusy and Calendar Events results:
+```typescript
+// Get both sources
+const freeBusyTimes = await getFreeBusySchedule(...)
+const calendarEventTimes = await getCalendarEvents(...)
+
+// Only include busy times that appear in BOTH sources
+const confirmedBusyTimes = freeBusyTimes.filter(fbTime =>
+  calendarEventTimes.some(ceTime => timesOverlap(fbTime, ceTime))
+)
+```
+
+**Trade-off**: Might miss legitimate events that only appear in one source.
+
+##### Solution 4: Whitelist Primary Calendar Only
+Configure FreeBusy to only check primary calendar:
+```typescript
+// In FreeBusy API request, specify only primary calendar
+const freeBusyResponse = await this.getFreeBusySchedule(
+  [trainerEmail],
+  startDate,
+  endDate,
+  trainerEmail,
+  { only_primary_calendar: true } // If Lark supports this
+)
+```
+
+**Note**: Check Lark API documentation for this capability.
+
+#### Current Implementation Status
+
+**As of October 2025**:
+- ✅ Using combined approach (FreeBusy + Calendar Events + `/instances`)
+- ✅ Expanding recurring events via `/instances` endpoint
+- ✅ Deduplicating overlapping busy times
+- ⚠️ Phantom events still detected from FreeBusy API
+- 🔍 Investigation ongoing to identify source
+
+**Debug Endpoint**: `/api/debug/jiaen-oct15` - Shows FreeBusy vs Calendar Events comparison
+
+#### Best Practices
+
+1. **Always expand recurring events** using `/instances` endpoint
+2. **Log all busy times** with source information (FreeBusy vs Calendar Events)
+3. **Verify against calendar display** when debugging availability issues
+4. **Check event status** - filter out cancelled/declined events
+5. **Document recurrence patterns** for each trainer's recurring meetings
+6. **Monitor for phantom events** using debug endpoints
+7. **Cross-reference multiple sources** when accuracy is critical
 
 ## Training Schedule Configuration
 
