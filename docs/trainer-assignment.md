@@ -138,15 +138,22 @@ Tooltip: "Please contact support to set up onboarding service"
 
 #### Onsite Training
 ```
-Show: Language selection checkboxes
+Show: Language selection checkboxes (only available languages enabled)
 Note: "Onsite training - filtered by language and location"
+Info: "Available languages: English, Bahasa Malaysia" (example for KL)
 ```
 
 #### Remote Training
 ```
-Show: Language selection checkboxes
-Note: "Remote training - all trainers available"
+Show: Language selection checkboxes (only available languages enabled)
+Note: "Remote training - all trainers available (filtered by language only)"
+Info: "Available languages: English, Bahasa Malaysia, Chinese" (all trainers)
 ```
+
+#### Dynamic Language Options
+- ✅ **Enabled**: Languages spoken by available trainers (clickable, normal color)
+- ❌ **Disabled**: Languages not spoken by any available trainer (grayed out, not clickable)
+- **Tooltip**: "No trainers available for this language" (on disabled options)
 
 ## Examples
 

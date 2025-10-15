@@ -81,6 +81,24 @@ export default function DatePickerModal({
     return shouldFilterByLocation(serviceType, bookingType)
   }, [serviceType, bookingType])
 
+  // Calculate available languages from the availability data
+  const availableLanguages = useMemo(() => {
+    const languagesSet = new Set<string>()
+
+    // Collect all languages from all available slots
+    availability.forEach(day => {
+      day.slots.forEach(slot => {
+        if (slot.available && slot.availableLanguages) {
+          slot.availableLanguages.forEach(lang => languagesSet.add(lang))
+        }
+      })
+    })
+
+    const languages = Array.from(languagesSet)
+    console.log('Available languages from trainers:', languages)
+    return languages
+  }, [availability])
+
   useEffect(() => {
     if (isOpen) {
       fetchAvailability()
@@ -329,58 +347,84 @@ export default function DatePickerModal({
                 Training Language (Select all that apply)
               </label>
               <div className="flex gap-3">
-                {['Chinese', 'Bahasa Malaysia', 'English'].map((lang) => (
-                  <label key={lang} className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-all ${
-                    selectedLanguages.includes(lang) 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      checked={selectedLanguages.includes(lang)}
-                      onChange={(e) => {
-                        setIsFilteringSlots(true)
-                        setTimeout(() => setIsFilteringSlots(false), 300) // Brief loading state
-                        
-                        if (e.target.checked) {
-                          const newLanguages = [...selectedLanguages, lang]
-                          console.log('Adding language:', lang, 'New languages:', newLanguages)
-                          setSelectedLanguages(newLanguages)
-                        } else {
-                          const newLanguages = selectedLanguages.filter(l => l !== lang)
-                          console.log('Removing language:', lang, 'New languages:', newLanguages)
-                          setSelectedLanguages(newLanguages)
-                          // Deselect slot if it doesn't match the new language selection
-                          if (selectedSlot && selectedSlot.availableLanguages) {
-                            const hasMatchingLanguage = newLanguages.some(l => 
-                              selectedSlot.availableLanguages?.includes(l)
-                            )
-                            if (!hasMatchingLanguage) {
-                              setSelectedSlot(null)
+                {['Chinese', 'Bahasa Malaysia', 'English'].map((lang) => {
+                  const isAvailable = availableLanguages.includes(lang)
+                  return (
+                    <label
+                      key={lang}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                        !isAvailable
+                          ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-200'
+                          : selectedLanguages.includes(lang)
+                            ? 'border-blue-500 bg-blue-50 cursor-pointer'
+                            : 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                      }`}
+                      title={!isAvailable ? 'No trainers available for this language' : ''}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedLanguages.includes(lang)}
+                        disabled={!isAvailable}
+                        onChange={(e) => {
+                          setIsFilteringSlots(true)
+                          setTimeout(() => setIsFilteringSlots(false), 300) // Brief loading state
+
+                          if (e.target.checked) {
+                            const newLanguages = [...selectedLanguages, lang]
+                            console.log('Adding language:', lang, 'New languages:', newLanguages)
+                            setSelectedLanguages(newLanguages)
+                          } else {
+                            const newLanguages = selectedLanguages.filter(l => l !== lang)
+                            console.log('Removing language:', lang, 'New languages:', newLanguages)
+                            setSelectedLanguages(newLanguages)
+                            // Deselect slot if it doesn't match the new language selection
+                            if (selectedSlot && selectedSlot.availableLanguages) {
+                              const hasMatchingLanguage = newLanguages.some(l =>
+                                selectedSlot.availableLanguages?.includes(l)
+                              )
+                              if (!hasMatchingLanguage) {
+                                setSelectedSlot(null)
+                              }
                             }
                           }
-                        }
-                      }}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">{lang}</span>
-                  </label>
-                ))}
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span className={`text-sm ${isAvailable ? 'text-gray-700' : 'text-gray-400'}`}>
+                        {lang}
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
 
               {/* Service Type Message */}
-              {serviceType !== 'none' && (
-                <div className={`mt-2 text-xs ${
-                  serviceType === 'onsite' ? 'text-blue-600' : 'text-green-600'
-                }`}>
-                  ℹ️ {getServiceTypeMessage(serviceType)}
-                </div>
-              )}
-              {serviceType === 'none' && (
-                <div className="mt-2 text-xs text-amber-600">
-                  ⚠️ {getServiceTypeMessage(serviceType)}
-                </div>
-              )}
+              <div className="mt-3 space-y-1">
+                {serviceType !== 'none' && (
+                  <div className={`text-xs ${
+                    serviceType === 'onsite' ? 'text-blue-600' : 'text-green-600'
+                  }`}>
+                    ℹ️ {getServiceTypeMessage(serviceType)}
+                  </div>
+                )}
+                {serviceType === 'none' && (
+                  <div className="text-xs text-amber-600">
+                    ⚠️ {getServiceTypeMessage(serviceType)}
+                  </div>
+                )}
+
+                {/* Show available trainers info */}
+                {availableLanguages.length > 0 && (
+                  <div className="text-xs text-gray-500">
+                    Available languages: {availableLanguages.join(', ')}
+                  </div>
+                )}
+                {availableLanguages.length === 0 && !loading && (
+                  <div className="text-xs text-amber-600">
+                    ⚠️ No trainers available for this location
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
