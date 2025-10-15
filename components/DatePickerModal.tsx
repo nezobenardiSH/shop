@@ -57,7 +57,7 @@ export default function DatePickerModal({
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['Chinese', 'Bahasa Malaysia', 'English'])
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
   const [isFilteringSlots, setIsFilteringSlots] = useState(false)
 
   useEffect(() => {
@@ -179,17 +179,32 @@ export default function DatePickerModal({
 
   const isDateAvailable = (date: Date | null) => {
     if (!date) return false
+
+    // Block weekends (Saturday = 6, Sunday = 0)
+    // Use the date's local day of week (already in local timezone)
+    const dayOfWeek = date.getDay()
+    console.log('Checking date:', date.toDateString(), 'Day of week:', dayOfWeek, ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek])
+
+    // Only block Saturday (6) and Sunday (0)
+    // Friday is 5, so it should NOT be blocked
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      console.log('  -> Blocked (weekend)')
+      return false
+    }
+
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const maxDate = new Date()
     maxDate.setDate(maxDate.getDate() + 30)
     maxDate.setHours(23, 59, 59, 999)
-    
+
     if (date < today || date > maxDate) return false
-    
+
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     const dayAvailability = availability.find(day => day.date === dateStr)
-    return dayAvailability && dayAvailability.slots.some(slot => slot.available)
+    const isAvailable = dayAvailability && dayAvailability.slots.some(slot => slot.available)
+    console.log('  -> Available:', isAvailable, 'Date string:', dateStr)
+    return isAvailable
   }
 
   const getDateSlots = (date: Date | null) => {

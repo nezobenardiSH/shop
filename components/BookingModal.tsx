@@ -54,7 +54,7 @@ export default function BookingModal({
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [assignedTrainer, setAssignedTrainer] = useState<string>('')
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['English'])
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
 
   useEffect(() => {
     if (isOpen) {

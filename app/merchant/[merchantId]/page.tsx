@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import DatePickerModal from '@/components/DatePickerModal'
 import OnboardingTimeline from '@/components/OnboardingTimeline'
@@ -71,11 +71,12 @@ const formatCurrency = (amount: number | null | undefined, currencyInfo: { symbo
   }
 }
 
-export default function TrainerPortal() {
+function TrainerPortalContent() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const trainerName = params.merchantId as string
-  
+
   const [trainerData, setTrainerData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [editingTrainer, setEditingTrainer] = useState<any>(null)
@@ -88,6 +89,7 @@ export default function TrainerPortal() {
   const [tempFieldValues, setTempFieldValues] = useState<{ [key: string]: string }>({})
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
+  const [hasProcessedUrlParam, setHasProcessedUrlParam] = useState(false)
 
   const loadTrainerData = async () => {
     setLoading(true)
@@ -169,6 +171,43 @@ export default function TrainerPortal() {
     }
   }, [trainerName])
 
+  // Handle URL parameters to auto-open booking modal
+  useEffect(() => {
+    if (!trainerData || hasProcessedUrlParam) return // Wait for trainer data to load and only process once
+
+    const bookingType = searchParams.get('booking')
+
+    // Valid booking types: pos-training, backoffice-training, installation
+    if (bookingType && ['pos-training', 'backoffice-training', 'installation'].includes(bookingType)) {
+      console.log('Auto-opening booking modal from URL parameter:', bookingType)
+
+      // Get the first trainer from the loaded data
+      const trainer = trainerData?.onboardingTrainerData?.trainers?.[0]
+
+      if (trainer) {
+        // Determine which actual trainer to use
+        let actualTrainerName = 'Nezo' // Default trainer
+        if (trainer.operationManagerContact?.name) {
+          actualTrainerName = trainer.operationManagerContact.name
+        }
+
+        setCurrentBookingInfo({
+          trainerId: trainer.id,
+          trainerName: actualTrainerName,
+          merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
+          merchantAddress: trainerData?.account?.billingAddress || '',
+          merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
+          merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
+          displayName: trainer.name,
+          bookingType: bookingType,
+          existingBooking: null
+        })
+        setBookingModalOpen(true)
+        setHasProcessedUrlParam(true)
+      }
+    }
+  }, [trainerData, searchParams, hasProcessedUrlParam, router, trainerName])
+
   const handleOpenBookingModal = (trainer: any) => {
     console.log('Opening booking modal with:', { bookingType: trainer.bookingType, trainer });
     
@@ -197,6 +236,8 @@ export default function TrainerPortal() {
     //   existingDate = trainer.trainingDate;
     // }
     
+    const bookingType = trainer.bookingType || 'training'
+
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
@@ -205,26 +246,40 @@ export default function TrainerPortal() {
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
-      bookingType: trainer.bookingType || 'training', // Pass the booking type
+      bookingType: bookingType, // Pass the booking type
       existingBooking: null // Don't pass existing booking for now, let user select new date
     })
     setBookingModalOpen(true)
+
+    // Update URL to include booking parameter
+    router.push(`/merchant/${trainerName}?booking=${bookingType}`, { scroll: false })
   }
 
   const handleBookingComplete = async (selectedDate?: string) => {
     console.log('Booking completed, refreshing trainer data...')
     setSuccessMessage('Booking confirmed! Refreshing data...')
-    
+
     // Refresh the trainer data to show the new training date
     await loadTrainerData()
-    
+
     // Clear booking modal state
     setBookingModalOpen(false)
     setCurrentBookingInfo(null)
-    
+
+    // Remove booking parameter from URL
+    router.push(`/merchant/${trainerName}`, { scroll: false })
+
     // Show success message for a few seconds
     setSuccessMessage('Training date updated successfully!')
     setTimeout(() => setSuccessMessage(''), 5000)
+  }
+
+  const handleCloseBookingModal = () => {
+    setBookingModalOpen(false)
+    setCurrentBookingInfo(null)
+
+    // Remove booking parameter from URL
+    router.push(`/merchant/${trainerName}`, { scroll: false })
   }
 
   const startEditing = (trainer: any) => {
@@ -592,7 +647,7 @@ export default function TrainerPortal() {
         {bookingModalOpen && currentBookingInfo && (
           <DatePickerModal
             isOpen={bookingModalOpen}
-            onClose={() => setBookingModalOpen(false)}
+            onClose={handleCloseBookingModal}
             merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
             merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
             merchantAddress={currentBookingInfo.merchantAddress}
@@ -609,5 +664,16 @@ export default function TrainerPortal() {
         <WhatsAppButton />
       </div>
     </div>
+  )
+}
+
+// Wrapper component with Suspense for useSearchParams
+export default function TrainerPortal() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#faf9f6] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff630f]"></div>
+    </div>}>
+      <TrainerPortalContent />
+    </Suspense>
   )
 }

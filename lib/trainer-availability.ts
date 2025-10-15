@@ -150,10 +150,15 @@ export async function getCombinedAvailability(
   const current = new Date(startDate)
   while (current <= endDate) {
     const dayOfWeek = current.getDay()
-    
-    // Only weekdays
+
+    // Only weekdays (Monday=1 to Friday=5)
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      const dateStr = current.toISOString().split('T')[0]
+      // Extract date components directly from the Date object (which is already in Singapore timezone)
+      // Don't use toISOString() as it converts to UTC and may shift the date
+      const year = current.getFullYear()
+      const month = String(current.getMonth() + 1).padStart(2, '0')
+      const day = String(current.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
       
       // Create slots based on real trainer availability
       const slots: TimeSlot[] = []
