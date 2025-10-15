@@ -191,8 +191,17 @@ function TrainerPortalContent() {
           actualTrainerName = trainer.operationManagerContact.name
         }
 
-        // Use shipping state for location-based trainer filtering
-        const merchantAddress = trainer.shippingState || ''
+        // Use training location (orderShippingAddress) for location-based trainer filtering
+        let merchantAddress = ''
+        if (trainer.orderShippingAddress) {
+          if (typeof trainer.orderShippingAddress === 'string') {
+            merchantAddress = trainer.orderShippingAddress
+          } else {
+            // Extract state from orderShippingAddress object
+            merchantAddress = trainer.orderShippingAddress.state ||
+                            trainer.orderShippingAddress.stateCode || ''
+          }
+        }
 
         setCurrentBookingInfo({
           trainerId: trainer.id,
@@ -242,8 +251,17 @@ function TrainerPortalContent() {
     
     const bookingType = trainer.bookingType || 'training'
 
-    // Use shipping state for location-based trainer filtering
-    const merchantAddress = trainer.shippingState || ''
+    // Use training location (orderShippingAddress) for location-based trainer filtering
+    let merchantAddress = ''
+    if (trainer.orderShippingAddress) {
+      if (typeof trainer.orderShippingAddress === 'string') {
+        merchantAddress = trainer.orderShippingAddress
+      } else {
+        // Extract state from orderShippingAddress object
+        merchantAddress = trainer.orderShippingAddress.state ||
+                        trainer.orderShippingAddress.stateCode || ''
+      }
+    }
 
     setCurrentBookingInfo({
       trainerId: trainer.id,
