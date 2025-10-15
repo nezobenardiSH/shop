@@ -140,7 +140,8 @@ export async function POST(request: NextRequest) {
           date,
           startTime,
           endTime,
-          bookingType
+          bookingType,
+          merchantName  // Pass merchant name as trainer name for event title
         )
         
         console.log('✅ Real calendar event created successfully:', eventId)

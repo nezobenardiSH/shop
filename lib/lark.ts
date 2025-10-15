@@ -1029,7 +1029,8 @@ class LarkService {
     date: string,
     startTime: string,
     endTime: string,
-    bookingType: string = 'training'
+    bookingType: string = 'training',
+    trainerName?: string
   ): Promise<string> {
     console.log('🔍 bookTraining called with:', {
       trainerEmail,
@@ -1114,9 +1115,39 @@ class LarkService {
         description += `• Support handover\n`
         break
         
+      case 'pos-training':
+        eventTitle = trainerName ? `POS Training: ${trainerName}` : `POS Training: ${merchantInfo.name}`
+        description = `POS Training Session\n\n`
+        description += `Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.address) {
+          description += `Address: ${merchantInfo.address}\n`
+        }
+        if (merchantInfo.phone) {
+          description += `Phone: ${merchantInfo.phone}\n`
+        }
+        if (merchantInfo.contactPerson) {
+          description += `Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        break
+
+      case 'backoffice-training':
+        eventTitle = trainerName ? `BackOffice Training: ${trainerName}` : `BackOffice Training: ${merchantInfo.name}`
+        description = `BackOffice Training Session\n\n`
+        description += `Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.address) {
+          description += `Address: ${merchantInfo.address}\n`
+        }
+        if (merchantInfo.phone) {
+          description += `Phone: ${merchantInfo.phone}\n`
+        }
+        if (merchantInfo.contactPerson) {
+          description += `Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        break
+
       case 'training':
       default:
-        eventTitle = `Training: ${merchantInfo.name}`
+        eventTitle = trainerName ? `Training: ${trainerName}` : `Training: ${merchantInfo.name}`
         description = `Onboarding Training Session\n\n`
         description += `Merchant: ${merchantInfo.name}\n`
         if (merchantInfo.address) {
