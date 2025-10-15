@@ -33,17 +33,33 @@ export interface TrainerAvailability {
 /**
  * Get combined availability from all trainers
  * Shows a slot as available if ANY trainer is free
+ * @param startDate - Start date for availability check
+ * @param endDate - End date for availability check
+ * @param merchantAddress - Optional merchant address for location-based filtering
  */
 export async function getCombinedAvailability(
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  merchantAddress?: string
 ): Promise<DayAvailability[]> {
   console.log('Getting combined availability for all trainers...')
-  
+  if (merchantAddress) {
+    console.log('Filtering by merchant address:', merchantAddress)
+  }
+
   // Get all configured trainers
-  const trainers = trainersConfig.trainers.filter(t => 
+  let trainers = trainersConfig.trainers.filter(t =>
     t.email && t.name !== 'Nasi Lemak' // Exclude merchant entries
   )
+
+  // Filter by location if merchant address is provided
+  if (merchantAddress) {
+    const { filterTrainersByLocation } = await import('./location-matcher')
+    const filteredTrainers = filterTrainersByLocation(trainers, merchantAddress)
+    console.log(`Location filtering: ${trainers.length} trainers → ${filteredTrainers.length} trainers`)
+    console.log('Trainers after location filter:', filteredTrainers.map(t => t.name))
+    trainers = filteredTrainers
+  }
   
   console.log(`Checking availability for ${trainers.length} trainers:`, trainers.map(t => t.name))
   

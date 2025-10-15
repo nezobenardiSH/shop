@@ -200,6 +200,7 @@ function TrainerPortalContent() {
           merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
           displayName: trainer.name,
           bookingType: bookingType,
+          onboardingServicesBought: trainer.onboardingServicesBought,
           existingBooking: null
         })
         setBookingModalOpen(true)
@@ -247,6 +248,7 @@ function TrainerPortalContent() {
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
       bookingType: bookingType, // Pass the booking type
+      onboardingServicesBought: trainer.onboardingServicesBought,
       existingBooking: null // Don't pass existing booking for now, let user select new date
     })
     setBookingModalOpen(true)
@@ -655,6 +657,7 @@ function TrainerPortalContent() {
             merchantContactPerson={currentBookingInfo.merchantContactPerson}
             trainerName={currentBookingInfo.trainerName}
             bookingType={currentBookingInfo.bookingType}
+            onboardingServicesBought={currentBookingInfo.onboardingServicesBought}
             currentBooking={currentBookingInfo.existingBooking}
             onBookingComplete={handleBookingComplete}
           />

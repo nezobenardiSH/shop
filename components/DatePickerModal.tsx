@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { X, ChevronLeft, ChevronRight, Calendar, Clock, Globe } from 'lucide-react'
+import { detectServiceType, getServiceTypeMessage, shouldFilterByLocation, type ServiceType } from '@/lib/service-type-detector'
 
 interface DatePickerModalProps {
   isOpen: boolean
@@ -13,6 +14,7 @@ interface DatePickerModalProps {
   merchantContactPerson?: string
   trainerName: string
   bookingType?: string
+  onboardingServicesBought?: string | null
   currentBooking?: {
     eventId: string
     date: string
@@ -47,6 +49,7 @@ export default function DatePickerModal({
   merchantContactPerson,
   trainerName,
   bookingType = 'training',
+  onboardingServicesBought,
   currentBooking,
   onBookingComplete
 }: DatePickerModalProps) {
@@ -59,6 +62,24 @@ export default function DatePickerModal({
   const [message, setMessage] = useState('')
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
   const [isFilteringSlots, setIsFilteringSlots] = useState(false)
+
+  // Detect service type for training bookings
+  const serviceType: ServiceType = useMemo(() => {
+    const isTraining = bookingType === 'training' ||
+                       bookingType === 'pos-training' ||
+                       bookingType === 'backoffice-training'
+
+    if (!isTraining) {
+      return 'none' // Not a training booking, service type doesn't apply
+    }
+
+    return detectServiceType(onboardingServicesBought)
+  }, [bookingType, onboardingServicesBought])
+
+  // Determine if location filtering should be applied
+  const filterByLocation = useMemo(() => {
+    return shouldFilterByLocation(serviceType, bookingType)
+  }, [serviceType, bookingType])
 
   useEffect(() => {
     if (isOpen) {
@@ -73,7 +94,14 @@ export default function DatePickerModal({
     setLoading(true)
     setMessage('')
     try {
-      const response = await fetch(`/api/lark/availability?trainerName=${encodeURIComponent(trainerName)}`)
+      // Build URL with merchant address if location filtering is needed
+      let url = `/api/lark/availability?trainerName=${encodeURIComponent(trainerName)}`
+
+      if (filterByLocation && merchantAddress) {
+        url += `&merchantAddress=${encodeURIComponent(merchantAddress)}`
+      }
+
+      const response = await fetch(url)
       const data = await response.json()
       
       if (response.ok) {
@@ -339,6 +367,20 @@ export default function DatePickerModal({
                   </label>
                 ))}
               </div>
+
+              {/* Service Type Message */}
+              {serviceType !== 'none' && (
+                <div className={`mt-2 text-xs ${
+                  serviceType === 'onsite' ? 'text-blue-600' : 'text-green-600'
+                }`}>
+                  ℹ️ {getServiceTypeMessage(serviceType)}
+                </div>
+              )}
+              {serviceType === 'none' && (
+                <div className="mt-2 text-xs text-amber-600">
+                  ⚠️ {getServiceTypeMessage(serviceType)}
+                </div>
+              )}
             </div>
           )}
         </div>

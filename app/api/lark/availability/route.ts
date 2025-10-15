@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const mode = searchParams.get('mode') || 'combined' // 'combined' or 'single'
     const trainerName = searchParams.get('trainerName')
-    
+    const merchantAddress = searchParams.get('merchantAddress') // For location-based filtering
+
     // Start from midnight of current day in Singapore timezone
     const now = new Date()
     const singaporeNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}))
@@ -18,8 +19,8 @@ export async function GET(request: NextRequest) {
     endDateSingapore.setDate(endDateSingapore.getDate() + 30)
     const endDate = new Date(`${endDateSingapore.getFullYear()}-${String(endDateSingapore.getMonth() + 1).padStart(2, '0')}-${String(endDateSingapore.getDate()).padStart(2, '0')}T23:59:59+08:00`)
 
-    // Get combined availability from all trainers
-    const availability = await getCombinedAvailability(startDate, endDate)
+    // Get combined availability from all trainers (with optional location filtering)
+    const availability = await getCombinedAvailability(startDate, endDate, merchantAddress || undefined)
     
     console.log(`Combined availability: ${availability.length} days with slots`)
 
