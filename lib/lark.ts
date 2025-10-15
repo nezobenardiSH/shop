@@ -609,9 +609,12 @@ class LarkService {
                 console.log(`   ✅ Found ${instancesResponse.data.items.length} instances of recurring event "${event.summary}"`)
 
                 for (const instance of instancesResponse.data.items) {
-                  // Only include confirmed events, skip cancelled/tentative/declined
+                  // Check free_busy_status: "busy" or "free"
+                  const freeBusyStatus = instance.free_busy_status || event.free_busy_status || 'busy'
+
+                  // Only include confirmed events that are marked as "busy", skip cancelled/tentative/declined/free
                   if (instance.start_time?.timestamp && instance.end_time?.timestamp &&
-                      instance.status === 'confirmed') {
+                      instance.status === 'confirmed' && freeBusyStatus === 'busy') {
                     const startMs = parseInt(instance.start_time.timestamp) * 1000
                     const endMs = parseInt(instance.end_time.timestamp) * 1000
 
@@ -637,7 +640,7 @@ class LarkService {
                     })
 
                     console.log(`   📍 Instance: ${startSGT} - ${endSGT} (UTC: ${instanceStart.toISOString()})`)
-                    console.log(`      Status: ${instance.status}, Within range: ${withinRange}`)
+                    console.log(`      Status: ${instance.status}, Free/Busy: ${freeBusyStatus}, Within range: ${withinRange}`)
 
                     if (withinRange) {
                       busyTimes.push({
@@ -650,8 +653,11 @@ class LarkService {
                     } else {
                       console.log(`      ⏭️  Skipped (outside range)`)
                     }
-                  } else if (instance.status && instance.status !== 'confirmed') {
-                    console.log(`   ⏭️  Skipped instance with status: ${instance.status}`)
+                  } else {
+                    const skipReason = !instance.start_time?.timestamp ? 'missing timestamp' :
+                                      instance.status !== 'confirmed' ? `status: ${instance.status}` :
+                                      freeBusyStatus === 'free' ? 'marked as FREE' : 'unknown'
+                    console.log(`   ⏭️  Skipped instance: ${skipReason}`)
                   }
                 }
               } else {
@@ -662,46 +668,53 @@ class LarkService {
             }
           } else if (event.start_time?.timestamp && event.end_time?.timestamp && event.status !== 'cancelled') {
             // Non-recurring event (one-time event)
-            const startMs = parseInt(event.start_time.timestamp) * 1000
-            const endMs = parseInt(event.end_time.timestamp) * 1000
+            const freeBusyStatus = event.free_busy_status || 'busy'
 
-            const eventStart = new Date(startMs)
-            const eventEnd = new Date(endMs)
+            // Only include events marked as "busy"
+            if (freeBusyStatus === 'busy') {
+              const startMs = parseInt(event.start_time.timestamp) * 1000
+              const endMs = parseInt(event.end_time.timestamp) * 1000
 
-            // Check if event is within our date range
-            const withinRange = eventEnd >= startDate && eventStart <= endDate
+              const eventStart = new Date(startMs)
+              const eventEnd = new Date(endMs)
 
-            // Log in Singapore time for readability
-            const startSGT = eventStart.toLocaleString('en-US', {
-              timeZone: 'Asia/Singapore',
-              month: 'short',
-              day: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            })
-            const endSGT = eventEnd.toLocaleString('en-US', {
-              timeZone: 'Asia/Singapore',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            })
+              // Check if event is within our date range
+              const withinRange = eventEnd >= startDate && eventStart <= endDate
 
-            console.log(`🔍 ONE-TIME Event: "${event.summary || 'No title'}"`)
-            console.log(`   Time: ${startSGT} - ${endSGT} (UTC: ${eventStart.toISOString()})`)
-            console.log(`   Status: ${event.status}`)
-            console.log(`   Within range: ${withinRange}`)
+              // Log in Singapore time for readability
+              const startSGT = eventStart.toLocaleString('en-US', {
+                timeZone: 'Asia/Singapore',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })
+              const endSGT = eventEnd.toLocaleString('en-US', {
+                timeZone: 'Asia/Singapore',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })
 
-            if (withinRange) {
-              busyTimes.push({
-                start_time: eventStart.toISOString(),
-                end_time: eventEnd.toISOString(),
-                source: `one-time:${event.summary || 'No title'}`,
-                event_id: event.event_id
-              } as any)
-              console.log(`   ✅ Added ONE-TIME event to busy times: "${event.summary || 'No title'}"`)
+              console.log(`🔍 ONE-TIME Event: "${event.summary || 'No title'}"`)
+              console.log(`   Time: ${startSGT} - ${endSGT} (UTC: ${eventStart.toISOString()})`)
+              console.log(`   Status: ${event.status}, Free/Busy: ${freeBusyStatus}`)
+              console.log(`   Within range: ${withinRange}`)
+
+              if (withinRange) {
+                busyTimes.push({
+                  start_time: eventStart.toISOString(),
+                  end_time: eventEnd.toISOString(),
+                  source: `one-time:${event.summary || 'No title'}`,
+                  event_id: event.event_id
+                } as any)
+                console.log(`   ✅ Added ONE-TIME event to busy times: "${event.summary || 'No title'}"`)
+              } else {
+                console.log(`   ❌ Skipped (outside date range)`)
+              }
             } else {
-              console.log(`   ❌ Skipped (outside date range)`)
+              console.log(`🔍 Skipping ONE-TIME event: "${event.summary || 'No title'}" (marked as FREE)`)
             }
           } else {
             console.log(`🔍 Skipping event: "${event.summary || 'No title'}" (missing timestamp or cancelled)`)
