@@ -44,7 +44,7 @@ export function getServiceTypeMessage(serviceType: ServiceType, state?: string):
     case 'remote':
       return 'Training: Remote'
     case 'none':
-      return 'Please contact support to set up onboarding service'
+      return 'Service type not set - booking will be treated as remote training'
   }
 }
 
@@ -59,15 +59,16 @@ export function shouldFilterByLocation(
   bookingType?: string
 ): boolean {
   // Only apply location filtering for training bookings
-  const isTraining = bookingType === 'training' || 
-                     bookingType === 'pos-training' || 
+  const isTraining = bookingType === 'training' ||
+                     bookingType === 'pos-training' ||
                      bookingType === 'backoffice-training'
-  
+
   if (!isTraining) {
     return false
   }
-  
+
   // For training, only filter by location if it's onsite
+  // If service type is 'none', treat as remote (no location filtering)
   return serviceType === 'onsite'
 }
 
@@ -77,7 +78,9 @@ export function shouldFilterByLocation(
  * @returns true if booking is allowed
  */
 export function canBook(serviceType: ServiceType): boolean {
-  return serviceType === 'onsite' || serviceType === 'remote'
+  // Allow booking even if service type is 'none'
+  // The merchant can still book training, just show a warning
+  return true
 }
 
 /**
