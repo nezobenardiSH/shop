@@ -212,11 +212,16 @@ export default function DatePickerModal({
         onBookingComplete(dateStr)
       } else {
         setBookingStatus('error')
-        setMessage(data.error || 'Failed to book')
+        const errorMsg = data.error || data.message || 'Failed to book'
+        const errorDetails = data.details ? ` - ${data.details}` : ''
+        setMessage(errorMsg + errorDetails)
+        console.error('Booking failed:', data)
       }
     } catch (error) {
       setBookingStatus('error')
-      setMessage('Failed to book')
+      const errorMsg = error instanceof Error ? error.message : 'Failed to book'
+      setMessage(`Booking error: ${errorMsg}`)
+      console.error('Booking error:', error)
     }
   }
 
