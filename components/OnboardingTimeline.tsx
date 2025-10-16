@@ -659,6 +659,50 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                       View Setup Guide
                     </a>
                   </div>
+
+                  {/* Video Checklist Instructions */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                    <div className="text-sm font-semibold text-blue-900">
+                      📱 Quick Tip: Hold your phone sideways (horizontally) while recording! Landscape mode works best. ↔️
+                    </div>
+
+                    <div className="text-sm font-semibold text-gray-900 mt-3">
+                      Your 1-Minute Video Checklist
+                    </div>
+                    <div className="text-xs text-gray-600 mb-2">
+                      In one continuous video, please walk us through these 3 stops:
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="bg-white rounded p-2 border border-blue-100">
+                        <div className="font-semibold text-gray-900 mb-1">📍 Stop 1: Your Main Counter</div>
+                        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
+                          <li><span className="font-medium">Show us:</span> Where your new terminal and receipt printer will go.</li>
+                          <li><span className="font-medium">Zoom in on:</span> The nearby power sockets (🔌) and LAN port (🌐).</li>
+                          <li><span className="font-medium">🎤 Say:</span> "Counter ready!"</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-white rounded p-2 border border-blue-100">
+                        <div className="font-semibold text-gray-900 mb-1">📍 Stop 2: Your Kitchen</div>
+                        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
+                          <li><span className="font-medium">Show us:</span> The spot for your kitchen printer.</li>
+                          <li><span className="font-medium">Zoom in on:</span> Its dedicated power socket (🔌) and LAN port (🌐).</li>
+                          <li><span className="font-medium">🎤 Say:</span> "Kitchen ready!" <span className="text-gray-500">(If you have more than one kitchen printer, please show each spot.)</span></li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-white rounded p-2 border border-blue-100">
+                        <div className="font-semibold text-gray-900 mb-1">📍 Stop 3: Your Bar (if applicable)</div>
+                        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
+                          <li><span className="font-medium">Show us:</span> The spot for your bar printer.</li>
+                          <li><span className="font-medium">Zoom in on:</span> Its power socket (🔌) and LAN port (🌐).</li>
+                          <li><span className="font-medium">🎤 Say:</span> "Bar ready!"</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Video Proof Status</div>
                     <div className="text-base text-gray-900">
@@ -1404,7 +1448,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
                 {/* Expanded Details for Store Setup */}
                 {expandedItems['store-setup'] && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
                     <div>
                       <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Setup Guide</div>
                       <div className="text-sm font-medium text-gray-900">
@@ -1419,6 +1463,49 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
                         </a>
+                      </div>
+                    </div>
+
+                    {/* Video Checklist Instructions */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                      <div className="text-sm font-semibold text-blue-900">
+                        📱 Quick Tip: Hold your phone sideways (horizontally) while recording! Landscape mode works best. ↔️
+                      </div>
+
+                      <div className="text-sm font-semibold text-gray-900 mt-2">
+                        Your 1-Minute Video Checklist
+                      </div>
+                      <div className="text-xs text-gray-600 mb-2">
+                        In one continuous video, please walk us through these 3 stops:
+                      </div>
+
+                      <div className="space-y-2 text-xs">
+                        <div className="bg-white rounded p-2 border border-blue-100">
+                          <div className="font-semibold text-gray-900 mb-1">📍 Stop 1: Your Main Counter</div>
+                          <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
+                            <li><span className="font-medium">Show us:</span> Where your new terminal and receipt printer will go.</li>
+                            <li><span className="font-medium">Zoom in on:</span> The nearby power sockets (🔌) and LAN port (🌐).</li>
+                            <li><span className="font-medium">🎤 Say:</span> "Counter ready!"</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-white rounded p-2 border border-blue-100">
+                          <div className="font-semibold text-gray-900 mb-1">📍 Stop 2: Your Kitchen</div>
+                          <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
+                            <li><span className="font-medium">Show us:</span> The spot for your kitchen printer.</li>
+                            <li><span className="font-medium">Zoom in on:</span> Its dedicated power socket (🔌) and LAN port (🌐).</li>
+                            <li><span className="font-medium">🎤 Say:</span> "Kitchen ready!" <span className="text-gray-500">(If you have more than one kitchen printer, please show each spot.)</span></li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-white rounded p-2 border border-blue-100">
+                          <div className="font-semibold text-gray-900 mb-1">📍 Stop 3: Your Bar (if applicable)</div>
+                          <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
+                            <li><span className="font-medium">Show us:</span> The spot for your bar printer.</li>
+                            <li><span className="font-medium">Zoom in on:</span> Its power socket (🔌) and LAN port (🌐).</li>
+                            <li><span className="font-medium">🎤 Say:</span> "Bar ready!"</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
 
