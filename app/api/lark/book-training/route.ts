@@ -252,9 +252,16 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // Update Onboarding_Trainer__c record
+        // For DateTime fields, we need to include the time in ISO format
+        const dateTimeValue = `${date}T${startTime}:00+08:00` // Singapore timezone
+
+        console.log('Updating Salesforce field:', mapping.field)
+        console.log('Date value:', date)
+        console.log('DateTime value:', dateTimeValue)
+
         updateResult = await conn.sobject('Onboarding_Trainer__c').update({
           Id: merchantId,
-          [mapping.field]: date // Salesforce Date field expects YYYY-MM-DD
+          [mapping.field]: dateTimeValue // Salesforce DateTime field expects ISO format with timezone
         })
       }
       
