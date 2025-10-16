@@ -19,6 +19,21 @@ interface OnboardingTimelineProps {
   onOpenBookingModal?: (bookingInfo: any) => void
 }
 
+// Helper function to format date with time
+const formatDateTime = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'Not Set'
+
+  const date = new Date(dateString)
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+}
+
 export default function OnboardingTimeline({ currentStage, stageData, trainerData, onBookingComplete, onOpenBookingModal }: OnboardingTimelineProps) {
   const [stages, setStages] = useState<TimelineStage[]>([])
   // Initialize selectedStage based on welcome call completion status
@@ -409,25 +424,19 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Installation:</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {trainerData?.installationDate
-                      ? new Date(trainerData.installationDate).toLocaleDateString()
-                      : 'Not Set'}
+                    {formatDateTime(trainerData?.installationDate)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">POS Training:</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {trainerData?.posTrainingDate
-                      ? new Date(trainerData.posTrainingDate).toLocaleDateString()
-                      : 'Not Set'}
+                    {formatDateTime(trainerData?.posTrainingDate)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">BO Training:</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {trainerData?.backOfficeTrainingDate
-                      ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString()
-                      : 'Not Set'}
+                    {formatDateTime(trainerData?.backOfficeTrainingDate)}
                   </span>
                 </div>
               </div>
@@ -773,7 +782,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="flex items-center justify-between">
                 <span className="text-base font-medium text-gray-900">
                   {trainerData?.installationDate
-                    ? new Date(trainerData.installationDate).toLocaleDateString()
+                    ? formatDateTime(trainerData.installationDate)
                     : 'Not Scheduled'}
                 </span>
                 <button
@@ -848,7 +857,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="flex items-center justify-between">
                 <span className="text-base font-medium text-gray-900">
                   {trainerData?.posTrainingDate
-                    ? new Date(trainerData.posTrainingDate).toLocaleDateString()
+                    ? formatDateTime(trainerData.posTrainingDate)
                     : 'Not Scheduled'}
                 </span>
                 <button
@@ -859,13 +868,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </button>
               </div>
             </div>
-            
+
             <div>
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">BackOffice Training Date</div>
               <div className="flex items-center justify-between">
                 <span className="text-base font-medium text-gray-900">
                   {trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
-                    ? new Date(trainerData.backOfficeTrainingDate || trainerData.trainingDate).toLocaleDateString()
+                    ? formatDateTime(trainerData.backOfficeTrainingDate || trainerData.trainingDate)
                     : 'Not Scheduled'}
                 </span>
                 <button
@@ -1641,25 +1650,19 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">• Installation date:</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {trainerData?.installationDate
-                      ? new Date(trainerData.installationDate).toLocaleDateString()
-                      : 'Not Set'}
+                    {formatDateTime(trainerData?.installationDate)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">• POS Training Date:</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {trainerData?.posTrainingDate
-                      ? new Date(trainerData.posTrainingDate).toLocaleDateString()
-                      : 'Not Set'}
+                    {formatDateTime(trainerData?.posTrainingDate)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">• BackOffice Training Date:</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {trainerData?.backOfficeTrainingDate
-                      ? new Date(trainerData.backOfficeTrainingDate).toLocaleDateString()
-                      : 'Not Set'}
+                    {formatDateTime(trainerData?.backOfficeTrainingDate)}
                   </span>
                 </div>
               </div>
@@ -1687,7 +1690,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="flex items-center gap-2">
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.installationDate
-                    ? new Date(trainerData.installationDate).toLocaleDateString()
+                    ? formatDateTime(trainerData.installationDate)
                     : 'Not Scheduled'}
                 </div>
                 <button
@@ -1792,7 +1795,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="flex items-center gap-2">
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.posTrainingDate
-                    ? new Date(trainerData.posTrainingDate).toLocaleDateString()
+                    ? formatDateTime(trainerData.posTrainingDate)
                     : 'Not Scheduled'}
                 </div>
                 <button
@@ -1813,7 +1816,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="flex items-center gap-2">
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
-                    ? new Date(trainerData.backOfficeTrainingDate || trainerData.trainingDate).toLocaleDateString()
+                    ? formatDateTime(trainerData.backOfficeTrainingDate || trainerData.trainingDate)
                     : 'Not Scheduled'}
                 </div>
                 <button
