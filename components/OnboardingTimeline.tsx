@@ -1193,24 +1193,34 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
       {/* Desktop Only: Preparation Status Overview - Prominent */}
       {selectedStage === 'preparation' && (
-        <div className="hidden md:block bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-lg font-semibold text-gray-900">Preparation Progress</h4>
-            <div className="text-sm text-gray-500">
-              {(() => {
-                const hardwareDeliveryCompleted = !!trainerData?.trackingLink;
-                const productSetupCompleted = trainerData?.completedProductSetup === 'Yes';
-                const storeSetupCompleted = !!trainerData?.videoProofLink;
+        <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+            <span>Preparation</span>
+            {(() => {
+              const hardwareDeliveryCompleted = !!trainerData?.trackingLink;
+              const productSetupCompleted = trainerData?.completedProductSetup === 'Yes';
+              const storeSetupCompleted = !!trainerData?.videoProofLink;
 
-                const completed = [
-                  hardwareDeliveryCompleted,
-                  productSetupCompleted,
-                  storeSetupCompleted
-                ].filter(Boolean).length;
-                return `${completed}/3 Complete`;
-              })()}
-            </div>
-          </div>
+              const completed = [
+                hardwareDeliveryCompleted,
+                productSetupCompleted,
+                storeSetupCompleted
+              ].filter(Boolean).length;
+
+              const allDone = completed === 3;
+
+              return (
+                <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                  allDone ? 'bg-green-100 text-green-800' :
+                  completed >= 2 ? 'bg-blue-100 text-blue-800' :
+                  completed >= 1 ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {allDone ? 'Completed' : `${completed}/3 Complete`}
+                </span>
+              );
+            })()}
+          </h4>
           
           <div className="space-y-3">
             {/* 1. Hardware Delivery */}
