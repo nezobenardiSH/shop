@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
         'installation': { field: 'Installation_Date__c', object: 'Onboarding_Trainer__c' },
         'training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' },
         'pos-training': { field: 'POS_Training_Date__c', object: 'Onboarding_Trainer__c' },
-        'backoffice-training': { field: 'BackOffice_Training_Date__c', object: 'Onboarding_Trainer__c' },
+        'backoffice-training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' }, // BackOffice uses Training_Date__c
         'go-live': { field: 'First_Revised_EGLD__c', object: 'Onboarding_Trainer__c' }
       }
 

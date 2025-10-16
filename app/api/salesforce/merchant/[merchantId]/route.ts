@@ -99,7 +99,7 @@ export async function GET(
                Product_Setup_Status__c, Completed_product_setup__c,
                Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                Installation_Issues_Elaboration__c, Training_Status__c,
-
+               Training_Date__c, POS_Training_Date__c, BackOffice_Training_Date__c,
                CSM_Name__c, CSM_Name__r.Name,
                Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
                SSM__c,
@@ -437,8 +437,9 @@ export async function GET(
         actualInstallationDate: trainer.Actual_Installation_Date__c,
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
-        backOfficeTrainingDate: null, // Field not available in current schema
-        posTrainingDate: null, // Field not available in current schema
+        trainingDate: trainer.Training_Date__c,
+        backOfficeTrainingDate: trainer.BackOffice_Training_Date__c,
+        posTrainingDate: trainer.POS_Training_Date__c,
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         hardwareFulfillmentDate: hardwareFulfillmentDate,
         trackingLink: trackingLink,
