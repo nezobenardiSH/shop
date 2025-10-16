@@ -34,6 +34,18 @@ const formatDateTime = (dateString: string | null | undefined): string => {
   })
 }
 
+// Helper function to format date only (dd/mm/yyyy)
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'Not Set'
+
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
 export default function OnboardingTimeline({ currentStage, stageData, trainerData, onBookingComplete, onOpenBookingModal }: OnboardingTimelineProps) {
   const [stages, setStages] = useState<TimelineStage[]>([])
   // Initialize selectedStage based on welcome call completion status
@@ -1052,16 +1064,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                             if (stage.status === 'completed') return 'Complete'
                             if (stage.status === 'current') return 'In Progress'
                             // Show "Not Started" with date if scheduled
-                            return trainerData?.installationDate 
-                              ? `Not Started • ${new Date(trainerData.installationDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}`
+                            return trainerData?.installationDate
+                              ? `Not Started • ${formatDate(trainerData.installationDate)}`
                               : 'Not Started • Not Scheduled'
                           case 'training':
                             if (stage.status === 'completed') return 'Complete'
                             if (stage.status === 'current') return 'In Progress'
                             // Show "Not Started" with date if scheduled
                             const trainingDate = trainerData?.posTrainingDate || trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
-                            return trainingDate 
-                              ? `Not Started • ${new Date(trainingDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}`
+                            return trainingDate
+                              ? `Not Started • ${formatDate(trainingDate)}`
                               : 'Not Started • Not Scheduled'
                           case 'ready-go-live':
                             return stage.status === 'completed' ? 'Ready' : stage.status === 'current' ? 'Preparing' : 'Not Started'
@@ -1135,21 +1147,21 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                                 return `${stage.completedCount}/${stage.totalCount} Complete`
                               }
                               if (stage.completedDate) {
-                                return new Date(stage.completedDate).toLocaleDateString()
+                                return formatDate(stage.completedDate)
                               }
                               // Show scheduled dates for Not Started stages
                               if (stage.status === 'pending') {
                                 let dateStr = 'Not Started'
                                 if (stage.id === 'installation') {
                                   if (trainerData?.installationDate) {
-                                    dateStr += ` • ${new Date(trainerData.installationDate).toLocaleDateString()}`
+                                    dateStr += ` • ${formatDate(trainerData.installationDate)}`
                                   } else {
                                     dateStr += ' • Not Scheduled'
                                   }
                                 } else if (stage.id === 'training') {
                                   const trainingDate = trainerData?.posTrainingDate || trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
                                   if (trainingDate) {
-                                    dateStr += ` • ${new Date(trainingDate).toLocaleDateString()}`
+                                    dateStr += ` • ${formatDate(trainingDate)}`
                                   } else {
                                     dateStr += ' • Not Scheduled'
                                   }
