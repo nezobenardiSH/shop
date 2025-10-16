@@ -188,27 +188,20 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       setSelectedStage('preparation')
     }
     
-    // Preparation Stage - Complex logic for sub-stages (SSM Document removed)
-    const documentSubmissionCompleted =
-      (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
-      trainerData?.menuSubmissionDate &&
-      trainerData?.videoProofLink
+    // Preparation Stage - Simplified logic to match details section
+    // 1. Hardware Delivery - completed if tracking link exists
+    const hardwareDeliveryCompleted = !!trainerData?.trackingLink
 
-    const hardwareDeliveryCompleted =
-      trainerData?.paymentStatus === 'Paid' &&
-      trainerData?.deliveryAddress &&
-      trainerData?.trackingLink &&
-      trainerData?.hardwareFulfillmentDate
+    // 2. Product Setup - completed if marked as Yes
+    const productSetupCompleted = trainerData?.completedProductSetup === 'Yes'
 
-    const productSetupCompleted =
-      trainerData?.menuCollectionFormLink &&
-      trainerData?.menuSubmissionDate &&
-      trainerData?.productSetupStatus === 'Completed'
+    // 3. Store Setup - completed if video proof link exists
+    const storeSetupCompleted = !!trainerData?.videoProofLink
 
     const preparationSubStagesCompleted = [
-      documentSubmissionCompleted,
       hardwareDeliveryCompleted,
-      productSetupCompleted
+      productSetupCompleted,
+      storeSetupCompleted
     ].filter(Boolean).length
 
     const totalPreparationStages = 3
