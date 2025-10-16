@@ -85,7 +85,8 @@ export async function GET(
     console.log('Getting all trainers and filtering in JavaScript...')
 
     try {
-      const allTrainersQuery = `
+      // Try with all fields including training dates
+      let allTrainersQuery = `
         SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
                Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
@@ -107,7 +108,36 @@ export async function GET(
         FROM Onboarding_Trainer__c
         ORDER BY Name LIMIT 50
       `
-      const allTrainersResult = await conn.query(allTrainersQuery)
+
+      let allTrainersResult
+      try {
+        allTrainersResult = await conn.query(allTrainersQuery)
+      } catch (queryError: any) {
+        // If query fails (likely due to missing fields), try without training date fields
+        console.log('Query with training dates failed, trying without them:', queryError.message)
+        allTrainersQuery = `
+          SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
+                 Phone_Number__c, Merchant_PIC_Contact_Number__c,
+                 Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
+                 Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
+                 Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c,
+                 Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c,
+                 Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
+                 Video_Proof_Link__c, Onboarding_Services_Bought__c,
+                 Synced_Quote_Total_Amount__c, Pending_Payment__c,
+                 Welcome_Call_Status__c, First_Call_Timestamp__c, MSM_Name__c, MSM_Name__r.Name,
+                 Product_Setup_Status__c, Completed_product_setup__c,
+                 Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
+                 Installation_Issues_Elaboration__c, Training_Status__c,
+                 CSM_Name__c, CSM_Name__r.Name,
+                 Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
+                 SSM__c,
+                 CreatedDate, LastModifiedDate
+          FROM Onboarding_Trainer__c
+          ORDER BY Name LIMIT 50
+        `
+        allTrainersResult = await conn.query(allTrainersQuery)
+      }
 
       console.log('All trainers found:', allTrainersResult.records.map((t: any) => `"${t.Name}"`))
       console.log('Looking for:', `"${actualTrainerName}"`)
