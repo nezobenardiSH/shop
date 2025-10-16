@@ -1040,14 +1040,18 @@ class LarkService {
       endTime,
       bookingType
     })
-    const startDateTime = new Date(`${date}T${startTime}:00`)
-    const endDateTime = new Date(`${date}T${endTime}:00`)
-    
+
+    // IMPORTANT: Add timezone suffix to ensure times are interpreted as Singapore time
+    // Without +08:00, the server's local timezone is used, which can cause incorrect times
+    const startDateTime = new Date(`${date}T${startTime}:00+08:00`)
+    const endDateTime = new Date(`${date}T${endTime}:00+08:00`)
+
     console.log('📅 Parsed dates:', {
       startDateTime: startDateTime.toISOString(),
       endDateTime: endDateTime.toISOString(),
       startTimestamp: Math.floor(startDateTime.getTime() / 1000),
-      endTimestamp: Math.floor(endDateTime.getTime() / 1000)
+      endTimestamp: Math.floor(endDateTime.getTime() / 1000),
+      timezone: 'Asia/Singapore (GMT+8)'
     })
     
     // Build detailed description with merchant information based on booking type
