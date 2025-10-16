@@ -471,6 +471,13 @@ export async function GET(
         backOfficeTrainingDate: trainer.BackOffice_Training_Date__c,
         posTrainingDate: trainer.POS_Training_Date__c,
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
+
+        // Debug logging for training dates
+        ...(console.log('Training date fields from Salesforce:', {
+          Training_Date__c: trainer.Training_Date__c,
+          BackOffice_Training_Date__c: trainer.BackOffice_Training_Date__c,
+          POS_Training_Date__c: trainer.POS_Training_Date__c
+        }), {}),
         hardwareFulfillmentDate: hardwareFulfillmentDate,
         trackingLink: trackingLink,
         orderNSStatus: orderNSStatus,
