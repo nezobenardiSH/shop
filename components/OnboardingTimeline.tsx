@@ -894,7 +894,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CSM Name</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.csmName || 'Not Assigned'}
+                {(() => {
+                  console.log('🔍 Trainer Name Data (Training Stage):', {
+                    trainerName: trainerData?.name,
+                    csmName: trainerData?.csmName,
+                    allTrainerData: trainerData
+                  });
+                  return trainerData?.csmName || 'Not Assigned';
+                })()}
               </div>
             </div>
 
@@ -1846,7 +1853,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CSM Name</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.csmName || 'Not Assigned'}
+                {(() => {
+                  console.log('🔍 Trainer Name Data:', {
+                    trainerName: trainerData?.name,
+                    csmName: trainerData?.csmName,
+                    allTrainerData: trainerData
+                  });
+                  return trainerData?.csmName || 'Not Assigned';
+                })()}
               </div>
             </div>
 
