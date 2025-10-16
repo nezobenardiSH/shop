@@ -110,11 +110,16 @@ export async function GET(
       `
 
       let allTrainersResult
+      let usingFallbackQuery = false
       try {
+        console.log('🔍 Attempting query with training date fields...')
         allTrainersResult = await conn.query(allTrainersQuery)
+        console.log('✅ Query with training date fields succeeded')
       } catch (queryError: any) {
+        usingFallbackQuery = true
         // If query fails (likely due to missing fields), try without training date fields
-        console.log('Query with training dates failed, trying without them:', queryError.message)
+        console.log('⚠️ Query with training dates failed, trying without them:', queryError.message)
+        console.log('Note: Training date fields will not be available in this query')
         allTrainersQuery = `
           SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
                  Phone_Number__c, Merchant_PIC_Contact_Number__c,
