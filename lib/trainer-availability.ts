@@ -464,22 +464,26 @@ export function assignTrainer(
  * Get trainer details by name
  */
 export function getTrainerDetails(trainerName: string) {
-  const trainer = trainersConfig.trainers.find(t => 
+  const trainer = trainersConfig.trainers.find(t =>
     t.name.toLowerCase() === trainerName.toLowerCase()
   )
-  
+
   if (!trainer) {
     // Return default trainer if not found
     return {
       name: trainerName,
       email: trainersConfig.defaultTrainer?.email || trainersConfig.trainers[0].email,
-      calendarId: trainersConfig.defaultCalendarId
+      calendarId: trainersConfig.defaultCalendarId,
+      languages: trainersConfig.defaultTrainer?.languages || [],
+      location: trainersConfig.defaultTrainer?.location || []
     }
   }
-  
+
   return {
     name: trainer.name,
     email: trainer.email,
-    calendarId: trainer.calendarId || trainersConfig.defaultCalendarId
+    calendarId: trainer.calendarId || trainersConfig.defaultCalendarId,
+    languages: trainer.languages || [],
+    location: trainer.location || []
   }
 }
