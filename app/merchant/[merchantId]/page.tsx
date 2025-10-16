@@ -102,6 +102,14 @@ function TrainerPortalContent() {
         }
       })
       const data = await response.json()
+
+      // Debug: Log training dates from API response
+      console.log('📅 Training dates from API:', {
+        posTrainingDate: data.onboardingTrainerData?.trainers?.[0]?.posTrainingDate,
+        backOfficeTrainingDate: data.onboardingTrainerData?.trainers?.[0]?.backOfficeTrainingDate,
+        trainingDate: data.onboardingTrainerData?.trainers?.[0]?.trainingDate
+      })
+
       setTrainerData(data)
 
       // Set active tab to current stage if trainer data is loaded
