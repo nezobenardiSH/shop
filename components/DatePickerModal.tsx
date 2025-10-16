@@ -73,6 +73,7 @@ export default function DatePickerModal({
     startTime: string
     endTime: string
   } | null>(null)
+  const [completedBookingDate, setCompletedBookingDate] = useState<string | undefined>(undefined)
 
   // Detect service type for training bookings
   const serviceType: ServiceType = useMemo(() => {
@@ -207,10 +208,11 @@ export default function DatePickerModal({
           startTime: selectedSlot.start,
           endTime: selectedSlot.end
         })
+        setCompletedBookingDate(dateStr) // Store the date to pass to onBookingComplete later
         setShowConfirmation(true)
 
-        // Call onBookingComplete to refresh data
-        onBookingComplete(dateStr)
+        // Don't call onBookingComplete here - wait for user to click OK
+        // onBookingComplete will be called in handleConfirmationClose
       } else {
         setBookingStatus('error')
         const errorMsg = data.error || data.message || 'Failed to book'
@@ -229,7 +231,12 @@ export default function DatePickerModal({
   const handleConfirmationClose = () => {
     setShowConfirmation(false)
     setBookingDetails(null)
-    onClose()
+
+    // Call onBookingComplete to refresh data and close modal
+    onBookingComplete(completedBookingDate)
+    setCompletedBookingDate(undefined)
+
+    // onClose will be called by parent's handleBookingComplete
   }
 
   const formatTime = (time: string) => {
