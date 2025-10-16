@@ -66,6 +66,13 @@ export default function DatePickerModal({
   const [message, setMessage] = useState('')
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
   const [isFilteringSlots, setIsFilteringSlots] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [bookingDetails, setBookingDetails] = useState<{
+    assignedTrainer: string
+    date: string
+    startTime: string
+    endTime: string
+  } | null>(null)
 
   // Detect service type for training bookings
   const serviceType: ServiceType = useMemo(() => {
@@ -187,14 +194,22 @@ export default function DatePickerModal({
       })
 
       const data = await response.json()
-      
+
       if (response.ok) {
         setBookingStatus('success')
         setMessage('Booking confirmed successfully!')
+
+        // Store booking details for confirmation popup
+        setBookingDetails({
+          assignedTrainer: data.assignedTrainer || trainerName,
+          date: dateStr,
+          startTime: selectedSlot.start,
+          endTime: selectedSlot.end
+        })
+        setShowConfirmation(true)
+
+        // Call onBookingComplete to refresh data
         onBookingComplete(dateStr)
-        setTimeout(() => {
-          onClose()
-        }, 2000)
       } else {
         setBookingStatus('error')
         setMessage(data.error || 'Failed to book')
@@ -205,12 +220,28 @@ export default function DatePickerModal({
     }
   }
 
+  const handleConfirmationClose = () => {
+    setShowConfirmation(false)
+    setBookingDetails(null)
+    onClose()
+  }
+
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':')
     const hour = parseInt(hours)
     const ampm = hour >= 12 ? 'PM' : 'AM'
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
     return `${String(displayHour).padStart(2, '0')}:${minutes} ${ampm}`
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
   const getDaysInMonth = (date: Date) => {
@@ -655,6 +686,79 @@ export default function DatePickerModal({
           </div>
         </div>
       </div>
+
+      {/* Booking Confirmation Popup */}
+      {showConfirmation && bookingDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8 animate-fade-in">
+            {/* Success Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl font-bold text-gray-900 text-center mb-2">
+              Booking Confirmed!
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              Your training session has been successfully scheduled
+            </p>
+
+            {/* Booking Details */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">Trainer</div>
+                  <div className="text-base font-semibold text-gray-900">{bookingDetails.assignedTrainer}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">Date</div>
+                  <div className="text-base font-semibold text-gray-900">{formatDate(bookingDetails.date)}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">Time</div>
+                  <div className="text-base font-semibold text-gray-900">
+                    {formatTime(bookingDetails.startTime)} - {formatTime(bookingDetails.endTime)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={handleConfirmationClose}
+              className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
