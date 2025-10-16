@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
       startTime,
       endTime,
       bookingType = 'training',
-      trainerLanguages  // Required languages for the training session
+      trainerLanguages,  // Required languages for the training session
+      onboardingServicesBought  // To determine if onsite or remote training
     } = body
 
     if (!merchantId || !merchantName || !date || !startTime || !endTime) {
@@ -30,17 +31,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 1: Check which trainers are available for this slot (skip in mock mode)
+    // Step 1: Determine if location filtering should be applied
+    const { detectServiceType, shouldFilterByLocation } = await import('@/lib/service-type-detector')
+    const serviceType = detectServiceType(onboardingServicesBought)
+    const filterByLocation = shouldFilterByLocation(serviceType, bookingType)
+
+    console.log('🔍 Service Type Detection:', {
+      onboardingServicesBought,
+      serviceType,
+      filterByLocation,
+      merchantAddress
+    })
+
+    // Step 2: Check which trainers are available for this slot (skip in mock mode)
     const mockMode = process.env.MOCK_LARK_BOOKING === 'true' || searchParams.get('mock') === 'true'
-    
+
     let available = true
     let availableTrainers = ['Nezo'] // Default trainer for mock mode
-    
+
     if (!mockMode) {
       console.log('Checking availability for slot:', { date, startTime, endTime })
-      const slotResult = await getSlotAvailability(date, startTime, endTime)
+
+      // Pass merchantAddress only if location filtering should be applied (onsite training)
+      const addressForFiltering = filterByLocation ? merchantAddress : undefined
+      const slotResult = await getSlotAvailability(date, startTime, endTime, addressForFiltering)
       available = slotResult.available
       availableTrainers = slotResult.availableTrainers
+
+      console.log(`📊 Availability check result: ${availableTrainers.length} trainers available`)
+      console.log(`   Service type: ${serviceType}`)
+      console.log(`   Location filtering: ${filterByLocation ? 'YES' : 'NO'}`)
     } else {
       console.log('MOCK MODE: Skipping availability check')
     }
@@ -55,7 +75,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Step 2: Filter to only trainers with OAuth tokens (for real booking)
+    // Step 3: Filter to only trainers with OAuth tokens (for real booking)
     let trainersWithAuth = availableTrainers
     if (!mockMode) {
       const { larkOAuthService } = await import('@/lib/lark-oauth-service')
@@ -81,13 +101,13 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Step 3: Intelligently assign a trainer based on language requirements
+    // Step 4: Intelligently assign a trainer based on language requirements
     console.log('Available trainers for slot:', trainersWithAuth)
     console.log('Required languages:', trainerLanguages)
     const assignment = assignTrainer(trainersWithAuth, trainerLanguages)
     console.log('Assigned trainer:', assignment)
     
-    // Step 3: Get the assigned trainer's details
+    // Step 5: Get the assigned trainer's details
     const trainer = getTrainerDetails(assignment.assigned)
 
     // Get calendar ID using centralized Calendar ID Manager

@@ -189,6 +189,7 @@ export default function DatePickerModal({
           startTime: selectedSlot.start,
           endTime: selectedSlot.end,
           bookingType: bookingType,
+          onboardingServicesBought,  // Pass to determine onsite vs remote
           ...((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && { trainerLanguages: selectedLanguages })
         })
       })

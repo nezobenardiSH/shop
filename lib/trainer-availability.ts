@@ -262,17 +262,35 @@ export async function getCombinedAvailability(
 /**
  * Check availability for a specific slot across all trainers
  * Uses the same logic as getCombinedAvailability() for consistency
+ * @param date - Date string in YYYY-MM-DD format
+ * @param startTime - Start time in HH:MM format
+ * @param endTime - End time in HH:MM format
+ * @param merchantAddress - Optional merchant address for location-based filtering (onsite training)
  */
 export async function getSlotAvailability(
   date: string,
   startTime: string,
-  endTime: string
+  endTime: string,
+  merchantAddress?: string
 ): Promise<{ available: boolean; availableTrainers: string[] }> {
   console.log(`\n=== Checking slot availability for ${date} ${startTime}-${endTime} ===`)
+  if (merchantAddress) {
+    console.log('Filtering by merchant address:', merchantAddress)
+  }
 
-  const trainers = trainersConfig.trainers.filter(t =>
+  // Get all configured trainers
+  let trainers = trainersConfig.trainers.filter(t =>
     t.email && t.name !== 'Nasi Lemak'
   )
+
+  // Filter by location if merchant address is provided (for onsite training)
+  if (merchantAddress) {
+    const { filterTrainersByLocation } = await import('./location-matcher')
+    const filteredTrainers = filterTrainersByLocation(trainers, merchantAddress)
+    console.log(`Location filtering: ${trainers.length} trainers → ${filteredTrainers.length} trainers`)
+    console.log('Trainers after location filter:', filteredTrainers.map(t => t.name))
+    trainers = filteredTrainers
+  }
 
   const availableTrainers: string[] = []
 
