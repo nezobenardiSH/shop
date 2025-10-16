@@ -228,13 +228,123 @@ Info: "Available languages: English, Bahasa Malaysia, Chinese" (all trainers)
 
 **Result:** Only Izzudin's availability shown
 
+## Intelligent Trainer Assignment Strategy
+
+### Priority-Based Assignment Logic
+
+When multiple trainers are available for a time slot, the system uses an intelligent assignment strategy to maximize scheduling flexibility:
+
+**Core Principle:**
+> Prioritize trainers with limited language capabilities first, reserving multilingual trainers for sessions requiring their specialized language skills.
+
+**Assignment Algorithm:**
+
+1. **Language Filtering**
+   - Filter available trainers to only those who speak ALL required languages
+   - If no trainers match all languages, fallback to trainers who speak at least one required language
+
+2. **Specialist Prioritization**
+   - Sort qualified trainers by language count (ascending)
+   - Prioritize trainers with fewer language capabilities
+   - Reserve multilingual trainers for sessions where their additional skills are needed
+
+3. **Load Distribution**
+   - If multiple specialists have the same language count, randomly select among them
+   - This distributes workload evenly among trainers with similar capabilities
+
+### Example Scenarios
+
+#### Scenario 1: English Training in Klang Valley
+
+**Available Trainers:**
+- John Lai: English only (1 language)
+- Vwie: English, Malay, Chinese (3 languages)
+
+**Assignment:**
+- ✅ **Assign: John Lai** (specialist with 1 language)
+- 🔒 **Reserve: Vwie** for Malay or Chinese sessions where John cannot serve
+
+**Rationale:** Maximize scheduling flexibility by keeping the multilingual trainer available for requests requiring Malay or Chinese.
+
+---
+
+#### Scenario 2: Bahasa Malaysia Training
+
+**Available Trainers:**
+- Nezo: English, Bahasa Malaysia (2 languages)
+- Jia En: Bahasa Malaysia, Chinese (2 languages)
+- Izzudin: Bahasa Malaysia (1 language)
+
+**Assignment:**
+- ✅ **Assign: Izzudin** (specialist with 1 language)
+- 🔒 **Reserve: Nezo & Jia En** for English/Chinese sessions
+
+**Rationale:** Izzudin is the specialist for Bahasa Malaysia only. Reserve Nezo for English sessions and Jia En for Chinese sessions.
+
+---
+
+#### Scenario 3: Multiple Specialists Available
+
+**Available Trainers:**
+- John Lai: English only (1 language)
+- Sarah: English only (1 language)
+- Vwie: English, Malay, Chinese (3 languages)
+
+**Assignment:**
+- ✅ **Randomly select: John Lai OR Sarah** (both specialists with 1 language)
+- 🔒 **Reserve: Vwie** for multilingual sessions
+
+**Rationale:** Both John and Sarah are equally specialized. Random selection distributes workload evenly between them.
+
+---
+
+#### Scenario 4: Multilingual Requirement
+
+**Required Languages:** English + Chinese
+
+**Available Trainers:**
+- John Lai: English only (1 language) ❌ Cannot serve
+- Vwie: English, Malay, Chinese (3 languages) ✅ Can serve
+- Sarah: English, Chinese (2 languages) ✅ Can serve
+
+**Assignment:**
+- ✅ **Assign: Sarah** (specialist with 2 languages)
+- 🔒 **Reserve: Vwie** for sessions requiring Malay
+
+**Rationale:** Sarah is the specialist for English+Chinese. Reserve Vwie for sessions requiring all three languages.
+
+### Benefits of This Strategy
+
+1. **Maximizes Scheduling Flexibility**
+   - Keeps versatile resources available for complex requests
+   - Reduces scheduling conflicts for specialized language requirements
+
+2. **Optimizes Resource Utilization**
+   - Deploys specialists strategically
+   - Prevents over-reliance on multilingual trainers
+
+3. **Improves Service Coverage**
+   - Ensures rare language combinations can be served
+   - Balances workload across the trainer team
+
+4. **Fair Load Distribution**
+   - Random selection among equal specialists prevents favoritism
+   - Distributes bookings evenly across trainers with similar capabilities
+
 ## Trainer Coverage Matrix
 
-| Trainer | Languages | Locations | Onsite Training | Remote Training |
-|---------|-----------|-----------|----------------|-----------------|
-| **Nezo** | English, Bahasa Malaysia | Kuala Lumpur, Selangor | ✅ KL & Selangor only | ✅ All locations |
-| **Jia En** | Bahasa Malaysia, Chinese | Penang | ✅ Penang only | ✅ All locations |
-| **Izzudin** | Bahasa Malaysia | Johor | ✅ Johor only | ✅ All locations |
+| Trainer | Languages | Locations | Language Count | Assignment Priority |
+|---------|-----------|-----------|----------------|---------------------|
+| **Izzudin** | Bahasa Malaysia | Johor | 1 | 🥇 Highest (for Bahasa Malaysia) |
+| **Nezo** | English, Bahasa Malaysia | Kuala Lumpur, Selangor | 2 | 🥈 Medium |
+| **Jia En** | Bahasa Malaysia, Chinese | Penang | 2 | 🥈 Medium |
+
+**Assignment Examples:**
+- **English only** → Nezo (only option)
+- **Bahasa Malaysia only** → Izzudin (specialist, 1 language)
+- **Chinese only** → Jia En (only option)
+- **English + Bahasa Malaysia** → Nezo (only option)
+- **Bahasa Malaysia + Chinese** → Jia En (only option)
 
 ## API Response Format
 

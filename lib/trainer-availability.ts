@@ -343,31 +343,120 @@ export async function getSlotAvailability(
 }
 
 /**
- * Intelligently assign a trainer based on availability
+ * Intelligently assign a trainer based on availability and language requirements
+ *
+ * Assignment Strategy:
+ * 1. Filter trainers by required language(s)
+ * 2. Prioritize trainers with fewer language capabilities (specialists)
+ * 3. Reserve multilingual trainers for sessions requiring their unique skills
+ *
+ * Example: For English-only training with John (English) and Vwie (English, Malay, Chinese) available:
+ * - Assign John first (specialist)
+ * - Reserve Vwie for Malay/Chinese sessions where John cannot serve
+ *
+ * @param availableTrainers - List of trainer names available for the slot
+ * @param requiredLanguages - Languages required for the training session (optional)
+ * @returns Assignment result with trainer name and reason
  */
-export function assignTrainer(availableTrainers: string[]): {
+export function assignTrainer(
+  availableTrainers: string[],
+  requiredLanguages?: string[]
+): {
   assigned: string;
   reason: string;
 } {
   if (availableTrainers.length === 0) {
     throw new Error('No trainers available for this slot')
   }
-  
-  if (availableTrainers.length === 1) {
-    // Only one trainer available
-    return {
-      assigned: availableTrainers[0],
-      reason: `Only ${availableTrainers[0]} is available`
+
+  // Get trainer details for all available trainers
+  const trainerDetails = availableTrainers.map(name => ({
+    name,
+    details: getTrainerDetails(name)
+  }))
+
+  // Step 1: Filter by required languages if specified
+  let qualifiedTrainers = trainerDetails
+  if (requiredLanguages && requiredLanguages.length > 0) {
+    qualifiedTrainers = trainerDetails.filter(({ details }) => {
+      // Trainer must speak ALL required languages
+      return requiredLanguages.every(reqLang =>
+        details.languages?.some(trainerLang =>
+          trainerLang.toLowerCase() === reqLang.toLowerCase()
+        )
+      )
+    })
+
+    console.log(`Language filtering: ${trainerDetails.length} trainers → ${qualifiedTrainers.length} trainers`)
+    console.log(`Required languages: ${requiredLanguages.join(', ')}`)
+    console.log(`Qualified trainers: ${qualifiedTrainers.map(t => t.name).join(', ')}`)
+
+    if (qualifiedTrainers.length === 0) {
+      // Fallback: No trainers match all required languages
+      // Use trainers who match at least one language
+      qualifiedTrainers = trainerDetails.filter(({ details }) => {
+        return requiredLanguages.some(reqLang =>
+          details.languages?.some(trainerLang =>
+            trainerLang.toLowerCase() === reqLang.toLowerCase()
+          )
+        )
+      })
+
+      if (qualifiedTrainers.length === 0) {
+        // Still no match, use all available trainers
+        console.log('⚠️ No trainers match required languages, using all available trainers')
+        qualifiedTrainers = trainerDetails
+      }
     }
   }
-  
-  // Multiple trainers available - random assignment
-  const randomIndex = Math.floor(Math.random() * availableTrainers.length)
-  const assigned = availableTrainers[randomIndex]
-  
+
+  if (qualifiedTrainers.length === 1) {
+    // Only one qualified trainer
+    const reason = requiredLanguages && requiredLanguages.length > 0
+      ? `Only ${qualifiedTrainers[0].name} speaks ${requiredLanguages.join(', ')}`
+      : `Only ${qualifiedTrainers[0].name} is available`
+
+    return {
+      assigned: qualifiedTrainers[0].name,
+      reason
+    }
+  }
+
+  // Step 2: Prioritize trainers with fewer language capabilities (specialists first)
+  // Sort by language count (ascending) - trainers with fewer languages first
+  const sortedByLanguageCount = qualifiedTrainers.sort((a, b) => {
+    const aLangCount = a.details.languages?.length || 0
+    const bLangCount = b.details.languages?.length || 0
+    return aLangCount - bLangCount
+  })
+
+  // Get the minimum language count
+  const minLanguageCount = sortedByLanguageCount[0].details.languages?.length || 0
+
+  // Get all trainers with the minimum language count (specialists)
+  const specialists = sortedByLanguageCount.filter(
+    t => (t.details.languages?.length || 0) === minLanguageCount
+  )
+
+  // Randomly select from specialists to distribute load evenly among them
+  const randomIndex = Math.floor(Math.random() * specialists.length)
+  const assigned = specialists[randomIndex]
+
+  const languageInfo = requiredLanguages && requiredLanguages.length > 0
+    ? ` for ${requiredLanguages.join(', ')} training`
+    : ''
+
+  const reason = specialists.length === 1
+    ? `${assigned.name} is the specialist (${minLanguageCount} language${minLanguageCount > 1 ? 's' : ''})${languageInfo}, reserving multilingual trainers`
+    : `Selected ${assigned.name} from ${specialists.length} specialists (${minLanguageCount} language${minLanguageCount > 1 ? 's' : ''} each)${languageInfo}`
+
+  console.log(`✅ Trainer assignment: ${assigned.name}`)
+  console.log(`   Reason: ${reason}`)
+  console.log(`   Available: ${qualifiedTrainers.map(t => `${t.name} (${t.details.languages?.length || 0} langs)`).join(', ')}`)
+
   return {
-    assigned,
-    reason: `Randomly selected from ${availableTrainers.length} available trainers`
+    assigned: assigned.name,
+    reason
   }
 }
 

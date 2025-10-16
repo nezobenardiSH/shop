@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
       date,
       startTime,
       endTime,
-      bookingType = 'training'
+      bookingType = 'training',
+      trainerLanguages  // Required languages for the training session
     } = body
 
     if (!merchantId || !merchantName || !date || !startTime || !endTime) {
@@ -80,9 +81,10 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Step 3: Intelligently assign a trainer
+    // Step 3: Intelligently assign a trainer based on language requirements
     console.log('Available trainers for slot:', trainersWithAuth)
-    const assignment = assignTrainer(trainersWithAuth)
+    console.log('Required languages:', trainerLanguages)
+    const assignment = assignTrainer(trainersWithAuth, trainerLanguages)
     console.log('Assigned trainer:', assignment)
     
     // Step 3: Get the assigned trainer's details
