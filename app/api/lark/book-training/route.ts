@@ -259,10 +259,39 @@ export async function POST(request: NextRequest) {
         console.log('Date value:', date)
         console.log('DateTime value:', dateTimeValue)
 
-        updateResult = await conn.sobject('Onboarding_Trainer__c').update({
+        // Prepare update object with training date
+        const updateData: any = {
           Id: merchantId,
           [mapping.field]: dateTimeValue // Salesforce DateTime field expects ISO format with timezone
-        })
+        }
+
+        // Also update CSM_Name__c with the assigned trainer's Contact ID
+        // CSM_Name__c is a lookup field to Contact, so we need to find the Contact ID
+        try {
+          console.log('🔍 Looking up Contact ID for assigned trainer:', assignment.assigned)
+
+          // Query Contact by email (trainers should have Contact records with their email)
+          const contactQuery = `SELECT Id, Name, Email FROM Contact WHERE Email = '${trainer.email}' LIMIT 1`
+          const contactResult = await conn.query(contactQuery)
+
+          if (contactResult.records && contactResult.records.length > 0) {
+            const contactId = contactResult.records[0].Id
+            const contactName = contactResult.records[0].Name
+            console.log('✅ Found Contact for trainer:', { contactId, contactName, email: trainer.email })
+
+            // Add CSM_Name__c to the update
+            updateData.CSM_Name__c = contactId
+            console.log('📝 Will update CSM_Name__c with Contact ID:', contactId)
+          } else {
+            console.log('⚠️ No Contact found for trainer email:', trainer.email)
+            console.log('   CSM_Name__c will not be updated')
+          }
+        } catch (contactError: any) {
+          console.log('⚠️ Failed to lookup Contact for trainer:', contactError.message)
+          console.log('   CSM_Name__c will not be updated, but training date will still be updated')
+        }
+
+        updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateData)
       }
       
       console.log('Salesforce update result:', updateResult)
