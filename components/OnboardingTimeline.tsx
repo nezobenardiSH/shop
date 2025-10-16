@@ -1683,9 +1683,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Installation</span>
-            {(trainerData?.hardwareInstallationStatus === 'Completed' || trainerData?.hardwareInstallationStatus === 'Installation Completed') &&
-              <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-            }
+            <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+              trainerData?.installationStatus === 'Completed' ? 'bg-green-100 text-green-800' :
+              trainerData?.installationStatus === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+              trainerData?.installationStatus === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-gray-100 text-gray-800'
+            }`}>
+              {trainerData?.installationStatus || 'Not Started'}
+            </span>
           </h4>
 
           <div className="space-y-4">
@@ -1755,21 +1760,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
-            {/* Installation Status */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Status</div>
-              <div className="text-sm font-medium">
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  trainerData?.installationStatus === 'Completed' ? 'bg-green-100 text-green-800' :
-                  trainerData?.installationStatus === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                  trainerData?.installationStatus === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {trainerData?.installationStatus || 'Not Started'}
-                </span>
-              </div>
-            </div>
-
             {/* Installation Issues Elaboration */}
             {trainerData?.installationIssuesElaboration && (
               <div>
@@ -1788,9 +1778,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         <div className="hidden md:block bg-gray-50 rounded-lg p-3 border border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Training</span>
-            {(trainerData?.trainingStatus === 'Completed' || trainerData?.trainingStatus === 'Training Completed' || trainerData?.completedTraining === 'Yes') &&
-              <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
-            }
+            <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+              trainerData?.completedTraining === 'Yes' ? 'bg-green-100 text-green-800' :
+              trainerData?.completedTraining === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+              trainerData?.completedTraining === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-gray-100 text-gray-800'
+            }`}>
+              {trainerData?.completedTraining === 'Yes' ? 'Completed' :
+               trainerData?.completedTraining || 'Not Started'}
+            </span>
           </h4>
 
           <div className="space-y-4">
@@ -1895,22 +1891,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 })()}
               </div>
             </div>
-
-            {/* Completed Training Status */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Completion Status</div>
-              <div className="text-sm font-medium">
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  trainerData?.completedTraining === 'Yes' ? 'bg-green-100 text-green-800' :
-                  trainerData?.completedTraining === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                  trainerData?.completedTraining === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {trainerData?.completedTraining === 'Yes' ? 'Completed' : 
-                   trainerData?.completedTraining || 'Not Started'}
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -1926,9 +1906,18 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               const installationDone = trainerData?.installationStatus === 'Completed';
               const trainingDone = trainerData?.completedTraining === 'Yes';
               const allDone = hardwareDelivered && productSetupDone && installationDone && trainingDone;
-              
-              return allDone && (
-                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Ready</span>
+
+              const completedCount = [hardwareDelivered, productSetupDone, installationDone, trainingDone].filter(Boolean).length;
+
+              return (
+                <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                  allDone ? 'bg-green-100 text-green-800' :
+                  completedCount >= 2 ? 'bg-blue-100 text-blue-800' :
+                  completedCount >= 1 ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {allDone ? 'Ready' : `${completedCount}/4 Complete`}
+                </span>
               );
             })()}
           </h4>
