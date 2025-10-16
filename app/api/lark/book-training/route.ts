@@ -205,10 +205,14 @@ export async function POST(request: NextRequest) {
         'hardware-fulfillment': { field: 'Hardware_Fulfillment_Date__c', object: 'Order' },
         'installation': { field: 'Installation_Date__c', object: 'Onboarding_Trainer__c' },
         'training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' },
+        'pos-training': { field: 'POS_Training_Date__c', object: 'Onboarding_Trainer__c' },
+        'backoffice-training': { field: 'BackOffice_Training_Date__c', object: 'Onboarding_Trainer__c' },
         'go-live': { field: 'First_Revised_EGLD__c', object: 'Onboarding_Trainer__c' }
       }
-      
+
       const mapping = fieldMapping[bookingType] || { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' }
+
+      console.log('📋 Field mapping for bookingType:', bookingType, '→', mapping)
       
       let updateResult: any
       
