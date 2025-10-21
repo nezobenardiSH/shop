@@ -23,6 +23,9 @@ const MALAYSIAN_STATES = {
   'Labuan': ['labuan', 'wilayah persekutuan labuan', 'wp labuan']
 }
 
+// States that are considered within Klang Valley
+const KLANG_VALLEY_STATES = ['Kuala Lumpur', 'Selangor', 'Putrajaya']
+
 /**
  * Extract state/location from address string
  * @param address - Full address string
@@ -48,6 +51,52 @@ export function extractLocationFromAddress(address: string | null | undefined): 
 }
 
 /**
+ * Determine if an address is within Klang Valley
+ * @param address - Full address string
+ * @returns true if the address is within Klang Valley, false otherwise
+ */
+export function isWithinKlangValley(address: string | null | undefined): boolean {
+  if (!address) return false
+  
+  const matchedStates = extractLocationFromAddress(address)
+  
+  // Check if any of the matched states are within Klang Valley
+  return matchedStates.some(state => KLANG_VALLEY_STATES.includes(state))
+}
+
+/**
+ * Determine the location category for trainer assignment
+ * @param address - Full address string
+ * @returns "Within Klang Valley", "Penang", "Johor", or "Outside of Klang Valley"
+ */
+export function getLocationCategory(address: string | null | undefined): string {
+  if (!address) return 'Within Klang Valley' // Default to Klang Valley if no address
+  
+  const matchedStates = extractLocationFromAddress(address)
+  
+  if (matchedStates.length === 0) {
+    return 'Within Klang Valley' // Default if no state detected
+  }
+  
+  // Check if within Klang Valley
+  if (matchedStates.some(state => KLANG_VALLEY_STATES.includes(state))) {
+    return 'Within Klang Valley'
+  }
+  
+  // Check specific states outside Klang Valley
+  if (matchedStates.includes('Penang')) {
+    return 'Penang'
+  }
+  
+  if (matchedStates.includes('Johor')) {
+    return 'Johor'
+  }
+  
+  // All other states are considered "Outside of Klang Valley"
+  return 'Outside of Klang Valley'
+}
+
+/**
  * Check if trainer location matches merchant location
  * @param trainerLocations - Array of locations trainer covers (from trainers.json)
  * @param merchantAddress - Merchant's full address
@@ -63,24 +112,15 @@ export function isLocationMatch(
   }
   
   if (!merchantAddress) {
-    // If merchant has no address, we can't determine location
-    // Default to true to not block bookings
-    return true
+    // If merchant has no address, check if trainer serves "Within Klang Valley" (default)
+    return trainerLocations.includes('Within Klang Valley')
   }
   
-  const merchantLocations = extractLocationFromAddress(merchantAddress)
+  // Get the location category for the merchant
+  const merchantLocationCategory = getLocationCategory(merchantAddress)
   
-  if (merchantLocations.length === 0) {
-    // Couldn't extract location from address, default to true
-    return true
-  }
-  
-  // Check if any merchant location matches any trainer location
-  return merchantLocations.some(merchantLoc =>
-    trainerLocations.some(trainerLoc =>
-      merchantLoc.toLowerCase() === trainerLoc.toLowerCase()
-    )
-  )
+  // Check if trainer serves this location category
+  return trainerLocations.includes(merchantLocationCategory)
 }
 
 /**

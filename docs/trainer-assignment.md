@@ -27,6 +27,12 @@ The system determines trainer assignment based on the **Onboarding Services Boug
 2. ✅ **Location Match** - Trainer must cover merchant's geographical area
 3. ✅ **Calendar Availability** - Trainer must be free at selected time
 
+**Location Categories:**
+- **Within Klang Valley**: Kuala Lumpur, Selangor, Putrajaya
+- **Penang**: Penang state
+- **Johor**: Johor state
+- **Outside of Klang Valley**: All other Malaysian states
+
 **Example:**
 ```
 Merchant: Nasi Lemak Restaurant
@@ -34,7 +40,8 @@ Location: Kuala Lumpur
 Language: Bahasa Malaysia
 Service: Onsite training
 
-→ Filters to: Nezo (covers KL, speaks Bahasa Malaysia)
+→ Location Category: Within Klang Valley
+→ Filters to: Nezo (covers "Within Klang Valley", speaks Bahasa Malaysia)
 ```
 
 ### Remote Training
@@ -65,6 +72,54 @@ Service: Remote Full Service
 - Schedule button is **disabled**
 - User cannot book training
 - System displays message: "Please contact support to set up onboarding service"
+
+## Location Categorization Logic
+
+### How Location is Determined
+
+The system categorizes merchant locations into four categories based on their address:
+
+1. **Within Klang Valley**
+   - Includes: Kuala Lumpur, Selangor, Putrajaya
+   - Default category if no location is detected
+   - Covers the greater Klang Valley metropolitan area
+
+2. **Penang**
+   - Includes: Penang state (Pulau Pinang)
+   - Detected by keywords: "penang", "pulau pinang", "p. pinang", "pg", "pn"
+
+3. **Johor**
+   - Includes: Johor state
+   - Detected by keywords: "johor", "johor bahru", "jb", "j.b"
+
+4. **Outside of Klang Valley**
+   - All other Malaysian states not covered above
+   - Examples: Perak, Kedah, Kelantan, Terengganu, Pahang, etc.
+   - Currently no trainers assigned to these areas
+
+### Location Detection Algorithm
+
+```typescript
+function getLocationCategory(address: string | null): string {
+  if (!address) return 'Within Klang Valley' // Default
+  
+  const states = extractStatesFromAddress(address)
+  
+  // Check if within Klang Valley
+  if (states.includes('Kuala Lumpur') || 
+      states.includes('Selangor') || 
+      states.includes('Putrajaya')) {
+    return 'Within Klang Valley'
+  }
+  
+  // Check specific states
+  if (states.includes('Penang')) return 'Penang'
+  if (states.includes('Johor')) return 'Johor'
+  
+  // All others
+  return 'Outside of Klang Valley'
+}
+```
 
 ## Implementation Logic
 
@@ -168,9 +223,10 @@ Info: "Available languages: English, Bahasa Malaysia, Chinese" (all trainers)
 **Filtering Process:**
 1. Service Type: `onsite` (contains "onsite")
 2. Extract Location: "Kuala Lumpur"
-3. Filter by Location: Nezo (covers KL + Selangor)
-4. Filter by Language: Nezo (speaks Bahasa Malaysia)
-5. Check Availability: Show Nezo's available slots
+3. Location Category: "Within Klang Valley"
+4. Filter by Location: Nezo (covers "Within Klang Valley")
+5. Filter by Language: Nezo (speaks Bahasa Malaysia)
+6. Check Availability: Show Nezo's available slots
 
 **Result:** Only Nezo's availability shown
 
@@ -222,9 +278,10 @@ Info: "Available languages: English, Bahasa Malaysia, Chinese" (all trainers)
 **Filtering Process:**
 1. Service Type: `onsite` (contains "onsite")
 2. Extract Location: "Johor"
-3. Filter by Location: Izzudin (covers Johor)
-4. Filter by Language: Izzudin (speaks Bahasa Malaysia)
-5. Check Availability: Show Izzudin's available slots
+3. Location Category: "Johor"
+4. Filter by Location: Izzudin (covers "Johor")
+5. Filter by Language: Izzudin (speaks Bahasa Malaysia)
+6. Check Availability: Show Izzudin's available slots
 
 **Result:** Only Izzudin's availability shown
 
@@ -336,7 +393,7 @@ When multiple trainers are available for a time slot, the system uses an intelli
 | Trainer | Languages | Locations | Language Count | Assignment Priority |
 |---------|-----------|-----------|----------------|---------------------|
 | **Izzudin** | Bahasa Malaysia | Johor | 1 | 🥇 Highest (for Bahasa Malaysia) |
-| **Nezo** | English, Bahasa Malaysia | Kuala Lumpur, Selangor | 2 | 🥈 Medium |
+| **Nezo** | English, Bahasa Malaysia | Within Klang Valley | 2 | 🥈 Medium |
 | **Jia En** | Bahasa Malaysia, Chinese | Penang | 2 | 🥈 Medium |
 
 **Assignment Examples:**
@@ -396,11 +453,13 @@ When multiple trainers are available for a time slot, the system uses an intelli
 ## Testing Checklist
 
 ### Onsite Training Tests
-- [ ] KL merchant with onsite → Shows only Nezo
-- [ ] Selangor merchant with onsite → Shows only Nezo
+- [ ] KL merchant with onsite → Shows only Nezo (Within Klang Valley)
+- [ ] Selangor merchant with onsite → Shows only Nezo (Within Klang Valley)
+- [ ] Putrajaya merchant with onsite → Shows only Nezo (Within Klang Valley)
 - [ ] Penang merchant with onsite → Shows only Jia En
 - [ ] Johor merchant with onsite → Shows only Izzudin
-- [ ] Sabah merchant with onsite → Shows "no trainers available"
+- [ ] Perak merchant with onsite → Shows "no trainers available" (Outside of Klang Valley)
+- [ ] Sabah merchant with onsite → Shows "no trainers available" (Outside of Klang Valley)
 
 ### Remote Training Tests
 - [ ] Any location with remote → Shows all trainers (filtered by language)
@@ -421,6 +480,6 @@ When multiple trainers are available for a time slot, the system uses an intelli
 
 ---
 
-*Last Updated: 2025-10-15*  
+*Last Updated: 2025-10-21*  
 *Document Owner: Development Team*
 

@@ -482,9 +482,18 @@ export function assignTrainer(
  * Get trainer details by name
  */
 export function getTrainerDetails(trainerName: string) {
-  const trainer = trainersConfig.trainers.find(t =>
+  // First try exact match
+  let trainer = trainersConfig.trainers.find(t =>
     t.name.toLowerCase() === trainerName.toLowerCase()
   )
+  
+  // If no exact match, try partial match (e.g., "Nezo" matches "Nezo Benardi")
+  if (!trainer) {
+    trainer = trainersConfig.trainers.find(t =>
+      t.name.toLowerCase().includes(trainerName.toLowerCase()) ||
+      trainerName.toLowerCase().includes(t.name.toLowerCase())
+    )
+  }
 
   if (!trainer) {
     // Return default trainer if not found
@@ -498,7 +507,7 @@ export function getTrainerDetails(trainerName: string) {
   }
 
   return {
-    name: trainer.name,
+    name: trainer.name,  // Use the full name from config
     email: trainer.email,
     calendarId: trainer.calendarId || trainersConfig.defaultCalendarId,
     languages: trainer.languages || [],

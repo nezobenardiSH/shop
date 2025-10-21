@@ -1,16 +1,16 @@
 {
   "trainers": [
     {
-      "name": "Nezo",
+      "name": "Nezo Benardi",
       "email": "nezo.benardi@storehub.com",
       "larkUserId": "",
       "calendarId": "primary",
       "salesforceId": "",
       "languages": ["English", "Bahasa Malaysia"],
-      "location": ["Kuala Lumpur", "Selangor"]
+      "location": ["Within Klang Valley"]
     },
     {
-      "name": "Jia En",
+      "name": "Jia En Chai",
       "email": "jiaen.chai@storehub.com",
       "larkUserId": "",
       "calendarId": "primary",
@@ -38,6 +38,6 @@
     "larkUserId": "",
     "salesforceId": "",
     "languages": ["English", "Bahasa Malaysia"],
-    "location": ["Kuala Lumpur", "Selangor"]
+    "location": ["Within Klang Valley"]
   }
 }

@@ -809,16 +809,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Store Address</div>
               <div className="text-base font-medium text-gray-900">
-                {(() => {
-                  if (!trainerData?.orderShippingAddress) return 'Not Available';
-                  if (typeof trainerData.orderShippingAddress === 'string') {
-                    return trainerData.orderShippingAddress;
-                  }
-                  const addr = trainerData.orderShippingAddress;
-                  const parts = [addr.street, addr.city, addr.state || addr.stateCode,
-                               addr.postalCode, addr.country || addr.countryCode].filter(Boolean);
-                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
-                })()}
+                {trainerData?.merchantLocation || 'Not Available'}
               </div>
             </div>
 
@@ -851,6 +842,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </div>
               </div>
             )}
+
+            {/* Merchant Location */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Merchant Location</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.merchantLocation || 'Not Available'}
+              </div>
+            </div>
           </div>
         )
       
@@ -905,22 +904,23 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
+            {/* CSM Name BO */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Location</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CSM Name BO</div>
               <div className="text-sm font-medium text-gray-900">
-                {(() => {
-                  if (!trainerData?.orderShippingAddress) return 'Not Available';
-                  if (typeof trainerData.orderShippingAddress === 'string') {
-                    return trainerData.orderShippingAddress;
-                  }
-                  const addr = trainerData.orderShippingAddress;
-                  const parts = [addr.street, addr.city, addr.state || addr.stateCode,
-                               addr.postalCode, addr.country || addr.countryCode].filter(Boolean);
-                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
-                })()}
+                {trainerData?.csmNameBO || 'Not Assigned'}
               </div>
             </div>
 
+            {/* Merchant Location */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Merchant Location</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.merchantLocation || 'Not Available'}
+              </div>
+            </div>
+
+            {/* Required Features by Merchant */}
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Required Features by Merchant</div>
               <div className="text-sm font-medium text-gray-900">
@@ -931,16 +931,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
               <div className="text-sm font-medium text-gray-900">
-                {(() => {
-                  const servicesBought = trainerData?.onboardingServicesBought || 'Standard Package'
-                  const isOnsite = servicesBought.toLowerCase().includes('onsite')
-                  const state = trainerData?.shippingState
-
-                  if (isOnsite && state) {
-                    return `Training: Onsite, ${state}`
-                  }
-                  return servicesBought
-                })()}
+                {trainerData?.onboardingServicesBought || 'Standard Package'}
               </div>
             </div>
 
@@ -993,7 +984,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         return (
           <div className="space-y-3">
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Go-Live Date</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Revised Go Live Date</div>
               <div className="text-sm font-medium text-gray-900">
                 {trainerData?.firstRevisedEGLD
                   ? new Date(trainerData.firstRevisedEGLD).toLocaleDateString()
@@ -1786,6 +1777,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </div>
               </div>
             )}
+
+            {/* Merchant Location */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Merchant Location</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.merchantLocation || 'Not Available'}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1864,6 +1863,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
+            {/* CSM Name BO */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CSM Name BO</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.csmNameBO || 'Not Assigned'}
+              </div>
+            </div>
+
             {/* Training Location */}
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Location</div>
@@ -1891,6 +1898,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
+            {/* Merchant Location */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Merchant Location</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.merchantLocation || 'Not Available'}
+              </div>
+            </div>
+
             {/* Required Features by Merchant */}
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Required Features by Merchant</div>
@@ -1903,16 +1918,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
               <div className="text-sm font-medium text-gray-900">
-                {(() => {
-                  const servicesBought = trainerData?.onboardingServicesBought || 'Standard Package'
-                  const isOnsite = servicesBought.toLowerCase().includes('onsite')
-                  const state = trainerData?.shippingState
-
-                  if (isOnsite && state) {
-                    return `Training: Onsite, ${state}`
-                  }
-                  return servicesBought
-                })()}
+                {trainerData?.onboardingServicesBought || 'Standard Package'}
               </div>
             </div>
           </div>

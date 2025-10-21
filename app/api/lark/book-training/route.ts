@@ -109,6 +109,11 @@ export async function POST(request: NextRequest) {
     
     // Step 5: Get the assigned trainer's details
     const trainer = getTrainerDetails(assignment.assigned)
+    console.log('Trainer details from getTrainerDetails:', {
+      assignedName: assignment.assigned,
+      fullName: trainer.name,
+      email: trainer.email
+    })
 
     // Get calendar ID using centralized Calendar ID Manager
     let calendarId = trainer.calendarId // fallback
@@ -206,7 +211,7 @@ export async function POST(request: NextRequest) {
         'installation': { field: 'Installation_Date__c', object: 'Onboarding_Trainer__c' },
         'training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' },
         'pos-training': { field: 'POS_Training_Date__c', object: 'Onboarding_Trainer__c' },
-        'backoffice-training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' }, // BackOffice uses Training_Date__c
+        'backoffice-training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' }, // BackOffice uses Training_Date__c (Date only field)
         'go-live': { field: 'First_Revised_EGLD__c', object: 'Onboarding_Trainer__c' }
       }
 
@@ -260,38 +265,92 @@ export async function POST(request: NextRequest) {
         console.log('DateTime value:', dateTimeValue)
 
         // Prepare update object with training date
+        let fieldValue: string
+        if (bookingType === 'backoffice-training' || bookingType === 'training') {
+          // Training_Date__c is a Date field, not DateTime
+          fieldValue = date // Just the date, no time
+          console.log('Using date only for Training_Date__c field')
+        } else {
+          // POS_Training_Date__c and other fields are DateTime
+          fieldValue = dateTimeValue
+          console.log('Using datetime for field:', mapping.field)
+        }
+        
         const updateData: any = {
           Id: merchantId,
-          [mapping.field]: dateTimeValue // Salesforce DateTime field expects ISO format with timezone
+          [mapping.field]: fieldValue
         }
 
-        // Also update CSM_Name__c with the assigned trainer's Contact ID
-        // CSM_Name__c is a lookup field to Contact, so we need to find the Contact ID
+        // Update the appropriate CSM field based on booking type
+        // CSM_Name__c and CSM_Name_BO__c are lookup fields to User (internal Salesforce users)
+        console.log('📝 Attempting to set CSM fields for trainer:', trainer.name, '(', trainer.email, ')')
+        console.log('📝 Booking type:', bookingType)
+
+        // Search for User (internal Salesforce user) using trainer info from trainers.json
         try {
-          console.log('🔍 Looking up Contact ID for assigned trainer:', assignment.assigned)
+          let userId: string | null = null
 
-          // Query Contact by email (trainers should have Contact records with their email)
-          const contactQuery = `SELECT Id, Name, Email FROM Contact WHERE Email = '${trainer.email}' LIMIT 1`
-          const contactResult = await conn.query(contactQuery)
+          // Search by email first (most reliable), then by name
+          const searchQuery = `SELECT Id, Name, Email FROM User WHERE Email = '${trainer.email}' OR Name = '${trainer.name}' LIMIT 1`
+          console.log('🔍 Searching for User with query:', searchQuery)
+          const searchResult = await conn.query(searchQuery)
+          console.log('🔍 User search result:', JSON.stringify(searchResult, null, 2))
 
-          if (contactResult.records && contactResult.records.length > 0) {
-            const contactId = contactResult.records[0].Id
-            const contactName = contactResult.records[0].Name
-            console.log('✅ Found Contact for trainer:', { contactId, contactName, email: trainer.email })
-
-            // Add CSM_Name__c to the update
-            updateData.CSM_Name__c = contactId
-            console.log('📝 Will update CSM_Name__c with Contact ID:', contactId)
+          if (searchResult.records && searchResult.records.length > 0) {
+            userId = searchResult.records[0].Id
+            console.log('✅ Found User:', {
+              id: userId,
+              name: searchResult.records[0].Name,
+              email: searchResult.records[0].Email
+            })
           } else {
-            console.log('⚠️ No Contact found for trainer email:', trainer.email)
-            console.log('   CSM_Name__c will not be updated')
+            console.log('❌ No User found for trainer:', trainer.name, '/', trainer.email)
+            console.log('   CSM fields cannot be set without a valid User in Salesforce')
+            console.log('   Make sure the trainer has a Salesforce User account with email:', trainer.email)
           }
-        } catch (contactError: any) {
-          console.log('⚠️ Failed to lookup Contact for trainer:', contactError.message)
-          console.log('   CSM_Name__c will not be updated, but training date will still be updated')
+
+          // If we have a User ID, update the appropriate CSM field
+          if (userId) {
+            if (bookingType === 'pos-training') {
+              updateData.CSM_Name__c = userId
+              console.log('📝 Setting CSM_Name__c (POS) to User ID:', userId)
+            } else if (bookingType === 'backoffice-training' || bookingType === 'training') {
+              updateData.CSM_Name_BO__c = userId
+              console.log('📝 Setting CSM_Name_BO__c (BackOffice) to User ID:', userId)
+            }
+          } else {
+            console.log('⚠️ Could not get User ID for trainer, CSM fields will not be updated')
+          }
+        } catch (userError: any) {
+          console.log('❌ Error searching for User for CSM fields:', userError.message)
+          console.log('   CSM fields will not be updated, but training date will still be saved')
         }
 
-        updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateData)
+        console.log('📦 Final update data being sent to Salesforce:', JSON.stringify(updateData, null, 2))
+        console.log('Update data keys:', Object.keys(updateData))
+        console.log('CSM_Name_BO__c value:', updateData.CSM_Name_BO__c)
+        
+        // Try to update with User ID first
+        try {
+          updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateData)
+          console.log('✅ Successfully updated Salesforce with data:', JSON.stringify(updateResult, null, 2))
+        } catch (updateError: any) {
+          console.log('⚠️ Failed to update with User ID:', updateError.message)
+
+          // If the CSM field update fails (likely due to invalid User ID),
+          // retry without the CSM field to at least update the training date
+          if (updateError.message && (updateError.message.includes('CSM') || updateError.message.includes('User'))) {
+            console.log('Retrying without CSM field update...')
+            const updateDataWithoutCSM: any = {
+              Id: merchantId,
+              [mapping.field]: fieldValue
+            }
+            updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateDataWithoutCSM)
+            console.log('✅ Successfully updated training date (without CSM field)')
+          } else {
+            throw updateError
+          }
+        }
       }
       
       console.log('Salesforce update result:', updateResult)

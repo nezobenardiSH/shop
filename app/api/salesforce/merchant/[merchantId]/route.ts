@@ -101,9 +101,9 @@ export async function GET(
                Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                Installation_Issues_Elaboration__c, Training_Status__c,
                Training_Date__c, POS_Training_Date__c,
-               CSM_Name__c, CSM_Name__r.Name,
+               CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
                Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
-               SSM__c,
+               SSM__c, Merchant_Location__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         ORDER BY Name LIMIT 50
@@ -134,7 +134,7 @@ export async function GET(
                  Product_Setup_Status__c, Completed_product_setup__c,
                  Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                  Installation_Issues_Elaboration__c, Training_Status__c,
-                 CSM_Name__c, CSM_Name__r.Name,
+                 CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
                  Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
                  SSM__c,
                  CreatedDate, LastModifiedDate
@@ -473,9 +473,11 @@ export async function GET(
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
         trainingDate: trainer.Training_Date__c,
-        backOfficeTrainingDate: trainer.Training_Date__c, // BackOffice uses Training_Date__c field
+        backOfficeTrainingDate: trainer.Training_Date__c, // BackOffice uses Training_Date__c field (Date only)
         posTrainingDate: trainer.POS_Training_Date__c,
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
+        csmNameBO: trainer.CSM_Name_BO__r ? trainer.CSM_Name_BO__r.Name : trainer.CSM_Name_BO__c,
+        merchantLocation: trainer.Merchant_Location__c,
 
         // Debug logging for training dates
         ...(console.log('Training date fields from Salesforce:', {

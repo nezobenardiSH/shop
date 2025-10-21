@@ -291,6 +291,19 @@ function TrainerPortalContent() {
       merchantState = trainer.shippingState
     }
 
+    // Determine dependent date based on booking type
+    let dependentDate = null
+    if (bookingType === 'installation') {
+      // Installation depends on Hardware Fulfillment date
+      dependentDate = trainer.hardwareFulfillmentDate || null
+    } else if (bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') {
+      // Training depends on Installation date
+      dependentDate = trainer.installationDate || null
+    }
+    
+    // Get the go-live date
+    const goLiveDate = trainer.plannedGoLiveDate || null
+
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
@@ -302,6 +315,8 @@ function TrainerPortalContent() {
       displayName: trainer.name, // Keep the Salesforce trainer name for display
       bookingType: bookingType, // Pass the booking type
       onboardingServicesBought: trainer.onboardingServicesBought,
+      dependentDate: dependentDate, // Pass the dependent date
+      goLiveDate: goLiveDate, // Pass the go-live date
       existingBooking: null // Don't pass existing booking for now, let user select new date
     })
     setBookingModalOpen(true)
@@ -714,6 +729,8 @@ function TrainerPortalContent() {
             bookingType={currentBookingInfo.bookingType}
             onboardingServicesBought={currentBookingInfo.onboardingServicesBought}
             currentBooking={currentBookingInfo.existingBooking}
+            dependentDate={currentBookingInfo.dependentDate}
+            goLiveDate={currentBookingInfo.goLiveDate}
             onBookingComplete={handleBookingComplete}
           />
         )}

@@ -22,6 +22,8 @@ interface DatePickerModalProps {
     date: string
     time: string
   }
+  dependentDate?: string  // Date that this booking depends on (e.g., Hardware Fulfillment date for Installation)
+  goLiveDate?: string  // Expected go-live date - no dates can be scheduled after this
   onBookingComplete: (selectedDate?: string) => void
 }
 
@@ -55,6 +57,8 @@ export default function DatePickerModal({
   bookingType = 'training',
   onboardingServicesBought,
   currentBooking,
+  dependentDate,
+  goLiveDate,
   onBookingComplete
 }: DatePickerModalProps) {
   const [availability, setAvailability] = useState<DayAvailability[]>([])
@@ -305,13 +309,46 @@ export default function DatePickerModal({
       return false
     }
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const maxDate = new Date()
-    maxDate.setDate(maxDate.getDate() + 30)
-    maxDate.setHours(23, 59, 59, 999)
+    // Calculate minimum date based on dependencies
+    let minDate = new Date()
+    minDate.setHours(0, 0, 0, 0)
+    
+    // If there's a dependent date, use it as the minimum (must be after dependent date)
+    if (dependentDate) {
+      const depDate = new Date(dependentDate)
+      depDate.setHours(0, 0, 0, 0)
+      // Add one day to dependent date (must be at least 1 day after)
+      depDate.setDate(depDate.getDate() + 1)
+      
+      // Use the later of today or dependent date + 1
+      if (depDate > minDate) {
+        minDate = depDate
+      }
+      
+      console.log('  -> Dependent date:', dependentDate, 'Min date:', minDate.toDateString())
+    }
 
-    if (date < today || date > maxDate) return false
+    // Maximum date is 14 days from the minimum eligible date
+    let maxDate = new Date(minDate)
+    maxDate.setDate(maxDate.getDate() + 14)
+    maxDate.setHours(23, 59, 59, 999)
+    
+    // Also check against go-live date if provided
+    if (goLiveDate) {
+      const goLive = new Date(goLiveDate)
+      goLive.setHours(23, 59, 59, 999)
+      
+      // Use the earlier of 14-day window or go-live date
+      if (goLive < maxDate) {
+        maxDate = goLive
+        console.log('  -> Limited by go-live date:', goLive.toDateString())
+      }
+    }
+
+    if (date < minDate || date > maxDate) {
+      console.log('  -> Date out of range. Min:', minDate.toDateString(), 'Max:', maxDate.toDateString())
+      return false
+    }
 
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     const dayAvailability = availability.find(day => day.date === dateStr)
@@ -407,6 +444,26 @@ export default function DatePickerModal({
               <X className="h-6 w-6" />
             </button>
           </div>
+          {/* Dependency Message */}
+          {(dependentDate || goLiveDate) && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                ℹ️ {dependentDate && (
+                  <>
+                    {bookingType === 'installation' && 'Installation must be scheduled after Hardware Fulfillment date'}
+                    {bookingType === 'training' && 'Training must be scheduled after Installation date'}
+                    {bookingType === 'pos-training' && 'POS Training must be scheduled after Installation date'}
+                    {bookingType === 'backoffice-training' && 'BackOffice Training must be scheduled after Installation date'}
+                    {' '}({formatDate(dependentDate)}).
+                  </>
+                )}
+                {goLiveDate && (
+                  <> Must be scheduled before the Expected Go-Live date ({formatDate(goLiveDate)}).</>
+                )}
+                {' '}You can select dates up to 14 days from the earliest eligible date.
+              </p>
+            </div>
+          )}
           {(bookingType === 'training' || bookingType === 'backoffice-training' || bookingType === 'pos-training') && (
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -553,17 +610,46 @@ export default function DatePickerModal({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Date</h3>
               <div className="overflow-x-auto pb-2">
                 <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
-                  {/* Show next 30 days */}
-                  {Array.from({ length: 30 }, (_, i) => {
-                    const date = new Date()
-                    date.setDate(date.getDate() + i)
-                    const available = isDateAvailable(date)
-                    const selected = isSelectedDate(date)
-                    const isToday = i === 0
+                  {/* Show dates from eligible start to max allowed date */}
+                  {(() => {
+                    // Calculate minimum date based on dependencies
+                    let startDate = new Date()
+                    startDate.setHours(0, 0, 0, 0)
                     
-                    return (
-                      <button
-                        key={i}
+                    if (dependentDate) {
+                      const depDate = new Date(dependentDate)
+                      depDate.setHours(0, 0, 0, 0)
+                      depDate.setDate(depDate.getDate() + 1)
+                      if (depDate > startDate) {
+                        startDate = depDate
+                      }
+                    }
+                    
+                    // Calculate max date (14 days or go-live date, whichever is earlier)
+                    let endDate = new Date(startDate)
+                    endDate.setDate(endDate.getDate() + 14)
+                    
+                    if (goLiveDate) {
+                      const goLive = new Date(goLiveDate)
+                      if (goLive < endDate) {
+                        endDate = goLive
+                      }
+                    }
+                    
+                    // Calculate number of days to show
+                    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                    const daysToShow = Math.max(1, Math.min(15, daysDiff))
+                    
+                    return Array.from({ length: daysToShow }, (_, i) => {
+                      const date = new Date(startDate)
+                      date.setDate(date.getDate() + i)
+                      const available = isDateAvailable(date)
+                      const selected = isSelectedDate(date)
+                      const isToday = date.toDateString() === new Date().toDateString()
+                      
+                      return (
+                        <button
+                          key={i}
                         onClick={() => available && setSelectedDate(date)}
                         disabled={!available}
                         className={`
@@ -584,8 +670,9 @@ export default function DatePickerModal({
                           {date.toLocaleDateString('en-US', { month: 'short' })}
                         </div>
                       </button>
-                    )
-                  })}
+                      )
+                    })
+                  })()}
                 </div>
               </div>
             </div>
