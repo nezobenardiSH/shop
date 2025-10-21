@@ -79,6 +79,17 @@ export default function DatePickerModal({
   } | null>(null)
   const [completedBookingDate, setCompletedBookingDate] = useState<string | undefined>(undefined)
 
+  // Log when modal opens with currentBooking data
+  useEffect(() => {
+    if (isOpen) {
+      console.log('📅 DatePickerModal opened with:', {
+        bookingType,
+        currentBooking,
+        isRescheduling: !!currentBooking?.eventId
+      })
+    }
+  }, [isOpen, bookingType, currentBooking])
+
   // Detect service type for training bookings
   const serviceType: ServiceType = useMemo(() => {
     const isTraining = bookingType === 'training' ||
@@ -178,7 +189,16 @@ export default function DatePickerModal({
     setBookingStatus('loading')
     try {
       const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-      
+
+      // Log rescheduling info
+      if (currentBooking?.eventId) {
+        console.log('🔄 Rescheduling booking:', {
+          existingEventId: currentBooking.eventId,
+          oldDate: currentBooking.date,
+          newDate: dateStr
+        })
+      }
+
       const response = await fetch('/api/lark/book-training', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -195,6 +215,7 @@ export default function DatePickerModal({
           endTime: selectedSlot.end,
           bookingType: bookingType,
           onboardingServicesBought,  // Pass to determine onsite vs remote
+          existingEventId: currentBooking?.eventId,  // Pass existing event ID for rescheduling
           ...((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && { trainerLanguages: selectedLanguages })
         })
       })
@@ -444,6 +465,22 @@ export default function DatePickerModal({
               <X className="h-6 w-6" />
             </button>
           </div>
+
+          {/* Current Booking Info (when rescheduling) */}
+          {currentBooking?.eventId && currentBooking?.date && (
+            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm font-semibold text-yellow-900 mb-1">
+                🔄 Rescheduling Existing Booking
+              </p>
+              <p className="text-sm text-yellow-800">
+                Current Date: <span className="font-medium">{formatDate(currentBooking.date)}</span>
+              </p>
+              <p className="text-xs text-yellow-700 mt-1">
+                Select a new date below. The old booking will be automatically cancelled.
+              </p>
+            </div>
+          )}
+
           {/* Dependency Message */}
           {(dependentDate || goLiveDate) && (
             <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">

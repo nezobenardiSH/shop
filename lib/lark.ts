@@ -818,10 +818,12 @@ class LarkService {
    */
   async deleteCalendarEvent(
     calendarId: string,
-    eventId: string
+    eventId: string,
+    userEmail?: string
   ): Promise<void> {
     await this.makeRequest(`/open-apis/calendar/v4/calendars/${calendarId}/events/${eventId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      userEmail: userEmail
     })
   }
 
@@ -1247,8 +1249,8 @@ class LarkService {
     eventId: string,
     merchantName: string
   ): Promise<void> {
-    await this.deleteCalendarEvent(trainerCalendarId, eventId)
-    
+    await this.deleteCalendarEvent(trainerCalendarId, eventId, trainerEmail)
+
     try {
       const user = await this.getUserByEmail(trainerEmail)
       await this.sendNotification(

@@ -85,7 +85,7 @@ export async function GET(
     console.log('Getting all trainers and filtering in JavaScript...')
 
     try {
-      // Try with all fields including training dates
+      // Try with all fields including training dates and event IDs
       let allTrainersQuery = `
         SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
                Phone_Number__c, Merchant_PIC_Contact_Number__c,
@@ -101,6 +101,7 @@ export async function GET(
                Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                Installation_Issues_Elaboration__c, Training_Status__c,
                Training_Date__c, POS_Training_Date__c,
+               Installation_Event_Id__c, Training_Event_Id__c, POS_Training_Event_Id__c,
                CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
                Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
                SSM__c, Merchant_Location__c,
@@ -134,6 +135,7 @@ export async function GET(
                  Product_Setup_Status__c, Completed_product_setup__c,
                  Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                  Installation_Issues_Elaboration__c, Training_Status__c,
+                 Installation_Event_Id__c, Training_Event_Id__c, POS_Training_Event_Id__c,
                  CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
                  Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
                  SSM__c,
@@ -401,19 +403,22 @@ export async function GET(
         }
         
         // Get Shipment tracking link
+        // TODO: Fix the Shipment__c query - Account__c field doesn't exist
+        // Need to find the correct field name for the Account relationship
         try {
-          const shipmentQuery = `
-            SELECT Id, Tracking_Link__c
-            FROM Shipment__c
-            WHERE Account__c = '${account.Id}'
-            ORDER BY CreatedDate DESC
-            LIMIT 1
-          `
-          
-          const shipmentResult = await conn.query(shipmentQuery)
-          if (shipmentResult.totalSize > 0) {
-            trackingLink = shipmentResult.records[0].Tracking_Link__c
-          }
+          // Temporarily disabled until we find the correct field name
+          // const shipmentQuery = `
+          //   SELECT Id, Tracking_Link__c
+          //   FROM Shipment__c
+          //   WHERE Account__c = '${account.Id}'
+          //   ORDER BY CreatedDate DESC
+          //   LIMIT 1
+          // `
+          //
+          // const shipmentResult = await conn.query(shipmentQuery)
+          // if (shipmentResult.totalSize > 0) {
+          //   trackingLink = shipmentResult.records[0].Tracking_Link__c
+          // }
         } catch (shipmentError) {
           console.log('Failed to fetch Shipment tracking:', shipmentError)
           // Continue without tracking link - not a critical failure
@@ -478,6 +483,11 @@ export async function GET(
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         csmNameBO: trainer.CSM_Name_BO__r ? trainer.CSM_Name_BO__r.Name : trainer.CSM_Name_BO__c,
         merchantLocation: trainer.Merchant_Location__c,
+        
+        // Event IDs for rescheduling
+        installationEventId: trainer.Installation_Event_Id__c,
+        trainingEventId: trainer.Training_Event_Id__c,  // Used for both 'training' and 'backoffice-training'
+        posTrainingEventId: trainer.POS_Training_Event_Id__c,
 
         // Debug logging for training dates
         ...(console.log('Training date fields from Salesforce:', {

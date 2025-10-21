@@ -10,7 +10,8 @@ export async function DELETE(request: NextRequest) {
       merchantId,
       merchantName,
       trainerName,
-      eventId
+      eventId,
+      bookingType = 'training' // Default to training if not specified
     } = body
 
     if (!merchantId || !merchantName || !trainerName || !eventId) {
@@ -52,12 +53,42 @@ export async function DELETE(request: NextRequest) {
     try {
       const conn = await getSalesforceConnection()
       
-      await conn.sobject('Onboarding_Trainer__c').update({
+      // Map booking types to Salesforce field names  
+      const fieldMapping: { [key: string]: { dateField: string, eventIdField: string } } = {
+        'installation': { 
+          dateField: 'Installation_Date__c',
+          eventIdField: 'Installation_Event_Id__c'
+        },
+        'training': { 
+          dateField: 'Training_Date__c',
+          eventIdField: 'Training_Event_Id__c'
+        },
+        'pos-training': { 
+          dateField: 'POS_Training_Date__c',
+          eventIdField: 'POS_Training_Event_Id__c'
+        },
+        'backoffice-training': { 
+          dateField: 'Training_Date__c',      // Same as training
+          eventIdField: 'Training_Event_Id__c' // Same as training
+        }
+      }
+
+      const mapping = fieldMapping[bookingType] || fieldMapping['training']
+      
+      // Clear the specific date and event ID fields
+      const updateData: any = {
         Id: merchantId,
-        Training_Date__c: null,
-        Lark_Event_Id__c: null,
-        Training_Status__c: 'Not Scheduled'
-      })
+        [mapping.dateField]: null,
+        [mapping.eventIdField]: null
+      }
+      
+      // Update training status if it's a training-related booking
+      if (bookingType.includes('training')) {
+        updateData.Training_Status__c = 'Not Scheduled'
+      }
+      
+      await conn.sobject('Onboarding_Trainer__c').update(updateData)
+      console.log(`Cleared ${mapping.dateField} and ${mapping.eventIdField} for booking type: ${bookingType}`)
     } catch (sfError) {
       console.error('Failed to update Salesforce:', sfError)
     }

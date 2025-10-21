@@ -243,7 +243,18 @@ function TrainerPortalContent() {
   }, [trainerData, searchParams, hasProcessedUrlParam, router, trainerName])
 
   const handleOpenBookingModal = (trainer: any) => {
-    console.log('Opening booking modal with:', { bookingType: trainer.bookingType, trainer });
+    console.log('🎯 Opening booking modal with:', {
+      bookingType: trainer.bookingType,
+      trainerEventData: {
+        trainingEventId: trainer.trainingEventId,
+        trainingDate: trainer.trainingDate,
+        backOfficeTrainingDate: trainer.backOfficeTrainingDate,
+        posTrainingEventId: trainer.posTrainingEventId,
+        posTrainingDate: trainer.posTrainingDate,
+        installationEventId: trainer.installationEventId,
+        installationDate: trainer.installationDate
+      }
+    });
     
     // Determine which actual trainer to use based on Salesforce data
     // This could be from a field like trainer.assignedTrainerEmail or trainer.operationManagerEmail
@@ -304,6 +315,39 @@ function TrainerPortalContent() {
     // Get the go-live date
     const goLiveDate = trainer.plannedGoLiveDate || null
 
+    // Get the existing event ID and date based on booking type
+    let existingEventId = null
+    let existingBookingDate = null
+
+    if (bookingType === 'installation' && trainer.installationEventId) {
+      existingEventId = trainer.installationEventId
+      existingBookingDate = trainer.installationDate
+    } else if ((bookingType === 'training' || bookingType === 'backoffice-training') && trainer.trainingEventId) {
+      // Both 'training' and 'backoffice-training' use the same Training_Event_Id__c field
+      existingEventId = trainer.trainingEventId
+      existingBookingDate = trainer.trainingDate || trainer.backOfficeTrainingDate
+    } else if (bookingType === 'pos-training' && trainer.posTrainingEventId) {
+      existingEventId = trainer.posTrainingEventId
+      existingBookingDate = trainer.posTrainingDate
+    }
+
+    // If we have an existing event, prepare the booking info
+    let existingBooking = null
+    if (existingEventId) {
+      existingBooking = {
+        eventId: existingEventId,
+        date: existingBookingDate || '', // Use the actual booking date, not dependent date
+        time: '' // Time will be handled by the booking modal
+      }
+      console.log(`🔍 RESCHEDULE MODE - Found existing event for ${bookingType}:`, {
+        eventId: existingEventId,
+        currentDate: existingBookingDate,
+        existingBooking: existingBooking
+      })
+    } else {
+      console.log(`📝 NEW BOOKING MODE - No existing event for ${bookingType}`)
+    }
+
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
@@ -317,7 +361,7 @@ function TrainerPortalContent() {
       onboardingServicesBought: trainer.onboardingServicesBought,
       dependentDate: dependentDate, // Pass the dependent date
       goLiveDate: goLiveDate, // Pass the go-live date
-      existingBooking: null // Don't pass existing booking for now, let user select new date
+      existingBooking: existingBooking // Pass existing booking info if rescheduling
     })
     setBookingModalOpen(true)
 

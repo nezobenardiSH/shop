@@ -21,8 +21,30 @@ export async function POST(request: NextRequest) {
       endTime,
       bookingType = 'training',
       trainerLanguages,  // Required languages for the training session
-      onboardingServicesBought  // To determine if onsite or remote training
+      onboardingServicesBought,  // To determine if onsite or remote training
+      existingEventId  // Event ID of existing booking to be cancelled (for rescheduling)
     } = body
+
+    console.log('📥 Booking request received:', {
+      merchantId,
+      merchantName,
+      date,
+      startTime,
+      endTime,
+      bookingType,
+      existingEventId: existingEventId || 'NONE (new booking)',
+      existingEventIdLength: existingEventId ? existingEventId.length : 0,
+      isRescheduling: !!existingEventId
+    })
+
+    // Warn if event ID is too long for Salesforce
+    if (existingEventId && existingEventId.length > 20) {
+      console.warn('⚠️ WARNING: Existing event ID is too long for Salesforce (max 20 chars):', {
+        eventId: existingEventId,
+        length: existingEventId.length,
+        note: 'Rescheduling may fail - Salesforce field needs to be expanded'
+      })
+    }
 
     if (!merchantId || !merchantName || !date || !startTime || !endTime) {
       return NextResponse.json(
@@ -135,8 +157,27 @@ export async function POST(request: NextRequest) {
       calendarId,
       date,
       startTime,
-      endTime
+      endTime,
+      existingEventId
     })
+
+    // Step 5.5: If this is a reschedule (existingEventId provided), delete the old event first
+    if (existingEventId && !mockMode) {
+      try {
+        console.log('🗑️ Rescheduling detected - cancelling existing event:', existingEventId)
+        await larkService.cancelTraining(
+          trainer.email,
+          calendarId,
+          existingEventId,
+          merchantName
+        )
+        console.log('✅ Successfully cancelled existing event')
+      } catch (cancelError) {
+        console.error('⚠️ Failed to cancel existing event:', cancelError)
+        // Continue with new booking even if cancellation fails
+        // The old event might have already been deleted or may not exist
+      }
+    }
 
     let eventId: string
     
@@ -281,6 +322,28 @@ export async function POST(request: NextRequest) {
           [mapping.field]: fieldValue
         }
 
+        // Store the Lark event ID based on booking type
+        const eventIdFieldMapping: { [key: string]: string } = {
+          'installation': 'Installation_Event_Id__c',
+          'training': 'Training_Event_Id__c',           // BackOffice training
+          'pos-training': 'POS_Training_Event_Id__c',
+          'backoffice-training': 'Training_Event_Id__c' // Same as 'training'
+        }
+
+        const eventIdField = eventIdFieldMapping[bookingType]
+        if (eventIdField) {
+          console.log(`📝 Storing event ID in field ${eventIdField}: ${eventId}`)
+          console.log(`📏 Event ID length: ${eventId.length} characters`)
+
+          if (eventId.length > 50) {
+            console.error(`❌ CRITICAL: Event ID is ${eventId.length} characters, but Salesforce field max is 50!`)
+            console.error(`   Event ID will NOT be saved to Salesforce`)
+            console.error(`   Please ask Salesforce admin to increase ${eventIdField} field length`)
+          }
+
+          updateData[eventIdField] = eventId
+        }
+
         // Update the appropriate CSM field based on booking type
         // CSM_Name__c and CSM_Name_BO__c are lookup fields to User (internal Salesforce users)
         console.log('📝 Attempting to set CSM fields for trainer:', trainer.name, '(', trainer.email, ')')
@@ -338,15 +401,23 @@ export async function POST(request: NextRequest) {
           console.log('⚠️ Failed to update with User ID:', updateError.message)
 
           // If the CSM field update fails (likely due to invalid User ID),
-          // retry without the CSM field to at least update the training date
+          // retry without the CSM field to at least update the training date and event ID
           if (updateError.message && (updateError.message.includes('CSM') || updateError.message.includes('User'))) {
             console.log('Retrying without CSM field update...')
             const updateDataWithoutCSM: any = {
               Id: merchantId,
               [mapping.field]: fieldValue
             }
+
+            // Also include the event ID if it was in the original update data
+            const eventIdField = eventIdFieldMapping[bookingType]
+            if (eventIdField && updateData[eventIdField]) {
+              updateDataWithoutCSM[eventIdField] = updateData[eventIdField]
+              console.log(`📝 Including event ID in retry: ${eventIdField} = ${updateData[eventIdField]}`)
+            }
+
             updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateDataWithoutCSM)
-            console.log('✅ Successfully updated training date (without CSM field)')
+            console.log('✅ Successfully updated training date and event ID (without CSM field)')
           } else {
             throw updateError
           }

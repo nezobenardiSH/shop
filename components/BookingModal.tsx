@@ -108,7 +108,8 @@ export default function BookingModal({
           startTime: selectedSlot.start,
           endTime: selectedSlot.end,
           bookingType: bookingType,
-          languages: (bookingType === 'pos-training' || bookingType === 'backoffice-training') ? selectedLanguages : undefined
+          languages: (bookingType === 'pos-training' || bookingType === 'backoffice-training') ? selectedLanguages : undefined,
+          existingEventId: currentBooking?.eventId // Pass existing event ID for rescheduling
         })
       })
 
@@ -162,7 +163,8 @@ export default function BookingModal({
           merchantId,
           merchantName,
           trainerName,
-          eventId: currentBooking.eventId
+          eventId: currentBooking.eventId,
+          bookingType: bookingType // Pass booking type for proper field cleanup
         })
       })
 
