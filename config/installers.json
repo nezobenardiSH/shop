@@ -1,0 +1,53 @@
+{
+  "internal": {
+    "description": "Internal StoreHub installers (when Merchant_Location__c = 'Within Klang Valley')",
+    "locationValue": "Within Klang Valley",
+    "scheduling": "calendar",
+    "installers": [
+      {
+        "name": "Nejojo",
+        "email": "nezo.benardi@storehub.com",
+        "larkUserId": "",
+        "larkCalendarId": "",
+        "phone": "+60123456789",
+        "isActive": true
+      },
+      {
+        "name": "JE",
+        "email": "jiaen.chai@storehub.com",
+        "larkUserId": "",
+        "larkCalendarId": "",
+        "phone": "+60123456789",
+        "isActive": true
+      }
+    ]
+  },
+  "external": {
+    "description": "External vendor (when Merchant_Location__c = 'Outside of Klang Valley')",
+    "locationValue": "Outside of Klang Valley",
+    "scheduling": "request",
+    "vendors": [
+      {
+        "name": "External Vendor Company Name",
+        "contactPerson": "Contact Person Name",
+        "email": "vendor@example.com",
+        "phone": "+60123456789",
+        "isActive": true,
+        "notificationMethod": "email",
+        "responseTime": "24 hours"
+      }
+    ]
+  },
+  "settings": {
+    "defaultTimeSlots": [
+      { "start": "09:00", "end": "11:00", "label": "9:00 AM - 11:00 AM" },
+      { "start": "11:00", "end": "13:00", "label": "11:00 AM - 1:00 PM" },
+      { "start": "14:00", "end": "16:00", "label": "2:00 PM - 4:00 PM" },
+      { "start": "16:00", "end": "18:00", "label": "4:00 PM - 6:00 PM" }
+    ],
+    "workingDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "advanceBookingDays": 7,
+    "bufferTimeMinutes": 30,
+    "timezone": "Asia/Kuala_Lumpur"
+  }
+}

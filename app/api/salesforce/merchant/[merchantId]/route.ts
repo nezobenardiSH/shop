@@ -102,6 +102,7 @@ export async function GET(
                Installation_Issues_Elaboration__c, Training_Status__c,
                Training_Date__c, POS_Training_Date__c,
                Installation_Event_Id__c, Training_Event_Id__c, POS_Training_Event_Id__c,
+               Installer_Name__c, Installer_Name__r.Name,
                CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
                Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
                SSM__c, Merchant_Location__c,
@@ -136,6 +137,7 @@ export async function GET(
                  Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                  Installation_Issues_Elaboration__c, Training_Status__c,
                  Installation_Event_Id__c, Training_Event_Id__c, POS_Training_Event_Id__c,
+                 Installer_Name__c, Installer_Name__r.Name,
                  CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
                  Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
                  SSM__c,
@@ -483,7 +485,8 @@ export async function GET(
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         csmNameBO: trainer.CSM_Name_BO__r ? trainer.CSM_Name_BO__r.Name : trainer.CSM_Name_BO__c,
         merchantLocation: trainer.Merchant_Location__c,
-        
+        installerName: trainer.Installer_Name__r ? trainer.Installer_Name__r.Name : trainer.Installer_Name__c,
+
         // Event IDs for rescheduling
         installationEventId: trainer.Installation_Event_Id__c,
         trainingEventId: trainer.Training_Event_Id__c,  // Used for both 'training' and 'backoffice-training'

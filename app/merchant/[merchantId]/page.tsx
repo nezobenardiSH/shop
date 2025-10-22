@@ -95,7 +95,9 @@ function TrainerPortalContent() {
     setLoading(true)
     setSuccessMessage('')
     try {
-      const response = await fetch(`/api/salesforce/merchant/${trainerName}`, {
+      // Add timestamp to force fresh data
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/salesforce/merchant/${trainerName}?t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache'
@@ -103,8 +105,10 @@ function TrainerPortalContent() {
       })
       const data = await response.json()
 
-      // Debug: Log training dates from API response
-      console.log('📅 Training dates from API:', {
+      // Debug: Log training and installation dates from API response
+      console.log('📅 Dates from API response:', {
+        installationDate: data.onboardingTrainerData?.trainers?.[0]?.installationDate,
+        installationEventId: data.onboardingTrainerData?.trainers?.[0]?.installationEventId,
         posTrainingDate: data.onboardingTrainerData?.trainers?.[0]?.posTrainingDate,
         backOfficeTrainingDate: data.onboardingTrainerData?.trainers?.[0]?.backOfficeTrainingDate,
         trainingDate: data.onboardingTrainerData?.trainers?.[0]?.trainingDate
@@ -370,10 +374,16 @@ function TrainerPortalContent() {
   }
 
   const handleBookingComplete = async (selectedDate?: string) => {
-    console.log('Booking completed, refreshing trainer data...')
+    console.log('Booking completed for date:', selectedDate)
+    console.log('Booking type:', currentBookingInfo?.bookingType)
     setSuccessMessage('Booking confirmed! Refreshing data...')
 
+    // Add a delay to ensure Salesforce has processed the update
+    // This is especially important for installation bookings
+    await new Promise(resolve => setTimeout(resolve, 2500))
+
     // Refresh the trainer data to show the new training date
+    console.log('Refreshing trainer data from Salesforce...')
     await loadTrainerData()
 
     // Clear booking modal state
@@ -384,7 +394,11 @@ function TrainerPortalContent() {
     router.push(`/merchant/${trainerName}`, { scroll: false })
 
     // Show success message for a few seconds
-    setSuccessMessage('Training date updated successfully!')
+    const bookingType = currentBookingInfo?.bookingType
+    const successMsg = bookingType === 'installation' 
+      ? 'Installation date updated successfully!' 
+      : 'Training date updated successfully!'
+    setSuccessMessage(successMsg)
     setTimeout(() => setSuccessMessage(''), 5000)
   }
 

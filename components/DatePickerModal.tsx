@@ -152,28 +152,71 @@ export default function DatePickerModal({
     setLoading(true)
     setMessage('')
     try {
-      // Build URL with merchant address if location filtering is needed
-      let url = `/api/lark/availability?trainerName=${encodeURIComponent(trainerName)}`
-
-      if (filterByLocation && merchantAddress) {
-        url += `&merchantAddress=${encodeURIComponent(merchantAddress)}`
-        console.log('🌍 Fetching availability WITH location filter:', merchantAddress)
-      } else {
-        console.log('🌍 Fetching availability WITHOUT location filter')
-      }
-
-      console.log('📡 API URL:', url)
-
-      const response = await fetch(url)
-      const data = await response.json()
+      let url: string
+      let response: Response
       
-      if (response.ok) {
-        setAvailability(data.availability || [])
-        if (!data.availability || data.availability.length === 0) {
-          setMessage('No availability data returned')
+      // Use different endpoints for installation vs training bookings
+      if (bookingType === 'installation') {
+        // For installations, use the installer availability endpoint
+        const today = new Date()
+        const endDate = new Date()
+        endDate.setDate(endDate.getDate() + 30)
+        
+        // Use merchantId directly (it's the Salesforce record ID)
+        url = `/api/installation/availability?merchantId=${encodeURIComponent(merchantId)}&startDate=${today.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`
+        console.log('🔧 Fetching installer availability:', {
+          merchantId,
+          url
+        })
+        
+        response = await fetch(url)
+        const data = await response.json()
+        
+        if (response.ok) {
+          if (data.type === 'internal') {
+            // Transform installer availability to match the expected format
+            const transformedAvailability = data.availability.map((day: any) => ({
+              date: day.date,
+              slots: day.slots.map((slot: any) => ({
+                start: slot.time.start,
+                end: slot.time.end,
+                available: slot.isAvailable,
+                availableTrainers: slot.availableInstallers || []
+              }))
+            }))
+            setAvailability(transformedAvailability)
+          } else {
+            // External vendor - show message
+            setMessage('External vendor installation required. Please select your preferred date and time, and the vendor will contact you to confirm.')
+            setAvailability([]) // Empty availability for external
+          }
+        } else {
+          setMessage(data.error || 'Failed to fetch installer availability')
         }
       } else {
-        setMessage(data.error || 'Failed to fetch availability')
+        // For training bookings, use the existing trainer availability endpoint
+        url = `/api/lark/availability?trainerName=${encodeURIComponent(trainerName)}`
+
+        if (filterByLocation && merchantAddress) {
+          url += `&merchantAddress=${encodeURIComponent(merchantAddress)}`
+          console.log('🌍 Fetching availability WITH location filter:', merchantAddress)
+        } else {
+          console.log('🌍 Fetching availability WITHOUT location filter')
+        }
+
+        console.log('📡 API URL:', url)
+
+        response = await fetch(url)
+        const data = await response.json()
+        
+        if (response.ok) {
+          setAvailability(data.availability || [])
+          if (!data.availability || data.availability.length === 0) {
+            setMessage('No availability data returned')
+          }
+        } else {
+          setMessage(data.error || 'Failed to fetch availability')
+        }
       }
     } catch (error) {
       console.error('Error fetching availability:', error)
@@ -199,26 +242,50 @@ export default function DatePickerModal({
         })
       }
 
-      const response = await fetch('/api/lark/book-training', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          merchantId,
-          merchantName,
-          merchantAddress,
-          merchantPhone,
-          merchantContactPerson,
-          trainerName,
-          onboardingTrainerName,  // Pass the Salesforce Onboarding_Trainer__c.Name
-          date: dateStr,
-          startTime: selectedSlot.start,
-          endTime: selectedSlot.end,
-          bookingType: bookingType,
-          onboardingServicesBought,  // Pass to determine onsite vs remote
-          existingEventId: currentBooking?.eventId,  // Pass existing event ID for rescheduling
-          ...((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && { trainerLanguages: selectedLanguages })
+      let response: Response
+      
+      if (bookingType === 'installation') {
+        // For installations, use the installation booking endpoint
+        response = await fetch('/api/installation/book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchantId: merchantId,  // Use merchantId directly - it's the Salesforce record ID
+            merchantName,
+            date: dateStr,
+            timeSlot: {
+              start: selectedSlot.start,
+              end: selectedSlot.end,
+              label: `${selectedSlot.start} - ${selectedSlot.end}`
+            },
+            availableInstallers: selectedSlot.availableTrainers || [],
+            contactPhone: merchantPhone,
+            existingEventId: currentBooking?.eventId  // Pass for rescheduling
+          })
         })
-      })
+      } else {
+        // For training bookings, use the existing training booking endpoint
+        response = await fetch('/api/lark/book-training', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchantId,
+            merchantName,
+            merchantAddress,
+            merchantPhone,
+            merchantContactPerson,
+            trainerName,
+            onboardingTrainerName,  // Pass the Salesforce Onboarding_Trainer__c.Name
+            date: dateStr,
+            startTime: selectedSlot.start,
+            endTime: selectedSlot.end,
+            bookingType: bookingType,
+            onboardingServicesBought,  // Pass to determine onsite vs remote
+            existingEventId: currentBooking?.eventId,  // Pass existing event ID for rescheduling
+            ...((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && { trainerLanguages: selectedLanguages })
+          })
+        })
+      }
 
       const data = await response.json()
 
@@ -228,7 +295,7 @@ export default function DatePickerModal({
 
         // Store booking details for confirmation popup
         setBookingDetails({
-          assignedTrainer: data.assignedTrainer || trainerName,
+          assignedTrainer: data.assignedTrainer || data.assignedInstaller || trainerName,
           date: dateStr,
           startTime: selectedSlot.start,
           endTime: selectedSlot.end
@@ -520,7 +587,7 @@ export default function DatePickerModal({
                             ? 'border-blue-500 bg-blue-50 cursor-pointer'
                             : 'border-gray-200 hover:border-gray-300 cursor-pointer'
                       }`}
-                      title={!isAvailable ? 'No trainers available for this language' : ''}
+                      title={!isAvailable ? `No ${bookingType === 'installation' ? 'installers' : 'trainers'} available for this language` : ''}
                     >
                       <input
                         type="checkbox"
@@ -575,7 +642,7 @@ export default function DatePickerModal({
                 {/* Show warning if no trainers available */}
                 {availableLanguages.length === 0 && !loading && (
                   <div className="text-xs text-amber-600 mt-1">
-                    ⚠️ No trainers available for this location
+                    ⚠️ No {bookingType === 'installation' ? 'installers' : 'trainers'} available for this location
                   </div>
                 )}
               </div>
@@ -854,7 +921,7 @@ export default function DatePickerModal({
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500">Trainer</div>
+                  <div className="text-sm text-gray-500">{bookingType === 'installation' ? 'Installer' : 'Trainer'}</div>
                   <div className="text-base font-semibold text-gray-900">{bookingDetails.assignedTrainer}</div>
                 </div>
               </div>

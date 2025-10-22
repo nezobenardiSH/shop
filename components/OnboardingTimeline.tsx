@@ -798,7 +798,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 </button>
               </div>
             </div>
-            
+
+            <div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Assigned Installer</div>
+              <div className="text-base font-medium text-gray-900">
+                {trainerData?.installerName || 'Not Assigned'}
+              </div>
+            </div>
+
             <div>
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Installation ST Ticket No</div>
               <div className="text-base font-medium text-gray-900">
@@ -1720,6 +1727,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </svg>
                   {trainerData?.installationDate ? 'Reschedule' : 'Schedule'}
                 </button>
+              </div>
+            </div>
+
+            {/* Installer Name */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Assigned Installer</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.installerName || 'Not Assigned'}
               </div>
             </div>
 
