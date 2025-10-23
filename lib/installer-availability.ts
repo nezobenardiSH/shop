@@ -120,13 +120,13 @@ export async function getInternalInstallersAvailability(
   // Now combine the availabilities into time slots
   const combinedAvailability: InstallationAvailability[] = []
   const TIME_SLOTS = installersConfig.settings.defaultTimeSlots
-  
+
   const current = new Date(`${startDate}T00:00:00+08:00`)
   const end = new Date(`${endDate}T23:59:59+08:00`)
-  
+
   while (current <= end) {
     const dayOfWeek = current.getDay()
-    
+
     // Only weekdays (Monday=1 to Friday=5)
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
       const year = current.getFullYear()
@@ -137,10 +137,10 @@ export async function getInternalInstallersAvailability(
       const slots = TIME_SLOTS.map(timeSlot => {
         const slotStart = new Date(`${dateStr}T${timeSlot.start}:00+08:00`)
         const slotEnd = new Date(`${dateStr}T${timeSlot.end}:00+08:00`)
-        
+
         // Check which installers are available for this slot
         const availableInstallers: string[] = []
-        
+
         for (const [installerName, busySlots] of installerAvailabilities.entries()) {
           const isAvailable = !busySlots.some(busy => {
             const busyStart = new Date(busy.start)
@@ -148,12 +148,12 @@ export async function getInternalInstallersAvailability(
             // Check if busy period overlaps with this time slot
             return busyStart < slotEnd && busyEnd > slotStart
           })
-          
+
           if (isAvailable) {
             availableInstallers.push(installerName)
           }
         }
-        
+
         return {
           time: timeSlot,
           isAvailable: availableInstallers.length > 0,
@@ -287,6 +287,19 @@ export async function bookInternalInstallation(
     eventIdLength: eventId?.length,
     fullResponse: JSON.stringify(eventResponse, null, 2)
   })
+  
+  // Send notification to installer (similar to training notifications)
+  try {
+    const user = await larkService.getUserByEmail(installer.email)
+    await larkService.sendNotification(
+      user.user_id,
+      `New installation booked for ${merchantName} on ${date} from ${timeSlot.start} to ${timeSlot.end}`
+    )
+    console.log('✅ Notification sent to installer:', installer.name)
+  } catch (notifyError) {
+    console.error('Failed to send notification to installer:', notifyError)
+    // Don't throw - notification failure shouldn't fail the booking
+  }
   
   // Update Salesforce - using the same pattern as training bookings
   const conn = await getSalesforceConnection()

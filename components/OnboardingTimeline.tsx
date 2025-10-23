@@ -328,9 +328,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   }
 
   const handleBookingClick = (bookingType: string, existingDate?: string) => {
+    console.log('🔘 handleBookingClick called:', {
+      bookingType,
+      existingDate,
+      hasOnOpenBookingModal: !!onOpenBookingModal,
+      trainerDataKeys: Object.keys(trainerData || {})
+    })
+
     if (onOpenBookingModal) {
-      onOpenBookingModal({ 
-        ...trainerData, 
+      onOpenBookingModal({
+        ...trainerData,
         bookingType: bookingType,
         existingDate: existingDate
       })

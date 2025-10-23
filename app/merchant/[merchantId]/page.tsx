@@ -188,6 +188,8 @@ function TrainerPortalContent() {
     }
   }, [trainerName])
 
+
+
   // Handle URL parameters to auto-open booking modal
   useEffect(() => {
     if (!trainerData || hasProcessedUrlParam) return // Wait for trainer data to load and only process once
@@ -227,6 +229,38 @@ function TrainerPortalContent() {
           merchantState = trainer.shippingState
         }
 
+        // Get the existing event ID and date based on booking type
+        let existingEventId = null
+        let existingBookingDate = null
+
+        if (bookingType === 'installation' && trainer.installationEventId) {
+          existingEventId = trainer.installationEventId
+          existingBookingDate = trainer.installationDate
+        } else if ((bookingType === 'training' || bookingType === 'backoffice-training') && trainer.trainingEventId) {
+          existingEventId = trainer.trainingEventId
+          existingBookingDate = trainer.trainingDate || trainer.backOfficeTrainingDate
+        } else if (bookingType === 'pos-training' && trainer.posTrainingEventId) {
+          existingEventId = trainer.posTrainingEventId
+          existingBookingDate = trainer.posTrainingDate
+        }
+
+        // If we have an existing event, prepare the booking info
+        let existingBooking = null
+        if (existingEventId) {
+          existingBooking = {
+            eventId: existingEventId,
+            date: existingBookingDate || '',
+            time: ''
+          }
+          console.log(`🔍 URL PARAM - RESCHEDULE MODE for ${bookingType}:`, {
+            eventId: existingEventId,
+            currentDate: existingBookingDate,
+            existingBooking: existingBooking
+          })
+        } else {
+          console.log(`📝 URL PARAM - NEW BOOKING MODE for ${bookingType}`)
+        }
+
         setCurrentBookingInfo({
           trainerId: trainer.id,
           trainerName: actualTrainerName,
@@ -238,7 +272,7 @@ function TrainerPortalContent() {
           displayName: trainer.name,
           bookingType: bookingType,
           onboardingServicesBought: trainer.onboardingServicesBought,
-          existingBooking: null
+          existingBooking: existingBooking
         })
         setBookingModalOpen(true)
         setHasProcessedUrlParam(true)
@@ -352,7 +386,7 @@ function TrainerPortalContent() {
       console.log(`📝 NEW BOOKING MODE - No existing event for ${bookingType}`)
     }
 
-    setCurrentBookingInfo({
+    const bookingInfo = {
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
@@ -366,7 +400,12 @@ function TrainerPortalContent() {
       dependentDate: dependentDate, // Pass the dependent date
       goLiveDate: goLiveDate, // Pass the go-live date
       existingBooking: existingBooking // Pass existing booking info if rescheduling
-    })
+    }
+
+    console.log('📦 About to set currentBookingInfo with existingBooking:', existingBooking)
+
+    // Set the booking info and open modal
+    setCurrentBookingInfo(bookingInfo)
     setBookingModalOpen(true)
 
     // Update URL to include booking parameter

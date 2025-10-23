@@ -85,7 +85,10 @@ export default function DatePickerModal({
       console.log('📅 DatePickerModal opened with:', {
         bookingType,
         currentBooking,
-        isRescheduling: !!currentBooking?.eventId
+        isRescheduling: !!currentBooking?.eventId,
+        hasEventId: !!currentBooking?.eventId,
+        hasDate: !!currentBooking?.date,
+        willShowBanner: !!(currentBooking?.eventId && currentBooking?.date)
       })
     }
   }, [isOpen, bookingType, currentBooking])
@@ -158,9 +161,10 @@ export default function DatePickerModal({
       // Use different endpoints for installation vs training bookings
       if (bookingType === 'installation') {
         // For installations, use the installer availability endpoint
+        // Installation bookings can be scheduled up to 14 days in advance
         const today = new Date()
         const endDate = new Date()
-        endDate.setDate(endDate.getDate() + 30)
+        endDate.setDate(endDate.getDate() + 14)
         
         // Use merchantId directly (it's the Salesforce record ID)
         url = `/api/installation/availability?merchantId=${encodeURIComponent(merchantId)}&startDate=${today.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`
