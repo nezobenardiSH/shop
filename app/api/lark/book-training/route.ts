@@ -203,7 +203,8 @@ export async function POST(request: NextRequest) {
             phone: merchantPhone,
             contactPerson: merchantContactPerson,
             businessType: merchantBusinessType,
-            salesforceId: merchantId
+            salesforceId: merchantId,
+            language: trainerLanguages  // Pass selected language to calendar event
           },
           trainer.email,
           calendarId,

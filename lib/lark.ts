@@ -1202,6 +1202,7 @@ class LarkService {
       contactPerson?: string
       businessType?: string
       salesforceId?: string
+      language?: string[]  // Selected training language(s)
     },
     trainerEmail: string,
     trainerCalendarId: string,
@@ -1303,6 +1304,9 @@ class LarkService {
         eventTitle = trainerName ? `POS Training: ${trainerName}` : `POS Training: ${merchantInfo.name}`
         description = `POS Training Session\n\n`
         description += `Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.language && merchantInfo.language.length > 0) {
+          description += `Language: ${merchantInfo.language.join(', ')}\n`
+        }
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`
         }
@@ -1318,6 +1322,9 @@ class LarkService {
         eventTitle = trainerName ? `BackOffice Training: ${trainerName}` : `BackOffice Training: ${merchantInfo.name}`
         description = `BackOffice Training Session\n\n`
         description += `Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.language && merchantInfo.language.length > 0) {
+          description += `Language: ${merchantInfo.language.join(', ')}\n`
+        }
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`
         }
@@ -1334,6 +1341,9 @@ class LarkService {
         eventTitle = trainerName ? `Training: ${trainerName}` : `Training: ${merchantInfo.name}`
         description = `Onboarding Training Session\n\n`
         description += `Merchant: ${merchantInfo.name}\n`
+        if (merchantInfo.language && merchantInfo.language.length > 0) {
+          description += `Language: ${merchantInfo.language.join(', ')}\n`
+        }
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`
         }
