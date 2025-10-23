@@ -75,7 +75,7 @@ export class LarkOAuthService {
       app_id: this.appId,
       redirect_uri: this.redirectUri,
       response_type: 'code',
-      scope: 'calendar:calendar calendar:calendar:read_as_user calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read',
+      scope: 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read',
       state: state || ''
     })
 
