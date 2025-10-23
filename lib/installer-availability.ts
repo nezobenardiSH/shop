@@ -208,18 +208,107 @@ export async function bookInternalInstallation(
     availableInstallers,
     existingEventId
   })
-  
+
   const assignedInstaller = assignInstaller(availableInstallers)
   const installer = installersConfig.internal.installers.find(i => i.name === assignedInstaller)
-  
+
   if (!installer) {
     throw new Error('Installer configuration not found')
   }
-  
+
+  // Fetch merchant details from Salesforce for calendar event
+  console.log('📋 Fetching merchant details from Salesforce for calendar event...')
+  const conn = await getSalesforceConnection()
+  let merchantDetails: any = {}
+  let hardwareList: string[] = []
+
+  if (conn) {
+    try {
+      // Get merchant/trainer record with all required fields
+      const trainerQuery = `
+        SELECT Id, Name, Account_Name__c,
+               Shipping_Street__c, Shipping_City__c, Shipping_State__c, Shipping_Zip_Postal_Code__c, Shipping_Country__c,
+               Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone,
+               Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone,
+               Merchant_PIC_Contact_Number__c,
+               MSM_Name__r.Name
+        FROM Onboarding_Trainer__c
+        WHERE Id = '${merchantId}'
+        LIMIT 1
+      `
+
+      const trainerResult = await conn.query(trainerQuery)
+
+      if (trainerResult.totalSize > 0) {
+        const trainer: any = trainerResult.records[0]
+        merchantDetails = {
+          name: trainer.Name,
+          address: [
+            trainer.Shipping_Street__c,
+            trainer.Shipping_City__c,
+            trainer.Shipping_State__c,
+            trainer.Shipping_Zip_Postal_Code__c,
+            trainer.Shipping_Country__c
+          ].filter(Boolean).join(', '),
+          primaryContactRole: trainer.Operation_Manager_Contact__r ? 'Operation Manager' :
+                             trainer.Business_Owner_Contact__r ? 'Business Owner' : 'N/A',
+          primaryContactName: trainer.Operation_Manager_Contact__r?.Name ||
+                             trainer.Business_Owner_Contact__r?.Name || 'N/A',
+          primaryContactPhone: trainer.Operation_Manager_Contact__r?.Phone ||
+                              trainer.Business_Owner_Contact__r?.Phone ||
+                              trainer.Merchant_PIC_Contact_Number__c || 'N/A',
+          msmName: trainer.MSM_Name__r?.Name || 'N/A',
+          accountId: trainer.Account_Name__c
+        }
+
+        // Get hardware list (non-software products) from Orders
+        if (trainer.Account_Name__c) {
+          try {
+            const ordersQuery = `
+              SELECT Id
+              FROM Order
+              WHERE AccountId = '${trainer.Account_Name__c}' AND Type = 'Non-Software Only'
+              LIMIT 10
+            `
+
+            const ordersResult = await conn.query(ordersQuery)
+
+            if (ordersResult.totalSize > 0) {
+              const orderIds = ordersResult.records.map((order: any) => `'${order.Id}'`).join(',')
+
+              const orderItemsQuery = `
+                SELECT Product2.Name, Quantity
+                FROM OrderItem
+                WHERE OrderId IN (${orderIds})
+              `
+
+              const orderItemsResult = await conn.query(orderItemsQuery)
+
+              if (orderItemsResult.totalSize > 0) {
+                hardwareList = orderItemsResult.records.map((item: any) => {
+                  const qty = item.Quantity > 1 ? ` (x${item.Quantity})` : ''
+                  return `${item.Product2?.Name || 'Unknown Product'}${qty}`
+                })
+              }
+            }
+          } catch (hardwareError) {
+            console.error('Failed to fetch hardware list:', hardwareError)
+          }
+        }
+      }
+
+      console.log('✅ Merchant details fetched:', merchantDetails)
+      console.log('✅ Hardware list:', hardwareList)
+    } catch (error) {
+      console.error('Failed to fetch merchant details from Salesforce:', error)
+      // Continue with basic details
+    }
+  }
+
   // Get the calendar ID for the installer (same as trainers do)
   const { CalendarIdManager } = await import('./calendar-id-manager')
   const calendarId = await CalendarIdManager.getResolvedCalendarId(installer.email)
-  
+
   console.log(`Creating installation event for ${installer.name} in calendar ${calendarId}`)
   
   // If this is a rescheduling, cancel the existing event first
@@ -267,13 +356,36 @@ export async function bookInternalInstallation(
   // Create calendar event using the existing larkService
   let eventResponse: any
   let eventId: string
-  
+
+  // Build detailed description for calendar event
+  const hardwareListText = hardwareList.length > 0
+    ? hardwareList.join('\n  • ')
+    : 'No hardware items found'
+
+  const eventDescription = `🔧 Pilot test: automated onboarding flow (manual Intercom ticket required)
+
+📋 Installation Details:
+Merchant Name: ${merchantDetails.name || merchantName}
+Merchant Address: ${merchantDetails.address || 'N/A'}
+
+👤 Primary Contact:
+Role: ${merchantDetails.primaryContactRole || 'N/A'}
+Name: ${merchantDetails.primaryContactName || 'N/A'}
+Phone: ${merchantDetails.primaryContactPhone || 'N/A'}
+
+📦 List of Hardware (Non-Software):
+  • ${hardwareListText}
+
+👨‍💼 MSM Name: ${merchantDetails.msmName || 'N/A'}
+
+🔗 Salesforce ID: ${merchantId}`
+
   try {
     eventResponse = await larkService.createCalendarEvent(
       calendarId,
       {
-        summary: `Installation: ${merchantName}`,
-        description: `Installation appointment for merchant ${merchantName} (ID: ${merchantId})`,
+        summary: `Installation: ${merchantDetails.name || merchantName}`,
+        description: eventDescription,
         start_time: {
           timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString()
         },
@@ -301,9 +413,8 @@ export async function bookInternalInstallation(
   })
 
   // Note: Notification will be sent later using sendBookingNotification() after Salesforce update
-  
-  // Update Salesforce - using the same pattern as training bookings
-  const conn = await getSalesforceConnection()
+
+  // Update Salesforce - using the same pattern as training bookings (reuse conn from above)
   if (conn) {
     try {
       // merchantId is already the Salesforce record ID (just like in training bookings)
