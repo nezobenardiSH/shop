@@ -242,6 +242,8 @@ export async function bookInternalInstallation(
       if (trainerResult.totalSize > 0) {
         const trainer: any = trainerResult.records[0]
         merchantDetails = {
+          // trainer.Name is the Onboarding Trainer Name (e.g., "Nasi Lemak")
+          // This is what should be displayed as the merchant name
           name: trainer.Name,
           address: [
             trainer.Shipping_Street__c,
@@ -362,10 +364,14 @@ export async function bookInternalInstallation(
     ? hardwareList.join('\n  • ')
     : 'No hardware items found'
 
+  // Use Onboarding Trainer Name (e.g., "Nasi Lemak") from Salesforce
+  // merchantDetails.name is always the correct Onboarding_Trainer__c.Name field
+  const displayName = merchantDetails.name || merchantName
+
   const eventDescription = `🔧 Pilot test: automated onboarding flow (manual Intercom ticket required)
 
 📋 Installation Details:
-Merchant Name: ${merchantDetails.name || merchantName}
+Merchant Name: ${displayName}
 Merchant Address: ${merchantDetails.address || 'N/A'}
 
 👤 Primary Contact:
@@ -384,7 +390,7 @@ Phone: ${merchantDetails.primaryContactPhone || 'N/A'}
     eventResponse = await larkService.createCalendarEvent(
       calendarId,
       {
-        summary: `Installation: ${merchantDetails.name || merchantName}`,
+        summary: `Installation: ${displayName}`,
         description: eventDescription,
         start_time: {
           timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString()
