@@ -232,7 +232,8 @@ export async function bookInternalInstallation(
                Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone,
                Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone,
                Merchant_PIC_Contact_Number__c,
-               MSM_Name__r.Name
+               MSM_Name__r.Name,
+               Onboarding_Summary__c
         FROM Onboarding_Trainer__c
         WHERE Id = '${merchantId}'
         LIMIT 1
@@ -261,14 +262,15 @@ export async function bookInternalInstallation(
                               trainer.Business_Owner_Contact__r?.Phone ||
                               trainer.Merchant_PIC_Contact_Number__c || 'N/A',
           msmName: trainer.MSM_Name__r?.Name || 'N/A',
+          onboardingSummary: trainer.Onboarding_Summary__c || 'N/A',
           accountId: trainer.Account_Name__c
         }
 
-        // Get hardware list (non-software products) from Orders
+        // Get hardware list and invoice number (non-software products) from Orders
         if (trainer.Account_Name__c) {
           try {
             const ordersQuery = `
-              SELECT Id
+              SELECT Id, NSOrderNumber__c
               FROM Order
               WHERE AccountId = '${trainer.Account_Name__c}' AND Type = 'Non-Software Only'
               LIMIT 10
@@ -278,6 +280,10 @@ export async function bookInternalInstallation(
 
             if (ordersResult.totalSize > 0) {
               const orderIds = ordersResult.records.map((order: any) => `'${order.Id}'`).join(',')
+
+              // Get invoice number from first order
+              const firstOrder: any = ordersResult.records[0]
+              merchantDetails.invoiceNumber = firstOrder.NSOrderNumber__c || 'N/A'
 
               const orderItemsQuery = `
                 SELECT Product2.Name, Quantity
@@ -374,6 +380,7 @@ export async function bookInternalInstallation(
 📋 Installation Details:
 Merchant Name: ${displayName}
 Merchant Address: ${merchantDetails.address || 'N/A'}
+Invoice Number: ${merchantDetails.invoiceNumber || 'N/A'}
 
 👤 Primary Contact:
 Role: ${merchantDetails.primaryContactRole || 'N/A'}
@@ -384,6 +391,9 @@ Phone: ${merchantDetails.primaryContactPhone || 'N/A'}
   • ${hardwareListText}
 
 👨‍💼 MSM Name: ${merchantDetails.msmName || 'N/A'}
+
+📝 Onboarding Summary:
+${merchantDetails.onboardingSummary || 'N/A'}
 
 🔗 Salesforce ID: ${merchantId}`
 
