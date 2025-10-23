@@ -591,7 +591,7 @@ export default function DatePickerModal({
                             ? 'border-blue-500 bg-blue-50 cursor-pointer'
                             : 'border-gray-200 hover:border-gray-300 cursor-pointer'
                       }`}
-                      title={!isAvailable ? `No ${bookingType === 'installation' ? 'installers' : 'trainers'} available for this language` : ''}
+                      title={!isAvailable ? `No trainers available for this language` : ''}
                     >
                       <input
                         type="checkbox"
@@ -646,7 +646,7 @@ export default function DatePickerModal({
                 {/* Show warning if no trainers available */}
                 {availableLanguages.length === 0 && !loading && (
                   <div className="text-xs text-amber-600 mt-1">
-                    ⚠️ No {bookingType === 'installation' ? 'installers' : 'trainers'} available for this location
+                    ⚠️ No trainers available for this location
                   </div>
                 )}
               </div>

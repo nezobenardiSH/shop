@@ -213,7 +213,7 @@ class LarkService {
     }
     
     if (data.code !== 0) {
-      console.error(`Lark API error: ${data.msg}`, data)
+      console.error(`Lark API error: ${data.msg}`, JSON.stringify(data, null, 2))
       throw new Error(`Lark API error: ${data.msg}`)
     }
 
@@ -798,11 +798,57 @@ class LarkService {
       startTime: event.start_time,
       endTime: event.end_time
     })
-    
-    // Use the calendar ID as-is - don't try to fetch a different one
+
+    // CRITICAL FIX: Find the user's writable calendar
+    // Google synced calendars (type: 'google') cannot be written to via Lark API
+    // We need to use the primary Lark calendar (type: 'primary')
     let actualCalendarId = calendarId
-    console.log(`Using calendar ID as provided: ${actualCalendarId}`)
-    
+
+    if (userEmail) {
+      try {
+        console.log(`🔍 Finding writable calendar for ${userEmail}...`)
+        const calendars = await this.getCalendarList(userEmail)
+
+        // PRIORITY 1: Find PRIMARY type calendar (native Lark calendar, not synced from Google)
+        const primaryCalendar = calendars.find((cal: any) =>
+          cal.type === 'primary' &&
+          cal.role === 'owner'
+        )
+
+        if (primaryCalendar) {
+          actualCalendarId = primaryCalendar.calendar_id
+          console.log(`✅ Using primary Lark calendar: ${actualCalendarId}`)
+          console.log(`   Summary: ${primaryCalendar.summary}`)
+          console.log(`   Type: ${primaryCalendar.type}`)
+          console.log(`   Role: ${primaryCalendar.role}`)
+        } else {
+          // PRIORITY 2: Find any owner calendar that is NOT a Google sync
+          const nativeCalendar = calendars.find((cal: any) =>
+            cal.role === 'owner' &&
+            cal.type !== 'google'
+          )
+
+          if (nativeCalendar) {
+            actualCalendarId = nativeCalendar.calendar_id
+            console.log(`✅ Using native Lark calendar: ${actualCalendarId}`)
+            console.log(`   Type: ${nativeCalendar.type}`)
+          } else {
+            // PRIORITY 3: Fallback to any owner calendar (may be Google sync - might fail)
+            const ownerCalendar = calendars.find((cal: any) => cal.role === 'owner')
+            if (ownerCalendar) {
+              actualCalendarId = ownerCalendar.calendar_id
+              console.log(`⚠️ Using owner calendar (may be Google sync): ${actualCalendarId}`)
+              console.log(`   Type: ${ownerCalendar.type}`)
+            } else {
+              console.log(`⚠️ No writable calendar found, using provided ID: ${calendarId}`)
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Failed to get calendar list, using provided ID:`, error)
+      }
+    }
+
     console.log(`Creating event in calendar ${actualCalendarId} for user ${userEmail}`)
     const response = await this.makeRequest(`/open-apis/calendar/v4/calendars/${actualCalendarId}/events`, {
       method: 'POST',
@@ -821,10 +867,76 @@ class LarkService {
     eventId: string,
     userEmail?: string
   ): Promise<void> {
-    await this.makeRequest(`/open-apis/calendar/v4/calendars/${calendarId}/events/${eventId}`, {
-      method: 'DELETE',
-      userEmail: userEmail
+    console.log('🗑️ Attempting to delete calendar event:', {
+      calendarId,
+      eventId,
+      userEmail
     })
+
+    // CRITICAL FIX: Find the user's writable calendar
+    // Google synced calendars (type: 'google') cannot be written to via Lark API
+    // We need to use the primary Lark calendar (type: 'primary')
+    let actualCalendarId = calendarId
+
+    if (userEmail) {
+      try {
+        console.log(`🔍 Finding writable calendar for ${userEmail}...`)
+        const calendars = await this.getCalendarList(userEmail)
+
+        // PRIORITY 1: Find PRIMARY type calendar (native Lark calendar, not synced from Google)
+        const primaryCalendar = calendars.find((cal: any) =>
+          cal.type === 'primary' &&
+          cal.role === 'owner'
+        )
+
+        if (primaryCalendar) {
+          actualCalendarId = primaryCalendar.calendar_id
+          console.log(`✅ Using primary Lark calendar for deletion: ${actualCalendarId}`)
+          console.log(`   Summary: ${primaryCalendar.summary}`)
+          console.log(`   Type: ${primaryCalendar.type}`)
+        } else {
+          // PRIORITY 2: Find any owner calendar that is NOT a Google sync
+          const nativeCalendar = calendars.find((cal: any) =>
+            cal.role === 'owner' &&
+            cal.type !== 'google'
+          )
+
+          if (nativeCalendar) {
+            actualCalendarId = nativeCalendar.calendar_id
+            console.log(`✅ Using native Lark calendar for deletion: ${actualCalendarId}`)
+            console.log(`   Type: ${nativeCalendar.type}`)
+          } else {
+            // PRIORITY 3: Fallback to any owner calendar (may be Google sync - might fail)
+            const ownerCalendar = calendars.find((cal: any) => cal.role === 'owner')
+            if (ownerCalendar) {
+              actualCalendarId = ownerCalendar.calendar_id
+              console.log(`⚠️ Using owner calendar for deletion (may be Google sync): ${actualCalendarId}`)
+              console.log(`   Type: ${ownerCalendar.type}`)
+            } else {
+              console.log(`⚠️ No writable calendar found, using provided ID: ${calendarId}`)
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Failed to get calendar list, using provided ID:`, error)
+      }
+    }
+
+    try {
+      const response = await this.makeRequest(`/open-apis/calendar/v4/calendars/${actualCalendarId}/events/${eventId}`, {
+        method: 'DELETE',
+        userEmail: userEmail
+      })
+      console.log('✅ Successfully deleted calendar event:', eventId)
+      return response
+    } catch (error: any) {
+      console.error('❌ Failed to delete calendar event:', {
+        eventId,
+        error: error.message,
+        details: error.response || error
+      })
+      throw error
+    }
   }
 
   /**
@@ -849,31 +961,96 @@ class LarkService {
   }
 
   /**
+   * Send message as app (not requiring user token)
+   */
+  async sendAppMessage(
+    receiverEmail: string,
+    message: string | any,
+    msgType: 'text' | 'interactive' = 'text'
+  ): Promise<void> {
+    try {
+      // First try to get user ID from config files
+      const { getLarkUserId } = await import('./get-lark-user-id')
+      const larkIds = await getLarkUserId(receiverEmail)
+      
+      if (!larkIds?.openId) {
+        console.error(`❌ No Lark ID found for ${receiverEmail}. User needs to authorize the app first.`)
+        throw new Error(`No Lark ID found for ${receiverEmail}`)
+      }
+      
+      console.log(`📧 Sending notification to ${receiverEmail} (Lark ID: ${larkIds.openId})`)
+      
+      // Ensure we have app access token
+      await this.getAccessToken()
+      
+      // Prepare the message content
+      let content: string
+      if (msgType === 'text') {
+        content = JSON.stringify({ text: message })
+      } else {
+        content = JSON.stringify(message)
+      }
+      
+      // Send the message using app token
+      // Using open_id type (ou_ prefix IDs we got from OAuth)
+      const response = await this.makeRequest('/open-apis/im/v1/messages?receive_id_type=open_id', {
+        method: 'POST',
+        body: JSON.stringify({
+          receive_id: larkIds.openId || larkIds.userId,
+          msg_type: msgType,
+          content: content
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      })
+      
+      console.log('✅ Notification sent successfully to:', receiverEmail)
+    } catch (error) {
+      console.error('❌ Failed to send app message:', error)
+      throw error
+    }
+  }
+
+  /**
    * Get user info by email
    */
-  async getUserByEmail(email: string): Promise<{ user_id: string; name: string }> {
+  async getUserByEmail(email: string): Promise<{ user_id: string; open_id: string; name: string }> {
     try {
-      // First try to get user by email
-      const response = await this.makeRequest(`/open-apis/contact/v3/users/batch/get?user_ids=${encodeURIComponent(email)}&user_id_type=email`, {
-        method: 'GET'
-      })
+      // Ensure we have app access token
+      await this.getAccessToken()
+      
+      // Use the contact API to search for user by email - correct parameter name is 'user_ids'
+      const response = await this.makeRequest(
+        `/open-apis/contact/v3/users/batch?user_ids=${encodeURIComponent(email)}&user_id_type=email`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`
+          }
+        }
+      )
       
       const users = response.data?.items || []
       if (users.length > 0) {
         return {
-          user_id: users[0].user_id || users[0].open_id,
+          user_id: users[0].user_id,
+          open_id: users[0].open_id,
           name: users[0].name
         }
       }
+      
+      throw new Error(`User not found with email: ${email}`)
     } catch (error) {
-      console.log('Failed to get user by email, trying alternative method:', error)
-    }
-    
-    // Alternative: Return a placeholder since we might not need user lookup for calendar operations
-    console.log('Using email as user identifier directly')
-    return {
-      user_id: email,
-      name: email.split('@')[0]
+      console.error('Failed to get user by email:', error)
+      // Fallback: Return a placeholder for backwards compatibility
+      console.log('Using email as user identifier directly')
+      return {
+        user_id: email,
+        open_id: email,
+        name: email.split('@')[0]
+      }
     }
   }
 
@@ -1040,7 +1217,8 @@ class LarkService {
       date,
       startTime,
       endTime,
-      bookingType
+      bookingType,
+      merchantName: merchantInfo.name
     })
 
     // IMPORTANT: Add timezone suffix to ensure times are interpreted as Singapore time
@@ -1227,15 +1405,7 @@ class LarkService {
 
     console.log('✅ Event created successfully with ID:', eventId)
 
-    try {
-      const user = await this.getUserByEmail(trainerEmail)
-      await this.sendNotification(
-        user.user_id,
-        `New training session booked for ${merchantInfo.name} on ${date} from ${startTime} to ${endTime}`
-      )
-    } catch (notifyError) {
-      console.error('Failed to send notification:', notifyError)
-    }
+    // Note: Notification will be sent by the calling route using sendBookingNotification()
 
     return eventId
   }
@@ -1251,15 +1421,7 @@ class LarkService {
   ): Promise<void> {
     await this.deleteCalendarEvent(trainerCalendarId, eventId, trainerEmail)
 
-    try {
-      const user = await this.getUserByEmail(trainerEmail)
-      await this.sendNotification(
-        user.user_id,
-        `Training session for ${merchantName} has been cancelled`
-      )
-    } catch (notifyError) {
-      console.error('Failed to send cancellation notification:', notifyError)
-    }
+    // Note: Cancellation notification should be sent by the calling route using sendCancellationNotification()
   }
 }
 

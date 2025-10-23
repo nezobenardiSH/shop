@@ -75,7 +75,7 @@ export class LarkOAuthService {
       app_id: this.appId,
       redirect_uri: this.redirectUri,
       response_type: 'code',
-      scope: 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read',
+      scope: 'calendar:calendar calendar:calendar:read_as_user calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read',
       state: state || ''
     })
 
@@ -85,7 +85,7 @@ export class LarkOAuthService {
   /**
    * Exchange authorization code for tokens and store in database
    */
-  async exchangeCodeForTokens(code: string): Promise<string> {
+  async exchangeCodeForTokens(code: string, userType: 'trainer' | 'installer' = 'trainer'): Promise<string> {
     // Check credentials before making the request
     if (!this.appId || !this.appSecret) {
       console.error('Missing credentials:', {
@@ -138,6 +138,8 @@ export class LarkOAuthService {
     
     const userEmail = userInfo.data.email || `${userInfo.data.open_id}@lark.user`
     const expiresAt = new Date(Date.now() + (tokenData.data.expires_in * 1000))
+    const larkUserId = userInfo.data.user_id || ''
+    const larkOpenId = userInfo.data.open_id || tokenData.data.open_id || ''
 
     // Get user's primary calendar ID
     const calendarId = await this.getPrimaryCalendarId(
@@ -151,7 +153,7 @@ export class LarkOAuthService {
       create: {
         userEmail,
         userName: userInfo.data.name,
-        larkUserId: userInfo.data.user_id || userInfo.data.open_id,
+        larkUserId: larkUserId || larkOpenId,
         accessToken: tokenData.data.access_token,
         refreshToken: tokenData.data.refresh_token,
         expiresAt,
@@ -164,9 +166,19 @@ export class LarkOAuthService {
         expiresAt,
         calendarId,
         userName: userInfo.data.name,
-        larkUserId: userInfo.data.user_id || userInfo.data.open_id
+        larkUserId: larkUserId || larkOpenId
       }
     })
+
+    // Also update the config files with Lark IDs
+    try {
+      const { updateConfigWithLarkIds } = await import('./update-config-with-lark-ids')
+      await updateConfigWithLarkIds(userEmail, larkUserId, larkOpenId, userType)
+      console.log(`✅ Updated ${userType} config with Lark IDs for ${userEmail}`)
+    } catch (error) {
+      console.error(`Failed to update ${userType} config:`, error)
+      // Don't fail the whole process if config update fails
+    }
 
     return userEmail
   }
@@ -191,6 +203,7 @@ export class LarkOAuthService {
 
   /**
    * Get primary calendar ID for a user
+   * Finds a writable calendar (native Lark calendar, not synced Google calendar)
    */
   private async getPrimaryCalendarId(accessToken: string, userEmail: string): Promise<string> {
     try {
@@ -201,21 +214,59 @@ export class LarkOAuthService {
       })
 
       const data = await response.json()
-      
+
       if (data.code === 0 && data.data?.calendar_list) {
         const calendars = data.data.calendar_list
-        const primary = calendars.find((cal: any) => 
-          cal.type === 'primary' || 
-          cal.role === 'owner' ||
-          cal.summary?.toLowerCase().includes('primary')
+
+        console.log(`🔍 Finding writable calendar for ${userEmail} during OAuth...`)
+        console.log(`   Total calendars: ${calendars.length}`)
+
+        // PRIORITY 1: Find PRIMARY type calendar (native Lark calendar, not synced from Google)
+        // Google synced calendars (type: 'google') cannot be written to via Lark API
+        const primaryCalendar = calendars.find((cal: any) =>
+          cal.type === 'primary' &&
+          cal.role === 'owner'
         )
-        
-        return primary?.calendar_id || calendars[0]?.calendar_id || 'primary'
+
+        if (primaryCalendar) {
+          console.log(`✅ Found primary Lark calendar: ${primaryCalendar.calendar_id}`)
+          console.log(`   Summary: ${primaryCalendar.summary}`)
+          console.log(`   Type: ${primaryCalendar.type}`)
+          console.log(`   Role: ${primaryCalendar.role}`)
+          return primaryCalendar.calendar_id
+        }
+
+        // PRIORITY 2: Find any owner calendar that is NOT a Google sync
+        const nativeCalendar = calendars.find((cal: any) =>
+          cal.role === 'owner' &&
+          cal.type !== 'google'
+        )
+
+        if (nativeCalendar) {
+          console.log(`✅ Found native Lark calendar: ${nativeCalendar.calendar_id}`)
+          console.log(`   Type: ${nativeCalendar.type}`)
+          return nativeCalendar.calendar_id
+        }
+
+        // PRIORITY 3: Fallback to any owner calendar (may be Google sync - might not work)
+        const ownerCalendar = calendars.find((cal: any) => cal.role === 'owner')
+        if (ownerCalendar) {
+          console.log(`⚠️ Using owner calendar (may be Google sync): ${ownerCalendar.calendar_id}`)
+          console.log(`   Type: ${ownerCalendar.type}`)
+          return ownerCalendar.calendar_id
+        }
+
+        // PRIORITY 4: Fallback to first calendar
+        if (calendars[0]) {
+          console.log(`⚠️ Using first calendar: ${calendars[0].calendar_id}`)
+          return calendars[0].calendar_id
+        }
       }
     } catch (error) {
       console.error('Failed to get calendar ID:', error)
     }
-    
+
+    console.log(`⚠️ No calendar found, using 'primary' as fallback`)
     return 'primary'
   }
 

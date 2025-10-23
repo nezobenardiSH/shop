@@ -32,7 +32,8 @@ export interface TrainerAvailability {
 
 /**
  * Get combined availability from all trainers
- * Shows a slot as available if ANY trainer is free
+ * Shows a slot as available if ANY authorized trainer (with OAuth token) is free
+ * Trainers without OAuth tokens are excluded from availability calculations
  * @param startDate - Start date for availability check
  * @param endDate - End date for availability check
  * @param merchantAddress - Optional merchant address for location-based filtering
@@ -71,15 +72,10 @@ export async function getCombinedAvailability(
       // First check if trainer has OAuth token
       const { larkOAuthService } = await import('./lark-oauth-service')
       const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
-      
+
       if (!hasToken) {
-        console.log(`⚠️ ${trainer.name} has no OAuth token - assuming available`)
-        // If trainer hasn't authorized, assume they're available
-        trainerAvailabilities.set(trainer.name, {
-          trainerName: trainer.name,
-          trainerEmail: trainer.email,
-          busySlots: []
-        })
+        console.log(`⚠️ ${trainer.name} has no OAuth token - SKIPPING (not available for booking)`)
+        // If trainer hasn't authorized, they cannot be booked, so skip them
         continue
       }
       
@@ -262,6 +258,7 @@ export async function getCombinedAvailability(
 /**
  * Check availability for a specific slot across all trainers
  * Uses the same logic as getCombinedAvailability() for consistency
+ * Only considers trainers with OAuth tokens (authorized trainers)
  * @param date - Date string in YYYY-MM-DD format
  * @param startTime - Start time in HH:MM format
  * @param endTime - End time in HH:MM format
@@ -307,9 +304,8 @@ export async function getSlotAvailability(
       const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
 
       if (!hasToken) {
-        console.log(`⚠️ ${trainer.name} has no OAuth token - assuming available`)
-        // If trainer hasn't authorized, assume they're available
-        availableTrainers.push(trainer.name)
+        console.log(`⚠️ ${trainer.name} has no OAuth token - SKIPPING (not available for booking)`)
+        // If trainer hasn't authorized, they cannot be booked, so skip them
         continue
       }
 

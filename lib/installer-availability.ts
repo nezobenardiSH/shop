@@ -1,5 +1,6 @@
 import { getSalesforceConnection } from './salesforce'
 import { larkService } from './lark'
+import { sendBookingNotification } from './lark-notifications'
 import installersConfig from '../config/installers.json'
 
 interface TimeSlot {
@@ -264,42 +265,42 @@ export async function bookInternalInstallation(
   }
   
   // Create calendar event using the existing larkService
-  const eventResponse = await larkService.createCalendarEvent(
-    calendarId,
-    {
-      summary: `Installation: ${merchantName}`,
-      description: `Installation appointment for merchant ${merchantName} (ID: ${merchantId})`,
-      start_time: {
-        timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString()
-      },
-      end_time: {
-        timestamp: Math.floor(new Date(`${date}T${timeSlot.end}:00+08:00`).getTime() / 1000).toString()
-      }
-    },
-    installer.email // Pass email as third parameter for user context
-  )
+  let eventResponse: any
+  let eventId: string
   
-  // The Lark API might return the event ID in different places
-  const eventId = (eventResponse as any)?.event?.event_id || eventResponse?.event_id
+  try {
+    eventResponse = await larkService.createCalendarEvent(
+      calendarId,
+      {
+        summary: `Installation: ${merchantName}`,
+        description: `Installation appointment for merchant ${merchantName} (ID: ${merchantId})`,
+        start_time: {
+          timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString()
+        },
+        end_time: {
+          timestamp: Math.floor(new Date(`${date}T${timeSlot.end}:00+08:00`).getTime() / 1000).toString()
+        }
+      },
+      installer.email // Pass email as third parameter for user context
+    )
+    
+    // The Lark API might return the event ID in different places
+    eventId = (eventResponse as any)?.event?.event_id || eventResponse?.event_id
+    console.log('✅ Calendar event created successfully:', eventId)
+  } catch (calendarError: any) {
+    console.error('❌ Calendar creation failed:', calendarError.message)
+    
+    // Throw error to fail the booking instead of using mock
+    throw new Error(`Failed to create calendar event: ${calendarError.message || 'Please check Lark calendar permissions.'}`)
+  }
   
   console.log('📅 Created new installation event:', {
     eventId: eventId,
     eventIdLength: eventId?.length,
     fullResponse: JSON.stringify(eventResponse, null, 2)
   })
-  
-  // Send notification to installer (similar to training notifications)
-  try {
-    const user = await larkService.getUserByEmail(installer.email)
-    await larkService.sendNotification(
-      user.user_id,
-      `New installation booked for ${merchantName} on ${date} from ${timeSlot.start} to ${timeSlot.end}`
-    )
-    console.log('✅ Notification sent to installer:', installer.name)
-  } catch (notifyError) {
-    console.error('Failed to send notification to installer:', notifyError)
-    // Don't throw - notification failure shouldn't fail the booking
-  }
+
+  // Note: Notification will be sent later using sendBookingNotification() after Salesforce update
   
   // Update Salesforce - using the same pattern as training bookings
   const conn = await getSalesforceConnection()
@@ -406,6 +407,25 @@ export async function bookInternalInstallation(
     }
   } else {
     console.log('⚠️ No Salesforce connection available')
+  }
+  
+  // Send notification to the assigned installer
+  try {
+    await sendBookingNotification({
+      merchantName,
+      merchantId,
+      date: date.split('T')[0], // Date only
+      startTime: timeSlot.start,
+      endTime: timeSlot.end,
+      bookingType: 'installation',
+      isRescheduling: !!existingEventId,
+      assignedPersonName: assignedInstaller,
+      assignedPersonEmail: installer.email
+    })
+    console.log('📧 Notification sent to installer:', installer.email)
+  } catch (notificationError) {
+    console.error('Notification failed but installation booking succeeded:', notificationError)
+    // Don't fail the booking if notification fails
   }
   
   return {

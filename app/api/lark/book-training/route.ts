@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { larkService } from '@/lib/lark'
 import { getSlotAvailability, assignTrainer, getTrainerDetails } from '@/lib/trainer-availability'
 import { getSalesforceConnection } from '@/lib/salesforce'
+import { sendBookingNotification } from '@/lib/lark-notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -215,15 +216,20 @@ export async function POST(request: NextRequest) {
         
         console.log('✅ Real calendar event created successfully:', eventId)
       } catch (bookingError: any) {
-        console.error('❌ Lark booking failed with error:', {
+        console.error('❌ Lark calendar booking failed:', {
           message: bookingError.message,
           stack: bookingError.stack,
           name: bookingError.name
         })
         
-        // Fallback to mock mode if calendar creation fails
-        console.log('⚠️ Falling back to mock mode due to Lark error')
-        eventId = `mock-event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        // Return error response instead of using mock fallback
+        return NextResponse.json(
+          { 
+            error: 'Failed to create calendar event',
+            details: bookingError.message || 'Unable to create calendar event. Please check Lark calendar permissions.'
+          },
+          { status: 500 }
+        )
       }
     }
 
@@ -443,6 +449,28 @@ export async function POST(request: NextRequest) {
       if (bookingType === 'hardware-fulfillment' && errorMessage.includes('CSM')) {
         console.log('⚠️ Note: Hardware Fulfillment Date requires special permissions in Salesforce')
       }
+    }
+
+    // Send notification to the assigned trainer
+    try {
+      await sendBookingNotification({
+        merchantName: onboardingTrainerName || merchantName,
+        merchantId,
+        date,
+        startTime,
+        endTime,
+        bookingType,
+        isRescheduling: !!existingEventId,
+        assignedPersonName: assignment.assigned,
+        assignedPersonEmail: trainer.email,
+        location: merchantAddress,
+        contactPerson: merchantContactPerson,
+        contactPhone: merchantPhone
+      })
+      console.log('📧 Notification sent to trainer:', trainer.email)
+    } catch (notificationError) {
+      console.error('Notification failed but booking succeeded:', notificationError)
+      // Don't fail the booking if notification fails
     }
 
     return NextResponse.json({

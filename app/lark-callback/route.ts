@@ -8,12 +8,17 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const code = searchParams.get('code')
     const state = searchParams.get('state')
+    
+    // Determine user type from state parameter
+    const userType = state?.includes('installer') ? 'installer' : 'trainer'
+    const authPage = userType === 'installer' ? '/installers/authorize' : '/trainers/authorize'
 
     console.log('OAuth callback received with code:', code?.substring(0, 10) + '...')
+    console.log('User type:', userType)
 
     if (!code) {
       return NextResponse.redirect(
-        new URL('/trainers/authorize?error=no_code', baseUrl)
+        new URL(`${authPage}?error=no_code`, baseUrl)
       )
     }
 
@@ -30,12 +35,12 @@ export async function GET(request: NextRequest) {
     try {
       // Exchange code for tokens and save to database
       console.log('Exchanging code for tokens...')
-      const userEmail = await larkOAuthService.exchangeCodeForTokens(code)
-      console.log(`Successfully authorized Lark for user: ${userEmail}`)
+      const userEmail = await larkOAuthService.exchangeCodeForTokens(code, userType as 'trainer' | 'installer')
+      console.log(`Successfully authorized Lark for ${userType}: ${userEmail}`)
 
       // Redirect with success
       return NextResponse.redirect(
-        new URL(`/trainers/authorize?success=true&email=${encodeURIComponent(userEmail)}`, baseUrl)
+        new URL(`${authPage}?success=true&email=${encodeURIComponent(userEmail)}`, baseUrl)
       )
     } catch (exchangeError: any) {
       console.error('OAuth token exchange error:', exchangeError)
@@ -43,14 +48,16 @@ export async function GET(request: NextRequest) {
 
       // Redirect with error
       return NextResponse.redirect(
-        new URL(`/trainers/authorize?error=${encodeURIComponent(exchangeError.message)}`, baseUrl)
+        new URL(`${authPage}?error=${encodeURIComponent(exchangeError.message)}`, baseUrl)
       )
     }
 
   } catch (error: any) {
     console.error('OAuth callback error:', error)
+    // Default to trainer page if we can't determine user type
+    const authPage = '/trainers/authorize'
     return NextResponse.redirect(
-      new URL(`/trainers/authorize?error=${encodeURIComponent(error.message)}`, baseUrl)
+      new URL(`${authPage}?error=${encodeURIComponent(error.message)}`, baseUrl)
     )
   }
 }

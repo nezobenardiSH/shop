@@ -7,7 +7,6 @@
       {
         "name": "Nejojo",
         "email": "nezo.benardi@storehub.com",
-        "larkUserId": "",
         "larkCalendarId": "",
         "phone": "+60123456789",
         "isActive": true
@@ -15,7 +14,6 @@
       {
         "name": "JE",
         "email": "jiaen.chai@storehub.com",
-        "larkUserId": "",
         "larkCalendarId": "",
         "phone": "+60123456789",
         "isActive": true
@@ -40,12 +38,34 @@
   },
   "settings": {
     "defaultTimeSlots": [
-      { "start": "09:00", "end": "11:00", "label": "9:00 AM - 11:00 AM" },
-      { "start": "11:00", "end": "13:00", "label": "11:00 AM - 1:00 PM" },
-      { "start": "14:00", "end": "16:00", "label": "2:00 PM - 4:00 PM" },
-      { "start": "16:00", "end": "18:00", "label": "4:00 PM - 6:00 PM" }
+      {
+        "start": "09:00",
+        "end": "11:00",
+        "label": "9:00 AM - 11:00 AM"
+      },
+      {
+        "start": "11:00",
+        "end": "13:00",
+        "label": "11:00 AM - 1:00 PM"
+      },
+      {
+        "start": "14:00",
+        "end": "16:00",
+        "label": "2:00 PM - 4:00 PM"
+      },
+      {
+        "start": "16:00",
+        "end": "18:00",
+        "label": "4:00 PM - 6:00 PM"
+      }
     ],
-    "workingDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "workingDays": [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday"
+    ],
     "advanceBookingDays": 7,
     "bufferTimeMinutes": 30,
     "timezone": "Asia/Kuala_Lumpur"
