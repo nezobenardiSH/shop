@@ -85,36 +85,37 @@ export async function getInternalInstallersAvailability(
       // Check if installer has OAuth token
       const { larkOAuthService } = await import('./lark-oauth-service')
       const hasToken = await larkOAuthService.isUserAuthorized(installer.email)
-      
+
       if (!hasToken) {
-        console.log(`⚠️ ${installer.name} has no OAuth token - assuming available`)
-        installerAvailabilities.set(installer.name, [])
+        console.log(`⚠️ ${installer.name} has no OAuth token - SKIPPING (not available)`)
+        // Don't add to installerAvailabilities - installer is not available without OAuth
         continue
       }
-      
+
       // Get raw busy times from calendar (same as trainers do)
       const startDateTime = new Date(`${startDate}T00:00:00+08:00`)
       const endDateTime = new Date(`${endDate}T23:59:59+08:00`)
-      
+
       const busySlots = await larkService.getRawBusyTimes(
         installer.email,
         startDateTime,
         endDateTime
       )
-      
+
       console.log(`${installer.name}: Found ${busySlots.length} busy periods`)
-      
+
       // Convert to simple format
       const simpleBusySlots = busySlots.map((busy: any) => ({
         start: busy.start_time,
         end: busy.end_time
       }))
-      
+
       installerAvailabilities.set(installer.name, simpleBusySlots)
     } catch (error) {
       console.error(`Failed to get availability for ${installer.name}:`, error)
-      // If we can't get availability, assume installer is available
-      installerAvailabilities.set(installer.name, [])
+      // If we can't get availability due to error, don't include this installer
+      // This prevents showing false availability
+      console.log(`⚠️ ${installer.name} excluded from availability due to error`)
     }
   }
   
