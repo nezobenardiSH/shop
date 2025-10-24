@@ -105,6 +105,7 @@ export async function GET(
                Installer_Name__c, Installer_Name__r.Name,
                CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
                Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
+               Subscription_Activation_Date__c,
                SSM__c, Merchant_Location__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
@@ -140,6 +141,7 @@ export async function GET(
                  Installer_Name__c, Installer_Name__r.Name,
                  CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
                  Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
+                 Subscription_Activation_Date__c,
                  SSM__c,
                  CreatedDate, LastModifiedDate
           FROM Onboarding_Trainer__c
@@ -504,6 +506,7 @@ export async function GET(
         menuCollectionFormLink: trainer.Menu_Collection_Form_Link__c,
         menuCollectionSubmissionTimestamp: trainer.Menu_Collection_Submission_Timestamp__c,
         boAccountName: trainer.BO_Account_Name__c,
+        subscriptionActivationDate: trainer.Subscription_Activation_Date__c,
         videoProofLink: trainer.Video_Proof_Link__c,
         ssmDocument: fixedSsmDocumentUrl,
         createdDate: trainer.CreatedDate,
