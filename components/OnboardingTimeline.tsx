@@ -738,31 +738,31 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                       In one continuous video, please walk us through these 3 stops:
                     </div>
 
-                    <div className="space-y-2 text-xs">
-                      <div className="bg-white rounded p-2 border border-blue-100">
-                        <div className="font-semibold text-gray-900 mb-1">📍 Stop 1: Your Main Counter</div>
+                    <div className="space-y-2 text-sm">
+                      <div className="bg-white rounded p-3 border border-blue-100">
+                        <div className="font-semibold text-gray-900 mb-1">Stop 1: Your Main Counter</div>
                         <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
                           <li><span className="font-medium">Show us:</span> Where your new terminal and receipt printer will go.</li>
-                          <li><span className="font-medium">Zoom in on:</span> The nearby power sockets (🔌) and LAN port (🌐).</li>
-                          <li><span className="font-medium">🎤 Say:</span> "Counter ready!"</li>
+                          <li><span className="font-medium">Zoom in on:</span> The nearby power sockets and LAN port.</li>
+                          <li><span className="font-medium">Say:</span> "Counter ready!"</li>
                         </ul>
                       </div>
 
-                      <div className="bg-white rounded p-2 border border-blue-100">
-                        <div className="font-semibold text-gray-900 mb-1">📍 Stop 2: Your Kitchen</div>
+                      <div className="bg-white rounded p-3 border border-blue-100">
+                        <div className="font-semibold text-gray-900 mb-1">Stop 2: Your Kitchen</div>
                         <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
                           <li><span className="font-medium">Show us:</span> The spot for your kitchen printer.</li>
-                          <li><span className="font-medium">Zoom in on:</span> Its dedicated power socket (🔌) and LAN port (🌐).</li>
-                          <li><span className="font-medium">🎤 Say:</span> "Kitchen ready!" <span className="text-gray-500">(If you have more than one kitchen printer, please show each spot.)</span></li>
+                          <li><span className="font-medium">Zoom in on:</span> Its dedicated power socket and LAN port.</li>
+                          <li><span className="font-medium">Say:</span> "Kitchen ready!" <span className="text-gray-500">(If you have more than one kitchen printer, please show each spot.)</span></li>
                         </ul>
                       </div>
 
-                      <div className="bg-white rounded p-2 border border-blue-100">
-                        <div className="font-semibold text-gray-900 mb-1">📍 Stop 3: Your Bar (if applicable)</div>
+                      <div className="bg-white rounded p-3 border border-blue-100">
+                        <div className="font-semibold text-gray-900 mb-1">Stop 3: Your Bar (if applicable)</div>
                         <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
                           <li><span className="font-medium">Show us:</span> The spot for your bar printer.</li>
-                          <li><span className="font-medium">Zoom in on:</span> Its power socket (🔌) and LAN port (🌐).</li>
-                          <li><span className="font-medium">🎤 Say:</span> "Bar ready!"</li>
+                          <li><span className="font-medium">Zoom in on:</span> Its power socket and LAN port.</li>
+                          <li><span className="font-medium">Say:</span> "Bar ready!"</li>
                         </ul>
                       </div>
                     </div>
@@ -1043,43 +1043,43 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         return (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-700">✓ Hardware Delivered</span>
-              <span className={`text-xs ${trainerData?.hardwareFulfillmentDate ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className="text-base text-gray-700">✓ Hardware Delivered</span>
+              <span className={`text-sm ${trainerData?.hardwareFulfillmentDate ? 'text-green-600' : 'text-gray-400'}`}>
                 {trainerData?.hardwareFulfillmentDate ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-700">✓ Product Setup</span>
-              <span className={`text-xs ${trainerData?.completedProductSetup === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className="text-base text-gray-700">✓ Product Setup</span>
+              <span className={`text-sm ${trainerData?.completedProductSetup === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>
                 {trainerData?.completedProductSetup === 'Yes' ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-700">✓ Installation</span>
-              <span className={`text-xs ${trainerData?.installationStatus === 'Completed' ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className="text-base text-gray-700">✓ Installation</span>
+              <span className={`text-sm ${trainerData?.installationStatus === 'Completed' ? 'text-green-600' : 'text-gray-400'}`}>
                 {trainerData?.installationStatus === 'Completed' ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-700">✓ Training</span>
-              <span className={`text-xs ${trainerData?.completedTraining === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className="text-base text-gray-700">✓ Training</span>
+              <span className={`text-sm ${trainerData?.completedTraining === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>
                 {trainerData?.completedTraining === 'Yes' ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-700">✓ Subscription Activated</span>
-              <span className={`text-xs ${trainerData?.subscriptionActivationDate ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className="text-base text-gray-700">✓ Subscription Activated</span>
+              <span className={`text-sm ${trainerData?.subscriptionActivationDate ? 'text-green-600' : 'text-gray-400'}`}>
                 {trainerData?.subscriptionActivationDate ? 'Yes' : 'No'}
               </span>
             </div>
             {trainerData?.boAccountName && !trainerData?.subscriptionActivationDate && (
-              <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-xs">
-                <p className="text-orange-800 mb-1">⚠️ Please activate subscription at:</p>
+              <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded">
+                <p className="text-orange-800 mb-1 text-sm">⚠️ Please activate subscription at:</p>
                 <a
                   href={`https://${trainerData.boAccountName}.storehubhq.com`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline break-all"
+                  className="text-blue-600 hover:text-blue-800 underline break-all text-base"
                 >
                   {trainerData.boAccountName}.storehubhq.com
                 </a>
@@ -1678,31 +1678,31 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         In one continuous video, please walk us through these 3 stops:
                       </div>
 
-                      <div className="space-y-2 text-xs">
-                        <div className="bg-white rounded p-2 border border-blue-100">
-                          <div className="font-semibold text-gray-900 mb-1">📍 Stop 1: Your Main Counter</div>
+                      <div className="space-y-2 text-sm">
+                        <div className="bg-white rounded p-3 border border-blue-100">
+                          <div className="font-semibold text-gray-900 mb-1">Stop 1: Your Main Counter</div>
                           <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
                             <li><span className="font-medium">Show us:</span> Where your new terminal and receipt printer will go.</li>
-                            <li><span className="font-medium">Zoom in on:</span> The nearby power sockets (🔌) and LAN port (🌐).</li>
-                            <li><span className="font-medium">🎤 Say:</span> "Counter ready!"</li>
+                            <li><span className="font-medium">Zoom in on:</span> The nearby power sockets and LAN port.</li>
+                            <li><span className="font-medium">Say:</span> "Counter ready!"</li>
                           </ul>
                         </div>
 
-                        <div className="bg-white rounded p-2 border border-blue-100">
-                          <div className="font-semibold text-gray-900 mb-1">📍 Stop 2: Your Kitchen</div>
+                        <div className="bg-white rounded p-3 border border-blue-100">
+                          <div className="font-semibold text-gray-900 mb-1">Stop 2: Your Kitchen</div>
                           <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
                             <li><span className="font-medium">Show us:</span> The spot for your kitchen printer.</li>
-                            <li><span className="font-medium">Zoom in on:</span> Its dedicated power socket (🔌) and LAN port (🌐).</li>
-                            <li><span className="font-medium">🎤 Say:</span> "Kitchen ready!" <span className="text-gray-500">(If you have more than one kitchen printer, please show each spot.)</span></li>
+                            <li><span className="font-medium">Zoom in on:</span> Its dedicated power socket and LAN port.</li>
+                            <li><span className="font-medium">Say:</span> "Kitchen ready!" <span className="text-gray-500">(If you have more than one kitchen printer, please show each spot.)</span></li>
                           </ul>
                         </div>
 
-                        <div className="bg-white rounded p-2 border border-blue-100">
-                          <div className="font-semibold text-gray-900 mb-1">📍 Stop 3: Your Bar (if applicable)</div>
+                        <div className="bg-white rounded p-3 border border-blue-100">
+                          <div className="font-semibold text-gray-900 mb-1">Stop 3: Your Bar (if applicable)</div>
                           <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
                             <li><span className="font-medium">Show us:</span> The spot for your bar printer.</li>
-                            <li><span className="font-medium">Zoom in on:</span> Its power socket (🔌) and LAN port (🌐).</li>
-                            <li><span className="font-medium">🎤 Say:</span> "Bar ready!"</li>
+                            <li><span className="font-medium">Zoom in on:</span> Its power socket and LAN port.</li>
+                            <li><span className="font-medium">Say:</span> "Bar ready!"</li>
                           </ul>
                         </div>
                       </div>
@@ -2186,9 +2186,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-sm text-gray-700">Hardware Delivered</span>
+                    <span className="text-base text-gray-700">Hardware Delivered</span>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-500">
                     {trainerData?.hardwareFulfillmentDate
                       ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
                       : 'Pending'}
@@ -2207,9 +2207,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-sm text-gray-700">Product Setup Completed</span>
+                    <span className="text-base text-gray-700">Product Setup Completed</span>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-500">
                     {trainerData?.completedProductSetup === 'Yes' ? 'Completed' : 'In Progress'}
                   </span>
                 </div>
@@ -2226,9 +2226,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-sm text-gray-700">Hardware Installation Completed</span>
+                    <span className="text-base text-gray-700">Hardware Installation Completed</span>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-500">
                     {trainerData?.installationStatus || 'Pending'}
                   </span>
                 </div>
@@ -2245,9 +2245,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-sm text-gray-700">Training Completed</span>
+                    <span className="text-base text-gray-700">Training Completed</span>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-500">
                     {trainerData?.completedTraining === 'Yes' ? 'Completed' : 'In Progress'}
                   </span>
                 </div>
@@ -2264,9 +2264,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-sm text-gray-700">Subscription Activated</span>
+                    <span className="text-base text-gray-700">Subscription Activated</span>
                   </div>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-500">
                     {trainerData?.subscriptionActivationDate
                       ? new Date(trainerData.subscriptionActivationDate).toLocaleDateString()
                       : 'Pending'}

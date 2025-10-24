@@ -1,6 +1,6 @@
 import Image from 'next/image'
 
-export default function Home() {
+export default function MerchantPage() {
   return (
     <div className="min-h-screen bg-[#faf9f6] flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
@@ -24,3 +24,4 @@ export default function Home() {
     </div>
   )
 }
+
