@@ -261,6 +261,24 @@ function TrainerPortalContent() {
           console.log(`📝 URL PARAM - NEW BOOKING MODE for ${bookingType}`)
         }
 
+        // Get installation date for training bookings (lower bound)
+        const installationDate = trainer.installationDate || null
+
+        // Get earliest training date for installation bookings (upper bound)
+        let trainingDate = null
+        if (bookingType === 'installation') {
+          const posDate = trainer.posTrainingDate ? new Date(trainer.posTrainingDate) : null
+          const boDate = trainer.backOfficeTrainingDate || trainer.trainingDate ? new Date(trainer.backOfficeTrainingDate || trainer.trainingDate) : null
+
+          if (posDate && boDate) {
+            trainingDate = posDate < boDate ? trainer.posTrainingDate : (trainer.backOfficeTrainingDate || trainer.trainingDate)
+          } else if (posDate) {
+            trainingDate = trainer.posTrainingDate
+          } else if (boDate) {
+            trainingDate = trainer.backOfficeTrainingDate || trainer.trainingDate
+          }
+        }
+
         setCurrentBookingInfo({
           trainerId: trainer.id,
           trainerName: actualTrainerName,
@@ -272,6 +290,8 @@ function TrainerPortalContent() {
           displayName: trainer.name,
           bookingType: bookingType,
           onboardingServicesBought: trainer.onboardingServicesBought,
+          installationDate: installationDate,
+          trainingDate: trainingDate,
           existingBooking: existingBooking
         })
         setBookingModalOpen(true)
@@ -349,9 +369,28 @@ function TrainerPortalContent() {
       // Training depends on Installation date
       dependentDate = trainer.installationDate || null
     }
-    
+
     // Get the go-live date
     const goLiveDate = trainer.plannedGoLiveDate || null
+
+    // Get installation date for training bookings (lower bound)
+    const installationDate = trainer.installationDate || null
+
+    // Get earliest training date for installation bookings (upper bound)
+    // Use the earliest of POS training or BackOffice training
+    let trainingDate = null
+    if (bookingType === 'installation') {
+      const posDate = trainer.posTrainingDate ? new Date(trainer.posTrainingDate) : null
+      const boDate = trainer.backOfficeTrainingDate || trainer.trainingDate ? new Date(trainer.backOfficeTrainingDate || trainer.trainingDate) : null
+
+      if (posDate && boDate) {
+        trainingDate = posDate < boDate ? trainer.posTrainingDate : (trainer.backOfficeTrainingDate || trainer.trainingDate)
+      } else if (posDate) {
+        trainingDate = trainer.posTrainingDate
+      } else if (boDate) {
+        trainingDate = trainer.backOfficeTrainingDate || trainer.trainingDate
+      }
+    }
 
     // Get the existing event ID and date based on booking type
     let existingEventId = null
@@ -399,6 +438,8 @@ function TrainerPortalContent() {
       onboardingServicesBought: trainer.onboardingServicesBought,
       dependentDate: dependentDate, // Pass the dependent date
       goLiveDate: goLiveDate, // Pass the go-live date
+      installationDate: installationDate, // Pass installation date for training bookings
+      trainingDate: trainingDate, // Pass earliest training date for installation bookings
       existingBooking: existingBooking // Pass existing booking info if rescheduling
     }
 
@@ -828,6 +869,8 @@ function TrainerPortalContent() {
             currentBooking={currentBookingInfo.existingBooking}
             dependentDate={currentBookingInfo.dependentDate}
             goLiveDate={currentBookingInfo.goLiveDate}
+            installationDate={currentBookingInfo.installationDate}
+            trainingDate={currentBookingInfo.trainingDate}
             onBookingComplete={handleBookingComplete}
           />
         )}

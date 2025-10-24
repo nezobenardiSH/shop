@@ -16,23 +16,42 @@ The scheduling system enforces a logical progression of dates through the onboar
   - Typically set by operations team (not editable via booking modal)
 
 ### 2. Installation
-- **Dependencies**: Must be scheduled AFTER Hardware Fulfillment date
-- **Constraints**:
-  - Minimum: 1 day after Hardware Fulfillment date
-  - Maximum: 14 days from the earliest eligible date OR Expected Go-Live date (whichever is earlier)
-  - Cannot be scheduled on weekends
+- **Dependencies**: Must be scheduled AFTER Hardware Fulfillment date and BEFORE Training date (if Training is already scheduled)
+- **Lower Bound**:
+  - Cannot book on the same day (today)
+  - Earliest booking: Tomorrow (today + 1 day)
+  - If Hardware Fulfillment date exists: 1 day after Hardware Fulfillment date
+  - Final lower bound: The later of (tomorrow) OR (Hardware Fulfillment + 1 day)
+- **Upper Bound**:
+  - If Training is already scheduled: 1 day before the earliest Training date (POS or BackOffice)
+  - Otherwise: 14 days from the lower bound
+  - Final upper bound: The earlier of (Training date - 1 day) OR (14 days from lower bound)
+- **Additional Constraints**:
+  - Cannot be scheduled on weekends (Saturday/Sunday)
   - Must be before the Expected Go-Live date
 
 ### 3. Training (General/POS/BackOffice)
-- **Dependencies**: Must be scheduled AFTER Installation date
-- **Constraints**:
-  - Minimum: 1 day after Installation date
-  - Maximum: 14 days from the earliest eligible date OR Expected Go-Live date (whichever is earlier)
-  - Cannot be scheduled on weekends
-  - Must be before the Expected Go-Live date
+- **Dependencies**: Must be scheduled AFTER Installation date and BEFORE Go-Live date
+- **Lower Bound**:
+  - Cannot book on the same day (today)
+  - Earliest booking: Tomorrow (today + 1 day)
+  - If Installation date exists: 1 day after Installation date
+  - Final lower bound: The later of (tomorrow) OR (Installation date + 1 day)
+- **Upper Bound**:
+  - If Go-Live date exists: On or before Go-Live date
+  - Otherwise: 14 days from the lower bound
+  - Final upper bound: The earlier of (Go-Live date) OR (14 days from lower bound)
+- **Additional Constraints**:
+  - Cannot be scheduled on weekends (Saturday/Sunday)
   - Language selection required (Chinese, Bahasa Malaysia, English)
 
 ## General Rules
+
+### Same-Day Booking Restriction
+- **Installation and Training bookings CANNOT be made for the same day (today)**
+- The earliest available booking date is **tomorrow** (today + 1 day)
+- This ensures adequate preparation time for both merchants and staff
+- Applies to all booking types: Installation, POS Training, BackOffice Training
 
 ### Weekend Exclusion
 - Saturday and Sunday are always blocked for scheduling
@@ -47,6 +66,15 @@ The scheduling system enforces a logical progression of dates through the onboar
 - ALL scheduled dates must be before or on the Expected Go-Live date
 - If Go-Live date is earlier than 14 days from the minimum eligible date, the Go-Live date becomes the maximum selectable date
 - This ensures all onboarding activities are completed before the merchant goes live
+
+### Booking Order Enforcement
+- **Installation must happen BEFORE Training**
+  - If Training is already scheduled, Installation cannot be rescheduled to a date after Training
+  - The system will limit Installation's upper bound to 1 day before the earliest Training date
+- **Training must happen AFTER Installation**
+  - If Installation is already scheduled, Training cannot be scheduled before Installation
+  - The system will set Training's lower bound to 1 day after Installation date
+- This prevents out-of-order scheduling and maintains the logical onboarding flow
 
 ## Visual Indicators
 
@@ -69,28 +97,44 @@ The scheduling system enforces a logical progression of dates through the onboar
 
 ### Date Validation Logic
 ```javascript
-// Minimum date calculation
-let minDate = today
-if (dependentDate) {
-  minDate = max(today, dependentDate + 1 day)
+// For Installation bookings:
+let minDate = tomorrow // Cannot book today
+if (hardwareFulfillmentDate) {
+  minDate = max(tomorrow, hardwareFulfillmentDate + 1 day)
 }
 
-// Maximum date calculation
-let maxDate = min(
-  minDate + 14 days,
-  goLiveDate
-)
+let maxDate = minDate + 14 days
+if (trainingDate) {
+  maxDate = min(maxDate, trainingDate - 1 day) // Must be before training
+}
+
+// For Training bookings:
+let minDate = tomorrow // Cannot book today
+if (installationDate) {
+  minDate = max(tomorrow, installationDate + 1 day)
+}
+
+let maxDate = minDate + 14 days
+if (goLiveDate) {
+  maxDate = min(maxDate, goLiveDate) // Must be before or on go-live
+}
 
 // Date is valid if:
-isValid = date >= minDate && 
-          date <= maxDate && 
-          !isWeekend(date)
+isValid = date >= minDate &&
+          date <= maxDate &&
+          !isWeekend(date) &&
+          date != today // Cannot book same day
 ```
 
 ### Booking Type Hierarchy
-1. Hardware Fulfillment → 2. Installation → 3. Training
+1. Hardware Fulfillment → 2. Installation → 3. Training → 4. Go-Live
 
-Each stage must be completed before the next can be scheduled.
+**Strict Ordering Rules:**
+- Installation MUST be scheduled AFTER Hardware Fulfillment
+- Installation MUST be scheduled BEFORE Training (if Training exists)
+- Training MUST be scheduled AFTER Installation (if Installation exists)
+- Training MUST be scheduled BEFORE Go-Live
+- Each stage must have at least 1 day gap from the previous stage
 
 ## Error Prevention
 
@@ -114,21 +158,39 @@ The system prevents invalid date selections by:
 ## Testing Scenarios
 
 ### Scenario 1: Normal Flow
-- Hardware Fulfillment: Oct 20, 2025
-- Installation: Can book Oct 21 - Nov 3, 2025
-- Training: After Installation is booked
+- **Today**: Oct 20, 2025
+- **Hardware Fulfillment**: Oct 18, 2025
+- **Installation**: Can book Oct 21 (tomorrow) - Nov 1, 2025 (14 days from Oct 21)
+- **Training**: After Installation is booked (e.g., if Installation is Oct 25, Training can be Oct 26 - Nov 8)
 
 ### Scenario 2: Go-Live Constraint
-- Hardware Fulfillment: Oct 20, 2025
-- Go-Live Date: Oct 30, 2025
-- Installation: Can only book Oct 21 - Oct 30, 2025 (limited by Go-Live)
-- Training: Must fit between Installation and Oct 30
+- **Today**: Oct 20, 2025
+- **Hardware Fulfillment**: Oct 18, 2025
+- **Go-Live Date**: Oct 30, 2025
+- **Installation**: Can book Oct 21 - Oct 30, 2025 (limited by Go-Live)
+- **Training**: Must fit between Installation and Oct 30 (e.g., if Installation is Oct 25, Training can be Oct 26-30)
 
-### Scenario 3: Late Start
+### Scenario 3: Rescheduling with Existing Bookings
+- **Today**: Oct 20, 2025
+- **Installation**: Already scheduled for Oct 25, 2025
+- **Training**: Already scheduled for Oct 28, 2025
+- **Rescheduling Installation**: Can only book Oct 21 - Oct 27 (limited by Training date - 1)
+- **Rescheduling Training**: Can only book Oct 26 (Installation + 1) - Nov 8 (14 days from Oct 26)
+
+### Scenario 4: Same-Day Booking Prevention
+- **Today**: Oct 20, 2025 at 2:00 PM
+- **User tries to book Installation for Oct 20**: ❌ Blocked - cannot book same day
+- **Earliest available date**: Oct 21, 2025 (tomorrow)
+
+### Scenario 5: Late Start
 - If booking starts close to Go-Live date, all dates must compress to fit before Go-Live
 - System will show limited or no available dates if timeline is too tight
+- Example: If today is Oct 28 and Go-Live is Oct 30, only Oct 29 and Oct 30 are available
 
 ## Frequently Asked Questions
+
+**Q: Why can't I book for today?**
+A: Same-day bookings are not allowed for Installation and Training to ensure adequate preparation time for both merchants and staff. The earliest you can book is tomorrow.
 
 **Q: Why can't I select a date more than 14 days out?**
 A: The 14-day window ensures timely progression through onboarding stages and prevents scheduling conflicts.
@@ -139,8 +201,17 @@ A: All scheduled dates that fall after the new Go-Live date would need to be res
 **Q: Can training happen on the same day as installation?**
 A: No, training must be at least 1 day after installation to allow proper setup time.
 
+**Q: Why can't I reschedule Installation to a date after Training?**
+A: The system enforces the logical order: Installation → Training → Go-Live. Installation must always happen before Training. If you need to move Installation later, you must first reschedule Training to a later date.
+
 **Q: Why are weekends blocked?**
 A: Onboarding activities require staff availability which is limited on weekends.
+
+**Q: What if I need to swap Installation and Training dates?**
+A: You must reschedule them in order:
+1. First, reschedule Training to a later date (this removes the upper bound constraint on Installation)
+2. Then, reschedule Installation to your desired date
+3. Finally, reschedule Training to your desired date (must be after the new Installation date)
 
 ## Future Enhancements
 

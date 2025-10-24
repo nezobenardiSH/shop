@@ -998,14 +998,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         return (
           <div className="space-y-3">
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Revised Go Live Date</div>
-              <div className="text-sm font-medium text-gray-900">
-                {trainerData?.firstRevisedEGLD
-                  ? new Date(trainerData.firstRevisedEGLD).toLocaleDateString()
-                  : 'Not Yet Live'}
-              </div>
-            </div>
-            <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</div>
               <div className="text-sm font-medium">
                 {trainerData?.firstRevisedEGLD && new Date(trainerData.firstRevisedEGLD) <= new Date() ? (
@@ -2073,15 +2065,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           </h4>
 
           <div className="space-y-4">
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Go-Live Date</div>
-              <div className="text-sm font-medium text-gray-900">
-                {trainerData?.firstRevisedEGLD
-                  ? new Date(trainerData.firstRevisedEGLD).toLocaleDateString()
-                  : 'Not Yet Live'}
-              </div>
-            </div>
-
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</div>
               <div className="text-sm font-medium">

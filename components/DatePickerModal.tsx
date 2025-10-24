@@ -24,6 +24,8 @@ interface DatePickerModalProps {
   }
   dependentDate?: string  // Date that this booking depends on (e.g., Hardware Fulfillment date for Installation)
   goLiveDate?: string  // Expected go-live date - no dates can be scheduled after this
+  installationDate?: string  // Scheduled installation date - used as lower bound for training bookings
+  trainingDate?: string  // Earliest scheduled training date (POS or BackOffice) - used as upper bound for installation bookings
   onBookingComplete: (selectedDate?: string) => void
 }
 
@@ -59,6 +61,8 @@ export default function DatePickerModal({
   currentBooking,
   dependentDate,
   goLiveDate,
+  installationDate,
+  trainingDate,
   onBookingComplete
 }: DatePickerModalProps) {
   const [availability, setAvailability] = useState<DayAvailability[]>([])
@@ -404,36 +408,70 @@ export default function DatePickerModal({
     // Calculate minimum date based on dependencies
     let minDate = new Date()
     minDate.setHours(0, 0, 0, 0)
-    
-    // If there's a dependent date, use it as the minimum (must be after dependent date)
-    if (dependentDate) {
+
+    // For training and installation bookings, the soonest they can book is tomorrow (not today)
+    if (bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training' || bookingType === 'installation') {
+      minDate.setDate(minDate.getDate() + 1) // Add 1 day - earliest is tomorrow
+      console.log('  -> Training/Installation cannot be booked today. Earliest date:', minDate.toDateString())
+    }
+
+    // For training bookings, installation date is the lower bound
+    if ((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && installationDate) {
+      const instDate = new Date(installationDate)
+      instDate.setHours(0, 0, 0, 0)
+      // Training must be at least 1 day after installation
+      instDate.setDate(instDate.getDate() + 1)
+
+      // Use the later of tomorrow or installation date + 1
+      if (instDate > minDate) {
+        minDate = instDate
+      }
+
+      console.log('  -> Training must be after installation date:', installationDate, 'Min date:', minDate.toDateString())
+    }
+    // For installation bookings, use dependent date (hardware fulfillment) if provided
+    else if (bookingType === 'installation' && dependentDate) {
       const depDate = new Date(dependentDate)
       depDate.setHours(0, 0, 0, 0)
       // Add one day to dependent date (must be at least 1 day after)
       depDate.setDate(depDate.getDate() + 1)
-      
-      // Use the later of today or dependent date + 1
+
+      // Use the later of tomorrow or dependent date + 1
       if (depDate > minDate) {
         minDate = depDate
       }
-      
-      console.log('  -> Dependent date:', dependentDate, 'Min date:', minDate.toDateString())
+
+      console.log('  -> Installation must be after hardware fulfillment:', dependentDate, 'Min date:', minDate.toDateString())
     }
 
     // Maximum date is 14 days from the minimum eligible date
     let maxDate = new Date(minDate)
     maxDate.setDate(maxDate.getDate() + 14)
     maxDate.setHours(23, 59, 59, 999)
-    
-    // Also check against go-live date if provided
-    if (goLiveDate) {
+
+    // For installation bookings, training date is the upper bound
+    if (bookingType === 'installation' && trainingDate) {
+      const trainDate = new Date(trainingDate)
+      trainDate.setHours(0, 0, 0, 0)
+      // Installation must be before training (at least 1 day before)
+      trainDate.setDate(trainDate.getDate() - 1)
+
+      // Use the earlier of 14-day window or training date - 1
+      if (trainDate < maxDate) {
+        maxDate = trainDate
+        console.log('  -> Installation limited by training date:', trainingDate, 'Max date:', maxDate.toDateString())
+      }
+    }
+
+    // For training bookings, check against go-live date if provided
+    if ((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && goLiveDate) {
       const goLive = new Date(goLiveDate)
       goLive.setHours(23, 59, 59, 999)
-      
+
       // Use the earlier of 14-day window or go-live date
       if (goLive < maxDate) {
         maxDate = goLive
-        console.log('  -> Limited by go-live date:', goLive.toDateString())
+        console.log('  -> Training limited by go-live date:', goLive.toDateString())
       }
     }
 
@@ -553,22 +591,30 @@ export default function DatePickerModal({
           )}
 
           {/* Dependency Message */}
-          {(dependentDate || goLiveDate) && (
+          {(dependentDate || goLiveDate || installationDate || trainingDate) && (
             <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                ℹ️ {dependentDate && (
+                ℹ️ {bookingType === 'installation' && (
                   <>
-                    {bookingType === 'installation' && 'Installation must be scheduled after Hardware Fulfillment date'}
-                    {bookingType === 'training' && 'Training must be scheduled after Installation date'}
-                    {bookingType === 'pos-training' && 'POS Training must be scheduled after Installation date'}
-                    {bookingType === 'backoffice-training' && 'BackOffice Training must be scheduled after Installation date'}
-                    {' '}({formatDate(dependentDate)}).
+                    {dependentDate && (
+                      <>Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)}). </>
+                    )}
+                    {trainingDate && (
+                      <>Installation must be scheduled before Training date ({formatDate(trainingDate)}). </>
+                    )}
                   </>
                 )}
-                {goLiveDate && (
-                  <> Must be scheduled before the Expected Go-Live date ({formatDate(goLiveDate)}).</>
+                {(bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && (
+                  <>
+                    {installationDate && (
+                      <>Training must be scheduled after Installation date ({formatDate(installationDate)}). </>
+                    )}
+                    {goLiveDate && (
+                      <>Training must be scheduled before Go-Live date ({formatDate(goLiveDate)}). </>
+                    )}
+                  </>
                 )}
-                {' '}You can select dates up to 14 days from the earliest eligible date.
+                You can select dates up to 14 days from the earliest eligible date.
               </p>
             </div>
           )}
