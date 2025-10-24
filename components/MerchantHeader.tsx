@@ -41,15 +41,26 @@ export default function MerchantHeader({
     <div className="py-3">
       <div className="flex justify-between items-center">
         {/* Left side - Logo and Portal Name */}
-        <div className="flex items-center gap-4">
-          <img 
-            src="/SH_logo.avif" 
-            alt="StoreHub" 
+        {/* Mobile: Logo and text stacked */}
+        <div className="flex md:hidden flex-col items-start gap-1">
+          <img
+            src="/SH_logo.avif"
+            alt="StoreHub"
             className="h-5 w-auto"
           />
           <span className="text-sm text-[#6b6a6a]">Onboarding Portal</span>
         </div>
-        
+
+        {/* Desktop: Logo and text side by side */}
+        <div className="hidden md:flex items-center gap-4">
+          <img
+            src="/SH_logo.avif"
+            alt="StoreHub"
+            className="h-5 w-auto"
+          />
+          <span className="text-sm text-[#6b6a6a]">Onboarding Portal</span>
+        </div>
+
         {/* Right side - Refresh and Logout */}
         <div className="flex items-center gap-4">
           {onRefresh && (

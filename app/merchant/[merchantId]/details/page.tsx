@@ -117,6 +117,7 @@ export default function MerchantDetailsPage() {
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
       bookingType: trainer.bookingType || 'training', // Pass the booking type
+      requiredFeatures: trainer.requiredFeaturesByMerchant, // Pass required features for training bookings
       existingBooking: null // Don't pass existing booking for now, let user select new date
     })
     setBookingModalOpen(true)
@@ -204,7 +205,7 @@ export default function MerchantDetailsPage() {
                         {/* Column 1 */}
                         <div className="space-y-2">
                           <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Trainer: </span>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Merchant: </span>
                             <span className="text-gray-900">{trainer.name || 'N/A'}</span>
                           </div>
                           <div>
@@ -293,16 +294,16 @@ export default function MerchantDetailsPage() {
                     <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Quote Total Amount */}
-                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                          <div className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                        <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                          <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
                             Quote Total Amount
                           </div>
-                          <div className="text-xl font-bold text-blue-900">
-                            {trainer.syncedQuoteTotalAmount !== null && trainer.syncedQuoteTotalAmount !== undefined 
+                          <div className="text-xl font-bold text-orange-900">
+                            {trainer.syncedQuoteTotalAmount !== null && trainer.syncedQuoteTotalAmount !== undefined
                               ? formatCurrency(trainer.syncedQuoteTotalAmount, currencyInfo)
                               : 'Not Available'}
                           </div>
-                          <div className="text-xs text-blue-600">
+                          <div className="text-xs text-orange-600">
                             Synced from quote
                           </div>
                         </div>
@@ -328,7 +329,7 @@ export default function MerchantDetailsPage() {
                     <div key={orderType} className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
                       {/* Order Type as Subsection Header */}
                       <h4 className="text-sm font-semibold text-gray-800 mb-2 flex items-center">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                           {orderType}
                         </span>
                         <span className="ml-2 text-xs text-gray-500">({items.length} items)</span>
@@ -386,6 +387,7 @@ export default function MerchantDetailsPage() {
             merchantContactPerson={currentBookingInfo.merchantContactPerson}
             trainerName={currentBookingInfo.trainerName}
             bookingType={currentBookingInfo.bookingType}
+            requiredFeatures={currentBookingInfo.requiredFeatures}
             currentBooking={currentBookingInfo.existingBooking}
             onBookingComplete={handleBookingComplete}
           />

@@ -17,6 +17,7 @@ interface DatePickerModalProps {
   onboardingTrainerName?: string  // The Salesforce Onboarding_Trainer__c.Name field (e.g., "Nasi Lemak")
   bookingType?: string
   onboardingServicesBought?: string | null
+  requiredFeatures?: string  // Required features by merchant
   currentBooking?: {
     eventId: string
     date: string
@@ -58,6 +59,7 @@ export default function DatePickerModal({
   onboardingTrainerName,
   bookingType = 'training',
   onboardingServicesBought,
+  requiredFeatures,
   currentBooking,
   dependentDate,
   goLiveDate,
@@ -290,7 +292,10 @@ export default function DatePickerModal({
             bookingType: bookingType,
             onboardingServicesBought,  // Pass to determine onsite vs remote
             existingEventId: currentBooking?.eventId,  // Pass existing event ID for rescheduling
-            ...((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && { trainerLanguages: selectedLanguages })
+            ...((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && {
+              trainerLanguages: selectedLanguages,
+              requiredFeatures: requiredFeatures  // Pass required features for training bookings
+            })
           })
         })
       }
@@ -596,20 +601,26 @@ export default function DatePickerModal({
               <p className="text-sm text-blue-800">
                 ℹ️ {bookingType === 'installation' && (
                   <>
-                    {dependentDate && (
+                    {dependentDate && trainingDate && (
+                      <>Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)}) and before Training date ({formatDate(trainingDate)}). </>
+                    )}
+                    {dependentDate && !trainingDate && (
                       <>Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)}). </>
                     )}
-                    {trainingDate && (
+                    {!dependentDate && trainingDate && (
                       <>Installation must be scheduled before Training date ({formatDate(trainingDate)}). </>
                     )}
                   </>
                 )}
                 {(bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && (
                   <>
-                    {installationDate && (
+                    {installationDate && goLiveDate && (
+                      <>Training must be scheduled after Installation date ({formatDate(installationDate)}) and before Go-Live date ({formatDate(goLiveDate)}). </>
+                    )}
+                    {installationDate && !goLiveDate && (
                       <>Training must be scheduled after Installation date ({formatDate(installationDate)}). </>
                     )}
-                    {goLiveDate && (
+                    {!installationDate && goLiveDate && (
                       <>Training must be scheduled before Go-Live date ({formatDate(goLiveDate)}). </>
                     )}
                   </>

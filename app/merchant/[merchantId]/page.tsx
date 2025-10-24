@@ -436,6 +436,7 @@ function TrainerPortalContent() {
       displayName: trainer.name, // Keep the Salesforce trainer name for display
       bookingType: bookingType, // Pass the booking type
       onboardingServicesBought: trainer.onboardingServicesBought,
+      requiredFeatures: trainer.requiredFeaturesByMerchant, // Pass required features for training bookings
       dependentDate: dependentDate, // Pass the dependent date
       goLiveDate: goLiveDate, // Pass the go-live date
       installationDate: installationDate, // Pass installation date for training bookings
@@ -604,7 +605,23 @@ function TrainerPortalContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider">Expected Go Live Date</div>
+                  <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1">
+                    <span>Expected Go Live Date</span>
+                    <div className="relative group">
+                      <svg
+                        className="w-3.5 h-3.5 text-orange-400 cursor-help"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      {/* Tooltip */}
+                      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
+                        Expected Go Live Date can only be changed by StoreHub Onboarding Manager
+                        <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="text-sm font-bold text-gray-900">
                   {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate 
@@ -641,7 +658,23 @@ function TrainerPortalContent() {
                   </svg>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-orange-600 uppercase tracking-wider">Expected Go Live Date</div>
+                  <div className="text-sm font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1">
+                    <span>Expected Go Live Date</span>
+                    <div className="relative group">
+                      <svg
+                        className="w-3.5 h-3.5 text-orange-400 cursor-help"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      {/* Tooltip */}
+                      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
+                        Expected Go Live Date can only be changed by StoreHub Onboarding Manager
+                        <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  </div>
                   <div className="text-2xl font-bold text-gray-900 truncate">
                     {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate 
                       ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-US', { 
@@ -866,6 +899,7 @@ function TrainerPortalContent() {
             onboardingTrainerName={currentBookingInfo.displayName}
             bookingType={currentBookingInfo.bookingType}
             onboardingServicesBought={currentBookingInfo.onboardingServicesBought}
+            requiredFeatures={currentBookingInfo.requiredFeatures}
             currentBooking={currentBookingInfo.existingBooking}
             dependentDate={currentBookingInfo.dependentDate}
             goLiveDate={currentBookingInfo.goLiveDate}

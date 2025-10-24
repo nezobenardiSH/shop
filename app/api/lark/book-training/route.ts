@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       endTime,
       bookingType = 'training',
       trainerLanguages,  // Required languages for the training session
+      requiredFeatures,  // Required features by merchant
       onboardingServicesBought,  // To determine if onsite or remote training
       existingEventId  // Event ID of existing booking to be cancelled (for rescheduling)
     } = body
@@ -204,7 +205,8 @@ export async function POST(request: NextRequest) {
             contactPerson: merchantContactPerson,
             businessType: merchantBusinessType,
             salesforceId: merchantId,
-            language: trainerLanguages  // Pass selected language to calendar event
+            language: trainerLanguages,  // Pass selected language to calendar event
+            requiredFeatures: requiredFeatures  // Pass required features to calendar event
           },
           trainer.email,
           calendarId,

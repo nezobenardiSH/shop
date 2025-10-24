@@ -1203,6 +1203,7 @@ class LarkService {
       businessType?: string
       salesforceId?: string
       language?: string[]  // Selected training language(s)
+      requiredFeatures?: string  // Required features by merchant
     },
     trainerEmail: string,
     trainerCalendarId: string,
@@ -1303,9 +1304,12 @@ class LarkService {
       case 'pos-training':
         eventTitle = trainerName ? `POS Training: ${trainerName}` : `POS Training: ${merchantInfo.name}`
         description = `POS Training Session\n\n`
-        description += `Merchant: ${merchantInfo.name}\n`
+        description += `Merchant: ${trainerName || merchantInfo.name}\n`
         if (merchantInfo.language && merchantInfo.language.length > 0) {
           description += `Language: ${merchantInfo.language.join(', ')}\n`
+        }
+        if (merchantInfo.requiredFeatures) {
+          description += `Required Features: ${merchantInfo.requiredFeatures}\n`
         }
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`
@@ -1321,9 +1325,12 @@ class LarkService {
       case 'backoffice-training':
         eventTitle = trainerName ? `BackOffice Training: ${trainerName}` : `BackOffice Training: ${merchantInfo.name}`
         description = `BackOffice Training Session\n\n`
-        description += `Merchant: ${merchantInfo.name}\n`
+        description += `Merchant: ${trainerName || merchantInfo.name}\n`
         if (merchantInfo.language && merchantInfo.language.length > 0) {
           description += `Language: ${merchantInfo.language.join(', ')}\n`
+        }
+        if (merchantInfo.requiredFeatures) {
+          description += `Required Features: ${merchantInfo.requiredFeatures}\n`
         }
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`
@@ -1340,9 +1347,12 @@ class LarkService {
       default:
         eventTitle = trainerName ? `Training: ${trainerName}` : `Training: ${merchantInfo.name}`
         description = `Onboarding Training Session\n\n`
-        description += `Merchant: ${merchantInfo.name}\n`
+        description += `Merchant: ${trainerName || merchantInfo.name}\n`
         if (merchantInfo.language && merchantInfo.language.length > 0) {
           description += `Language: ${merchantInfo.language.join(', ')}\n`
+        }
+        if (merchantInfo.requiredFeatures) {
+          description += `Required Features: ${merchantInfo.requiredFeatures}\n`
         }
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`

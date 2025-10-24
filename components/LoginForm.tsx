@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import WhatsAppButton from '@/components/WhatsAppButton'
 
 interface LoginFormProps {
   merchantId: string
@@ -12,15 +13,20 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null)
+  const [displayName, setDisplayName] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
-  
+
   useEffect(() => {
     // Check if session expired
     if (searchParams.get('expired') === 'true') {
       setError('Your session has expired. Please log in again.')
     }
-  }, [searchParams])
+
+    // Convert merchantId to display name (replace hyphens with spaces)
+    const formattedName = merchantId.replace(/-/g, ' ')
+    setDisplayName(formattedName)
+  }, [searchParams, merchantId])
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,26 +73,30 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
   }
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen flex items-center justify-center bg-[#faf9f6]">
       <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+            {/* StoreHub Logo */}
+            <div className="flex justify-center mb-6">
+              <img
+                src="/SH_logo.avif"
+                alt="StoreHub"
+                className="h-8 w-auto"
+              />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Merchant Portal Access
+
+            <h2 className="text-2xl font-bold text-[#0b0707] mb-2">
+              Onboarding Portal
             </h2>
-            <p className="mt-2 text-gray-600">
-              Merchant: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{merchantId}</span>
+            <p className="text-lg text-[#6b6a6a]">
+              {displayName}
             </p>
           </div>
           
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="pin" className="block text-sm font-medium text-[#0b0707] mb-2">
                 Enter 4-Digit PIN
               </label>
               <input
@@ -98,17 +108,14 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
                 value={pin}
                 onChange={handlePINChange}
                 className="block w-full text-center text-3xl tracking-[1em] font-mono
-                         px-4 py-3 border-2 border-gray-300 rounded-lg
-                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                         px-4 py-3 border-2 border-[#e5e7eb] rounded-lg
+                         focus:outline-none focus:border-[#ff630f]
                          disabled:bg-gray-50 disabled:text-gray-500"
                 placeholder="••••"
                 required
                 disabled={loading}
                 autoComplete="off"
               />
-              <p className="mt-2 text-sm text-gray-500 text-center">
-                Use the last 4 digits of your registered phone number
-              </p>
             </div>
             
             {error && (
@@ -133,33 +140,36 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
               type="submit"
               disabled={loading || pin.length !== 4}
               className="w-full flex items-center justify-center py-3 px-4
-                       border border-transparent rounded-lg text-white
-                       bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2
-                       focus:ring-offset-2 focus:ring-blue-500
-                       disabled:bg-gray-300 disabled:cursor-not-allowed
-                       transition-colors duration-200"
+                       border border-transparent rounded-full text-white font-medium
+                       bg-[#ff630f] hover:bg-[#fe5b25] focus:outline-none focus:ring-2
+                       focus:ring-offset-2 focus:ring-[#ff630f]
+                       disabled:bg-gray-400 disabled:cursor-not-allowed
+                       transition-all duration-200 transform hover:scale-105 disabled:transform-none"
             >
               {loading ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                   Verifying...
                 </>
               ) : (
-                'Access Portal'
+                'Log in'
               )}
             </button>
           </form>
-          
+
           <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
-              Having trouble? Contact your administrator for assistance.
+            <p className="text-xs text-[#6b6a6a]">
+              Having trouble? Contact your onboarding manager.
             </p>
           </div>
         </div>
       </div>
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppButton />
     </div>
   )
 }
