@@ -1,3 +1,4 @@
+// API Version: 2.0 - Direct SOQL query with trailing hyphen preservation (Oct 27, 2025)
 import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
 
