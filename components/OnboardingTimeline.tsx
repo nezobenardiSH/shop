@@ -169,33 +169,34 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   }
 
   useEffect(() => {
-    // Determine stage statuses based on business rules
+    // Determine stage statuses based on business rules from progress-bar-completion-guide.md
     const timelineStages: TimelineStage[] = []
-    
-    // Welcome Stage
-    const welcomeCompleted = trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
-                            trainerData?.welcomeCallStatus === 'Completed'
-    
+
+    // Welcome Stage - Completed when First_Call__c timestamp is filled out
+    const welcomeCompleted = !!trainerData?.firstCall || !!trainerData?.firstCallTimestamp
+
     timelineStages.push({
       id: 'welcome',
       label: 'Welcome to StoreHub',
       status: welcomeCompleted ? 'completed' : 'current',
-      completedDate: trainerData?.firstCallTimestamp
+      completedDate: trainerData?.firstCall || trainerData?.firstCallTimestamp
     })
-    
+
     // If welcome is completed, automatically set selected stage to preparation
     if (welcomeCompleted && selectedStage === 'welcome') {
       setSelectedStage('preparation')
     }
     
-    // Preparation Stage - Simplified logic to match details section
-    // 1. Hardware Delivery - completed if tracking link exists
-    const hardwareDeliveryCompleted = !!trainerData?.trackingLink
+    // Preparation Stage - Based on progress-bar-completion-guide.md
+    // 1. Hardware Delivery - Done when Hardware Fulfillment Date has passed
+    const hardwareDeliveryCompleted = trainerData?.hardwareFulfillmentDate
+      ? new Date(trainerData.hardwareFulfillmentDate) <= new Date()
+      : false
 
-    // 2. Product Setup - completed if marked as Yes
+    // 2. Product Setup - Done when Completed Product Setup = Yes
     const productSetupCompleted = trainerData?.completedProductSetup === 'Yes'
 
-    // 3. Store Setup - completed if video proof link exists
+    // 3. Store Setup - Done when video has been uploaded
     const storeSetupCompleted = !!trainerData?.videoProofLink
 
     const preparationSubStagesCompleted = [
@@ -224,10 +225,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       totalCount: totalPreparationStages
     })
     
-    // Installation Stage
-    const installationCompleted = trainerData?.hardwareInstallationStatus === 'Completed' || 
-                                 trainerData?.hardwareInstallationStatus === 'Installation Completed'
-    
+    // Installation Stage - Done when Actual Installation Date is filled out
+    const installationCompleted = !!trainerData?.actualInstallationDate
+
     timelineStages.push({
       id: 'installation',
       label: 'Installation',
@@ -235,10 +235,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       completedDate: trainerData?.actualInstallationDate
     })
     
-    // Training Stage
-    const trainingCompleted = trainerData?.trainingStatus === 'Completed' || 
-                             trainerData?.trainingStatus === 'Training Completed'
-    
+    // Training Stage - Done when both POS Training Date and Back Office Training Date have passed
+    const posTrainingPassed = trainerData?.posTrainingDate
+      ? new Date(trainerData.posTrainingDate) <= new Date()
+      : false
+    const backOfficeTrainingPassed = trainerData?.backOfficeTrainingDate
+      ? new Date(trainerData.backOfficeTrainingDate) <= new Date()
+      : false
+    const trainingCompleted = posTrainingPassed && backOfficeTrainingPassed
+
     timelineStages.push({
       id: 'training',
       label: 'Training',
@@ -246,37 +251,27 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       completedDate: trainerData?.backOfficeTrainingDate || trainerData?.posTrainingDate
     })
     
-    // Ready to Go Live Stage
-    // Hardware is only considered delivered when tracking link is provided
-    const hardwareDelivered = !!trainerData?.trackingLink
-    const productSetupDone = trainerData?.completedProductSetup === 'Yes'
-    const installationDone = trainerData?.installationStatus === 'Completed'
-    const trainingDone = trainerData?.completedTraining === 'Yes'
-    const subscriptionActivated = !!trainerData?.subscriptionActivationDate
-
-    const readyToGoLiveCompletedCount = [
-      hardwareDelivered,
-      productSetupDone,
-      installationDone,
-      trainingDone,
-      subscriptionActivated
-    ].filter(Boolean).length
-
-    const readyToGoLive = hardwareDelivered && productSetupDone && installationDone && trainingDone && subscriptionActivated
+    // Ready to Go Live Stage - Done when all previous stages have been completed
+    const readyToGoLive = welcomeCompleted &&
+                         preparationStatus === 'completed' &&
+                         installationCompleted &&
+                         trainingCompleted
 
     timelineStages.push({
       id: 'ready-go-live',
       label: 'Ready to go live',
       status: trainingCompleted ? (readyToGoLive ? 'completed' : 'current') : 'pending',
-      completedDate: undefined,
-      completedCount: readyToGoLiveCompletedCount,
-      totalCount: 5
+      completedDate: undefined
     })
     
     // Live Stage
-    const isLive = trainerData?.firstRevisedEGLD && 
+    // Special status: When Days to Go Live < 0 and merchant is on Live stage, show as Done
+    // When Days to Go Live < 0 and merchant is NOT on Live stage, show as Overdue
+    const isLive = trainerData?.firstRevisedEGLD &&
                   new Date(trainerData.firstRevisedEGLD) <= new Date()
-    
+    const daysToGoLive = trainerData?.daysToGoLive ?? null
+    const isOverdue = daysToGoLive !== null && daysToGoLive < 0 && !isLive
+
     timelineStages.push({
       id: 'live',
       label: 'Live',
@@ -1215,6 +1210,12 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                             }
                             return stage.status === 'current' ? 'Preparing' : 'Not Started'
                           case 'live':
+                            // Show "Overdue" if Days to Go Live < 0 and not on Live stage
+                            // Show "Done" if Days to Go Live < 0 and on Live stage
+                            const daysToGoLive = trainerData?.daysToGoLive ?? null
+                            if (daysToGoLive !== null && daysToGoLive < 0) {
+                              return stage.status === 'completed' ? 'Done' : 'Overdue'
+                            }
                             return stage.status === 'completed' ? 'Live' : stage.status === 'current' ? 'Going Live' : 'Not Started'
                           default:
                             return ''
@@ -1277,8 +1278,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           <p className="text-sm text-gray-500 mt-1">
                             {(() => {
                               if (stage.id === 'welcome') {
-                                return (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
-                                       trainerData?.welcomeCallStatus === 'Completed') ? 'Completed' : 'In Progress'
+                                return welcomeCompleted ? 'Completed' : 'In Progress'
+                              }
+                              if (stage.id === 'live') {
+                                // Show "Overdue" if Days to Go Live < 0 and not on Live stage
+                                // Show "Done" if Days to Go Live < 0 and on Live stage
+                                const daysToGoLive = trainerData?.daysToGoLive ?? null
+                                if (daysToGoLive !== null && daysToGoLive < 0) {
+                                  return stage.status === 'completed' ? 'Done' : 'Overdue'
+                                }
+                                return stage.status === 'completed' ? 'Live' : stage.status === 'current' ? 'Going Live' : 'Not Started'
                               }
                               if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
                                 return `${stage.completedCount}/${stage.totalCount} Completed`
@@ -1341,7 +1350,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Preparation</span>
             {(() => {
-              const hardwareDeliveryCompleted = !!trainerData?.trackingLink;
+              // Use the same completion logic as defined in the useEffect
+              const hardwareDeliveryCompleted = trainerData?.hardwareFulfillmentDate
+                ? new Date(trainerData.hardwareFulfillmentDate) <= new Date()
+                : false;
               const productSetupCompleted = trainerData?.completedProductSetup === 'Yes';
               const storeSetupCompleted = !!trainerData?.videoProofLink;
 
@@ -1373,7 +1385,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {(() => {
-                      const hardwareComplete = !!trainerData?.trackingLink;
+                      // Hardware Delivery is done when Hardware Fulfillment Date has passed
+                      const hardwareComplete = trainerData?.hardwareFulfillmentDate
+                        ? new Date(trainerData.hardwareFulfillmentDate) <= new Date()
+                        : false;
 
                       return hardwareComplete ? (
                         <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
@@ -1393,7 +1408,12 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
-                      Status: {trainerData?.trackingLink ? 'Completed' : 'Pending'}
+                      Status: {(() => {
+                        const hardwareComplete = trainerData?.hardwareFulfillmentDate
+                          ? new Date(trainerData.hardwareFulfillmentDate) <= new Date()
+                          : false;
+                        return hardwareComplete ? 'Completed' : 'Pending';
+                      })()}
                     </div>
                     <button
                       onClick={() => toggleItemExpansion('hardware-delivery')}
@@ -2148,24 +2168,17 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Ready to Go Live</span>
             {(() => {
-              // Hardware is only considered delivered when tracking link is provided
-              const hardwareDelivered = !!trainerData?.trackingLink;
-              const productSetupDone = trainerData?.completedProductSetup === 'Yes';
-              const installationDone = trainerData?.installationStatus === 'Completed';
-              const trainingDone = trainerData?.completedTraining === 'Yes';
-              const subscriptionActivated = !!trainerData?.subscriptionActivationDate;
-              const allDone = hardwareDelivered && productSetupDone && installationDone && trainingDone && subscriptionActivated;
-
-              const completedCount = [hardwareDelivered, productSetupDone, installationDone, trainingDone, subscriptionActivated].filter(Boolean).length;
+              // Ready to Go Live is done when all previous stages are completed
+              const allDone = welcomeCompleted &&
+                             preparationStatus === 'completed' &&
+                             installationCompleted &&
+                             trainingCompleted;
 
               return (
                 <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                  allDone ? 'bg-green-100 text-green-800' :
-                  completedCount >= 3 ? 'bg-blue-100 text-blue-800' :
-                  completedCount >= 1 ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
+                  allDone ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {allDone ? 'Ready' : `${completedCount}/5 Completed`}
+                  {allDone ? 'Ready' : 'In Progress'}
                 </span>
               );
             })()}

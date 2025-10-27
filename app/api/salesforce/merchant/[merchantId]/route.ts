@@ -99,13 +99,13 @@ export async function GET(
                Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
                Video_Proof_Link__c, Onboarding_Services_Bought__c,
                Synced_Quote_Total_Amount__c, Pending_Payment__c,
-               Welcome_Call_Status__c, First_Call_Timestamp__c,
+               Welcome_Call_Status__c, First_Call_Timestamp__c, First_Call__c,
                Product_Setup_Status__c, Completed_product_setup__c,
                Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                Installation_Issues_Elaboration__c, Training_Status__c,
-               Training_Date__c,
+               Training_Date__c, POS_Training_Date__c, Back_Office_Training_Date__c,
                Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c,
-               Subscription_Activation_Date__c,
+               Subscription_Activation_Date__c, Days_to_Go_Live__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         WHERE Name = '${escapedTrainerName}'
@@ -356,6 +356,7 @@ export async function GET(
         pendingPayment: trainer.Pending_Payment__c,
         welcomeCallStatus: trainer.Welcome_Call_Status__c,
         firstCallTimestamp: trainer.First_Call_Timestamp__c,
+        firstCall: trainer.First_Call__c,
         msmName: trainer.MSM_Name__r ? trainer.MSM_Name__r.Name : trainer.MSM_Name__c,
         productSetupStatus: trainer.Product_Setup_Status__c,
         completedProductSetup: trainer.Completed_product_setup__c,
@@ -365,12 +366,13 @@ export async function GET(
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
         trainingDate: trainer.Training_Date__c,
-        backOfficeTrainingDate: trainer.Training_Date__c, // BackOffice uses Training_Date__c field (Date only)
+        backOfficeTrainingDate: trainer.Back_Office_Training_Date__c || trainer.Training_Date__c, // Prefer Back_Office_Training_Date__c, fallback to Training_Date__c
         posTrainingDate: trainer.POS_Training_Date__c,
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         csmNameBO: trainer.CSM_Name_BO__r ? trainer.CSM_Name_BO__r.Name : trainer.CSM_Name_BO__c,
         merchantLocation: trainer.Merchant_Location__c,
         installerName: trainer.Installer_Name__r ? trainer.Installer_Name__r.Name : trainer.Installer_Name__c,
+        daysToGoLive: trainer.Days_to_Go_Live__c,
 
         // Event IDs for rescheduling
         installationEventId: trainer.Installation_Event_Id__c,
