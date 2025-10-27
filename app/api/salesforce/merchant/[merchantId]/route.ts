@@ -80,12 +80,15 @@ export async function GET(
     // First, find the OnboardingTrainer by name
     let trainerResult: any = null
 
-    // Let's use the JavaScript filtering approach since SOQL queries are failing
-    console.log('Getting all trainers and filtering in JavaScript...')
+    // Query directly for the specific trainer name (much more efficient)
+    console.log(`Querying for specific trainer: "${actualTrainerName}"`)
 
     try {
+      // Escape single quotes for SOQL
+      const escapedTrainerName = actualTrainerName.replace(/'/g, "\\'")
+
       // Try with all fields including training dates and event IDs
-      let allTrainersQuery = `
+      let trainerQuery = `
         SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
                Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
@@ -108,21 +111,22 @@ export async function GET(
                SSM__c, Merchant_Location__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
-        ORDER BY Name LIMIT 50
+        WHERE Name = '${escapedTrainerName}'
+        LIMIT 1
       `
 
-      let allTrainersResult
-      let usingFallbackQuery = false
       try {
-        console.log('🔍 Attempting query with training date fields...')
-        allTrainersResult = await conn.query(allTrainersQuery)
-        console.log('✅ Query with training date fields succeeded')
+        console.log('🔍 Attempting direct query for trainer...')
+        trainerResult = await conn.query(trainerQuery)
+        console.log('✅ Direct query succeeded, found:', trainerResult.totalSize, 'record(s)')
+        if (trainerResult.totalSize > 0) {
+          console.log('   Trainer name:', trainerResult.records[0].Name)
+        }
       } catch (queryError: any) {
-        usingFallbackQuery = true
         // If query fails (likely due to missing fields), try without training date fields
         console.log('⚠️ Query with training dates failed, trying without them:', queryError.message)
         console.log('Note: Training date fields will not be available in this query')
-        allTrainersQuery = `
+        trainerQuery = `
           SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
                  Phone_Number__c, Merchant_PIC_Contact_Number__c,
                  Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
@@ -144,102 +148,18 @@ export async function GET(
                  SSM__c,
                  CreatedDate, LastModifiedDate
           FROM Onboarding_Trainer__c
-          ORDER BY Name LIMIT 50
+          WHERE Name = '${escapedTrainerName}'
+          LIMIT 1
         `
-        allTrainersResult = await conn.query(allTrainersQuery)
-      }
-
-      console.log('All trainers found:', allTrainersResult.records.map((t: any) => `"${t.Name}"`))
-      console.log('Looking for:', `"${actualTrainerName}"`)
-
-      // Filter in JavaScript for exact match
-      const matchingTrainer = allTrainersResult.records.find((trainer: any) => {
-        console.log(`Comparing "${trainer.Name}" with "${actualTrainerName}" and original "${trainerName}"`)
-        
-        // Normalize both names for comparison
-        const normalizeNameForComparison = (name: string) => {
-          return name
-            .toLowerCase()
-            .replace(/-/g, ' ')  // Replace hyphens with spaces
-            .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
-            .trim()
-        }
-        
-        const trainerNameNormalized = normalizeNameForComparison(trainer.Name)
-        const actualNameNormalized = normalizeNameForComparison(actualTrainerName)
-        const originalNameNormalized = normalizeNameForComparison(trainerName)
-        
-        // Check various matching patterns
-        const matches = trainer.Name === actualTrainerName ||
-               trainer.Name === trainerName ||
-               trainer.Name === trainerName.replace(/-/g, ' ') ||  // Direct hyphen to space replacement
-               trainer.Name === actualTrainerName.replace(/-/g, ' ') ||  // Direct hyphen to space replacement
-               trainerNameNormalized === actualNameNormalized ||
-               trainerNameNormalized === originalNameNormalized
-        
-        if (matches) {
-          console.log(`Match found: "${trainer.Name}"`)
-        }
-        
-        return matches
-      })
-
-      if (matchingTrainer) {
-        console.log('Found matching trainer:', matchingTrainer.Name)
-        trainerResult = {
-          totalSize: 1,
-          records: [matchingTrainer]
-        }
-      } else {
-        console.log('No matching trainer found in JavaScript filter')
-        trainerResult = { totalSize: 0, records: [] }
+        trainerResult = await conn.query(trainerQuery)
+        console.log('✅ Fallback query succeeded, found:', trainerResult.totalSize, 'record(s)')
       }
 
     } catch (error: any) {
-      console.log('Failed to get all trainers - ERROR DETAILS:', error)
-      console.log('Error type:', typeof error)
+      console.log('Failed to query trainer - ERROR DETAILS:', error)
       console.log('Error message:', error?.message)
-      console.log('Error code:', error?.errorCode)
-      console.log('Error name:', error?.name)
-      console.log('Full error object:', JSON.stringify(error, null, 2))
-      
-      // Try a simplified fallback query
-      console.log('Attempting simplified fallback query...')
-      try {
-        const simpleQuery = `
-          SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c
-          FROM Onboarding_Trainer__c
-          ORDER BY Name LIMIT 20
-        `
-        const simpleResult = await conn.query(simpleQuery)
-        console.log('Simplified query successful, found trainers:', simpleResult.records.map((t: any) => t.Name))
-        
-        // Try to find match with simplified data
-        const matchingTrainer = simpleResult.records.find((trainer: any) => {
-          const normalizeNameForComparison = (name: string) => {
-            return name.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim()
-          }
-          
-          const trainerNameNormalized = normalizeNameForComparison(trainer.Name)
-          const actualNameNormalized = normalizeNameForComparison(actualTrainerName)
-          
-          return trainerNameNormalized === actualNameNormalized || 
-                 trainer.Name.toLowerCase() === actualTrainerName.toLowerCase()
-        })
-        
-        if (matchingTrainer) {
-          console.log('Found match in simplified query:', matchingTrainer.Name)
-          trainerResult = { totalSize: 1, records: [matchingTrainer] }
-        } else {
-          trainerResult = { totalSize: 0, records: [] }
-        }
-      } catch (fallbackError) {
-        console.log('Simplified fallback query also failed:', fallbackError)
-        trainerResult = { totalSize: 0, records: [] }
-      }
+      trainerResult = { totalSize: 0, records: [] }
     }
-
-    // The search logic is now handled above
 
     if (!trainerResult || trainerResult.totalSize === 0) {
       // Debug: Let's see what trainers actually exist
