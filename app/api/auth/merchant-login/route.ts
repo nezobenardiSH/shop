@@ -36,15 +36,18 @@ export async function POST(request: NextRequest) {
     }
     
     // Query merchant's phone numbers using the Name field
+    // First, decode any URL-encoded characters (like %7C for |)
+    let decodedMerchantId = decodeURIComponent(merchantId)
+
     // Convert hyphens to spaces for database lookup (URLs use hyphens, DB uses spaces)
     // BUT preserve trailing hyphens as they are part of the actual name in Salesforce
-    let dbMerchantId = merchantId
+    let dbMerchantId = decodedMerchantId
 
     // Check if there's a trailing hyphen
-    const hasTrailingHyphen = merchantId.endsWith('-')
+    const hasTrailingHyphen = decodedMerchantId.endsWith('-')
 
     // Replace all hyphens with spaces
-    dbMerchantId = merchantId.replace(/-/g, ' ')
+    dbMerchantId = decodedMerchantId.replace(/-/g, ' ')
 
     // If there was a trailing hyphen, restore it
     if (hasTrailingHyphen) {
@@ -53,7 +56,9 @@ export async function POST(request: NextRequest) {
 
     // We need to escape single quotes in the merchantId for SOQL
     const escapedMerchantId = dbMerchantId.replace(/'/g, "\\'")
-    
+
+    console.log('🔍 Looking for merchant:', dbMerchantId)
+
     const query = `
       SELECT Id, Name,
              Business_Owner_Contact__r.Phone,
@@ -65,38 +70,43 @@ export async function POST(request: NextRequest) {
       WHERE Name = '${escapedMerchantId}'
       LIMIT 1
     `
-    
+
     const result = await conn.query(query)
-    
+    console.log('📊 Query result - found:', result.totalSize, 'records')
+
     if (result.totalSize === 0) {
+      console.log('❌ Merchant not found in Salesforce')
       recordLoginAttempt(merchantId, false)
       return NextResponse.json(
-        { 
+        {
           error: 'Invalid merchant ID or PIN',
           remainingAttempts: rateLimit.remainingAttempts ? rateLimit.remainingAttempts - 1 : 0
         },
         { status: 401 }
       )
     }
-    
+
     const trainer = result.records[0] as any
+    console.log('✅ Found merchant:', trainer.Name)
     
     // Extract phone numbers with associated contact names
     const phoneData = [
-      { 
-        phone: trainer.Business_Owner_Contact__r?.Phone, 
-        name: trainer.Business_Owner_Contact__r?.Name 
+      {
+        phone: trainer.Business_Owner_Contact__r?.Phone,
+        name: trainer.Business_Owner_Contact__r?.Name
       },
-      { 
-        phone: trainer.Merchant_PIC_Contact_Number__c, 
+      {
+        phone: trainer.Merchant_PIC_Contact_Number__c,
         name: 'Merchant PIC' // This field doesn't have a name, so use a generic label
       },
-      { 
-        phone: trainer.Operation_Manager_Contact__r?.Phone, 
-        name: trainer.Operation_Manager_Contact__r?.Name 
+      {
+        phone: trainer.Operation_Manager_Contact__r?.Phone,
+        name: trainer.Operation_Manager_Contact__r?.Name
       }
     ].filter(({ phone }) => phone) // Remove entries without phone numbers
-    
+
+    console.log('📞 Phone data found:', phoneData.map(p => ({ phone: p.phone, name: p.name })))
+
     // Check if we have any phone numbers
     if (phoneData.length === 0) {
       return NextResponse.json(
@@ -104,9 +114,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    
+
+    console.log('🔑 Submitted PIN:', pin)
+
     // Validate PIN and get the user name
     const validationResult = validatePINWithUser(pin, phoneData)
+    console.log('✅ Validation result:', validationResult)
     if (!validationResult.isValid) {
       recordLoginAttempt(merchantId, false)
       const updatedRateLimit = checkRateLimit(merchantId)
