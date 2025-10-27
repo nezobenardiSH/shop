@@ -36,8 +36,21 @@ export async function POST(request: NextRequest) {
     }
     
     // Query merchant's phone numbers using the Name field
-    // Convert hyphen to space for database lookup (URLs use hyphens, DB uses spaces)
-    const dbMerchantId = merchantId.replace(/-/g, ' ')
+    // Convert hyphens to spaces for database lookup (URLs use hyphens, DB uses spaces)
+    // BUT preserve trailing hyphens as they are part of the actual name in Salesforce
+    let dbMerchantId = merchantId
+
+    // Check if there's a trailing hyphen
+    const hasTrailingHyphen = merchantId.endsWith('-')
+
+    // Replace all hyphens with spaces
+    dbMerchantId = merchantId.replace(/-/g, ' ')
+
+    // If there was a trailing hyphen, restore it
+    if (hasTrailingHyphen) {
+      dbMerchantId = dbMerchantId.trimEnd() + '-'
+    }
+
     // We need to escape single quotes in the merchantId for SOQL
     const escapedMerchantId = dbMerchantId.replace(/'/g, "\\'")
     
