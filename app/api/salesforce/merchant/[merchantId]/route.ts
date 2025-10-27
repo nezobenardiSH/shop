@@ -88,7 +88,7 @@ export async function GET(
       // Escape single quotes for SOQL
       const escapedTrainerName = actualTrainerName.replace(/'/g, "\\'")
 
-      // Try with all fields including training dates and event IDs
+      // Query with minimal fields - production is missing many custom fields
       let trainerQuery = `
         SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
                Phone_Number__c, Merchant_PIC_Contact_Number__c,
@@ -99,61 +99,24 @@ export async function GET(
                Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
                Video_Proof_Link__c, Onboarding_Services_Bought__c,
                Synced_Quote_Total_Amount__c, Pending_Payment__c,
-               Welcome_Call_Status__c, First_Call_Timestamp__c, MSM_Name__c, MSM_Name__r.Name,
+               Welcome_Call_Status__c, First_Call_Timestamp__c,
                Product_Setup_Status__c, Completed_product_setup__c,
                Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
                Installation_Issues_Elaboration__c, Training_Status__c,
-               Training_Date__c, POS_Training_Date__c,
-               Installation_Event_Id__c, Training_Event_Id__c, POS_Training_Event_Id__c,
-               Installer_Name__c, Installer_Name__r.Name,
-               CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
-               Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
+               Training_Date__c,
+               Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c,
                Subscription_Activation_Date__c,
-               SSM__c, Merchant_Location__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         WHERE Name = '${escapedTrainerName}'
         LIMIT 1
       `
 
-      try {
-        console.log('🔍 Attempting direct query for trainer...')
-        trainerResult = await conn.query(trainerQuery)
-        console.log('✅ Direct query succeeded, found:', trainerResult.totalSize, 'record(s)')
-        if (trainerResult.totalSize > 0) {
-          console.log('   Trainer name:', trainerResult.records[0].Name)
-        }
-      } catch (queryError: any) {
-        // If query fails (likely due to missing fields), try without training date fields
-        console.log('⚠️ Query with training dates failed, trying without them:', queryError.message)
-        console.log('Note: Training date fields will not be available in this query')
-        trainerQuery = `
-          SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
-                 Phone_Number__c, Merchant_PIC_Contact_Number__c,
-                 Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
-                 Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
-                 Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c,
-                 Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c,
-                 Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
-                 Video_Proof_Link__c, Onboarding_Services_Bought__c,
-                 Synced_Quote_Total_Amount__c, Pending_Payment__c,
-                 Welcome_Call_Status__c, First_Call_Timestamp__c, MSM_Name__c, MSM_Name__r.Name,
-                 Product_Setup_Status__c, Completed_product_setup__c,
-                 Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
-                 Installation_Issues_Elaboration__c, Training_Status__c,
-                 Installation_Event_Id__c, Training_Event_Id__c, POS_Training_Event_Id__c,
-                 Installer_Name__c, Installer_Name__r.Name,
-                 CSM_Name__c, CSM_Name__r.Name, CSM_Name_BO__c, CSM_Name_BO__r.Name,
-                 Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c, BO_Account_Name__c,
-                 Subscription_Activation_Date__c,
-                 SSM__c,
-                 CreatedDate, LastModifiedDate
-          FROM Onboarding_Trainer__c
-          WHERE Name = '${escapedTrainerName}'
-          LIMIT 1
-        `
-        trainerResult = await conn.query(trainerQuery)
-        console.log('✅ Fallback query succeeded, found:', trainerResult.totalSize, 'record(s)')
+      console.log('🔍 Querying for trainer:', actualTrainerName)
+      trainerResult = await conn.query(trainerQuery)
+      console.log('✅ Query completed, found:', trainerResult.totalSize, 'record(s)')
+      if (trainerResult.totalSize > 0) {
+        console.log('   Trainer name:', trainerResult.records[0].Name)
       }
 
     } catch (error: any) {
