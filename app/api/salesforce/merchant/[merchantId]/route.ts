@@ -63,19 +63,18 @@ export async function GET(
     }
 
     // Convert URL-friendly trainer name back to actual name
-    // "Nasi-Lemak-" should become "Nasi Lemak" (without trailing hyphen)
-    // "Nasi-Lemak" should become "Nasi Lemak"
-    // Replace hyphens with spaces
+    // BUT preserve trailing hyphens as they are part of the actual name in Salesforce
     let actualTrainerName = trainerName
-    
-    // Remove trailing hyphen if present
-    if (trainerName.endsWith('-')) {
-      actualTrainerName = trainerName.slice(0, -1)
-    }
-    
-    // Replace hyphens with spaces
-    if (actualTrainerName.includes('-')) {
-      actualTrainerName = actualTrainerName.replace(/-/g, ' ')
+
+    // Check if there's a trailing hyphen
+    const hasTrailingHyphen = trainerName.endsWith('-')
+
+    // Replace all hyphens with spaces
+    actualTrainerName = trainerName.replace(/-/g, ' ')
+
+    // If there was a trailing hyphen, restore it
+    if (hasTrailingHyphen) {
+      actualTrainerName = actualTrainerName.trimEnd() + '-'
     }
 
     // First, find the OnboardingTrainer by name
