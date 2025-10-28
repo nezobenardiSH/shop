@@ -43,13 +43,13 @@ export async function GET(
   { params }: { params: Promise<{ merchantId: string }> }
 ) {
   const resolvedParams = await params
-  const trainerName = resolvedParams.merchantId
+  const trainerId = resolvedParams.merchantId // This is now the Salesforce ID
 
   try {
 
-    if (!trainerName) {
+    if (!trainerId) {
       return NextResponse.json(
-        { success: false, message: 'Trainer name is required' },
+        { success: false, message: 'Merchant ID is required' },
         { status: 400 }
       )
     }
@@ -63,96 +63,44 @@ export async function GET(
       )
     }
 
-    // Convert URL-friendly trainer name back to actual name
-    // BUT preserve trailing hyphens as they are part of the actual name in Salesforce
-    let actualTrainerName = trainerName
+    // Query directly by Salesforce ID (much more efficient and reliable)
+    console.log(`Querying for merchant by Salesforce ID: "${trainerId}"`)
 
-    // Check if there's a trailing hyphen
-    const hasTrailingHyphen = trainerName.endsWith('-')
-
-    // Replace all hyphens with spaces
-    actualTrainerName = trainerName.replace(/-/g, ' ')
-
-    // If there was a trailing hyphen, restore it
-    if (hasTrailingHyphen) {
-      actualTrainerName = actualTrainerName.trimEnd() + '-'
-    }
-
-    // First, find the OnboardingTrainer by name
     let trainerResult: any = null
 
-    // Query directly for the specific trainer name (much more efficient)
-    console.log(`Querying for specific trainer: "${actualTrainerName}"`)
-
     try {
-      // Escape single quotes for SOQL
-      const escapedTrainerName = actualTrainerName.replace(/'/g, "\\'")
-
       // Query with minimal fields - production is missing many custom fields
       let trainerQuery = `
-        SELECT Id, Name, First_Revised_EGLD__c, Onboarding_Trainer_Stage__c, Installation_Date__c,
+        SELECT Id, Name,
                Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
                Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
-               Account_Name__c, Shipping_Street__c, Shipping_City__c, Shipping_State__c,
-               Shipping_Zip_Postal_Code__c, Shipping_Country__c, Sub_Industry__c,
-               Preferred_Language__c, Planned_Go_Live_Date__c, Required_Features_by_Merchant__c,
-               Video_Proof_Link__c, Onboarding_Services_Bought__c,
-               Synced_Quote_Total_Amount__c, Pending_Payment__c,
-               Welcome_Call_Status__c, First_Call_Timestamp__c, First_Call__c,
-               Product_Setup_Status__c, Completed_product_setup__c,
-               Hardware_Delivery_Status__c, Hardware_Installation_Status__c, Actual_Installation_Date__c,
-               Installation_Issues_Elaboration__c, Training_Status__c,
-               Training_Date__c, POS_Training_Date__c, Back_Office_Training_Date__c,
-               Menu_Collection_Form_Link__c, Menu_Collection_Submission_Timestamp__c,
-               Subscription_Activation_Date__c, Days_to_Go_Live__c,
+               Account_Name__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
-        WHERE Name = '${escapedTrainerName}'
+        WHERE Id = '${trainerId}'
         LIMIT 1
       `
 
-      console.log('🔍 Querying for trainer:', actualTrainerName)
+      console.log('🔍 Querying for merchant by ID:', trainerId)
       trainerResult = await conn.query(trainerQuery)
       console.log('✅ Query completed, found:', trainerResult.totalSize, 'record(s)')
       if (trainerResult.totalSize > 0) {
-        console.log('   Trainer name:', trainerResult.records[0].Name)
+        console.log('   Merchant name:', trainerResult.records[0].Name)
       }
 
     } catch (error: any) {
-      console.log('Failed to query trainer - ERROR DETAILS:', error)
+      console.log('Failed to query merchant - ERROR DETAILS:', error)
       console.log('Error message:', error?.message)
       trainerResult = { totalSize: 0, records: [] }
     }
 
     if (!trainerResult || trainerResult.totalSize === 0) {
-      // Debug: Let's see what trainers actually exist
-      let allTrainersResult: any = null
-      try {
-        allTrainersResult = await conn.query(`
-          SELECT Id, Name
-          FROM Onboarding_Trainer__c
-          ORDER BY Name
-          LIMIT 20
-        `)
-      } catch (error) {
-        console.log('Failed to get all trainers for debugging:', error)
-      }
-
       return NextResponse.json({
         success: false,
-        message: `No OnboardingTrainer found with name: ${trainerName}`,
-        searchedFor: trainerName,
-        searchedVariations: [
-          `"${trainerName}"`,
-          `"${actualTrainerName}"`,
-          `"${trainerName.replace(/-/g, ' ')}"`,
-          `"${trainerName.toLowerCase()}"`,
-          `"${actualTrainerName.toLowerCase()}"`
-        ],
-        suggestion: 'Try using the exact OnboardingTrainer.Name from Salesforce',
-        availableTrainers: allTrainersResult?.records?.map((t: any) => t.Name) || [],
-        totalTrainersInSystem: allTrainersResult?.totalSize || 0
+        message: `No merchant found with Salesforce ID: ${trainerId}`,
+        searchedFor: trainerId,
+        suggestion: 'Verify the Salesforce Onboarding_Trainer__c ID is correct'
       }, { status: 404 })
     }
 
@@ -404,7 +352,8 @@ export async function GET(
     return NextResponse.json({
       success: true,
       message: `Successfully loaded data for trainer: ${trainer.Name}`,
-      trainerName: trainerName,
+      name: trainer.Name,
+      trainerName: trainer.Name,
       account: accountData,
       onboardingTrainerData: onboardingTrainerData,
       orderItems: orderItems
@@ -421,8 +370,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        message: `Failed to fetch trainer data: ${error.message}`,
-        trainerName: trainerName
+        message: `Failed to fetch trainer data: ${error.message}`
       },
       {
         status: 500,

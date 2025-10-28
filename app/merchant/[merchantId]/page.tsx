@@ -75,7 +75,7 @@ function TrainerPortalContent() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const trainerName = params.merchantId as string
+  const merchantId = params.merchantId as string // This is now the Salesforce ID
 
   const [trainerData, setTrainerData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -97,7 +97,7 @@ function TrainerPortalContent() {
     try {
       // Add timestamp to force fresh data
       const timestamp = new Date().getTime()
-      const response = await fetch(`/api/salesforce/merchant/${trainerName}?t=${timestamp}`, {
+      const response = await fetch(`/api/salesforce/merchant/${merchantId}?t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache'
@@ -115,6 +115,11 @@ function TrainerPortalContent() {
       })
 
       setTrainerData(data)
+
+      // Update page title with merchant name
+      if (data.success && data.name) {
+        document.title = `${data.name} - Onboarding Portal`
+      }
 
       // Set active tab to current stage if trainer data is loaded
       if (data.success && data.onboardingTrainerData?.trainers?.[0]?.onboardingTrainerStage) {
@@ -182,11 +187,11 @@ function TrainerPortalContent() {
 
 
   useEffect(() => {
-    if (trainerName) {
+    if (merchantId) {
       loadTrainerData()
       loadAvailableStages()
     }
-  }, [trainerName])
+  }, [merchantId])
 
 
 
@@ -298,7 +303,7 @@ function TrainerPortalContent() {
         setHasProcessedUrlParam(true)
       }
     }
-  }, [trainerData, searchParams, hasProcessedUrlParam, router, trainerName])
+  }, [trainerData, searchParams, hasProcessedUrlParam, router, merchantId])
 
   const handleOpenBookingModal = (trainer: any) => {
     console.log('🎯 Opening booking modal with:', {
@@ -451,7 +456,7 @@ function TrainerPortalContent() {
     setBookingModalOpen(true)
 
     // Update URL to include booking parameter
-    router.push(`/merchant/${trainerName}?booking=${bookingType}`, { scroll: false })
+    router.push(`/merchant/${merchantId}?booking=${bookingType}`, { scroll: false })
   }
 
   const handleBookingComplete = async (selectedDate?: string) => {
@@ -472,12 +477,12 @@ function TrainerPortalContent() {
     setCurrentBookingInfo(null)
 
     // Remove booking parameter from URL
-    router.push(`/merchant/${trainerName}`, { scroll: false })
+    router.push(`/merchant/${merchantId}`, { scroll: false })
 
     // Show success message for a few seconds
     const bookingType = currentBookingInfo?.bookingType
-    const successMsg = bookingType === 'installation' 
-      ? 'Installation date updated successfully!' 
+    const successMsg = bookingType === 'installation'
+      ? 'Installation date updated successfully!'
       : 'Training date updated successfully!'
     setSuccessMessage(successMsg)
     setTimeout(() => setSuccessMessage(''), 5000)
@@ -488,7 +493,7 @@ function TrainerPortalContent() {
     setCurrentBookingInfo(null)
 
     // Remove booking parameter from URL
-    router.push(`/merchant/${trainerName}`, { scroll: false })
+    router.push(`/merchant/${merchantId}`, { scroll: false })
   }
 
   const startEditing = (trainer: any) => {
@@ -576,6 +581,9 @@ function TrainerPortalContent() {
     }
   }
 
+  // Get merchant name from API response
+  const merchantName = trainerData?.success && trainerData?.name ? trainerData.name : 'Loading...'
+
   return (
     <div className="min-h-screen bg-[#faf9f6] py-4">
       <div className="max-w-6xl mx-auto px-4">
@@ -583,12 +591,13 @@ function TrainerPortalContent() {
           <MerchantHeader
             onRefresh={loadTrainerData}
             loading={loading}
-            merchantName={trainerName}
+            merchantId={merchantId}
           />
         </div>
-        
-        <PageHeader 
-          merchantName={trainerName}
+
+        <PageHeader
+          merchantId={merchantId}
+          merchantName={merchantName}
           lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
           currentPage="progress"
         />

@@ -3,17 +3,19 @@
 import Link from 'next/link'
 
 interface PageHeaderProps {
+  merchantId: string
   merchantName: string
   lastModifiedDate?: string
   currentPage: 'progress' | 'details'
 }
 
-export default function PageHeader({ 
-  merchantName, 
-  lastModifiedDate, 
+export default function PageHeader({
+  merchantId,
+  merchantName,
+  lastModifiedDate,
   currentPage
 }: PageHeaderProps) {
-  const formattedMerchantName = merchantName.replace(/-/g, ' ')
+  // merchantName is now the actual name from Salesforce, no need to format
   
   return (
     <>
@@ -23,7 +25,7 @@ export default function PageHeader({
         {/* Mobile Layout: Title and timestamp stacked */}
         <div className="block sm:hidden">
           <h1 className="text-2xl font-bold text-[#0b0707] mb-1">
-            {formattedMerchantName}
+            {merchantName}
           </h1>
           {lastModifiedDate && (
             <p className="text-xs text-[#6b6a6a]">
@@ -35,7 +37,7 @@ export default function PageHeader({
         {/* Desktop Layout: Title and timestamp side by side */}
         <div className="hidden sm:flex sm:justify-between sm:items-center">
           <h1 className="text-3xl font-bold text-[#0b0707]">
-            {formattedMerchantName}
+            {merchantName}
           </h1>
           {lastModifiedDate && (
             <p className="text-sm text-[#6b6a6a]">
@@ -49,20 +51,20 @@ export default function PageHeader({
       <div className="mb-6 border-b border-[#e5e7eb]">
         <nav className="flex space-x-8">
           <Link
-            href={`/merchant/${merchantName}`}
+            href={`/merchant/${merchantId}`}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-              currentPage === 'progress' 
-                ? 'border-[#ff630f] text-[#ff630f]' 
+              currentPage === 'progress'
+                ? 'border-[#ff630f] text-[#ff630f]'
                 : 'border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]'
             }`}
           >
             Onboarding Progress
           </Link>
           <Link
-            href={`/merchant/${merchantName}/details`}
+            href={`/merchant/${merchantId}/details`}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-              currentPage === 'details' 
-                ? 'border-[#ff630f] text-[#ff630f]' 
+              currentPage === 'details'
+                ? 'border-[#ff630f] text-[#ff630f]'
                 : 'border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]'
             }`}
           >

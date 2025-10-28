@@ -35,29 +35,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Query merchant's phone numbers using the Name field
-    // First, decode any URL-encoded characters (like %7C for |)
-    let decodedMerchantId = decodeURIComponent(merchantId)
-
-    // Convert hyphens to spaces for database lookup (URLs use hyphens, DB uses spaces)
-    // BUT preserve trailing hyphens as they are part of the actual name in Salesforce
-    let dbMerchantId = decodedMerchantId
-
-    // Check if there's a trailing hyphen
-    const hasTrailingHyphen = decodedMerchantId.endsWith('-')
-
-    // Replace all hyphens with spaces
-    dbMerchantId = decodedMerchantId.replace(/-/g, ' ')
-
-    // If there was a trailing hyphen, restore it
-    if (hasTrailingHyphen) {
-      dbMerchantId = dbMerchantId.trimEnd() + '-'
-    }
-
-    // We need to escape single quotes in the merchantId for SOQL
-    const escapedMerchantId = dbMerchantId.replace(/'/g, "\\'")
-
-    console.log('🔍 Looking for merchant:', dbMerchantId)
+    // Query merchant's phone numbers using the Salesforce ID
+    // merchantId is now the Salesforce Onboarding_Trainer__c.Id (e.g., a0yBE000002SwCnYAK)
+    console.log('🔍 Looking for merchant by Salesforce ID:', merchantId)
 
     const query = `
       SELECT Id, Name,
@@ -67,7 +47,7 @@ export async function POST(request: NextRequest) {
              Operation_Manager_Contact__r.Phone,
              Operation_Manager_Contact__r.Name
       FROM Onboarding_Trainer__c
-      WHERE Name = '${escapedMerchantId}'
+      WHERE Id = '${merchantId}'
       LIMIT 1
     `
 

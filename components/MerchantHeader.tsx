@@ -6,13 +6,13 @@ import { useRouter } from 'next/navigation'
 interface MerchantHeaderProps {
   onRefresh?: () => void
   loading?: boolean
-  merchantName?: string
+  merchantId?: string
 }
 
-export default function MerchantHeader({ 
-  onRefresh, 
+export default function MerchantHeader({
+  onRefresh,
   loading = false,
-  merchantName
+  merchantId
 }: MerchantHeaderProps) {
   const router = useRouter()
   const [loggingOut, setLoggingOut] = useState(false)
@@ -23,10 +23,10 @@ export default function MerchantHeader({
       const response = await fetch('/api/auth/merchant-logout', {
         method: 'POST'
       })
-      
+
       if (response.ok) {
-        // Redirect to merchant login page
-        const loginPath = merchantName ? `/login/${merchantName.toLowerCase().replace(/\s+/g, '-')}` : '/login'
+        // Redirect to merchant login page using Salesforce ID
+        const loginPath = merchantId ? `/login/${merchantId}` : '/login'
         router.push(loginPath)
         router.refresh()
       }

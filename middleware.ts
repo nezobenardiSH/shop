@@ -56,14 +56,15 @@ export async function middleware(request: NextRequest) {
       return response
     }
     
-    console.log('[Middleware] Token valid for merchant:', payload.merchantId)
-    
-    // Verify token matches the merchantId in URL (case-insensitive comparison)
+    console.log('[Middleware] Token valid for merchant:', payload.trainerId)
+
+    // Verify token matches the merchantId in URL (exact comparison since IDs are case-sensitive)
     const urlMerchantId = path.split('/')[2]
-    const tokenMerchantId = payload.merchantId as string
-    
-    // Compare case-insensitively since URLs might have different cases
-    if (urlMerchantId.toLowerCase() !== tokenMerchantId.toLowerCase()) {
+    const tokenTrainerId = payload.trainerId as string
+
+    // Compare the Salesforce IDs - they should match exactly
+    if (urlMerchantId !== tokenTrainerId) {
+      console.log('[Middleware] Token mismatch - URL:', urlMerchantId, 'Token:', tokenTrainerId)
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
   }

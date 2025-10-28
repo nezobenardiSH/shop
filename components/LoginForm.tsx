@@ -23,9 +23,28 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
       setError('Your session has expired. Please log in again.')
     }
 
-    // Convert merchantId to display name (replace hyphens with spaces)
-    const formattedName = merchantId.replace(/-/g, ' ')
-    setDisplayName(formattedName)
+    // Fetch merchant name from API since merchantId is now a Salesforce ID
+    const fetchMerchantName = async () => {
+      try {
+        const response = await fetch(`/api/salesforce/merchant/${merchantId}`)
+        const data = await response.json()
+        console.log('Login page - API response:', data)
+        if (data.success && (data.name || data.trainerName)) {
+          const merchantName = data.name || data.trainerName
+          setDisplayName(merchantName)
+          // Update page title with merchant name
+          document.title = `${merchantName} - Onboarding Portal`
+        } else {
+          console.log('No merchant name found in response')
+          setDisplayName('Merchant Portal')
+        }
+      } catch (error) {
+        console.error('Failed to fetch merchant name:', error)
+        setDisplayName('Merchant Portal')
+      }
+    }
+
+    fetchMerchantName()
   }, [searchParams, merchantId])
   
   const handleSubmit = async (e: React.FormEvent) => {

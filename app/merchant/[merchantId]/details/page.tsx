@@ -73,8 +73,8 @@ const formatCurrency = (amount: number | null | undefined, currencyInfo: { symbo
 export default function MerchantDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const trainerName = params.merchantId as string
-  
+  const merchantId = params.merchantId as string // This is now the Salesforce ID
+
   const [trainerData, setTrainerData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
@@ -83,9 +83,14 @@ export default function MerchantDetailsPage() {
   const loadTrainerData = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/salesforce/merchant/${trainerName}`)
+      const response = await fetch(`/api/salesforce/merchant/${merchantId}`)
       const data = await response.json()
       setTrainerData(data)
+
+      // Update page title with merchant name
+      if (data.success && data.name) {
+        document.title = `${data.name} - Details - Onboarding Portal`
+      }
     } catch (error) {
       setTrainerData({ success: false, message: `Error: ${error}` })
     } finally {
@@ -94,10 +99,8 @@ export default function MerchantDetailsPage() {
   }
 
   useEffect(() => {
-    if (trainerName) {
-      loadTrainerData()
-    }
-  }, [trainerName])
+    loadTrainerData()
+  }, [merchantId])
 
   const handleOpenBookingModal = (trainer: any) => {
     // For future use: Determine which date to use based on bookingType
@@ -134,6 +137,9 @@ export default function MerchantDetailsPage() {
     setCurrentBookingInfo(null)
   }
 
+  // Get merchant name from API response
+  const merchantName = trainerData?.success && trainerData?.name ? trainerData.name : 'Loading...'
+
   return (
     <div className="min-h-screen bg-[#faf9f6] py-4">
       <div className="max-w-6xl mx-auto px-4">
@@ -141,12 +147,13 @@ export default function MerchantDetailsPage() {
           <MerchantHeader
             onRefresh={loadTrainerData}
             loading={loading}
-            merchantName={trainerName}
+            merchantId={merchantId}
           />
         </div>
-        
-        <PageHeader 
-          merchantName={trainerName}
+
+        <PageHeader
+          merchantId={merchantId}
+          merchantName={merchantName}
           lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
           currentPage="details"
         />

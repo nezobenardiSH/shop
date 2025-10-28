@@ -48,8 +48,48 @@ const formatDate = (dateString: string | null | undefined): string => {
 
 export default function OnboardingTimeline({ currentStage, stageData, trainerData, onBookingComplete, onOpenBookingModal }: OnboardingTimelineProps) {
   const [stages, setStages] = useState<TimelineStage[]>([])
+
+  // Calculate completion statuses at component level so they can be used throughout
+  const welcomeCompleted = !!trainerData?.firstCall || !!trainerData?.firstCallTimestamp
+
+  // Preparation sub-stages
+  const hardwareDeliveryCompleted = trainerData?.hardwareFulfillmentDate
+    ? new Date(trainerData.hardwareFulfillmentDate) <= new Date()
+    : false
+  const productSetupCompleted = trainerData?.completedProductSetup === 'Yes'
+  const storeSetupCompleted = !!trainerData?.videoProofLink
+
+  const preparationSubStagesCompleted = [
+    hardwareDeliveryCompleted,
+    productSetupCompleted,
+    storeSetupCompleted
+  ].filter(Boolean).length
+
+  const totalPreparationStages = 3
+
+  let preparationStatus: 'completed' | 'current' | 'pending' = 'pending'
+  if (welcomeCompleted) {
+    if (preparationSubStagesCompleted === totalPreparationStages) {
+      preparationStatus = 'completed'
+    } else {
+      preparationStatus = 'current'
+    }
+  }
+
+  // Installation completion
+  const installationCompleted = !!trainerData?.actualInstallationDate
+
+  // Training completion
+  const posTrainingPassed = trainerData?.posTrainingDate
+    ? new Date(trainerData.posTrainingDate) <= new Date()
+    : false
+  const backOfficeTrainingPassed = trainerData?.backOfficeTrainingDate
+    ? new Date(trainerData.backOfficeTrainingDate) <= new Date()
+    : false
+  const trainingCompleted = posTrainingPassed && backOfficeTrainingPassed
+
   // Initialize selectedStage based on welcome call completion status
-  const initialStage = (trainerData?.welcomeCallStatus === 'Welcome Call Completed' || 
+  const initialStage = (trainerData?.welcomeCallStatus === 'Welcome Call Completed' ||
                         trainerData?.welcomeCallStatus === 'Completed') ? 'preparation' : 'welcome'
   const [selectedStage, setSelectedStage] = useState<string>(initialStage)
   const [updatingField, setUpdatingField] = useState<string | null>(null)
@@ -173,7 +213,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     const timelineStages: TimelineStage[] = []
 
     // Welcome Stage - Completed when First_Call__c timestamp is filled out
-    const welcomeCompleted = !!trainerData?.firstCall || !!trainerData?.firstCallTimestamp
+    // (welcomeCompleted is now calculated at component level)
 
     timelineStages.push({
       id: 'welcome',
@@ -186,36 +226,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     if (welcomeCompleted && selectedStage === 'welcome') {
       setSelectedStage('preparation')
     }
-    
-    // Preparation Stage - Based on progress-bar-completion-guide.md
-    // 1. Hardware Delivery - Done when Hardware Fulfillment Date has passed
-    const hardwareDeliveryCompleted = trainerData?.hardwareFulfillmentDate
-      ? new Date(trainerData.hardwareFulfillmentDate) <= new Date()
-      : false
 
-    // 2. Product Setup - Done when Completed Product Setup = Yes
-    const productSetupCompleted = trainerData?.completedProductSetup === 'Yes'
-
-    // 3. Store Setup - Done when video has been uploaded
-    const storeSetupCompleted = !!trainerData?.videoProofLink
-
-    const preparationSubStagesCompleted = [
-      hardwareDeliveryCompleted,
-      productSetupCompleted,
-      storeSetupCompleted
-    ].filter(Boolean).length
-
-    const totalPreparationStages = 3
-    
-    let preparationStatus: 'completed' | 'current' | 'pending' = 'pending'
-    if (welcomeCompleted) {
-      if (preparationSubStagesCompleted === totalPreparationStages) {
-        preparationStatus = 'completed'
-      } else {
-        preparationStatus = 'current'
-      }
-    }
-    
+    // Preparation Stage - (completion statuses calculated at component level)
     timelineStages.push({
       id: 'preparation',
       label: 'Preparation',
@@ -225,25 +237,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       totalCount: totalPreparationStages
     })
     
-    // Installation Stage - Done when Actual Installation Date is filled out
-    const installationCompleted = !!trainerData?.actualInstallationDate
-
+    // Installation Stage - (completion status calculated at component level)
     timelineStages.push({
       id: 'installation',
       label: 'Installation',
       status: preparationStatus === 'completed' ? (installationCompleted ? 'completed' : 'current') : 'pending',
       completedDate: trainerData?.actualInstallationDate
     })
-    
-    // Training Stage - Done when both POS Training Date and Back Office Training Date have passed
-    const posTrainingPassed = trainerData?.posTrainingDate
-      ? new Date(trainerData.posTrainingDate) <= new Date()
-      : false
-    const backOfficeTrainingPassed = trainerData?.backOfficeTrainingDate
-      ? new Date(trainerData.backOfficeTrainingDate) <= new Date()
-      : false
-    const trainingCompleted = posTrainingPassed && backOfficeTrainingPassed
 
+    // Training Stage - (completion status calculated at component level)
     timelineStages.push({
       id: 'training',
       label: 'Training',
