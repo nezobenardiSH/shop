@@ -645,13 +645,28 @@ function TrainerPortalContent() {
               {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate && (
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-gray-600">Days until go-live</div>
-                  <div className="text-lg font-bold text-orange-600">
+                  <div className={`text-lg font-bold ${(() => {
+                    const today = new Date();
+                    const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
+                    const diffTime = goLive.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const isLive = (trainerData.onboardingTrainerData.trainers[0].posQrDeliveryTnxCount ?? 0) > 30;
+
+                    // Green if Live, orange otherwise
+                    return (diffDays < 0 && isLive) ? 'text-green-600' : 'text-orange-600';
+                  })()}`}>
                     {(() => {
                       const today = new Date();
                       const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
                       const diffTime = goLive.getTime() - today.getTime();
                       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      return diffDays > 0 ? diffDays : 'Overdue';
+                      const isLive = (trainerData.onboardingTrainerData.trainers[0].posQrDeliveryTnxCount ?? 0) > 30;
+
+                      if (diffDays > 0) return diffDays;
+                      // If days < 0 and merchant is Live, show "Live"
+                      if (isLive) return 'Live';
+                      // If days < 0 and merchant is NOT Live, show "Overdue"
+                      return 'Overdue';
                     })()}
                   </div>
                 </div>
@@ -699,13 +714,28 @@ function TrainerPortalContent() {
               {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate && (
                 <div className="text-right flex-shrink-0">
                   <div className="text-sm text-gray-600">Days until go-live</div>
-                  <div className="text-3xl font-bold text-orange-600">
+                  <div className={`text-3xl font-bold ${(() => {
+                    const today = new Date();
+                    const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
+                    const diffTime = goLive.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const isLive = (trainerData.onboardingTrainerData.trainers[0].posQrDeliveryTnxCount ?? 0) > 30;
+
+                    // Green if Live, orange otherwise
+                    return (diffDays < 0 && isLive) ? 'text-green-600' : 'text-orange-600';
+                  })()}`}>
                     {(() => {
                       const today = new Date();
                       const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
                       const diffTime = goLive.getTime() - today.getTime();
                       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      return diffDays > 0 ? diffDays : 'Overdue';
+                      const isLive = (trainerData.onboardingTrainerData.trainers[0].posQrDeliveryTnxCount ?? 0) > 30;
+
+                      if (diffDays > 0) return diffDays;
+                      // If days < 0 and merchant is Live, show "Live"
+                      if (isLive) return 'Live';
+                      // If days < 0 and merchant is NOT Live, show "Overdue"
+                      return 'Overdue';
                     })()}
                   </div>
                 </div>

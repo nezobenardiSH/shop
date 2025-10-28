@@ -5,10 +5,14 @@ This document defines the completion criteria for each stage in the onboarding p
 ## Stage Completion Criteria
 
 ### 1. Welcome to StoreHub
-**Status:** Completed when First Call timestamp is filled out
+**Status:** Completed when Welcome Call Status is set to "Welcome Call Completed"
 
-- Field: `First_Call__c`
-- Condition: Field has a valid date/time value
+- Field: `Welcome_Call_Status__c`
+- Condition: Field value = "Welcome Call Completed"
+- Display: The Welcome Call Status value is displayed in the welcome stage details with color coding:
+  - Green badge: "Welcome Call Completed" (stage completed)
+  - Yellow badge: Any other status value (stage in progress)
+  - Gray text: "Not Set" (no status recorded)
 
 ---
 
@@ -16,10 +20,18 @@ This document defines the completion criteria for each stage in the onboarding p
 The Preparation stage contains three sub-tasks. Each has its own completion criteria:
 
 #### 2.1 Hardware Delivery
-**Status:** Done when Hardware Fulfillment Date has passed
+**Status:** Done when tracking link is provided
 
-- Field: `Hardware_Fulfillment_Date__c`
-- Condition: Current date >= Hardware Fulfillment Date
+- Field: `Delivery_Tracking_Number__c`
+- Condition: Tracking number/link exists (not null/empty)
+- Display Status:
+  - "Delivered" if `Hardware_Delivery_Status__c` = "Delivered"
+  - "In Transit" if tracking link exists
+  - "Scheduled" if hardware fulfillment date exists
+  - "Pending" otherwise
+- Additional Fields:
+  - `Delivery_Tracking_Number_Timestamp__c` - When tracking was added
+  - `Hardware_Fulfillment_Date__c` - Scheduled delivery date
 
 #### 2.2 Product Setup
 **Status:** Done when Completed Product Setup = Yes

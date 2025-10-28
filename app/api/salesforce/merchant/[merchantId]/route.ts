@@ -69,13 +69,33 @@ export async function GET(
     let trainerResult: any = null
 
     try {
-      // Query with minimal fields - production is missing many custom fields
+      // Query all fields needed by the UI
+      // Only include fields that exist in production Salesforce
+      // Fields that DON'T exist: Days_to_Go_Live__c, First_Call__c, Installer_Name__c, POS_Training_Date__c
       let trainerQuery = `
         SELECT Id, Name,
                Phone_Number__c, Merchant_PIC_Contact_Number__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
                Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
-               Account_Name__c,
+               Account_Name__c, Account_Name__r.POS_QR_Delivery_Tnx_Count_Past_30_Days__c,
+               Welcome_Call_Status__c,
+               First_Call_Timestamp__c,
+               MSM_Name__c, MSM_Name__r.Name,
+               Planned_Go_Live_Date__c,
+               Menu_Collection_Form_Link__c,
+               Menu_Collection_Submission_Timestamp__c,
+               Completed_product_setup__c,
+               Delivery_Tracking_Number__c,
+               Delivery_Tracking_Number_Timestamp__c,
+               Video_Proof_Link__c,
+               Installation_Date__c,
+               Actual_Installation_Date__c,
+               Assigned_Installer__c,
+               Training_Date__c,
+               CSM_Name__c, CSM_Name__r.Name,
+               Merchant_Location__c,
+               Subscription_Activation_Date__c,
+               BO_Account_Name__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         WHERE Id = '${trainerId}'
@@ -87,6 +107,8 @@ export async function GET(
       console.log('✅ Query completed, found:', trainerResult.totalSize, 'record(s)')
       if (trainerResult.totalSize > 0) {
         console.log('   Merchant name:', trainerResult.records[0].Name)
+        console.log('   Tracking Number:', trainerResult.records[0].Delivery_Tracking_Number__c)
+        console.log('   Tracking Timestamp:', trainerResult.records[0].Delivery_Tracking_Number_Timestamp__c)
       }
 
     } catch (error: any) {
@@ -237,26 +259,41 @@ export async function GET(
           }
         }
         
-        // Get Shipment tracking link
-        // TODO: Fix the Shipment__c query - Account__c field doesn't exist
-        // Need to find the correct field name for the Account relationship
-        try {
-          // Temporarily disabled until we find the correct field name
-          // const shipmentQuery = `
-          //   SELECT Id, Tracking_Link__c
-          //   FROM Shipment__c
-          //   WHERE Account__c = '${account.Id}'
-          //   ORDER BY CreatedDate DESC
-          //   LIMIT 1
-          // `
-          //
-          // const shipmentResult = await conn.query(shipmentQuery)
-          // if (shipmentResult.totalSize > 0) {
-          //   trackingLink = shipmentResult.records[0].Tracking_Link__c
-          // }
-        } catch (shipmentError) {
-          console.log('Failed to fetch Shipment tracking:', shipmentError)
-          // Continue without tracking link - not a critical failure
+        // Get Shipment tracking link if not found in Order
+        if (!trackingLink && ordersResult && ordersResult.totalSize > 0) {
+          try {
+            // Build list of Order IDs to query Shipment
+            const orderIds = ordersResult.records.map((order: any) => `'${order.Id}'`).join(',')
+
+            // Query Shipment object using Order__c relationship
+            const shipmentQuery = `
+              SELECT Id, Tracking_Link__c, Order__c, CreatedDate
+              FROM Shipment__c
+              WHERE Order__c IN (${orderIds})
+              ORDER BY CreatedDate DESC
+              LIMIT 1
+            `
+
+            console.log('🚢 Querying Shipment for Orders:', orderIds)
+            const shipmentResult = await conn.query(shipmentQuery)
+            console.log('🚢 Shipment query result:', shipmentResult.totalSize, 'records found')
+
+            if (shipmentResult.totalSize > 0) {
+              console.log('🚢 Shipment record:', {
+                Id: shipmentResult.records[0].Id,
+                Order__c: shipmentResult.records[0].Order__c,
+                Tracking_Link__c: shipmentResult.records[0].Tracking_Link__c
+              })
+
+              if (shipmentResult.records[0].Tracking_Link__c) {
+                trackingLink = shipmentResult.records[0].Tracking_Link__c
+                console.log('📦 ✅ Found Tracking Link from Shipment:', shipmentResult.records[0].Id, '→', trackingLink)
+              }
+            }
+          } catch (shipmentError: any) {
+            console.log('Failed to fetch Shipment tracking:', shipmentError?.message)
+            // Continue without tracking link - not a critical failure
+          }
         }
       } catch (error) {
         console.log('Failed to fetch OrderItems:', error)
@@ -314,13 +351,9 @@ export async function GET(
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
         trainingDate: trainer.Training_Date__c,
-        backOfficeTrainingDate: trainer.Back_Office_Training_Date__c || trainer.Training_Date__c, // Prefer Back_Office_Training_Date__c, fallback to Training_Date__c
-        posTrainingDate: trainer.POS_Training_Date__c,
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
-        csmNameBO: trainer.CSM_Name_BO__r ? trainer.CSM_Name_BO__r.Name : trainer.CSM_Name_BO__c,
         merchantLocation: trainer.Merchant_Location__c,
-        installerName: trainer.Installer_Name__r ? trainer.Installer_Name__r.Name : trainer.Installer_Name__c,
-        daysToGoLive: trainer.Days_to_Go_Live__c,
+        installerName: trainer.Assigned_Installer__c, // Assigned_Installer__c is a picklist, not a lookup
 
         // Event IDs for rescheduling
         installationEventId: trainer.Installation_Event_Id__c,
@@ -333,13 +366,15 @@ export async function GET(
           POS_Training_Date__c: trainer.POS_Training_Date__c
         }), {}),
         hardwareFulfillmentDate: hardwareFulfillmentDate,
-        trackingLink: trackingLink,
+        trackingLink: trainer.Delivery_Tracking_Number__c || trackingLink,
+        trackingNumberTimestamp: trainer.Delivery_Tracking_Number_Timestamp__c,
         orderNSStatus: orderNSStatus,
         orderShippingAddress: orderShippingAddress,
         menuCollectionFormLink: trainer.Menu_Collection_Form_Link__c,
         menuCollectionSubmissionTimestamp: trainer.Menu_Collection_Submission_Timestamp__c,
         boAccountName: trainer.BO_Account_Name__c,
         subscriptionActivationDate: trainer.Subscription_Activation_Date__c,
+        posQrDeliveryTnxCount: trainer.Account_Name__r?.POS_QR_Delivery_Tnx_Count_Past_30_Days__c || 0,
         videoProofLink: trainer.Video_Proof_Link__c,
         ssmDocument: fixedSsmDocumentUrl,
         createdDate: trainer.CreatedDate,
