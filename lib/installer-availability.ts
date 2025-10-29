@@ -467,8 +467,9 @@ ${merchantDetails.onboardingSummary || 'N/A'}
       }
 
       // Store the Lark event ID in Onboarding_Portal__c object (same pattern as training bookings)
-      console.log(`📝 Storing event ID in Onboarding_Portal__c.Installation_Event_ID__c: ${eventId}`)
-      console.log(`📏 Event ID length: ${eventId?.length} characters`)
+      console.error(`📝 [PORTAL-SAVE] Storing event ID in Onboarding_Portal__c.Installation_Event_ID__c: ${eventId}`)
+      console.error(`📏 [PORTAL-SAVE] Event ID length: ${eventId?.length} characters`)
+      console.error(`🔍 [PORTAL-SAVE] Merchant ID: ${merchantId}`)
 
       try {
         const portalQuery = `
@@ -477,25 +478,29 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           WHERE Onboarding_Trainer_Record__c = '${merchantId}'
           LIMIT 1
         `
+        console.error(`🔎 [PORTAL-SAVE] Running query: ${portalQuery}`)
         const portalResult = await conn.query(portalQuery)
+        console.error(`📊 [PORTAL-SAVE] Query returned ${portalResult.totalSize} records`)
 
         if (portalResult.totalSize > 0) {
           const portalId = portalResult.records[0].Id
-          console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
+          console.error(`📝 [PORTAL-SAVE] Found Onboarding_Portal__c ID: ${portalId}`)
 
           // Update the Onboarding_Portal__c record with the event ID
-          await conn.sobject('Onboarding_Portal__c').update({
+          const updateResult = await conn.sobject('Onboarding_Portal__c').update({
             Id: portalId,
             Installation_Event_ID__c: eventId
           })
-          console.log(`✅ Successfully stored event ID in Onboarding_Portal__c.Installation_Event_ID__c`)
+          console.error(`✅ [PORTAL-SAVE] Update result:`, JSON.stringify(updateResult))
+          console.error(`✅ [PORTAL-SAVE] Successfully stored event ID in Onboarding_Portal__c.Installation_Event_ID__c`)
         } else {
-          console.log(`⚠️ No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
-          console.log(`   Event ID will not be saved. Please create a Portal record for this merchant.`)
+          console.error(`⚠️ [PORTAL-SAVE] No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
+          console.error(`   [PORTAL-SAVE] Event ID will not be saved. Please create a Portal record for this merchant.`)
         }
       } catch (portalError: any) {
-        console.log(`❌ Error storing event ID in Onboarding_Portal__c:`, portalError.message)
-        console.log(`   Event ID will not be saved, but booking will continue`)
+        console.error(`❌ [PORTAL-SAVE] Error storing event ID in Onboarding_Portal__c:`, portalError.message)
+        console.error(`   [PORTAL-SAVE] Full error:`, portalError)
+        console.error(`   [PORTAL-SAVE] Event ID will not be saved, but booking will continue`)
       }
 
       // Verify the update
