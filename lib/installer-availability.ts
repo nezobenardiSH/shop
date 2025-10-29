@@ -509,10 +509,15 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           console.error(`📝 [PORTAL-SAVE] Found Onboarding_Portal__c ID: ${portalId}`)
 
           // Update the Onboarding_Portal__c record with event ID, installer User ID, and datetime
+          // Combine date and time slot start time for full datetime
+          // Following timezone-handling-rules.md: Always use Singapore timezone explicitly
+          const installationDateTime = `${date}T${timeSlot.start}:00+08:00`  // Singapore timezone (GMT+8)
+          console.error(`📅 [PORTAL-SAVE] Date: ${date}, Time: ${timeSlot.start}`)
+          console.error(`📅 [PORTAL-SAVE] Saving DateTime: ${installationDateTime}`)
           const updateData: any = {
             Id: portalId,
             Installation_Event_ID__c: eventId,
-            Installation_Date__c: date  // Use full datetime for Portal
+            Installation_Date__c: installationDateTime  // Send with timezone offset, not UTC
           }
           
           // Only set Installer_Name__c if we found a User ID
@@ -538,11 +543,14 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           const merchantName = merchantResult.totalSize > 0 ? merchantResult.records[0].Name : 'Unknown Merchant'
           
           // Create the Portal record with all installation fields
+          // Combine date and time slot start time for full datetime
+          // Following timezone-handling-rules.md: Always use Singapore timezone explicitly
+          const installationDateTime = `${date}T${timeSlot.start}:00+08:00`  // Singapore timezone (GMT+8)
           const createData: any = {
             Name: `Portal - ${merchantName}`,
             Onboarding_Trainer_Record__c: merchantId,
             Installation_Event_ID__c: eventId,
-            Installation_Date__c: date  // Use full datetime for Portal
+            Installation_Date__c: installationDateTime  // Send with timezone offset, not UTC
           }
           
           // Only set Installer_Name__c if we found a User ID
