@@ -1300,22 +1300,6 @@ class LarkService {
         description += `• Staff readiness verification\n`
         description += `• Support handover\n`
         break
-        
-
-        }
-        if (merchantInfo.requiredFeatures) {
-          description += `Required Features: ${merchantInfo.requiredFeatures}\n`
-        }
-        if (merchantInfo.address) {
-          description += `Address: ${merchantInfo.address}\n`
-        }
-        if (merchantInfo.phone) {
-          description += `Phone: ${merchantInfo.phone}\n`
-        }
-        if (merchantInfo.contactPerson) {
-          description += `Contact Person: ${merchantInfo.contactPerson}\n`
-        }
-        break
 
       case 'training':
       default:
