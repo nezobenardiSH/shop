@@ -128,14 +128,18 @@ export async function GET(
 
     const trainer = trainerResult.records[0]
 
-    // Get Event IDs from Onboarding_Portal__c
-    let portalEventIds = {
+    // Get Event IDs and dates from Onboarding_Portal__c
+    let portalData: any = {
       trainingEventId: null,
-      installationEventId: null
+      installationEventId: null,
+      installationDate: null,
+      installerName: null,
+      trainingDate: null
     }
     try {
       const portalQuery = `
-        SELECT Id, Training_Event_ID__c, Installation_Event_ID__c
+        SELECT Id, Training_Event_ID__c, Installation_Event_ID__c, 
+               Installation_Date__c, Installer_Name__c, Training_Date__c
         FROM Onboarding_Portal__c
         WHERE Onboarding_Trainer_Record__c = '${trainerId}'
         LIMIT 1
@@ -143,9 +147,12 @@ export async function GET(
       const portalResult = await conn.query(portalQuery)
       if (portalResult.totalSize > 0) {
         const portal = portalResult.records[0] as any
-        portalEventIds.trainingEventId = portal.Training_Event_ID__c
-        portalEventIds.installationEventId = portal.Installation_Event_ID__c
-        console.log('✅ Found Onboarding_Portal__c record with Event IDs:', portalEventIds)
+        portalData.trainingEventId = portal.Training_Event_ID__c
+        portalData.installationEventId = portal.Installation_Event_ID__c
+        portalData.installationDate = portal.Installation_Date__c
+        portalData.installerName = portal.Installer_Name__c
+        portalData.trainingDate = portal.Training_Date__c
+        console.log('✅ Found Onboarding_Portal__c record with data:', portalData)
       } else {
         console.log('⚠️ No Onboarding_Portal__c record found for this merchant')
       }
@@ -337,7 +344,7 @@ export async function GET(
         name: trainer.Name,
         firstRevisedEGLD: trainer.First_Revised_EGLD__c,
         onboardingTrainerStage: trainer.Onboarding_Trainer_Stage__c,
-        installationDate: trainer.Installation_Date__c,
+        installationDate: portalData.installationDate || trainer.Installation_Date__c, // Use Portal date if available
         phoneNumber: trainer.Phone_Number__c,
         merchantPICContactNumber: trainer.Merchant_PIC_Contact_Number__c,
         operationManagerContact: trainer.Operation_Manager_Contact__r ? {
@@ -374,14 +381,14 @@ export async function GET(
         actualInstallationDate: trainer.Actual_Installation_Date__c,
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
-        trainingDate: trainer.Training_Date__c,
+        trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         merchantLocation: trainer.Merchant_Location__c,
-        installerName: trainer.Assigned_Installer__c, // Assigned_Installer__c is a picklist, not a lookup
+        installerName: portalData.installerName || trainer.Assigned_Installer__c, // Use Portal installer name if available
 
         // Event IDs for rescheduling (from Onboarding_Portal__c object)
-        installationEventId: portalEventIds.installationEventId,
-        trainingEventId: portalEventIds.trainingEventId,
+        installationEventId: portalData.installationEventId,
+        trainingEventId: portalData.trainingEventId,
 
         hardwareFulfillmentDate: hardwareFulfillmentDate,
         trackingLink: trainer.Delivery_Tracking_Number__c || trackingLink,

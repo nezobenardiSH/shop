@@ -441,24 +441,22 @@ ${merchantDetails.onboardingSummary || 'N/A'}
       const dateOnly = date.split('T')[0]
       console.log(`📅 Converting date for Salesforce: ${date} -> ${dateOnly}`)
       
-      // Prepare update data exactly like training bookings
+      // Update Onboarding_Trainer__c with installation date only (no installer, as it's a restricted picklist)
       const updateData: any = {
         Id: merchantId,  // Use merchantId directly as it's already the record ID
-        Installation_Date__c: dateOnly,
-        Assigned_Installer__c: assignedInstaller  // Assigned_Installer__c is a picklist field
+        Installation_Date__c: dateOnly
       }
 
-      console.log('📝 Setting Assigned_Installer__c to:', assignedInstaller)
       console.log('📦 Update data for Onboarding_Trainer__c:', JSON.stringify(updateData, null, 2))
 
-      // Update Onboarding_Trainer__c with installation date and assigned installer
+      // Update Onboarding_Trainer__c with installation date
       let updateResult: any
       try {
         updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateData)
         console.log('✅ Salesforce Onboarding_Trainer__c update result:', JSON.stringify(updateResult, null, 2))
       } catch (updateError: any) {
         console.log('❌ Failed to update Onboarding_Trainer__c:', updateError.message)
-        throw updateError
+        // Don't throw - allow booking to succeed even if Salesforce update fails
       }
 
       if (!updateResult || !updateResult.success) {
@@ -470,8 +468,32 @@ ${merchantDetails.onboardingSummary || 'N/A'}
       console.error(`📝 [PORTAL-SAVE] Storing event ID in Onboarding_Portal__c.Installation_Event_ID__c: ${eventId}`)
       console.error(`📏 [PORTAL-SAVE] Event ID length: ${eventId?.length} characters`)
       console.error(`🔍 [PORTAL-SAVE] Merchant ID: ${merchantId}`)
+      console.error(`👤 [PORTAL-SAVE] Installer: ${assignedInstaller} (email: ${installer.email})`)
 
       try {
+        // First, find the User ID by installer email
+        let installerUserId = null
+        try {
+          const userQuery = `
+            SELECT Id, Name
+            FROM User
+            WHERE Email = '${installer.email}'
+            LIMIT 1
+          `
+          console.error(`🔍 [PORTAL-SAVE] Looking up User by email: ${installer.email}`)
+          const userResult = await conn.query(userQuery)
+          
+          if (userResult.totalSize > 0) {
+            installerUserId = userResult.records[0].Id
+            console.error(`✅ [PORTAL-SAVE] Found User ID: ${installerUserId} (${userResult.records[0].Name})`)
+          } else {
+            console.error(`⚠️ [PORTAL-SAVE] No User found for email: ${installer.email}`)
+          }
+        } catch (userError: any) {
+          console.error(`❌ [PORTAL-SAVE] Error looking up User:`, userError.message)
+        }
+        
+        // Now find the Portal record
         const portalQuery = `
           SELECT Id
           FROM Onboarding_Portal__c
@@ -486,11 +508,19 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           const portalId = portalResult.records[0].Id
           console.error(`📝 [PORTAL-SAVE] Found Onboarding_Portal__c ID: ${portalId}`)
 
-          // Update the Onboarding_Portal__c record with the event ID
-          const updateResult = await conn.sobject('Onboarding_Portal__c').update({
+          // Update the Onboarding_Portal__c record with event ID, installer User ID, and datetime
+          const updateData: any = {
             Id: portalId,
-            Installation_Event_ID__c: eventId
-          })
+            Installation_Event_ID__c: eventId,
+            Installation_Date__c: date  // Use full datetime for Portal
+          }
+          
+          // Only set Installer_Name__c if we found a User ID
+          if (installerUserId) {
+            updateData.Installer_Name__c = installerUserId
+          }
+          
+          const updateResult = await conn.sobject('Onboarding_Portal__c').update(updateData)
           console.error(`✅ [PORTAL-SAVE] Update result:`, JSON.stringify(updateResult))
           console.error(`✅ [PORTAL-SAVE] Successfully stored event ID in Onboarding_Portal__c.Installation_Event_ID__c`)
         } else {
@@ -507,12 +537,20 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           const merchantResult = await conn.query(merchantQuery)
           const merchantName = merchantResult.totalSize > 0 ? merchantResult.records[0].Name : 'Unknown Merchant'
           
-          // Create the Portal record
-          const createResult = await conn.sobject('Onboarding_Portal__c').create({
+          // Create the Portal record with all installation fields
+          const createData: any = {
             Name: `Portal - ${merchantName}`,
             Onboarding_Trainer_Record__c: merchantId,
-            Installation_Event_ID__c: eventId
-          })
+            Installation_Event_ID__c: eventId,
+            Installation_Date__c: date  // Use full datetime for Portal
+          }
+          
+          // Only set Installer_Name__c if we found a User ID
+          if (installerUserId) {
+            createData.Installer_Name__c = installerUserId
+          }
+          
+          const createResult = await conn.sobject('Onboarding_Portal__c').create(createData)
           console.error(`✅ [PORTAL-SAVE] Created new Portal record: ${createResult.id}`)
           console.error(`✅ [PORTAL-SAVE] Successfully stored event ID in new Portal record`)
         }
