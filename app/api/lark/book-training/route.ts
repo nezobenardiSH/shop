@@ -329,24 +329,42 @@ export async function POST(request: NextRequest) {
           [mapping.field]: fieldValue
         }
 
-        // Store the Lark event ID based on booking type
+        // Store the Lark event ID in Onboarding_Portal__c object
         const eventIdFieldMapping: { [key: string]: string } = {
-          'installation': 'Installation_Event_Id__c',
-          'training': 'Training_Event_Id__c'
+          'installation': 'Installation_Event_ID__c',
+          'training': 'Training_Event_ID__c'
         }
 
         const eventIdField = eventIdFieldMapping[bookingType]
         if (eventIdField) {
-          console.log(`📝 Storing event ID in field ${eventIdField}: ${eventId}`)
+          console.log(`📝 Storing event ID in Onboarding_Portal__c.${eventIdField}: ${eventId}`)
           console.log(`📏 Event ID length: ${eventId.length} characters`)
 
-          if (eventId.length > 50) {
-            console.error(`❌ CRITICAL: Event ID is ${eventId.length} characters, but Salesforce field max is 50!`)
-            console.error(`   Event ID will NOT be saved to Salesforce`)
-            console.error(`   Please ask Salesforce admin to increase ${eventIdField} field length`)
-          }
+          // Get the Onboarding_Portal__c ID from the Onboarding_Trainer__c record
+          try {
+            const trainerRecord = await conn.sobject('Onboarding_Trainer__c')
+              .select('Id, Onboarding_Portal__c')
+              .where({ Id: merchantId })
+              .limit(1)
+              .execute()
 
-          updateData[eventIdField] = eventId
+            if (trainerRecord && trainerRecord.length > 0 && trainerRecord[0].Onboarding_Portal__c) {
+              const portalId = trainerRecord[0].Onboarding_Portal__c
+              console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
+
+              // Update the Onboarding_Portal__c record with the event ID
+              await conn.sobject('Onboarding_Portal__c').update({
+                Id: portalId,
+                [eventIdField]: eventId
+              })
+              console.log(`✅ Successfully stored event ID in Onboarding_Portal__c.${eventIdField}`)
+            } else {
+              console.log(`⚠️ No Onboarding_Portal__c record found for this merchant`)
+            }
+          } catch (portalError: any) {
+            console.log(`❌ Error storing event ID in Onboarding_Portal__c:`, portalError.message)
+            console.log(`   Event ID will not be saved, but booking will continue`)
+          }
         }
 
         // Update the appropriate CSM field based on booking type
@@ -411,15 +429,8 @@ export async function POST(request: NextRequest) {
               [mapping.field]: fieldValue
             }
 
-            // Also include the event ID if it was in the original update data
-            const eventIdField = eventIdFieldMapping[bookingType]
-            if (eventIdField && updateData[eventIdField]) {
-              updateDataWithoutCSM[eventIdField] = updateData[eventIdField]
-              console.log(`📝 Including event ID in retry: ${eventIdField} = ${updateData[eventIdField]}`)
-            }
-
             updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateDataWithoutCSM)
-            console.log('✅ Successfully updated training date and event ID (without CSM field)')
+            console.log('✅ Successfully updated training date (without CSM field)')
           } else {
             throw updateError
           }

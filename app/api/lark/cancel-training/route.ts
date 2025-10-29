@@ -57,30 +57,54 @@ export async function DELETE(request: NextRequest) {
       const fieldMapping: { [key: string]: { dateField: string, eventIdField: string } } = {
         'installation': {
           dateField: 'Installation_Date__c',
-          eventIdField: 'Installation_Event_Id__c'
+          eventIdField: 'Installation_Event_ID__c'
         },
         'training': {
           dateField: 'Training_Date__c',
-          eventIdField: 'Training_Event_Id__c'
+          eventIdField: 'Training_Event_ID__c'
         }
       }
 
       const mapping = fieldMapping[bookingType] || fieldMapping['training']
-      
-      // Clear the specific date and event ID fields
+
+      // Clear the date field on Onboarding_Trainer__c
       const updateData: any = {
         Id: merchantId,
-        [mapping.dateField]: null,
-        [mapping.eventIdField]: null
+        [mapping.dateField]: null
       }
-      
+
       // Update training status if it's a training-related booking
       if (bookingType.includes('training')) {
         updateData.Training_Status__c = 'Not Scheduled'
       }
-      
+
       await conn.sobject('Onboarding_Trainer__c').update(updateData)
-      console.log(`Cleared ${mapping.dateField} and ${mapping.eventIdField} for booking type: ${bookingType}`)
+      console.log(`Cleared ${mapping.dateField} for booking type: ${bookingType}`)
+
+      // Clear the event ID from Onboarding_Portal__c object
+      try {
+        const trainerRecord = await conn.sobject('Onboarding_Trainer__c')
+          .select('Id, Onboarding_Portal__c')
+          .where({ Id: merchantId })
+          .limit(1)
+          .execute()
+
+        if (trainerRecord && trainerRecord.length > 0 && trainerRecord[0].Onboarding_Portal__c) {
+          const portalId = trainerRecord[0].Onboarding_Portal__c
+          console.log(`📝 Clearing event ID from Onboarding_Portal__c.${mapping.eventIdField}`)
+
+          await conn.sobject('Onboarding_Portal__c').update({
+            Id: portalId,
+            [mapping.eventIdField]: null
+          })
+          console.log(`✅ Successfully cleared event ID from Onboarding_Portal__c`)
+        } else {
+          console.log(`⚠️ No Onboarding_Portal__c record found for this merchant`)
+        }
+      } catch (portalError: any) {
+        console.log(`❌ Error clearing event ID from Onboarding_Portal__c:`, portalError.message)
+        console.log(`   Event ID will not be cleared, but cancellation will continue`)
+      }
     } catch (sfError) {
       console.error('Failed to update Salesforce:', sfError)
     }
