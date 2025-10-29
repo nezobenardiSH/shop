@@ -445,89 +445,66 @@ ${merchantDetails.onboardingSummary || 'N/A'}
       const updateData: any = {
         Id: merchantId,  // Use merchantId directly as it's already the record ID
         Installation_Date__c: dateOnly,
-        Installation_Event_Id__c: eventId || null
+        Assigned_Installer__c: assignedInstaller  // Assigned_Installer__c is a picklist field
       }
 
-      // Installer_Name__c is a lookup field to User (internal Salesforce users)
-      // Same mechanism as CSM_Name__c
-      console.log('📝 Attempting to set Installer_Name__c for installer:', assignedInstaller, '(', installer.email, ')')
+      console.log('📝 Setting Assigned_Installer__c to:', assignedInstaller)
+      console.log('📦 Update data for Onboarding_Trainer__c:', JSON.stringify(updateData, null, 2))
 
-      try {
-        let userId: string | null = null
-
-        // Search by email first (most reliable), then by name
-        const searchQuery = `SELECT Id, Name, Email FROM User WHERE Email = '${installer.email}' OR Name = '${assignedInstaller}' LIMIT 1`
-        console.log('🔍 Searching for User with query:', searchQuery)
-
-        const userResult = await conn.query(searchQuery)
-
-        if (userResult.records && userResult.records.length > 0) {
-          const user: any = userResult.records[0]
-          userId = user.Id
-          console.log('✅ Found User:', {
-            id: user.Id,
-            name: user.Name,
-            email: user.Email
-          })
-        } else {
-          console.log('⚠️ No User found for installer email:', installer.email)
-        }
-
-        // If we have a User ID, update the Installer_Name__c field
-        if (userId) {
-          updateData.Installer_Name__c = userId
-          console.log('📝 Setting Installer_Name__c to User ID:', userId)
-        } else {
-          console.log('⚠️ Could not get User ID for installer, Installer_Name__c will not be updated')
-        }
-      } catch (userError: any) {
-        console.log('❌ Error searching for User for Installer_Name__c:', userError.message)
-        console.log('   Installer_Name__c will not be updated, but installation date will still be saved')
-      }
-      
-      console.log('📦 Final update data being sent to Salesforce:', JSON.stringify(updateData, null, 2))
-
-      // Try to update with User ID first (same pattern as training bookings)
+      // Update Onboarding_Trainer__c with installation date and assigned installer
       let updateResult: any
       try {
         updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateData)
-        console.log('✅ Salesforce update result:', JSON.stringify(updateResult, null, 2))
+        console.log('✅ Salesforce Onboarding_Trainer__c update result:', JSON.stringify(updateResult, null, 2))
       } catch (updateError: any) {
-        console.log('⚠️ Failed to update with User ID:', updateError.message)
-
-        // If the Installer_Name__c field update fails (likely due to invalid User ID),
-        // retry without the Installer_Name__c field to at least update the installation date and event ID
-        const updateDataWithoutInstaller: any = {
-          Id: merchantId,
-          Installation_Date__c: updateData.Installation_Date__c
-        }
-
-        // Also include the event ID if it was in the original update data
-        if (updateData.Installation_Event_Id__c) {
-          updateDataWithoutInstaller.Installation_Event_Id__c = updateData.Installation_Event_Id__c
-          console.log(`📝 Including event ID in retry: Installation_Event_Id__c = ${updateData.Installation_Event_Id__c}`)
-        }
-
-        console.log('🔄 Retrying update without Installer_Name__c field...')
-        console.log('📦 Retry update data:', JSON.stringify(updateDataWithoutInstaller, null, 2))
-
-        updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateDataWithoutInstaller)
-        console.log('✅ Successfully updated installation date and event ID (without installer field)')
+        console.log('❌ Failed to update Onboarding_Trainer__c:', updateError.message)
+        throw updateError
       }
 
       if (!updateResult || !updateResult.success) {
-        console.error(`❌ Update failed:`, updateResult)
+        console.error(`❌ Onboarding_Trainer__c update failed:`, updateResult)
         // Don't throw - allow booking to succeed even if Salesforce update fails
-      } else {
-        // Verify the update
-        const verifyQuery = `SELECT Id, Installation_Date__c, Installation_Event_Id__c, Installer_Name__c FROM Onboarding_Trainer__c WHERE Id = '${merchantId}'`
-        const verifyResult = await conn.query(verifyQuery)
-        if (verifyResult.records && verifyResult.records.length > 0) {
-          const updated: any = verifyResult.records[0]
-          console.log(`✔️ Verification - Installation_Date__c: ${updated.Installation_Date__c}`)
-          console.log(`✔️ Verification - Installation_Event_Id__c: ${updated.Installation_Event_Id__c}`)
-          console.log(`✔️ Verification - Installer_Name__c: ${updated.Installer_Name__c}`)
+      }
+
+      // Store the Lark event ID in Onboarding_Portal__c object (same pattern as training bookings)
+      console.log(`📝 Storing event ID in Onboarding_Portal__c.Installation_Event_ID__c: ${eventId}`)
+      console.log(`📏 Event ID length: ${eventId?.length} characters`)
+
+      try {
+        const portalQuery = `
+          SELECT Id
+          FROM Onboarding_Portal__c
+          WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+          LIMIT 1
+        `
+        const portalResult = await conn.query(portalQuery)
+
+        if (portalResult.totalSize > 0) {
+          const portalId = portalResult.records[0].Id
+          console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
+
+          // Update the Onboarding_Portal__c record with the event ID
+          await conn.sobject('Onboarding_Portal__c').update({
+            Id: portalId,
+            Installation_Event_ID__c: eventId
+          })
+          console.log(`✅ Successfully stored event ID in Onboarding_Portal__c.Installation_Event_ID__c`)
+        } else {
+          console.log(`⚠️ No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
+          console.log(`   Event ID will not be saved. Please create a Portal record for this merchant.`)
         }
+      } catch (portalError: any) {
+        console.log(`❌ Error storing event ID in Onboarding_Portal__c:`, portalError.message)
+        console.log(`   Event ID will not be saved, but booking will continue`)
+      }
+
+      // Verify the update
+      const verifyQuery = `SELECT Id, Installation_Date__c, Assigned_Installer__c FROM Onboarding_Trainer__c WHERE Id = '${merchantId}'`
+      const verifyResult = await conn.query(verifyQuery)
+      if (verifyResult.records && verifyResult.records.length > 0) {
+        const updated: any = verifyResult.records[0]
+        console.log(`✔️ Verification - Installation_Date__c: ${updated.Installation_Date__c}`)
+        console.log(`✔️ Verification - Assigned_Installer__c: ${updated.Assigned_Installer__c}`)
       }
     } catch (error) {
       console.error('Error updating Salesforce:', error)
