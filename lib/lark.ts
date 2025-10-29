@@ -1301,33 +1301,7 @@ class LarkService {
         description += `• Support handover\n`
         break
         
-      case 'pos-training':
-        eventTitle = trainerName ? `POS Training: ${trainerName}` : `POS Training: ${merchantInfo.name}`
-        description = `POS Training Session\n\n`
-        description += `Merchant: ${trainerName || merchantInfo.name}\n`
-        if (merchantInfo.language && merchantInfo.language.length > 0) {
-          description += `Language: ${merchantInfo.language.join(', ')}\n`
-        }
-        if (merchantInfo.requiredFeatures) {
-          description += `Required Features: ${merchantInfo.requiredFeatures}\n`
-        }
-        if (merchantInfo.address) {
-          description += `Address: ${merchantInfo.address}\n`
-        }
-        if (merchantInfo.phone) {
-          description += `Phone: ${merchantInfo.phone}\n`
-        }
-        if (merchantInfo.contactPerson) {
-          description += `Contact Person: ${merchantInfo.contactPerson}\n`
-        }
-        break
 
-      case 'backoffice-training':
-        eventTitle = trainerName ? `BackOffice Training: ${trainerName}` : `BackOffice Training: ${merchantInfo.name}`
-        description = `BackOffice Training Session\n\n`
-        description += `Merchant: ${trainerName || merchantInfo.name}\n`
-        if (merchantInfo.language && merchantInfo.language.length > 0) {
-          description += `Language: ${merchantInfo.language.join(', ')}\n`
         }
         if (merchantInfo.requiredFeatures) {
           description += `Required Features: ${merchantInfo.requiredFeatures}\n`

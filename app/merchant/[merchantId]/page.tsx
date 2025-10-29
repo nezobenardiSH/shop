@@ -201,8 +201,8 @@ function TrainerPortalContent() {
 
     const bookingType = searchParams.get('booking')
 
-    // Valid booking types: pos-training, backoffice-training, installation
-    if (bookingType && ['pos-training', 'backoffice-training', 'installation'].includes(bookingType)) {
+    // Valid booking types: training, installation
+    if (bookingType && ['training', 'installation'].includes(bookingType)) {
       console.log('Auto-opening booking modal from URL parameter:', bookingType)
 
       // Get the first trainer from the loaded data
@@ -241,12 +241,9 @@ function TrainerPortalContent() {
         if (bookingType === 'installation' && trainer.installationEventId) {
           existingEventId = trainer.installationEventId
           existingBookingDate = trainer.installationDate
-        } else if ((bookingType === 'training' || bookingType === 'backoffice-training') && trainer.trainingEventId) {
+        } else if (bookingType === 'training' && trainer.trainingEventId) {
           existingEventId = trainer.trainingEventId
-          existingBookingDate = trainer.trainingDate || trainer.backOfficeTrainingDate
-        } else if (bookingType === 'pos-training' && trainer.posTrainingEventId) {
-          existingEventId = trainer.posTrainingEventId
-          existingBookingDate = trainer.posTrainingDate
+          existingBookingDate = trainer.trainingDate
         }
 
         // If we have an existing event, prepare the booking info
@@ -370,7 +367,7 @@ function TrainerPortalContent() {
     if (bookingType === 'installation') {
       // Installation depends on Hardware Fulfillment date
       dependentDate = trainer.hardwareFulfillmentDate || null
-    } else if (bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') {
+    } else if (bookingType === 'training') {
       // Training depends on Installation date
       dependentDate = trainer.installationDate || null
     }
@@ -381,20 +378,10 @@ function TrainerPortalContent() {
     // Get installation date for training bookings (lower bound)
     const installationDate = trainer.installationDate || null
 
-    // Get earliest training date for installation bookings (upper bound)
-    // Use the earliest of POS training or BackOffice training
+    // Get training date for installation bookings (upper bound)
     let trainingDate = null
     if (bookingType === 'installation') {
-      const posDate = trainer.posTrainingDate ? new Date(trainer.posTrainingDate) : null
-      const boDate = trainer.backOfficeTrainingDate || trainer.trainingDate ? new Date(trainer.backOfficeTrainingDate || trainer.trainingDate) : null
-
-      if (posDate && boDate) {
-        trainingDate = posDate < boDate ? trainer.posTrainingDate : (trainer.backOfficeTrainingDate || trainer.trainingDate)
-      } else if (posDate) {
-        trainingDate = trainer.posTrainingDate
-      } else if (boDate) {
-        trainingDate = trainer.backOfficeTrainingDate || trainer.trainingDate
-      }
+      trainingDate = trainer.trainingDate || null
     }
 
     // Get the existing event ID and date based on booking type
@@ -404,13 +391,9 @@ function TrainerPortalContent() {
     if (bookingType === 'installation' && trainer.installationEventId) {
       existingEventId = trainer.installationEventId
       existingBookingDate = trainer.installationDate
-    } else if ((bookingType === 'training' || bookingType === 'backoffice-training') && trainer.trainingEventId) {
-      // Both 'training' and 'backoffice-training' use the same Training_Event_Id__c field
+    } else if (bookingType === 'training' && trainer.trainingEventId) {
       existingEventId = trainer.trainingEventId
-      existingBookingDate = trainer.trainingDate || trainer.backOfficeTrainingDate
-    } else if (bookingType === 'pos-training' && trainer.posTrainingEventId) {
-      existingEventId = trainer.posTrainingEventId
-      existingBookingDate = trainer.posTrainingDate
+      existingBookingDate = trainer.trainingDate
     }
 
     // If we have an existing event, prepare the booking info

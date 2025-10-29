@@ -101,9 +101,7 @@ export default function DatePickerModal({
 
   // Detect service type for training bookings
   const serviceType: ServiceType = useMemo(() => {
-    const isTraining = bookingType === 'training' ||
-                       bookingType === 'pos-training' ||
-                       bookingType === 'backoffice-training'
+    const isTraining = bookingType === 'training'
 
     if (!isTraining) {
       return 'none' // Not a training booking, service type doesn't apply
@@ -292,7 +290,7 @@ export default function DatePickerModal({
             bookingType: bookingType,
             onboardingServicesBought,  // Pass to determine onsite vs remote
             existingEventId: currentBooking?.eventId,  // Pass existing event ID for rescheduling
-            ...((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && {
+            ...(bookingType === 'training' && {
               trainerLanguages: selectedLanguages,
               requiredFeatures: requiredFeatures  // Pass required features for training bookings
             })
@@ -415,13 +413,13 @@ export default function DatePickerModal({
     minDate.setHours(0, 0, 0, 0)
 
     // For training and installation bookings, the soonest they can book is tomorrow (not today)
-    if (bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training' || bookingType === 'installation') {
+    if (bookingType === 'training' || bookingType === 'installation') {
       minDate.setDate(minDate.getDate() + 1) // Add 1 day - earliest is tomorrow
       console.log('  -> Training/Installation cannot be booked today. Earliest date:', minDate.toDateString())
     }
 
     // For training bookings, installation date is the lower bound
-    if ((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && installationDate) {
+    if (bookingType === 'training' && installationDate) {
       const instDate = new Date(installationDate)
       instDate.setHours(0, 0, 0, 0)
       // Training must be at least 1 day after installation
@@ -469,7 +467,7 @@ export default function DatePickerModal({
     }
 
     // For training bookings, check against go-live date if provided
-    if ((bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && goLiveDate) {
+    if (bookingType === 'training' && goLiveDate) {
       const goLive = new Date(goLiveDate)
       goLive.setHours(23, 59, 59, 999)
 
@@ -509,7 +507,7 @@ export default function DatePickerModal({
     console.log('Booking type:', bookingType)
     
     // Only filter for training bookings
-    if (bookingType !== 'training' && bookingType !== 'pos-training' && bookingType !== 'backoffice-training') {
+    if (bookingType !== 'training') {
       const availableSlots = allSlots.filter(slot => slot.available)
       console.log('Non-training booking - available slots:', availableSlots)
       return availableSlots
@@ -550,10 +548,6 @@ export default function DatePickerModal({
         return 'Schedule Installation'
       case 'training':
         return 'Schedule Training'
-      case 'backoffice-training':
-        return 'Schedule BackOffice Training'
-      case 'pos-training':
-        return 'Schedule POS Training'
       case 'go-live':
         return 'Schedule Go-Live'
       default:
@@ -612,7 +606,7 @@ export default function DatePickerModal({
                     )}
                   </>
                 )}
-                {(bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && (
+                {bookingType === 'training' && (
                   <>
                     {installationDate && goLiveDate && (
                       <>Training must be scheduled after Installation date ({formatDate(installationDate)}) and before Go-Live date ({formatDate(goLiveDate)}). </>
@@ -629,7 +623,7 @@ export default function DatePickerModal({
               </p>
             </div>
           )}
-          {(bookingType === 'training' || bookingType === 'backoffice-training' || bookingType === 'pos-training') && (
+          {bookingType === 'training' && (
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Globe className="inline h-4 w-4 mr-1" />
@@ -873,7 +867,7 @@ export default function DatePickerModal({
                                 {formatTime(slot.start)} - {formatTime(slot.end)}
                               </span>
                             </div>
-                            {(bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && slot.availableLanguages && slot.availableLanguages.length > 0 && (
+                            {bookingType === 'training' && slot.availableLanguages && slot.availableLanguages.length > 0 && (
                               <div className="flex items-center gap-2 mt-2">
                                 <Globe className="h-3 w-3 text-gray-400" />
                                 <div className="flex flex-wrap gap-1">
@@ -906,7 +900,7 @@ export default function DatePickerModal({
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    {(bookingType === 'training' || bookingType === 'pos-training' || bookingType === 'backoffice-training') && selectedLanguages.length === 0 
+                    {bookingType === 'training' && selectedLanguages.length === 0
                       ? 'Please select at least one language'
                       : 'No available slots for this date'}
                   </div>

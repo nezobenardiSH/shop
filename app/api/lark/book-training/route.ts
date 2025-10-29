@@ -260,8 +260,6 @@ export async function POST(request: NextRequest) {
         'hardware-fulfillment': { field: 'Hardware_Fulfillment_Date__c', object: 'Order' },
         'installation': { field: 'Installation_Date__c', object: 'Onboarding_Trainer__c' },
         'training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' },
-        'pos-training': { field: 'POS_Training_Date__c', object: 'Onboarding_Trainer__c' },
-        'backoffice-training': { field: 'Training_Date__c', object: 'Onboarding_Trainer__c' }, // BackOffice uses Training_Date__c (Date only field)
         'go-live': { field: 'First_Revised_EGLD__c', object: 'Onboarding_Trainer__c' }
       }
 
@@ -316,12 +314,12 @@ export async function POST(request: NextRequest) {
 
         // Prepare update object with training date
         let fieldValue: string
-        if (bookingType === 'backoffice-training' || bookingType === 'training') {
+        if (bookingType === 'training') {
           // Training_Date__c is a Date field, not DateTime
           fieldValue = date // Just the date, no time
           console.log('Using date only for Training_Date__c field')
         } else {
-          // POS_Training_Date__c and other fields are DateTime
+          // Other fields like Installation_Date__c are DateTime
           fieldValue = dateTimeValue
           console.log('Using datetime for field:', mapping.field)
         }
@@ -334,9 +332,7 @@ export async function POST(request: NextRequest) {
         // Store the Lark event ID based on booking type
         const eventIdFieldMapping: { [key: string]: string } = {
           'installation': 'Installation_Event_Id__c',
-          'training': 'Training_Event_Id__c',           // BackOffice training
-          'pos-training': 'POS_Training_Event_Id__c',
-          'backoffice-training': 'Training_Event_Id__c' // Same as 'training'
+          'training': 'Training_Event_Id__c'
         }
 
         const eventIdField = eventIdFieldMapping[bookingType]
@@ -381,14 +377,11 @@ export async function POST(request: NextRequest) {
             console.log('   Make sure the trainer has a Salesforce User account with email:', trainer.email)
           }
 
-          // If we have a User ID, update the appropriate CSM field
+          // If we have a User ID, update the CSM field for training
           if (userId) {
-            if (bookingType === 'pos-training') {
-              updateData.CSM_Name__c = userId
-              console.log('📝 Setting CSM_Name__c (POS) to User ID:', userId)
-            } else if (bookingType === 'backoffice-training' || bookingType === 'training') {
+            if (bookingType === 'training') {
               updateData.CSM_Name_BO__c = userId
-              console.log('📝 Setting CSM_Name_BO__c (BackOffice) to User ID:', userId)
+              console.log('📝 Setting CSM_Name_BO__c (Training) to User ID:', userId)
             }
           } else {
             console.log('⚠️ Could not get User ID for trainer, CSM fields will not be updated')

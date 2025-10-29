@@ -108,7 +108,7 @@ export default function BookingModal({
           startTime: selectedSlot.start,
           endTime: selectedSlot.end,
           bookingType: bookingType,
-          languages: (bookingType === 'pos-training' || bookingType === 'backoffice-training') ? selectedLanguages : undefined,
+          languages: bookingType === 'training' ? selectedLanguages : undefined,
           existingEventId: currentBooking?.eventId // Pass existing event ID for rescheduling
         })
       })
@@ -266,7 +266,7 @@ export default function BookingModal({
               <div>
                 <h3 className="text-lg font-semibold text-[#0b0707] mb-4">Select Date</h3>
                 {/* Language Selection for Training - moved up for better UX */}
-                {(bookingType === 'pos-training' || bookingType === 'backoffice-training' || bookingType === 'training') && (
+                {bookingType === 'training' && (
                   <div className="bg-[#fff4ed] rounded-xl p-4 border border-[#ff630f]/20 mb-4">
                     <h4 className="font-semibold text-[#0b0707] mb-3">Select Training Language</h4>
                     <div className="space-y-2">
@@ -302,7 +302,7 @@ export default function BookingModal({
                 <div className="grid grid-cols-7 gap-2">
                   {availability.slice(0, 28).map((day) => {
                     // Check if day has slots available in selected language
-                    const isTrainingBooking = bookingType === 'pos-training' || bookingType === 'backoffice-training' || bookingType === 'training'
+                    const isTrainingBooking = bookingType === 'training'
                     let hasAvailableSlots = day.slots.some(slot => slot.available)
                     
                     if (isTrainingBooking && selectedLanguages.length > 0) {
@@ -345,7 +345,7 @@ export default function BookingModal({
                       .find(day => day.date === selectedDate)
                       ?.slots.map((slot: any) => {
                         // Filter slots based on selected language for training bookings
-                        const isTrainingBooking = bookingType === 'pos-training' || bookingType === 'backoffice-training' || bookingType === 'training'
+                        const isTrainingBooking = bookingType === 'training'
                         let isSlotAvailable = slot.available
                         let relevantTrainers = slot.availableTrainers || []
                         
@@ -419,7 +419,7 @@ export default function BookingModal({
                     <p className="text-sm text-[#6b6a6a]">
                       Trainer: <span className="font-medium text-[#0b0707]">{trainerName}</span>
                     </p>
-                    {(bookingType === 'pos-training' || bookingType === 'backoffice-training') && selectedLanguages.length > 0 && (
+                    {bookingType === 'training' && selectedLanguages.length > 0 && (
                       <p className="text-sm text-[#6b6a6a] mt-1">
                         Language(s): <span className="font-medium text-[#0b0707]">{selectedLanguages.join(', ')}</span>
                       </p>
@@ -465,7 +465,7 @@ export default function BookingModal({
                 !selectedDate || 
                 !selectedSlot || 
                 bookingStatus === 'loading' ||
-                ((bookingType === 'pos-training' || bookingType === 'backoffice-training') && selectedLanguages.length === 0)
+                (bookingType === 'training' && selectedLanguages.length === 0)
               }
               className="bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >

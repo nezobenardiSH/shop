@@ -59,9 +59,7 @@ export function shouldFilterByLocation(
   bookingType?: string
 ): boolean {
   // Only apply location filtering for training bookings
-  const isTraining = bookingType === 'training' ||
-                     bookingType === 'pos-training' ||
-                     bookingType === 'backoffice-training'
+  const isTraining = bookingType === 'training'
 
   if (!isTraining) {
     return false
@@ -97,10 +95,6 @@ export function getBookingButtonText(
     return 'Schedule Training (Contact Support)'
   }
   
-  const typeLabel = bookingType === 'pos-training' ? 'POS Training' :
-                    bookingType === 'backoffice-training' ? 'Back Office Training' :
-                    'Training'
-  
-  return `Schedule ${typeLabel}`
+  return 'Schedule Training'
 }
 

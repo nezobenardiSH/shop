@@ -53,23 +53,15 @@ export async function DELETE(request: NextRequest) {
     try {
       const conn = await getSalesforceConnection()
       
-      // Map booking types to Salesforce field names  
+      // Map booking types to Salesforce field names
       const fieldMapping: { [key: string]: { dateField: string, eventIdField: string } } = {
-        'installation': { 
+        'installation': {
           dateField: 'Installation_Date__c',
           eventIdField: 'Installation_Event_Id__c'
         },
-        'training': { 
+        'training': {
           dateField: 'Training_Date__c',
           eventIdField: 'Training_Event_Id__c'
-        },
-        'pos-training': { 
-          dateField: 'POS_Training_Date__c',
-          eventIdField: 'POS_Training_Event_Id__c'
-        },
-        'backoffice-training': { 
-          dateField: 'Training_Date__c',      // Same as training
-          eventIdField: 'Training_Event_Id__c' // Same as training
         }
       }
 
