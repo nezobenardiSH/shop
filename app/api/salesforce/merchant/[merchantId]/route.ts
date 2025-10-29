@@ -139,7 +139,8 @@ export async function GET(
     try {
       const portalQuery = `
         SELECT Id, Training_Event_ID__c, Installation_Event_ID__c, 
-               Installation_Date__c, Installer_Name__c, Training_Date__c
+               Installation_Date__c, Installer_Name__c, Installer_Name__r.Name,
+               Training_Date__c
         FROM Onboarding_Portal__c
         WHERE Onboarding_Trainer_Record__c = '${trainerId}'
         LIMIT 1
@@ -150,7 +151,8 @@ export async function GET(
         portalData.trainingEventId = portal.Training_Event_ID__c
         portalData.installationEventId = portal.Installation_Event_ID__c
         portalData.installationDate = portal.Installation_Date__c
-        portalData.installerName = portal.Installer_Name__c
+        // Get the actual name from the User relationship, not the ID
+        portalData.installerName = portal.Installer_Name__r ? portal.Installer_Name__r.Name : null
         portalData.trainingDate = portal.Training_Date__c
         console.log('✅ Found Onboarding_Portal__c record with data:', portalData)
       } else {
