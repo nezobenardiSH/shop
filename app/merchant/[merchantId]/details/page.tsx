@@ -105,12 +105,12 @@ export default function MerchantDetailsPage() {
   const handleOpenBookingModal = (trainer: any) => {
     // For future use: Determine which date to use based on bookingType
     let actualTrainerName = 'Nezo'; // Default trainer
-    
+
     // Option 1: Use Operation Manager name if it matches a configured trainer
     if (trainer.operationManagerContact?.name) {
       actualTrainerName = trainer.operationManagerContact.name;
     }
-    
+
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
@@ -128,10 +128,10 @@ export default function MerchantDetailsPage() {
 
   const handleBookingComplete = async (selectedDate?: string) => {
     console.log('Booking completed, refreshing trainer data...')
-    
+
     // Refresh the trainer data to show the new training date
     await loadTrainerData()
-    
+
     // Clear booking modal state
     setBookingModalOpen(false)
     setCurrentBookingInfo(null)
@@ -381,7 +381,7 @@ export default function MerchantDetailsPage() {
           })() : null}
 
         </div>
-        
+
         {/* Booking Modal */}
         {bookingModalOpen && currentBookingInfo && (
           <DatePickerModal
@@ -399,7 +399,7 @@ export default function MerchantDetailsPage() {
             onBookingComplete={handleBookingComplete}
           />
         )}
-        
+
         {/* WhatsApp Floating Button */}
         <WhatsAppButton />
       </div>

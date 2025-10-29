@@ -357,11 +357,18 @@ export class LarkOAuthService {
    * Check if a user has authorized the app
    */
   async isUserAuthorized(userEmail: string): Promise<boolean> {
-    const token = await prisma.larkAuthToken.findUnique({
-      where: { userEmail }
-    })
-    
-    return !!token
+    try {
+      const token = await prisma.larkAuthToken.findUnique({
+        where: { userEmail }
+      })
+
+      return !!token
+    } catch (error) {
+      console.error(`⚠️ Database error checking authorization for ${userEmail}:`, error)
+      // In case of database connection error, return false
+      // This prevents the system from crashing but means the user won't be available
+      return false
+    }
   }
 
   /**
