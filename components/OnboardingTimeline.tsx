@@ -208,14 +208,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     // Determine stage statuses based on business rules from progress-bar-completion-guide.md
     const timelineStages: TimelineStage[] = []
 
-    // Welcome Stage - Completed when First_Call__c timestamp is filled out
+    // Welcome Stage - Completed when Welcome_Call_Status__c = 'Welcome Call Completed'
     // (welcomeCompleted is now calculated at component level)
 
     timelineStages.push({
       id: 'welcome',
       label: 'Welcome to StoreHub',
       status: welcomeCompleted ? 'completed' : 'current',
-      completedDate: trainerData?.firstCall || trainerData?.firstCallTimestamp
+      completedDate: trainerData?.firstCallTimestamp
     })
 
     // If welcome is completed, automatically set selected stage to preparation

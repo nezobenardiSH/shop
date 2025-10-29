@@ -341,7 +341,6 @@ export async function GET(
         pendingPayment: trainer.Pending_Payment__c,
         welcomeCallStatus: trainer.Welcome_Call_Status__c,
         firstCallTimestamp: trainer.First_Call_Timestamp__c,
-        firstCall: trainer.First_Call__c,
         msmName: trainer.MSM_Name__r ? trainer.MSM_Name__r.Name : trainer.MSM_Name__c,
         productSetupStatus: trainer.Product_Setup_Status__c,
         completedProductSetup: trainer.Completed_product_setup__c,
@@ -360,11 +359,6 @@ export async function GET(
         trainingEventId: trainer.Training_Event_Id__c,  // Used for both 'training' and 'backoffice-training'
         posTrainingEventId: trainer.POS_Training_Event_Id__c,
 
-        // Debug logging for training dates
-        ...(console.log('Training date fields from Salesforce:', {
-          Training_Date__c: trainer.Training_Date__c,
-          POS_Training_Date__c: trainer.POS_Training_Date__c
-        }), {}),
         hardwareFulfillmentDate: hardwareFulfillmentDate,
         trackingLink: trainer.Delivery_Tracking_Number__c || trackingLink,
         trackingNumberTimestamp: trainer.Delivery_Tracking_Number_Timestamp__c,
