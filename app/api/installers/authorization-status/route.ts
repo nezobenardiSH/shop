@@ -1,41 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { larkOAuthService } from '@/lib/lark-oauth-service'
+import installersConfig from '@/config/installers.json'
 
 export async function GET(request: NextRequest) {
   try {
-    // For now, we'll just check if any installer is authorized
-    // In a real app, you'd identify the specific installer
-    const searchParams = request.nextUrl.searchParams
-    const email = searchParams.get('email')
-    
-    if (!email) {
-      // Could check based on session/auth
-      return NextResponse.json({
-        authorized: false,
-        message: 'No email provided'
-      })
-    }
-    
-    const isAuthorized = await larkOAuthService.isUserAuthorized(email)
-    
-    if (isAuthorized) {
-      return NextResponse.json({
-        authorized: true,
-        userEmail: email
-      })
-    }
-    
-    return NextResponse.json({
-      authorized: false,
-      message: 'Not authorized'
+    // Get all configured internal installers
+    const configuredInstallers = installersConfig.internal.installers.filter(i =>
+      i.email && i.isActive
+    )
+
+    // Get authorized installers from database
+    const authorizedInstallers = await larkOAuthService.getAuthorizedInstallers()
+    const authorizedEmails = new Set(authorizedInstallers.map(i => i.email))
+
+    // Combine information
+    const installers = configuredInstallers.map(installer => {
+      const authorized = authorizedEmails.has(installer.email)
+      const authInfo = authorizedInstallers.find(i => i.email === installer.email)
+
+      return {
+        email: installer.email,
+        name: installer.name,
+        calendarId: authInfo?.calendarId || installer.larkCalendarId || 'primary',
+        authorized
+      }
     })
-    
-  } catch (error) {
-    console.error('Error checking installer authorization status:', error)
+
+    // Also include any authorized installers not in config
+    authorizedInstallers.forEach(authInstaller => {
+      if (!configuredInstallers.find(i => i.email === authInstaller.email)) {
+        installers.push(authInstaller)
+      }
+    })
+
+    return NextResponse.json({
+      installers,
+      totalConfigured: configuredInstallers.length,
+      totalAuthorized: authorizedInstallers.length
+    })
+
+  } catch (error: any) {
+    console.error('Failed to get installer authorization status:', error)
     return NextResponse.json(
-      { 
-        authorized: false,
-        error: 'Failed to check authorization status' 
+      {
+        error: 'Failed to get installer status',
+        details: error.message
       },
       { status: 500 }
     )

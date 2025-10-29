@@ -1,281 +1,250 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
-import Link from 'next/link'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { CheckCircle, XCircle, Calendar, RefreshCw, LogIn } from 'lucide-react'
 
-export default function InstallersAuthorizePage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [authStatus, setAuthStatus] = useState<{
-    authorized: boolean
-    email?: string
-    error?: string
-  } | null>(null)
+interface AuthorizedInstaller {
+  email: string
+  name: string
+  calendarId: string
+  authorized: boolean
+}
 
-  // Check auth status on mount and after redirect
+function InstallerAuthorizeContent() {
+  const searchParams = useSearchParams()
+  const [installers, setInstallers] = useState<AuthorizedInstaller[]>([])
+  const [loading, setLoading] = useState(true)
+  const [authorizing, setAuthorizing] = useState(false)
+
+  // Check for success/error messages from OAuth callback
+  const success = searchParams.get('success')
+  const error = searchParams.get('error')
+  const authorizedEmail = searchParams.get('email')
+  const processing = searchParams.get('processing')
+  const code = searchParams.get('code')
+
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const success = urlParams.get('success')
-    const email = urlParams.get('email')
-    const error = urlParams.get('error')
-    const processing = urlParams.get('processing')
-    const code = urlParams.get('code')
+    fetchInstallerStatus()
+  }, [success])
 
-    if (success && email) {
-      setAuthStatus({
-        authorized: true,
-        email: decodeURIComponent(email)
-      })
-    } else if (error) {
-      setAuthStatus({
-        authorized: false,
-        error: decodeURIComponent(error)
-      })
-    } else if (processing && code) {
-      // OAuth callback is processing - show loading state
-      setIsLoading(true)
-      // Clean up URL and refresh status after processing
+  // Clean up URL after processing
+  useEffect(() => {
+    if (processing && code) {
+      // Remove the processing params from URL after a moment
       setTimeout(() => {
         window.history.replaceState({}, '', '/installers/authorize')
-        checkAuthStatus()
-        setIsLoading(false)
-      }, 2000)
-    } else {
-      // Check current auth status
-      checkAuthStatus()
+      }, 1000)
     }
-  }, [])
+  }, [processing, code])
 
-  const checkAuthStatus = async () => {
+  const fetchInstallerStatus = async () => {
     try {
       const response = await fetch('/api/installers/authorization-status')
       const data = await response.json()
-      
-      if (data.authorized && data.userEmail) {
-        setAuthStatus({
-          authorized: true,
-          email: data.userEmail
-        })
-      }
+      setInstallers(data.installers || [])
     } catch (error) {
-      console.error('Failed to check auth status:', error)
-    }
-  }
-
-  const handleAuthorize = async () => {
-    setIsLoading(true)
-    try {
-      // Redirect to Lark OAuth with installer type
-      const response = await fetch('/api/lark/auth/authorize?type=installer', {
-        headers: {
-          'Accept': 'application/json'
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (data.authUrl) {
-        window.location.href = data.authUrl
-      } else {
-        setAuthStatus({
-          authorized: false,
-          error: 'Failed to generate authorization URL'
-        })
-      }
-    } catch (error) {
-      console.error('Authorization error:', error)
-      setAuthStatus({
-        authorized: false,
-        error: 'Failed to initiate authorization'
-      })
+      console.error('Failed to fetch installer status:', error)
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const handleRevoke = async () => {
-    if (!confirm('Are you sure you want to revoke Lark authorization?')) {
-      return
-    }
+  const handleAuthorize = () => {
+    setAuthorizing(true)
+    window.location.href = '/api/lark/auth/authorize?type=installer'
+  }
 
-    setIsLoading(true)
+  const handleRevoke = async (email: string) => {
+    if (!confirm(`Revoke authorization for ${email}?`)) return
+
     try {
       const response = await fetch('/api/installers/revoke-authorization', {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
       })
-      
+
       if (response.ok) {
-        setAuthStatus(null)
-        checkAuthStatus()
-      } else {
-        const error = await response.text()
-        setAuthStatus({
-          authorized: false,
-          error: `Failed to revoke authorization: ${error}`
-        })
+        fetchInstallerStatus()
       }
     } catch (error) {
-      console.error('Revoke error:', error)
-      setAuthStatus({
-        authorized: false,
-        error: 'Failed to revoke authorization'
-      })
-    } finally {
-      setIsLoading(false)
+      console.error('Failed to revoke authorization:', error)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Installer Lark Authorization</h1>
-          <Link 
-            href="/"
-            className="text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#fffaf5] to-[#fff4ed] p-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-[#0b0707] flex items-center gap-3">
+              <Calendar className="h-8 w-8 text-[#ff630f]" />
+              Installer Calendar Authorization
+            </h1>
+            <p className="mt-2 text-[#6b6a6a]">
+              Authorize installers to connect their Lark calendars for automatic scheduling
+            </p>
+          </div>
 
-        <div className="space-y-6">
-          {/* Authorization Status */}
-          {authStatus?.authorized && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-medium text-green-900">
-                    Lark Calendar Connected
-                  </h3>
-                  <p className="text-sm text-green-700 mt-1">
-                    Authorized as: {authStatus.email}
-                  </p>
-                  <p className="text-xs text-green-600 mt-2">
-                    Your Lark calendar is connected and installation bookings will be automatically added to your calendar.
-                  </p>
-                </div>
+          {/* Success/Error Messages */}
+          {processing && code && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
+              <RefreshCw className="h-5 w-5 text-blue-600 mt-0.5 animate-spin" />
+              <div>
+                <p className="font-semibold text-blue-800">Processing Authorization...</p>
+                <p className="text-sm text-blue-700">
+                  Exchanging authorization code for access token. This may take a moment...
+                </p>
               </div>
             </div>
           )}
 
-          {/* Error Status */}
-          {authStatus?.error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-medium text-red-900">
-                    Authorization Error
-                  </h3>
-                  <p className="text-sm text-red-700 mt-1">
-                    {authStatus.error}
-                  </p>
-                </div>
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-green-800">Authorization Successful!</p>
+                <p className="text-sm text-green-700">
+                  {authorizedEmail} can now use calendar scheduling
+                </p>
               </div>
             </div>
           )}
 
-          {/* Processing Status */}
-          {isLoading && !authStatus?.authorized && !authStatus?.error && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <Loader2 className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0 animate-spin" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-medium text-blue-900">
-                    Processing Authorization...
-                  </h3>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Connecting to Lark and exchanging authorization tokens. This may take a moment...
-                  </p>
-                </div>
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-800">Authorization Failed</p>
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             </div>
           )}
 
-          {/* Not Authorized */}
-          {!authStatus?.authorized && !authStatus?.error && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-medium text-yellow-900">
-                    Lark Calendar Not Connected
-                  </h3>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    Connect your Lark calendar to automatically receive installation bookings.
-                  </p>
+          {/* How It Works */}
+          <div className="mb-8 p-6 bg-[#fff4ed] rounded-xl">
+            <h2 className="text-lg font-semibold text-[#0b0707] mb-3">How It Works</h2>
+            <ol className="space-y-2 text-sm text-[#6b6a6a]">
+              <li className="flex gap-2">
+                <span className="font-semibold text-[#ff630f]">1.</span>
+                Click "Authorize with Lark" below
+              </li>
+              <li className="flex gap-2">
+                <span className="font-semibold text-[#ff630f]">2.</span>
+                Log in with your Lark account
+              </li>
+              <li className="flex gap-2">
+                <span className="font-semibold text-[#ff630f]">3.</span>
+                Approve calendar access permissions
+              </li>
+              <li className="flex gap-2">
+                <span className="font-semibold text-[#ff630f]">4.</span>
+                System can now check your availability and create events
+              </li>
+            </ol>
+          </div>
+
+          {/* Authorization Button */}
+          <div className="mb-8">
+            <button
+              onClick={handleAuthorize}
+              disabled={authorizing}
+              className="w-full bg-[#ff630f] hover:bg-[#fe5b25] text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            >
+              {authorizing ? (
+                <>
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  Redirecting to Lark...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-5 w-5" />
+                  Authorize with Lark
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Authorized Installers List */}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <RefreshCw className="h-8 w-8 text-[#ff630f] animate-spin" />
+            </div>
+          ) : (
+            <div>
+              <h2 className="text-lg font-semibold text-[#0b0707] mb-4">
+                Authorized Installers ({installers.filter(i => i.authorized).length})
+              </h2>
+
+              {installers.length === 0 ? (
+                <p className="text-[#6b6a6a] text-center py-8">
+                  No installers authorized yet
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {installers.map(installer => (
+                    <div
+                      key={installer.email}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        {installer.authorized ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-gray-400" />
+                        )}
+                        <div>
+                          <p className="font-medium text-[#0b0707]">
+                            {installer.name}
+                          </p>
+                          <p className="text-sm text-[#6b6a6a]">
+                            {installer.email}
+                          </p>
+                          {installer.calendarId && installer.calendarId !== 'primary' && (
+                            <p className="text-xs text-[#6b6a6a] mt-1">
+                              Calendar: {installer.calendarId}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {installer.authorized && (
+                        <button
+                          onClick={() => handleRevoke(installer.email)}
+                          className="text-red-600 hover:text-red-700 text-sm font-medium"
+                        >
+                          Revoke
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           )}
 
           {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-blue-900 mb-2">
-              Why Connect Lark?
-            </h3>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li>• Installation bookings automatically added to your calendar</li>
-              <li>• Real-time availability checking</li>
-              <li>• Automatic conflict detection</li>
-              <li>• Instant notifications for new installations</li>
-            </ul>
+          <div className="mt-8 p-4 bg-blue-50 rounded-xl">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> Each installer must authorize individually using their own Lark account.
+              Share this page URL with installers who need to connect their calendars.
+            </p>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            {authStatus?.authorized ? (
-              <>
-                <button
-                  onClick={handleRevoke}
-                  disabled={isLoading}
-                  className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    'Revoke Authorization'
-                  )}
-                </button>
-                <button
-                  onClick={handleAuthorize}
-                  disabled={isLoading}
-                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    'Re-authorize'
-                  )}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleAuthorize}
-                disabled={isLoading}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  'Connect Lark Calendar'
-                )}
-              </button>
-            )}
-          </div>
-
-          {/* Privacy Note */}
-          <p className="text-xs text-gray-500 text-center">
-            We only access your calendar to manage installation bookings. 
-            Your data is secure and never shared.
-          </p>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function InstallerAuthorizePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#fffaf5] to-[#fff4ed] p-8 flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 text-[#ff630f] animate-spin" />
+      </div>
+    }>
+      <InstallerAuthorizeContent />
+    </Suspense>
   )
 }

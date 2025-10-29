@@ -397,6 +397,31 @@ export class LarkOAuthService {
   }
 
   /**
+   * Get all authorized installers
+   */
+  async getAuthorizedInstallers(): Promise<Array<{
+    email: string
+    name: string
+    calendarId: string
+    authorized: boolean
+  }>> {
+    const tokens = await prisma.larkAuthToken.findMany({
+      select: {
+        userEmail: true,
+        userName: true,
+        calendarId: true
+      }
+    })
+
+    return tokens.map(t => ({
+      email: t.userEmail,
+      name: t.userName || t.userEmail,
+      calendarId: t.calendarId || 'primary',
+      authorized: true
+    }))
+  }
+
+  /**
    * Revoke authorization for a user
    */
   async revokeAuthorization(userEmail: string): Promise<void> {
