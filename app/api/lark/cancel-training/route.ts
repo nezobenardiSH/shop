@@ -83,14 +83,16 @@ export async function DELETE(request: NextRequest) {
 
       // Clear the event ID from Onboarding_Portal__c object
       try {
-        const trainerRecord = await conn.sobject('Onboarding_Trainer__c')
-          .select('Id, Onboarding_Portal__c')
-          .where({ Id: merchantId })
-          .limit(1)
-          .execute()
+        const portalQuery = `
+          SELECT Id
+          FROM Onboarding_Portal__c
+          WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+          LIMIT 1
+        `
+        const portalResult = await conn.query(portalQuery)
 
-        if (trainerRecord && trainerRecord.length > 0 && trainerRecord[0].Onboarding_Portal__c) {
-          const portalId = trainerRecord[0].Onboarding_Portal__c
+        if (portalResult.totalSize > 0) {
+          const portalId = portalResult.records[0].Id
           console.log(`📝 Clearing event ID from Onboarding_Portal__c.${mapping.eventIdField}`)
 
           await conn.sobject('Onboarding_Portal__c').update({
@@ -99,7 +101,7 @@ export async function DELETE(request: NextRequest) {
           })
           console.log(`✅ Successfully cleared event ID from Onboarding_Portal__c`)
         } else {
-          console.log(`⚠️ No Onboarding_Portal__c record found for this merchant`)
+          console.log(`⚠️ No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
         }
       } catch (portalError: any) {
         console.log(`❌ Error clearing event ID from Onboarding_Portal__c:`, portalError.message)

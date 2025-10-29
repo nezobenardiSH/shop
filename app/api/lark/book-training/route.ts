@@ -340,16 +340,18 @@ export async function POST(request: NextRequest) {
           console.log(`📝 Storing event ID in Onboarding_Portal__c.${eventIdField}: ${eventId}`)
           console.log(`📏 Event ID length: ${eventId.length} characters`)
 
-          // Get the Onboarding_Portal__c ID from the Onboarding_Trainer__c record
+          // Query Onboarding_Portal__c by Onboarding_Trainer_Record__c lookup
           try {
-            const trainerRecord = await conn.sobject('Onboarding_Trainer__c')
-              .select('Id, Onboarding_Portal__c')
-              .where({ Id: merchantId })
-              .limit(1)
-              .execute()
+            const portalQuery = `
+              SELECT Id
+              FROM Onboarding_Portal__c
+              WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+              LIMIT 1
+            `
+            const portalResult = await conn.query(portalQuery)
 
-            if (trainerRecord && trainerRecord.length > 0 && trainerRecord[0].Onboarding_Portal__c) {
-              const portalId = trainerRecord[0].Onboarding_Portal__c
+            if (portalResult.totalSize > 0) {
+              const portalId = portalResult.records[0].Id
               console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
 
               // Update the Onboarding_Portal__c record with the event ID
@@ -359,7 +361,7 @@ export async function POST(request: NextRequest) {
               })
               console.log(`✅ Successfully stored event ID in Onboarding_Portal__c.${eventIdField}`)
             } else {
-              console.log(`⚠️ No Onboarding_Portal__c record found for this merchant`)
+              console.log(`⚠️ No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
             }
           } catch (portalError: any) {
             console.log(`❌ Error storing event ID in Onboarding_Portal__c:`, portalError.message)

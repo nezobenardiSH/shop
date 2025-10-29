@@ -96,9 +96,6 @@ export async function GET(
                Merchant_Location__c,
                Subscription_Activation_Date__c,
                BO_Account_Name__c,
-               Onboarding_Portal__c,
-               Onboarding_Portal__r.Training_Event_ID__c,
-               Onboarding_Portal__r.Installation_Event_ID__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         WHERE Id = '${trainerId}'
@@ -130,6 +127,31 @@ export async function GET(
     }
 
     const trainer = trainerResult.records[0]
+
+    // Get Event IDs from Onboarding_Portal__c
+    let portalEventIds = {
+      trainingEventId: null,
+      installationEventId: null
+    }
+    try {
+      const portalQuery = `
+        SELECT Id, Training_Event_ID__c, Installation_Event_ID__c
+        FROM Onboarding_Portal__c
+        WHERE Onboarding_Trainer_Record__c = '${trainerId}'
+        LIMIT 1
+      `
+      const portalResult = await conn.query(portalQuery)
+      if (portalResult.totalSize > 0) {
+        const portal = portalResult.records[0] as any
+        portalEventIds.trainingEventId = portal.Training_Event_ID__c
+        portalEventIds.installationEventId = portal.Installation_Event_ID__c
+        console.log('✅ Found Onboarding_Portal__c record with Event IDs:', portalEventIds)
+      } else {
+        console.log('⚠️ No Onboarding_Portal__c record found for this merchant')
+      }
+    } catch (portalError) {
+      console.log('Failed to query Onboarding_Portal__c:', portalError)
+    }
 
     // Get the Account by ID (Account_Name__c actually contains the Account ID)
     let account: any = null
@@ -358,8 +380,8 @@ export async function GET(
         installerName: trainer.Assigned_Installer__c, // Assigned_Installer__c is a picklist, not a lookup
 
         // Event IDs for rescheduling (from Onboarding_Portal__c object)
-        installationEventId: trainer.Onboarding_Portal__r?.Installation_Event_ID__c,
-        trainingEventId: trainer.Onboarding_Portal__r?.Training_Event_ID__c,
+        installationEventId: portalEventIds.installationEventId,
+        trainingEventId: portalEventIds.trainingEventId,
 
         hardwareFulfillmentDate: hardwareFulfillmentDate,
         trackingLink: trainer.Delivery_Tracking_Number__c || trackingLink,
