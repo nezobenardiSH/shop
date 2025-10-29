@@ -9,9 +9,22 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code')
     const state = searchParams.get('state')
 
+    // Determine user type from state parameter (format: "trainer_xxx" or "installer_xxx")
+    const userType = state?.startsWith('installer_') ? 'installer' : 'trainer'
+    const redirectPath = userType === 'installer' ? '/installers/authorize' : '/trainers/authorize'
+
+    console.log('🔙 OAuth Callback Received:', {
+      hasCode: !!code,
+      state: state,
+      stateStartsWith: state?.substring(0, 10),
+      detectedUserType: userType,
+      redirectPath: redirectPath,
+      allParams: Object.fromEntries(searchParams.entries())
+    })
+
     if (!code) {
       return NextResponse.redirect(
-        new URL('/trainers/authorize?error=no_code', baseUrl)
+        new URL(`${redirectPath}?error=no_code`, baseUrl)
       )
     }
 
@@ -20,13 +33,13 @@ export async function GET(request: NextRequest) {
 
     // Quick response to avoid timeout - process in background
     const response = NextResponse.redirect(
-      new URL(`/trainers/authorize?processing=true&code=${code}`, baseUrl)
+      new URL(`${redirectPath}?processing=true&code=${code}`, baseUrl)
     )
 
-    // Process token exchange asynchronously
-    larkOAuthService.exchangeCodeForTokens(code).then(
+    // Process token exchange asynchronously with user type
+    larkOAuthService.exchangeCodeForTokens(code, userType).then(
       (userEmail) => {
-        console.log(`Successfully authorized Lark for user: ${userEmail}`)
+        console.log(`Successfully authorized Lark for ${userType}: ${userEmail}`)
       },
       (error) => {
         console.error('OAuth token exchange error:', error)
@@ -37,8 +50,13 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('OAuth callback error:', error)
+    // Default to trainers page if we can't determine type
+    const state = request.nextUrl.searchParams.get('state')
+    const userType = state?.startsWith('installer_') ? 'installer' : 'trainer'
+    const redirectPath = userType === 'installer' ? '/installers/authorize' : '/trainers/authorize'
+
     return NextResponse.redirect(
-      new URL(`/trainers/authorize?error=${encodeURIComponent(error.message)}`, baseUrl)
+      new URL(`${redirectPath}?error=${encodeURIComponent(error.message)}`, baseUrl)
     )
   }
 }

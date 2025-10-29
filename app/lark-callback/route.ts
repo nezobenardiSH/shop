@@ -8,13 +8,18 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const code = searchParams.get('code')
     const state = searchParams.get('state')
-    
+
     // Determine user type from state parameter
     const userType = state?.includes('installer') ? 'installer' : 'trainer'
     const authPage = userType === 'installer' ? '/installers/authorize' : '/trainers/authorize'
 
-    console.log('OAuth callback received with code:', code?.substring(0, 10) + '...')
-    console.log('User type:', userType)
+    console.log('🔙 /lark-callback route hit!')
+    console.log('OAuth callback received:', {
+      code: code?.substring(0, 10) + '...',
+      state: state,
+      userType: userType,
+      authPage: authPage
+    })
 
     if (!code) {
       return NextResponse.redirect(
@@ -54,8 +59,14 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('OAuth callback error:', error)
-    // Default to trainer page if we can't determine user type
-    const authPage = '/trainers/authorize'
+    // Try to determine user type from state, default to trainer if not found
+    const searchParams = request.nextUrl.searchParams
+    const state = searchParams.get('state')
+    const userType = state?.includes('installer') ? 'installer' : 'trainer'
+    const authPage = userType === 'installer' ? '/installers/authorize' : '/trainers/authorize'
+
+    console.log('Error redirect:', { userType, authPage, state })
+
     return NextResponse.redirect(
       new URL(`${authPage}?error=${encodeURIComponent(error.message)}`, baseUrl)
     )

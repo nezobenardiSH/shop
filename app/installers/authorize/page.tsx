@@ -18,6 +18,8 @@ export default function InstallersAuthorizePage() {
     const success = urlParams.get('success')
     const email = urlParams.get('email')
     const error = urlParams.get('error')
+    const processing = urlParams.get('processing')
+    const code = urlParams.get('code')
 
     if (success && email) {
       setAuthStatus({
@@ -29,6 +31,15 @@ export default function InstallersAuthorizePage() {
         authorized: false,
         error: decodeURIComponent(error)
       })
+    } else if (processing && code) {
+      // OAuth callback is processing - show loading state
+      setIsLoading(true)
+      // Clean up URL and refresh status after processing
+      setTimeout(() => {
+        window.history.replaceState({}, '', '/installers/authorize')
+        checkAuthStatus()
+        setIsLoading(false)
+      }, 2000)
     } else {
       // Check current auth status
       checkAuthStatus()
@@ -163,6 +174,23 @@ export default function InstallersAuthorizePage() {
                   </h3>
                   <p className="text-sm text-red-700 mt-1">
                     {authStatus.error}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Processing Status */}
+          {isLoading && !authStatus?.authorized && !authStatus?.error && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <Loader2 className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0 animate-spin" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-blue-900">
+                    Processing Authorization...
+                  </h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Connecting to Lark and exchanging authorization tokens. This may take a moment...
                   </p>
                 </div>
               </div>
