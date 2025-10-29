@@ -329,6 +329,12 @@ export async function POST(request: NextRequest) {
           [mapping.field]: fieldValue
         }
 
+        // For installation bookings, also update the Assigned_Installer__c field
+        if (bookingType === 'installation' && trainer && trainer.name) {
+          updateData.Assigned_Installer__c = trainer.name
+          console.log('📝 Setting Assigned_Installer__c to:', trainer.name)
+        }
+
         // Store the Lark event ID in Onboarding_Portal__c object
         const eventIdFieldMapping: { [key: string]: string } = {
           'installation': 'Installation_Event_ID__c',
