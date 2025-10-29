@@ -495,7 +495,26 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           console.error(`✅ [PORTAL-SAVE] Successfully stored event ID in Onboarding_Portal__c.Installation_Event_ID__c`)
         } else {
           console.error(`⚠️ [PORTAL-SAVE] No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
-          console.error(`   [PORTAL-SAVE] Event ID will not be saved. Please create a Portal record for this merchant.`)
+          console.error(`🔧 [PORTAL-SAVE] Auto-creating Portal record for merchant...`)
+          
+          // Get merchant name for the Portal record
+          const merchantQuery = `
+            SELECT Name
+            FROM Onboarding_Trainer__c
+            WHERE Id = '${merchantId}'
+            LIMIT 1
+          `
+          const merchantResult = await conn.query(merchantQuery)
+          const merchantName = merchantResult.totalSize > 0 ? merchantResult.records[0].Name : 'Unknown Merchant'
+          
+          // Create the Portal record
+          const createResult = await conn.sobject('Onboarding_Portal__c').create({
+            Name: `Portal - ${merchantName}`,
+            Onboarding_Trainer_Record__c: merchantId,
+            Installation_Event_ID__c: eventId
+          })
+          console.error(`✅ [PORTAL-SAVE] Created new Portal record: ${createResult.id}`)
+          console.error(`✅ [PORTAL-SAVE] Successfully stored event ID in new Portal record`)
         }
       } catch (portalError: any) {
         console.error(`❌ [PORTAL-SAVE] Error storing event ID in Onboarding_Portal__c:`, portalError.message)
@@ -565,7 +584,7 @@ export async function submitExternalInstallationRequest(
   const conn = await getSalesforceConnection()
   if (conn) {
     await conn.sobject('Onboarding_Trainer__c').update({
-      Name: merchantId,
+      Id: merchantId,
       Preferred_Installation_Date__c: preferredDate,
       Preferred_Installation_Time__c: preferredTime,
       Installation_Status__c: 'Pending Vendor Confirmation',
