@@ -58,13 +58,18 @@ export async function middleware(request: NextRequest) {
     
     console.log('[Middleware] Token valid for merchant:', payload.trainerId)
 
-    // Verify token matches the merchantId in URL (exact comparison since IDs are case-sensitive)
+    // Verify token matches the merchantId in URL
+    // Salesforce IDs can be 15 or 18 characters - we need to handle both
     const urlMerchantId = path.split('/')[2]
     const tokenTrainerId = payload.trainerId as string
+    
+    // Compare the first 15 characters of both IDs (case-insensitive for the suffix)
+    // Salesforce IDs: 15-char version is case-sensitive, 18-char adds 3-char case-safe suffix
+    const urlId15 = urlMerchantId.substring(0, 15)
+    const tokenId15 = tokenTrainerId.substring(0, 15)
 
-    // Compare the Salesforce IDs - they should match exactly
-    if (urlMerchantId !== tokenTrainerId) {
-      console.log('[Middleware] Token mismatch - URL:', urlMerchantId, 'Token:', tokenTrainerId)
+    if (urlId15 !== tokenId15) {
+      console.log('[Middleware] Token mismatch - URL ID:', urlMerchantId, '(15-char:', urlId15, ') Token ID:', tokenTrainerId, '(15-char:', tokenId15, ')')
       // Instead of blocking, redirect to login for the new merchant
       const loginUrl = new URL(`/login/${urlMerchantId}`, request.url)
       loginUrl.searchParams.set('redirect', path)
