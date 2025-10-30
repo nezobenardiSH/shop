@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // Remove standalone output for Render deployment
+  // output: 'standalone',
   poweredByHeader: false,
   
   // Production optimizations

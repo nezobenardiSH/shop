@@ -1,0 +1,88 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - alert [ref=e2]: Merchant Onboarding Portal
+  - generic [ref=e4]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - img "StoreHub" [ref=e9]
+        - generic [ref=e10]: Onboarding Portal
+      - generic [ref=e11]:
+        - button [ref=e12] [cursor=pointer]:
+          - img [ref=e13] [cursor=pointer]
+        - button "Log out" [ref=e15] [cursor=pointer]
+    - generic [ref=e17]:
+      - heading "activate175" [level=1] [ref=e18]
+      - paragraph [ref=e19]: "Last Modified: 10/29/2025, 2:37:44 PM"
+    - navigation [ref=e21]:
+      - link "Onboarding Progress" [ref=e22] [cursor=pointer]:
+        - /url: /merchant/a0yQ9000003aAvBIAU
+      - link "Merchant Details" [ref=e23] [cursor=pointer]:
+        - /url: /merchant/a0yQ9000003aAvBIAU/details
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - img [ref=e28]
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]: Expected Go Live Date
+            - img [ref=e34]
+          - generic [ref=e36]: Sunday, November 30, 2025
+      - generic [ref=e37]:
+        - generic [ref=e38]: Days until go-live
+        - generic [ref=e39]: "32"
+    - generic [ref=e42]:
+      - generic [ref=e44]:
+        - generic [ref=e49] [cursor=pointer]:
+          - generic [ref=e50] [cursor=pointer]: Welcome to StoreHub
+          - generic [ref=e51] [cursor=pointer]: In Progress
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e57] [cursor=pointer]: Preparation
+          - generic [ref=e58] [cursor=pointer]: 0/3 Completed
+        - generic [ref=e63] [cursor=pointer]:
+          - generic [ref=e64] [cursor=pointer]: Installation
+          - generic [ref=e65] [cursor=pointer]: Not Started • Not Scheduled
+        - generic [ref=e70] [cursor=pointer]:
+          - generic [ref=e71] [cursor=pointer]: Training
+          - generic [ref=e72] [cursor=pointer]: Not Started • Not Scheduled
+        - generic [ref=e77] [cursor=pointer]:
+          - generic [ref=e78] [cursor=pointer]: Ready to go live
+          - generic [ref=e79] [cursor=pointer]: 1/5 Completed
+        - generic [ref=e84] [cursor=pointer]:
+          - generic [ref=e85] [cursor=pointer]: Live
+          - generic [ref=e86] [cursor=pointer]: Not Started
+      - generic [ref=e87]:
+        - heading "Welcome to StoreHub" [level=4] [ref=e88]:
+          - generic [ref=e89]: Welcome to StoreHub
+        - generic [ref=e90]:
+          - generic [ref=e91]:
+            - generic [ref=e92]: Welcome Call Status
+            - generic [ref=e94]: Welcome Call Attempt 1
+          - generic [ref=e95]:
+            - generic [ref=e96]: First Call Timestamp
+            - generic [ref=e97]: Not Recorded
+          - generic [ref=e98]:
+            - generic [ref=e99]: Onboarding Manager Name
+            - generic [ref=e100]: Not Assigned
+          - generic [ref=e101]:
+            - heading "Welcome Call Summary:" [level=5] [ref=e102]
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - generic [ref=e105]: "• Go live date:"
+                - generic [ref=e106]: 11/30/2025
+              - generic [ref=e107]:
+                - generic [ref=e108]: "• Hardware delivery date:"
+                - generic [ref=e109]: Not Set
+              - generic [ref=e110]:
+                - generic [ref=e111]: "• Installation date:"
+                - generic [ref=e112]: Not Set
+              - generic [ref=e113]:
+                - generic [ref=e114]: "• POS Training Date:"
+                - generic [ref=e115]: Not Set
+              - generic [ref=e116]:
+                - generic [ref=e117]: "• BackOffice Training Date:"
+                - generic [ref=e118]: Not Set
+    - link [ref=e120] [cursor=pointer]:
+      - /url: https://wa.me/601117225000?text=Hi!%20I%20need%20help%20with%20the%20merchant%20portal.
+      - img [ref=e122] [cursor=pointer]
+```

@@ -1,11 +1,11 @@
 services:
   - type: web
     name: onboarding-portal
-    runtime: node
-    region: singapore  # Changed to match your database region
+    env: node  # Explicitly specify Node.js environment
+    region: singapore
     plan: starter   # Or 'free' for testing
-    buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npm start
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: node_modules/.bin/next start -p $PORT
     healthCheckPath: /api/health
     envVars:
       # Database (auto-connected)
