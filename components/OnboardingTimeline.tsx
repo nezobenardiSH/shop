@@ -525,12 +525,12 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   })()}
                   <div className="flex-1 text-left">
                     <div className="text-base font-medium text-gray-900 text-left">Hardware Delivery</div>
-                    <div className="text-sm text-gray-500 text-left">
+                    <div className="text-sm text-left">
                       {(() => {
-                        if (trainerData?.hardwareDeliveryStatus === 'Delivered') return 'Delivered';
-                        if (trainerData?.trackingLink) return 'In Transit';
-                        if (trainerData?.hardwareFulfillmentDate) return 'Scheduled';
-                        return 'Pending';
+                        if (trainerData?.hardwareDeliveryStatus === 'Delivered') return <span className="text-gray-500">Delivered</span>;
+                        if (trainerData?.trackingLink) return <span className="text-gray-500">In Transit</span>;
+                        if (trainerData?.hardwareFulfillmentDate) return <span className="text-orange-600">Scheduled</span>;
+                        return <span className="text-orange-600">Pending</span>;
                       })()}
                     </div>
                   </div>
@@ -640,8 +640,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <div className="text-sm text-gray-500 text-left">
                       {(() => {
                         if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
-                        if (trainerData?.menuCollectionSubmissionTimestamp) return 'Pending Setup';
-                        return 'Pending';
+                        if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">Pending Setup</span>;
+                        return <span className="text-orange-600">Pending Menu</span>;
                       })()}
                     </div>
                   </div>
@@ -720,8 +720,12 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   )}
                   <div className="flex-1 text-left">
                     <div className="text-base font-medium text-gray-900 text-left">Store Setup</div>
-                    <div className="text-sm text-gray-500 text-left">
-                      {trainerData?.videoProofLink || uploadedVideoUrl ? 'Video Uploaded' : 'Pending Upload'}
+                    <div className="text-sm text-left">
+                      {trainerData?.videoProofLink || uploadedVideoUrl ? (
+                        <span className="text-gray-500">Completed</span>
+                      ) : (
+                        <span className="text-orange-600">Pending Upload</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1401,15 +1405,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <div className="text-sm font-medium text-gray-900">Hardware Delivery</div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="text-sm font-medium text-gray-500">
+                    <div className="text-sm font-medium">
                       {(() => {
                         if (trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.trackingLink) {
-                          return 'Delivered';
+                          return <span className="text-gray-500">Delivered</span>;
                         }
                         if (trainerData?.hardwareFulfillmentDate) {
-                          return 'Scheduled';
+                          return <span className="text-orange-600">Scheduled</span>;
                         }
-                        return 'Pending';
+                        return <span className="text-orange-600">Pending</span>;
                       })()}
                     </div>
                     <button
@@ -1548,8 +1552,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <div className="text-sm font-medium text-gray-500">
                       {(() => {
                         if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
-                        if (trainerData?.menuCollectionSubmissionTimestamp) return 'Pending Setup';
-                        return 'Pending';
+                        if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">Pending Setup</span>;
+                        return <span className="text-orange-600">Pending Menu</span>;
                       })()}
                     </div>
                     <button
@@ -1647,9 +1651,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
                       {trainerData?.videoProofLink || uploadedVideoUrl ? (
-                        <span className="text-green-600 font-medium">✓ Video Uploaded</span>
+                        <span>Completed</span>
                       ) : (
-                        <span className="text-orange-600 font-medium">⏳ Pending Upload</span>
+                        <span className="text-orange-600">Pending Upload</span>
                       )}
                     </div>
                     <button
@@ -2156,14 +2160,14 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     )}
                     <span className="text-base text-gray-700">Product Setup Completed</span>
                   </div>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm">
                     {(() => {
                       if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') {
-                        return 'Completed';
+                        return <span className="text-gray-500">Completed</span>;
                       } else if (trainerData?.menuCollectionSubmissionTimestamp) {
-                        return 'Pending Setup';
+                        return <span className="text-orange-600">Pending Setup</span>;
                       } else {
-                        return 'Pending';
+                        return <span className="text-orange-600">Pending Menu</span>;
                       }
                     })()}
                   </span>

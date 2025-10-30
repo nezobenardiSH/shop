@@ -24,11 +24,11 @@ The Preparation stage contains three sub-tasks. Each has its own completion crit
 
 - Field: `Delivery_Tracking_Number__c`
 - Condition: Tracking number/link exists (not null/empty)
-- Display Status:
-  - "Delivered" if `Hardware_Delivery_Status__c` = "Delivered"
-  - "In Transit" if tracking link exists
-  - "Scheduled" if hardware fulfillment date exists
-  - "Pending" otherwise
+- Display Status (with colors):
+  - "Delivered" (gray text) - if tracking link exists or `Hardware_Delivery_Status__c` = "Delivered"
+  - "In Transit" (gray text) - if tracking link exists
+  - "Scheduled" (orange text) - if hardware fulfillment date exists but no tracking link
+  - "Pending" (orange text) - if no fulfillment date and no tracking link
 - Additional Fields:
   - `Delivery_Tracking_Number_Timestamp__c` - When tracking was added
   - `Hardware_Fulfillment_Date__c` - Scheduled delivery date
@@ -38,17 +38,25 @@ The Preparation stage contains three sub-tasks. Each has its own completion crit
 
 - Field: `Completed_Product_Setup__c`
 - Condition: Field value = "Yes" OR "Yes - Self-serve"
-- Valid completion values:
-  - "Yes" - Product setup completed with assistance
-  - "Yes - Self-serve" - Product setup completed by merchant independently
+- Display Status (with colors):
+  - "Completed" (gray text) - if `Completed_Product_Setup__c` = "Yes" or "Yes - Self-serve"
+  - "Pending Setup" (orange text) - if menu collection form has been submitted but setup not complete
+  - "Pending Menu" (orange text) - if menu collection form has not been submitted
+- Additional Fields:
+  - `Menu_Collection_Submission_Timestamp__c` - When menu was submitted
+  - `Menu_Collection_Form_Link__c` - Link to menu collection form
 
 #### 2.3 Store Setup
 **Status:** Done when video has been uploaded
 
-- Field: Video upload status/timestamp
+- Field: `Video_Proof_Link__c`
 - Condition: Video file exists and has been successfully uploaded
+- Display Status (with colors):
+  - "Completed" (gray text) - if video has been uploaded
+  - "Pending Upload" (orange text) - if no video uploaded yet
+- Note: No emoji icons used, consistent with other status displays
 
----S
+---
 
 ### 3. Installation
 **Status:** Done when Actual Installation Date is filled out
