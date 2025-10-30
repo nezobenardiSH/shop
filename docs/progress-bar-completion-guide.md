@@ -48,7 +48,7 @@ The Preparation stage contains three sub-tasks. Each has its own completion crit
 - Field: Video upload status/timestamp
 - Condition: Video file exists and has been successfully uploaded
 
----
+---S
 
 ### 3. Installation
 **Status:** Done when Actual Installation Date is filled out

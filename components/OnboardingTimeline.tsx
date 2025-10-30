@@ -499,7 +499,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   {(() => {
                     const isDelivered = trainerData?.hardwareDeliveryStatus === 'Delivered' || 
                                        trainerData?.trackingLink;
-                    const isInProgress = trainerData?.hardwareFulfillmentDate && !isDelivered;
+                    const isScheduled = trainerData?.hardwareFulfillmentDate && !isDelivered;
                     
                     if (isDelivered) {
                       return (
@@ -509,7 +509,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           </svg>
                         </div>
                       );
-                    } else if (isInProgress) {
+                    } else if (isScheduled) {
                       return (
                         <div className="w-5 h-5 bg-orange-400 rounded-full flex items-center justify-center flex-shrink-0">
                           <div className="w-2 h-2 bg-white rounded-full" />
@@ -1368,34 +1368,48 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {(() => {
-                      // Hardware Delivery is done when Hardware Fulfillment Date has passed
-                      const hardwareComplete = trainerData?.hardwareFulfillmentDate
-                        ? new Date(trainerData.hardwareFulfillmentDate) <= new Date()
-                        : false;
+                      // Hardware Delivery status icons
+                      const isDelivered = trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.trackingLink;
+                      const isScheduled = trainerData?.hardwareFulfillmentDate && !isDelivered;
 
-                      return hardwareComplete ? (
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      );
+                      if (isDelivered) {
+                        return (
+                          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        );
+                      } else if (isScheduled) {
+                        return (
+                          <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        );
+                      }
                     })()}
                     <div className="text-sm font-medium text-gray-900">Hardware Delivery</div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
                       Status: {(() => {
-                        const hardwareComplete = trainerData?.hardwareFulfillmentDate
-                          ? new Date(trainerData.hardwareFulfillmentDate) <= new Date()
-                          : false;
-                        return hardwareComplete ? 'Completed' : 'Pending';
+                        if (trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.trackingLink) {
+                          return 'Delivered';
+                        }
+                        if (trainerData?.hardwareFulfillmentDate) {
+                          return 'Scheduled';
+                        }
+                        return 'Pending';
                       })()}
                     </div>
                     <button

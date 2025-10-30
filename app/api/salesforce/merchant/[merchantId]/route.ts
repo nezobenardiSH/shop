@@ -177,16 +177,22 @@ export async function GET(
 
     // Get the Account by ID (Account_Name__c actually contains the Account ID)
     let account: any = null
+    console.log('🔍 Account_Name__c value:', trainer.Account_Name__c)
     if (trainer.Account_Name__c) {
       try {
         // Account_Name__c contains the Account ID, not the name
+        console.log(`📊 Fetching Account with ID: ${trainer.Account_Name__c}`)
         const accountResult = await conn.query(`SELECT Id, Name, Business_Store_Name__c FROM Account WHERE Id = '${trainer.Account_Name__c}'`)
+        console.log(`✅ Account query result: found ${accountResult.totalSize} records`)
         if (accountResult.totalSize > 0) {
           account = accountResult.records[0]
+          console.log(`✅ Account found: ${account.Name}`)
         }
       } catch (error) {
         console.log('Failed to get account by ID:', error)
       }
+    } else {
+      console.log('⚠️ No Account_Name__c value in trainer record')
     }
 
     // Get detailed account data with custom fields (if account exists)
