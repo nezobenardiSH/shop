@@ -48,15 +48,10 @@ export async function POST(request: NextRequest) {
     // Generate the public download URL using the same format as video upload
     const downloadUrl = `${conn.instanceUrl}/sfc/servlet.shepherd/version/download/${contentVersion.id}`
 
-    // Check if there's an existing document
-    const existingTrainer = await conn.sobject('Onboarding_Trainer__c').findOne({
-      Id: trainerId
-    }, ['SSM__c'])
-
-    const isReplacement = existingTrainer && existingTrainer.SSM__c
-
     // Update the trainer record with the document link
-    const updateField = documentType === 'ssm' ? 'SSM__c' : 'Document_Link__c'
+    // SSM__c field no longer exists, using Document_Link__c for all document types
+    const updateField = 'Document_Link__c'
+    const isReplacement = false // Since we can't check for existing SSM anymore
 
     await conn.sobject('Onboarding_Trainer__c').update({
       Id: trainerId,

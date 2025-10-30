@@ -96,6 +96,19 @@ export async function GET(
                Merchant_Location__c,
                Subscription_Activation_Date__c,
                BO_Account_Name__c,
+               Onboarding_Services_Bought__c,
+               Shipping_Street__c, Shipping_City__c, Shipping_State__c,
+               Shipping_Zip_Postal_Code__c, Shipping_Country__c,
+               Sub_Industry__c, Preferred_Language__c,
+               Required_Features_by_Merchant__c,
+               Synced_Quote_Total_Amount__c, Pending_Payment__c,
+               Product_Setup_Status__c,
+               Hardware_Delivery_Status__c,
+               Hardware_Installation_Status__c,
+               Installation_Issues_Elaboration__c,
+               Training_Status__c,
+               First_Revised_EGLD__c,
+               Onboarding_Trainer_Stage__c,
                CreatedDate, LastModifiedDate
         FROM Onboarding_Trainer__c
         WHERE Id = '${trainerId}'
@@ -335,8 +348,7 @@ export async function GET(
       }
     }
 
-    // Fix SSM document URL if needed
-    const fixedSsmDocumentUrl = await fixSalesforceFileUrl(trainer.SSM__c, conn)
+    // SSM__c field no longer exists in Salesforce
 
     // Return the specific trainer data (not all trainers)
     const onboardingTrainerData = {
@@ -403,7 +415,6 @@ export async function GET(
         subscriptionActivationDate: trainer.Subscription_Activation_Date__c,
         posQrDeliveryTnxCount: trainer.Account_Name__r?.POS_QR_Delivery_Tnx_Count_Past_30_Days__c || 0,
         videoProofLink: trainer.Video_Proof_Link__c,
-        ssmDocument: fixedSsmDocumentUrl,
         createdDate: trainer.CreatedDate,
         lastModifiedDate: trainer.LastModifiedDate
       }]
