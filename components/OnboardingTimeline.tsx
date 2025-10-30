@@ -475,15 +475,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">POS Training:</span>
+                  <span className="text-sm text-gray-600">Training:</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatDateTime(trainerData?.posTrainingDate)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">BO Training:</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatDateTime(trainerData?.backOfficeTrainingDate)}
+                    {formatDateTime(trainerData?.trainingDate)}
                   </span>
                 </div>
               </div>
@@ -1872,15 +1866,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">• POS Training Date:</span>
+                  <span className="text-sm text-gray-600">• Training Date:</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatDateTime(trainerData?.posTrainingDate)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">• BackOffice Training Date:</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatDateTime(trainerData?.backOfficeTrainingDate)}
+                    {formatDateTime(trainerData?.trainingDate)}
                   </span>
                 </div>
               </div>
