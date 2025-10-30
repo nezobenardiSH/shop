@@ -77,6 +77,7 @@ export default function DatePickerModal({
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
   const [isFilteringSlots, setIsFilteringSlots] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
+  const [isExternalVendor, setIsExternalVendor] = useState(false)
   const [bookingDetails, setBookingDetails] = useState<{
     assignedTrainer: string
     date: string
@@ -182,6 +183,7 @@ export default function DatePickerModal({
         
         if (response.ok) {
           if (data.type === 'internal') {
+            setIsExternalVendor(false)
             // Transform installer availability to match the expected format
             const transformedAvailability = data.availability.map((day: any) => ({
               date: day.date,
@@ -194,8 +196,8 @@ export default function DatePickerModal({
             }))
             setAvailability(transformedAvailability)
           } else {
-            // External vendor - show message
-            setMessage('Choose preferred date and vendor will call to finalise')
+            // External vendor - set flag and generate availability
+            setIsExternalVendor(true)
             // Generate availability for external vendor (weekdays 9am-6pm)
             const externalAvailability = []
             const startDate = new Date()
@@ -601,6 +603,15 @@ export default function DatePickerModal({
               <X className="h-6 w-6" />
             </button>
           </div>
+
+          {/* External Vendor Banner */}
+          {isExternalVendor && bookingType === 'installation' && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm font-medium text-amber-900">
+                📞 Choose preferred date and vendor will call to finalise
+              </p>
+            </div>
+          )}
 
           {/* Current Booking Info (when rescheduling) */}
           {currentBooking?.eventId && currentBooking?.date && (
