@@ -65,8 +65,11 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
       if (response.ok) {
         // Get redirect URL or default to merchant page
         const redirectUrl = searchParams.get('redirect') || `/merchant/${merchantId}`
-        router.push(redirectUrl)
-        router.refresh()
+        console.log('Login successful, redirecting to:', redirectUrl)
+        console.log('Response data:', data)
+        
+        // Use window.location for a hard redirect to ensure cookies are picked up
+        window.location.href = redirectUrl
       } else {
         setError(data.error || 'Invalid PIN')
         if (data.remainingAttempts !== undefined) {

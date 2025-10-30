@@ -125,8 +125,19 @@ export async function POST(request: NextRequest) {
       pin: pin
     })
     
+    console.log('🎫 Generated token for:', {
+      merchantId,
+      trainerId: trainer.Id,
+      trainerName: trainer.Name
+    })
+    
     // Set httpOnly cookie
     const cookieStore = await cookies()
+    
+    // First, explicitly delete any existing auth-token to ensure clean state
+    cookieStore.delete('auth-token')
+    
+    // Then set the new token
     cookieStore.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
