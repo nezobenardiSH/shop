@@ -56,7 +56,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   // Preparation sub-stages
   // Hardware delivery is completed when tracking link is provided
   const hardwareDeliveryCompleted = !!trainerData?.trackingLink
-  const productSetupCompleted = trainerData?.completedProductSetup === 'Yes'
+  const productSetupCompleted = trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve'
   const storeSetupCompleted = !!trainerData?.videoProofLink
 
   const preparationSubStagesCompleted = [
@@ -616,7 +616,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 <div className="flex items-center gap-3 flex-1">
                   {/* Status Icon */}
                   {(() => {
-                    const productComplete = trainerData?.completedProductSetup === 'Yes';
+                    const productComplete = trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve';
                     const inProgress = !!trainerData?.menuCollectionSubmissionTimestamp && !productComplete;
 
                     if (productComplete) {
@@ -645,7 +645,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <div className="text-base font-medium text-gray-900 text-left">Product Setup</div>
                     <div className="text-sm text-gray-500 text-left">
                       {(() => {
-                        if (trainerData?.completedProductSetup === 'Yes') return 'Completed';
+                        if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
                         if (trainerData?.menuCollectionSubmissionTimestamp) return 'In Progress';
                         return 'Pending';
                       })()}
@@ -1030,8 +1030,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             </div>
             <div className="flex items-center justify-between">
               <span className="text-base text-gray-700">✓ Product Setup</span>
-              <span className={`text-sm ${trainerData?.completedProductSetup === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>
-                {trainerData?.completedProductSetup === 'Yes' ? 'Yes' : 'No'}
+              <span className={`text-sm ${(trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') ? 'text-green-600' : 'text-gray-400'}`}>
+                {(trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') ? trainerData?.completedProductSetup : 'No'}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -1343,7 +1343,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               // Use the same completion logic as defined at component level
               // Hardware delivery is completed when tracking link is provided
               const hardwareDeliveryCompleted = !!trainerData?.trackingLink;
-              const productSetupCompleted = trainerData?.completedProductSetup === 'Yes';
+              const productSetupCompleted = trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve';
               const storeSetupCompleted = !!trainerData?.videoProofLink;
 
               const completed = [
@@ -1505,7 +1505,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {(() => {
-                      const productComplete = trainerData?.completedProductSetup === 'Yes';
+                      const productComplete = trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve';
                       const inProgress = !!trainerData?.menuCollectionSubmissionTimestamp && !productComplete;
 
                       if (productComplete) {
@@ -1539,7 +1539,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
                       Status: {(() => {
-                        if (trainerData?.completedProductSetup === 'Yes') return 'Completed';
+                        if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
                         if (trainerData?.menuCollectionSubmissionTimestamp) return 'In Progress';
                         return 'Pending';
                       })()}
@@ -2143,7 +2143,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 {/* Product Setup */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {trainerData?.completedProductSetup === 'Yes' ? (
+                    {(trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') ? (
                       <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                         <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -2155,7 +2155,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <span className="text-base text-gray-700">Product Setup Completed</span>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {trainerData?.completedProductSetup === 'Yes' ? 'Completed' : 'In Progress'}
+                    {(trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') ? 'Completed' : 'In Progress'}
                   </span>
                 </div>
 

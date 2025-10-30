@@ -34,10 +34,13 @@ The Preparation stage contains three sub-tasks. Each has its own completion crit
   - `Hardware_Fulfillment_Date__c` - Scheduled delivery date
 
 #### 2.2 Product Setup
-**Status:** Done when Completed Product Setup = Yes
+**Status:** Done when Completed Product Setup = Yes or Yes - Self-serve
 
 - Field: `Completed_Product_Setup__c`
-- Condition: Field value = "Yes"
+- Condition: Field value = "Yes" OR "Yes - Self-serve"
+- Valid completion values:
+  - "Yes" - Product setup completed with assistance
+  - "Yes - Self-serve" - Product setup completed by merchant independently
 
 #### 2.3 Store Setup
 **Status:** Done when video has been uploaded
