@@ -65,7 +65,14 @@ export async function middleware(request: NextRequest) {
     // Compare the Salesforce IDs - they should match exactly
     if (urlMerchantId !== tokenTrainerId) {
       console.log('[Middleware] Token mismatch - URL:', urlMerchantId, 'Token:', tokenTrainerId)
-      return NextResponse.redirect(new URL('/unauthorized', request.url))
+      // Instead of blocking, redirect to login for the new merchant
+      const loginUrl = new URL(`/login/${urlMerchantId}`, request.url)
+      loginUrl.searchParams.set('redirect', path)
+      
+      // Clear the old token since it's for a different merchant
+      const response = NextResponse.redirect(loginUrl)
+      response.cookies.delete('auth-token')
+      return response
     }
   }
   
