@@ -51,6 +51,14 @@ This document maps all data fields displayed in the Onboarding Portal to their c
 | Merchant PIC Contact | `Merchant_PIC_Contact_Number__c` | Onboarding_Trainer__c | Person in charge |
 | Onboarding Stage | `Onboarding_Trainer_Stage__c` | Onboarding_Trainer__c | Current stage |
 
+### System Fields (Header Information)
+
+| Display Name | Salesforce Field | Object | Notes |
+|-------------|------------------|--------|-------|
+| Salesforce ID | `Id` | Onboarding_Trainer__c | 15 or 18 character unique identifier |
+| Last Modified | `LastModifiedDate` | Onboarding_Trainer__c | Auto-updated when record changes |
+| Created Date | `CreatedDate` | Onboarding_Trainer__c | Record creation timestamp |
+
 ### Contact Information
 
 | Display Name | Salesforce Field | Object | Notes |
@@ -237,3 +245,4 @@ Fields accessed through relationships (using __r notation):
 - **2025-10-30**: Updated Product Setup to include "Yes - Self-serve"
 - **2025-10-30**: Consolidated training dates to single field
 - **2025-10-30**: Added Onboarding_Services_Bought__c and shipping fields
+- **2025-10-30**: Added System Fields section (Id, LastModifiedDate, CreatedDate)
