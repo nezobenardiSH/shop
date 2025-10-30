@@ -640,7 +640,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <div className="text-sm text-gray-500 text-left">
                       {(() => {
                         if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
-                        if (trainerData?.menuCollectionSubmissionTimestamp) return 'In Progress';
+                        if (trainerData?.menuCollectionSubmissionTimestamp) return 'Pending Setup';
                         return 'Pending';
                       })()}
                     </div>
@@ -1402,7 +1402,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
-                      Status: {(() => {
+                      {(() => {
                         if (trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.trackingLink) {
                           return 'Delivered';
                         }
@@ -1546,9 +1546,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
-                      Status: {(() => {
+                      {(() => {
                         if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
-                        if (trainerData?.menuCollectionSubmissionTimestamp) return 'In Progress';
+                        if (trainerData?.menuCollectionSubmissionTimestamp) return 'Pending Setup';
                         return 'Pending';
                       })()}
                     </div>
@@ -2157,7 +2157,15 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <span className="text-base text-gray-700">Product Setup Completed</span>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {(trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') ? 'Completed' : 'In Progress'}
+                    {(() => {
+                      if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') {
+                        return 'Completed';
+                      } else if (trainerData?.menuCollectionSubmissionTimestamp) {
+                        return 'Pending Setup';
+                      } else {
+                        return 'Pending';
+                      }
+                    })()}
                   </span>
                 </div>
 
