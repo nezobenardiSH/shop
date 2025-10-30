@@ -441,15 +441,20 @@ ${merchantDetails.onboardingSummary || 'N/A'}
       const dateOnly = date.split('T')[0]
       console.log(`📅 Converting date for Salesforce: ${date} -> ${dateOnly}`)
       
-      // Update Onboarding_Trainer__c with installation date only (no installer, as it's a restricted picklist)
+      // Prepare DateTime format with timezone for Installation_Date_Time__c
+      const installationDateTime = `${date}T${timeSlot.start}:00+08:00`  // Singapore timezone (GMT+8)
+      console.log(`📅 Installation DateTime for Salesforce: ${installationDateTime}`)
+      
+      // Update Onboarding_Trainer__c with both installation date and datetime fields
       const updateData: any = {
         Id: merchantId,  // Use merchantId directly as it's already the record ID
-        Installation_Date__c: dateOnly
+        Installation_Date__c: dateOnly,  // Date only field
+        Installation_Date_Time__c: installationDateTime  // DateTime field with timezone
       }
 
       console.log('📦 Update data for Onboarding_Trainer__c:', JSON.stringify(updateData, null, 2))
 
-      // Update Onboarding_Trainer__c with installation date
+      // Update Onboarding_Trainer__c with installation date and datetime
       let updateResult: any
       try {
         updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateData)
@@ -569,11 +574,12 @@ ${merchantDetails.onboardingSummary || 'N/A'}
       }
 
       // Verify the update
-      const verifyQuery = `SELECT Id, Installation_Date__c, Assigned_Installer__c FROM Onboarding_Trainer__c WHERE Id = '${merchantId}'`
+      const verifyQuery = `SELECT Id, Installation_Date__c, Installation_Date_Time__c, Assigned_Installer__c FROM Onboarding_Trainer__c WHERE Id = '${merchantId}'`
       const verifyResult = await conn.query(verifyQuery)
       if (verifyResult.records && verifyResult.records.length > 0) {
         const updated: any = verifyResult.records[0]
         console.log(`✔️ Verification - Installation_Date__c: ${updated.Installation_Date__c}`)
+        console.log(`✔️ Verification - Installation_Date_Time__c: ${updated.Installation_Date_Time__c}`)
         console.log(`✔️ Verification - Assigned_Installer__c: ${updated.Assigned_Installer__c}`)
       }
     } catch (error) {
