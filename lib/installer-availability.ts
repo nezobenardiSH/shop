@@ -31,7 +31,7 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
     }
 
     const query = `
-      SELECT Merchant_Location__c, Name, Id 
+      SELECT Merchant_Location__c, Name, Id, Assigned_Installer__c 
       FROM Onboarding_Trainer__c 
       WHERE Id = '${merchantId}'
       LIMIT 1
@@ -42,14 +42,23 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
     const result = await conn.query(query)
     const record = result.records[0]
     const merchantLocation = record?.Merchant_Location__c
+    const assignedInstaller = record?.Assigned_Installer__c
     
     console.log('🔍 Installer type query result:', {
       merchantId,
       foundRecord: !!record,
       recordName: record?.Name,
       recordId: record?.Id,
-      merchantLocation
+      merchantLocation,
+      assignedInstaller
     })
+    
+    // Check if already assigned to external vendor (Surfstek)
+    // This takes precedence over location-based logic
+    if (assignedInstaller && assignedInstaller.toLowerCase() === 'surfstek') {
+      console.log('📦 Assigned to Surfstek - treating as external vendor')
+      return 'external'
+    }
     
     // Check location value from Salesforce
     if (merchantLocation === 'Within Klang Valley') {

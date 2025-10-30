@@ -195,8 +195,36 @@ export default function DatePickerModal({
             setAvailability(transformedAvailability)
           } else {
             // External vendor - show message
-            setMessage('External vendor installation required. Please select your preferred date and time, and the vendor will contact you to confirm.')
-            setAvailability([]) // Empty availability for external
+            setMessage('Choose preferred date and vendor will call to finalise')
+            // Generate availability for external vendor (weekdays 9am-6pm)
+            const externalAvailability = []
+            const startDate = new Date()
+            startDate.setDate(startDate.getDate() + 1) // Start from tomorrow
+            
+            for (let i = 0; i < 14; i++) {
+              const currentDate = new Date(startDate)
+              currentDate.setDate(currentDate.getDate() + i)
+              
+              // Skip weekends (0 = Sunday, 6 = Saturday)
+              if (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+                continue
+              }
+              
+              const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
+              
+              // Add time slots for 9am-6pm
+              externalAvailability.push({
+                date: dateStr,
+                slots: [
+                  { start: '09:00', end: '11:00', available: true, availableTrainers: ['External Vendor'] },
+                  { start: '11:00', end: '13:00', available: true, availableTrainers: ['External Vendor'] },
+                  { start: '14:00', end: '16:00', available: true, availableTrainers: ['External Vendor'] },
+                  { start: '16:00', end: '18:00', available: true, availableTrainers: ['External Vendor'] }
+                ]
+              })
+            }
+            
+            setAvailability(externalAvailability)
           }
         } else {
           setMessage(data.error || 'Failed to fetch installer availability')
