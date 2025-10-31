@@ -86,6 +86,36 @@ function formatBookingMessage(data: BookingNotificationData): string {
 }
 
 /**
+ * Send notification to Onboarding Manager about external vendor assignment
+ */
+export async function sendExternalVendorNotificationToManager(
+  managerEmail: string,
+  merchantName: string,
+  merchantId: string,
+  vendorName: string,
+  preferredDate: string,
+  preferredTime: string,
+  contactPhone?: string
+): Promise<void> {
+  try {
+    const message = `🏪 External Vendor Assignment Notification\n\n` +
+                   `Merchant: ${merchantName}\n` +
+                   `Merchant ID: ${merchantId}\n` +
+                   `Assigned Vendor: ${vendorName}\n` +
+                   `Preferred Installation Date: ${preferredDate}\n` +
+                   `Preferred Installation Time: ${preferredTime}\n` +
+                   (contactPhone ? `Contact Phone: ${contactPhone}\n` : '') +
+                   `\nThis merchant has been assigned to an external vendor for installation. ` +
+                   `The vendor will contact the merchant directly to schedule the installation.`
+    
+    await larkService.sendAppMessage(managerEmail, message, 'text')
+    console.log(`📧 External vendor notification sent to onboarding manager: ${managerEmail}`)
+  } catch (error) {
+    console.error('Failed to send external vendor notification to manager:', error)
+  }
+}
+
+/**
  * Create a rich message card for booking notifications (optional - for future enhancement)
  */
 export function createBookingCard(data: BookingNotificationData): any {

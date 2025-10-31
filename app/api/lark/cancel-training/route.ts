@@ -25,12 +25,15 @@ export async function DELETE(request: NextRequest) {
       t => t.name.toLowerCase().trim() === trainerName.toLowerCase().trim()
     )
     
-    // If trainer not found by name, use default trainer config
-    if (!trainer && trainersConfig.defaultTrainer) {
-      console.log('Trainer not found, using default trainer configuration')
-      trainer = {
-        ...trainersConfig.defaultTrainer,
-        name: trainerName || trainersConfig.defaultTrainer.name
+    // If trainer not found by name, use first trainer as fallback
+    if (!trainer) {
+      console.log('Trainer not found, using first trainer as fallback')
+      const fallbackTrainer = trainersConfig.trainers[0]
+      if (fallbackTrainer) {
+        trainer = {
+          ...fallbackTrainer,
+          name: trainerName || fallbackTrainer.name
+        }
       }
     }
     

@@ -1,0 +1,105 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+
+export async function POST(request: NextRequest) {
+  try {
+    const { code, state } = await request.json()
+    
+    // Verify state
+    const cookieStore = cookies()
+    const savedState = cookieStore.get('manager_oauth_state')?.value
+    
+    if (!savedState || savedState !== state) {
+      return NextResponse.json(
+        { error: 'Invalid state parameter' },
+        { status: 400 }
+      )
+    }
+    
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://open.larksuite.com/open-apis/authen/v1/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        code,
+        app_id: process.env.LARK_APP_ID,
+        app_secret: process.env.LARK_APP_SECRET
+      })
+    })
+    
+    const tokenData = await tokenResponse.json()
+    
+    if (tokenData.code !== 0) {
+      throw new Error(tokenData.msg || 'Failed to get access token')
+    }
+    
+    // Get user info
+    const userResponse = await fetch('https://open.larksuite.com/open-apis/authen/v1/user_info', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${tokenData.data.access_token}`
+      }
+    })
+    
+    const userData = await userResponse.json()
+    
+    if (userData.code !== 0) {
+      throw new Error(userData.msg || 'Failed to get user info')
+    }
+    
+    const userInfo = {
+      email: userData.data.email,
+      name: userData.data.name,
+      userId: userData.data.user_id,
+      openId: userData.data.open_id
+    }
+    
+    // Store in database
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+    
+    try {
+      await prisma.larkAuthToken.upsert({
+        where: { userEmail: userInfo.email },
+        update: {
+          larkUserId: userInfo.userId || userInfo.openId,
+          larkOpenId: userInfo.openId || userInfo.userId,
+          accessToken: tokenData.data.access_token,
+          refreshToken: tokenData.data.refresh_token,
+          expiresAt: new Date(Date.now() + (tokenData.data.expire * 1000)),
+          refreshExpiresAt: new Date(Date.now() + (tokenData.data.refresh_expire * 1000)),
+          userName: userInfo.name
+        },
+        create: {
+          userEmail: userInfo.email,
+          larkUserId: userInfo.userId || userInfo.openId,
+          larkOpenId: userInfo.openId || userInfo.userId,
+          accessToken: tokenData.data.access_token,
+          refreshToken: tokenData.data.refresh_token,
+          expiresAt: new Date(Date.now() + (tokenData.data.expire * 1000)),
+          refreshExpiresAt: new Date(Date.now() + (tokenData.data.refresh_expire * 1000)),
+          userName: userInfo.name
+        }
+      })
+      
+      console.log(`✅ Onboarding manager authorized: ${userInfo.email}`)
+    } finally {
+      await prisma.$disconnect()
+    }
+    
+    // Clear the state cookie
+    cookieStore.delete('manager_oauth_state')
+    
+    return NextResponse.json({
+      success: true,
+      userInfo
+    })
+  } catch (error) {
+    console.error('Manager authorization failed:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Authorization failed' },
+      { status: 500 }
+    )
+  }
+}

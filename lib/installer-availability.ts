@@ -1,6 +1,6 @@
 import { getSalesforceConnection } from './salesforce'
 import { larkService } from './lark'
-import { sendBookingNotification } from './lark-notifications'
+import { sendBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
 import installersConfig from '../config/installers.json'
 
 interface TimeSlot {
@@ -170,9 +170,9 @@ export async function getInternalInstallersAvailability(
   console.log(`Using installers for location: ${locationKey}`)
   
   // Get the appropriate installer config
-  const locationConfig = installersConfig[locationKey] || installersConfig.klangValley
-  const installers = locationConfig.installers.filter(i => i.isActive)
-  console.log(`Checking availability for ${installers.length} installers:`, installers.map(i => i.name))
+  const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
+  const installers = locationConfig.installers.filter((i: any) => i.isActive)
+  console.log(`Checking availability for ${installers.length} installers:`, installers.map((i: any) => i.name))
   
   // Map to store each installer's availability
   const installerAvailabilities: Map<string, Array<{start: string; end: string}>> = new Map()
@@ -736,17 +736,63 @@ export async function submitExternalInstallationRequest(
     throw new Error('No external vendor available')
   }
   
-  // Update Salesforce with request
+  // Update Salesforce with request using correct field names
   const conn = await getSalesforceConnection()
   if (conn) {
-    await conn.sobject('Onboarding_Trainer__c').update({
-      Id: merchantId,
-      Preferred_Installation_Date__c: preferredDate,
-      Preferred_Installation_Time__c: preferredTime,
-      Installation_Status__c: 'Pending Vendor Confirmation',
-      Installation_Type__c: 'External',
-      Installation_Vendor__c: vendor.name
-    })
+    try {
+      // Create a date-time string for Installation_Date_Time__c
+      const dateTime = new Date(preferredDate)
+      const dateTimeStr = dateTime.toISOString()
+      
+      await conn.sobject('Onboarding_Trainer__c').update({
+        Id: merchantId,
+        Installation_Date__c: preferredDate,
+        Installation_Date_Time__c: dateTimeStr,
+        Installation_Status__c: 'Pending Vendor Confirmation',
+        Assigned_Installer__c: vendor.name,
+        // Store preferred time in a notes field or similar if available
+        Installation_Notes__c: `External Vendor: ${vendor.name}\nPreferred Time: ${preferredTime}\nContact: ${contactPhone || 'Not provided'}`
+      })
+      
+      console.log('✅ Updated Salesforce with external vendor assignment')
+    } catch (error) {
+      console.error('Failed to update Salesforce:', error)
+      // Don't fail the request if Salesforce update fails
+    }
+  }
+  
+  // Notify the onboarding manager (MSM) about external vendor assignment
+  try {
+    // Fetch MSM email from Salesforce
+    const msmQuery = `
+      SELECT MSM_Name__r.Email, MSM_Name__r.Name
+      FROM Onboarding_Trainer__c
+      WHERE Id = '${merchantId}'
+      LIMIT 1
+    `
+    const msmResult = await conn.query(msmQuery)
+    
+    if (msmResult.totalSize > 0 && msmResult.records[0].MSM_Name__r?.Email) {
+      const msmEmail = msmResult.records[0].MSM_Name__r.Email
+      const msmName = msmResult.records[0].MSM_Name__r.Name
+      
+      console.log(`📧 Notifying onboarding manager: ${msmName} (${msmEmail})`)
+      
+      await sendExternalVendorNotificationToManager(
+        msmEmail,
+        merchantName,
+        merchantId,
+        vendor.name,
+        preferredDate,
+        preferredTime,
+        contactPhone
+      )
+    } else {
+      console.log('⚠️ No MSM email found for notification')
+    }
+  } catch (notifyError) {
+    console.error('Failed to notify onboarding manager:', notifyError)
+    // Don't fail the request if notification fails
   }
   
   // TODO: Send email notification to vendor

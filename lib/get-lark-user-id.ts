@@ -14,23 +14,18 @@ export async function getLarkUserId(email: string): Promise<{ userId: string; op
     }
   }
 
-  // Check default trainer
-  if (trainersConfig.defaultTrainer?.email === email) {
-    const defaultTrainer = trainersConfig.defaultTrainer as any
-    if (defaultTrainer.larkUserId || defaultTrainer.larkOpenId) {
-      return {
-        userId: defaultTrainer.larkUserId || defaultTrainer.larkOpenId || '',
-        openId: defaultTrainer.larkOpenId || defaultTrainer.larkUserId || ''
-      }
-    }
-  }
 
-  // Check installers config
-  const installer = installersConfig.internal?.installers?.find((i: any) => i.email === email) as any
-  if (installer?.larkUserId || installer?.larkOpenId) {
-    return {
-      userId: installer.larkUserId || installer.larkOpenId || '',
-      openId: installer.larkOpenId || installer.larkUserId || ''
+  // Check installers config across all locations
+  for (const location of ['klangValley', 'penang', 'johorBahru']) {
+    const locationConfig = (installersConfig as any)[location]
+    if (locationConfig?.installers) {
+      const installer = locationConfig.installers.find((i: any) => i.email === email) as any
+      if (installer?.larkUserId || installer?.larkOpenId) {
+        return {
+          userId: installer.larkUserId || installer.larkOpenId || '',
+          openId: installer.larkOpenId || installer.larkUserId || ''
+        }
+      }
     }
   }
   

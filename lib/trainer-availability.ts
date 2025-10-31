@@ -492,13 +492,14 @@ export function getTrainerDetails(trainerName: string) {
   }
 
   if (!trainer) {
-    // Return default trainer if not found
+    // Return default trainer if not found - use first trainer as fallback
+    const defaultTrainer = trainersConfig.trainers[0]
     return {
       name: trainerName,
-      email: trainersConfig.defaultTrainer?.email || trainersConfig.trainers[0].email,
+      email: defaultTrainer?.email || 'nezo.benardi@storehub.com',
       calendarId: trainersConfig.defaultCalendarId,
-      languages: trainersConfig.defaultTrainer?.languages || [],
-      location: trainersConfig.defaultTrainer?.location || []
+      languages: defaultTrainer?.languages || [],
+      location: defaultTrainer?.location || []
     }
   }
 
