@@ -64,21 +64,17 @@ export async function POST(request: NextRequest) {
         where: { userEmail: userInfo.email },
         update: {
           larkUserId: userInfo.userId || userInfo.openId,
-          larkOpenId: userInfo.openId || userInfo.userId,
           accessToken: tokenData.data.access_token,
           refreshToken: tokenData.data.refresh_token,
           expiresAt: new Date(Date.now() + (tokenData.data.expire * 1000)),
-          refreshExpiresAt: new Date(Date.now() + (tokenData.data.refresh_expire * 1000)),
           userName: userInfo.name
         },
         create: {
           userEmail: userInfo.email,
           larkUserId: userInfo.userId || userInfo.openId,
-          larkOpenId: userInfo.openId || userInfo.userId,
           accessToken: tokenData.data.access_token,
           refreshToken: tokenData.data.refresh_token,
           expiresAt: new Date(Date.now() + (tokenData.data.expire * 1000)),
-          refreshExpiresAt: new Date(Date.now() + (tokenData.data.refresh_expire * 1000)),
           userName: userInfo.name
         }
       })
