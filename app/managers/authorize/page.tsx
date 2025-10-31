@@ -46,12 +46,25 @@ function ManagerAuthorizeContent() {
         body: JSON.stringify({ code, state })
       })
       
-      const data = await response.json()
+      const responseText = await response.text()
+      console.log('Raw response:', { status: response.status, text: responseText })
+      
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (e) {
+        console.error('Failed to parse response:', responseText)
+        setAuthStatus('error')
+        return
+      }
+      
+      console.log('Auth callback response:', { status: response.status, data })
       
       if (response.ok) {
         setAuthStatus('success')
         setUserInfo(data.userInfo)
       } else {
+        console.error('Auth callback error:', data)
         setAuthStatus('error')
       }
     } catch (error) {

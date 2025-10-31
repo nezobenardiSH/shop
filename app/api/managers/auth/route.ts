@@ -12,7 +12,7 @@ export async function GET() {
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&response_type=code` +
     `&state=${state}` +
-    `&scope=contact:user.email:readonly%20contact:user.phone:readonly`
+    `&scope=contact:user.email:readonly`
   )
   
   response.cookies.set('manager_oauth_state', state, {
