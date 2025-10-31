@@ -740,21 +740,77 @@ export async function submitExternalInstallationRequest(
   const conn = await getSalesforceConnection()
   if (conn) {
     try {
-      // Create a date-time string for Installation_Date_Time__c
-      const dateTime = new Date(preferredDate)
-      const dateTimeStr = dateTime.toISOString()
+      // Prepare date in correct format (Date field only, no time)
+      const dateOnly = preferredDate.split('T')[0]
+      console.log(`📅 External vendor - Converting date for Salesforce: ${preferredDate} -> ${dateOnly}`)
       
-      await conn.sobject('Onboarding_Trainer__c').update({
+      // For external vendors, we don't have a specific time slot, but we need to provide Installation_Date_Time__c
+      // Use a default time of 09:00 AM Singapore time
+      const installationDateTime = `${dateOnly}T09:00:00+08:00`  // Default 9 AM Singapore timezone (GMT+8)
+      console.log(`📅 External vendor - Installation DateTime for Salesforce: ${installationDateTime}`)
+      
+      const updateData = {
         Id: merchantId,
-        Installation_Date__c: preferredDate,
-        Installation_Date_Time__c: dateTimeStr,
-        Installation_Status__c: 'Pending Vendor Confirmation',
-        Assigned_Installer__c: vendor.name,
-        // Store preferred time in a notes field or similar if available
-        Installation_Notes__c: `External Vendor: ${vendor.name}\nPreferred Time: ${preferredTime}\nContact: ${contactPhone || 'Not provided'}`
-      })
+        Installation_Date__c: dateOnly,  // Date only field
+        Installation_Date_Time__c: installationDateTime  // DateTime field with timezone
+        // Don't update status or installer fields for external vendors - just save the date
+      }
       
-      console.log('✅ Updated Salesforce with external vendor assignment')
+      console.log('📦 External vendor update data:', JSON.stringify(updateData, null, 2))
+      
+      await conn.sobject('Onboarding_Trainer__c').update(updateData)
+      
+      console.log('✅ Updated Salesforce Onboarding_Trainer__c with external vendor assignment')
+      
+      // Also update the Onboarding_Portal__c object with the installation date
+      try {
+        const portalQuery = `
+          SELECT Id
+          FROM Onboarding_Portal__c
+          WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+          LIMIT 1
+        `
+        console.log(`🔎 Looking for Onboarding_Portal__c record for merchant: ${merchantId}`)
+        const portalResult = await conn.query(portalQuery)
+        
+        if (portalResult.totalSize > 0) {
+          const portalId = portalResult.records[0].Id
+          console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
+          
+          // Update the Onboarding_Portal__c record with the installation date
+          const portalUpdateData = {
+            Id: portalId,
+            Installation_Date__c: installationDateTime  // DateTime field with timezone
+          }
+          
+          const portalUpdateResult = await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
+          console.log(`✅ Updated Onboarding_Portal__c.Installation_Date__c:`, JSON.stringify(portalUpdateResult))
+        } else {
+          console.log(`⚠️ No Onboarding_Portal__c record found for merchant ${merchantId}`)
+          
+          // Create the Portal record if it doesn't exist
+          const merchantQuery = `
+            SELECT Name
+            FROM Onboarding_Trainer__c
+            WHERE Id = '${merchantId}'
+            LIMIT 1
+          `
+          const merchantResult = await conn.query(merchantQuery)
+          const merchantName = merchantResult.totalSize > 0 ? merchantResult.records[0].Name : 'Unknown Merchant'
+          
+          const createData = {
+            Name: `Portal - ${merchantName}`,
+            Onboarding_Trainer_Record__c: merchantId,
+            Installation_Date__c: installationDateTime  // DateTime field with timezone
+          }
+          
+          const createResult = await conn.sobject('Onboarding_Portal__c').create(createData)
+          console.log(`✅ Created new Portal record with Installation_Date__c: ${createResult.id}`)
+        }
+      } catch (portalError) {
+        console.error('Failed to update Onboarding_Portal__c:', portalError)
+        // Don't fail the main request if portal update fails
+      }
     } catch (error) {
       console.error('Failed to update Salesforce:', error)
       // Don't fail the request if Salesforce update fails

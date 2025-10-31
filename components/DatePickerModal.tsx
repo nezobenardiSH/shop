@@ -336,7 +336,7 @@ export default function DatePickerModal({
 
         // Store booking details for confirmation popup
         setBookingDetails({
-          assignedTrainer: data.assignedTrainer || data.assignedInstaller || trainerName,
+          assignedTrainer: data.type === 'external' ? 'External' : (data.assignedTrainer || data.assignedInstaller || trainerName),
           date: dateStr,
           startTime: selectedSlot.start,
           endTime: selectedSlot.end

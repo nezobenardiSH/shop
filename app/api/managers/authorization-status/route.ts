@@ -5,7 +5,7 @@ export async function GET() {
   try {
     // For managers, we check based on email from a session/cookie
     // You might want to implement a proper session management here
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const managerEmail = cookieStore.get('manager_email')?.value
     
     if (!managerEmail) {

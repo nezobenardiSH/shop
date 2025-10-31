@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const { code, state } = await request.json()
     
     // Verify state
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const savedState = cookieStore.get('manager_oauth_state')?.value
     
     if (!savedState || savedState !== state) {
@@ -88,13 +88,21 @@ export async function POST(request: NextRequest) {
       await prisma.$disconnect()
     }
     
-    // Clear the state cookie
-    cookieStore.delete('manager_oauth_state')
-    
-    return NextResponse.json({
+    // Create response with cleared cookie
+    const response = NextResponse.json({
       success: true,
       userInfo
     })
+    
+    // Clear the state cookie by setting it with maxAge=0
+    response.cookies.set('manager_oauth_state', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0
+    })
+    
+    return response
   } catch (error) {
     console.error('Manager authorization failed:', error)
     return NextResponse.json(
