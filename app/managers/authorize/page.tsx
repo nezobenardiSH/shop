@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-export default function ManagerAuthorizePage() {
+// Force dynamic rendering to prevent build-time prerendering
+export const dynamic = 'force-dynamic'
+
+function ManagerAuthorizeContent() {
   const [isAuthorizing, setIsAuthorizing] = useState(false)
   const [authStatus, setAuthStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [userInfo, setUserInfo] = useState<any>(null)
@@ -144,5 +147,25 @@ export default function ManagerAuthorizePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ManagerAuthorizePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+          <div className="text-center">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-5/6 mx-auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ManagerAuthorizeContent />
+    </Suspense>
   )
 }
