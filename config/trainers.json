@@ -16,11 +16,73 @@
       "larkOpenId": "ou_bc49381e883793739ca325f982c21c80"
     },
     {
-      "name": "Mazni",
-      "email": "mazni.noah@storehub.com",
+      "name": "John Lai",
+      "email": "john.lai@storehub.com",
       "calendarId": "primary",
       "salesforceId": "",
       "languages": [
+        "English"
+      ],
+      "location": [
+        "Within Klang Valley"
+      ],
+      "larkUserId": "",
+      "larkOpenId": ""
+    },
+    {
+      "name": "Vwie Gan",
+      "email": "vwie.gan@storehub.com",
+      "calendarId": "primary",
+      "salesforceId": "",
+      "languages": [
+        "English",
+        "Bahasa Malaysia",
+        "Chinese"
+      ],
+      "location": [
+        "Within Klang Valley"
+      ],
+      "larkUserId": "",
+      "larkOpenId": ""
+    },
+    {
+      "name": "Khairul Uwais Fuad",
+      "email": "khairuluwais.fuad@storehub.com",
+      "calendarId": "primary",
+      "salesforceId": "",
+      "languages": [
+        "English",
+        "Bahasa Malaysia"
+      ],
+      "location": [
+        "Within Klang Valley"
+      ],
+      "larkUserId": "",
+      "larkOpenId": ""
+    },
+    {
+      "name": "Evelyn Cham",
+      "email": "evelyn.cham@storehub.com",
+      "calendarId": "primary",
+      "salesforceId": "",
+      "languages": [
+        "English",
+        "Bahasa Malaysia",
+        "Chinese"
+      ],
+      "location": [
+        "Within Klang Valley"
+      ],
+      "larkUserId": "",
+      "larkOpenId": ""
+    },
+    {
+      "name": "Suvisa Foo",
+      "email": "suvisa.foo@storehub.com",
+      "calendarId": "primary",
+      "salesforceId": "",
+      "languages": [
+        "English",
         "Bahasa Malaysia",
         "Chinese"
       ],
@@ -29,33 +91,19 @@
       ]
     },
     {
-      "name": "Izzudin",
-      "email": "izzuddin.azizol@storehub.com",
+      "name": "Farhan Nasir",
+      "email": "farhan.nasir@storehub.com",
       "calendarId": "primary",
       "salesforceId": "",
       "languages": [
+        "English",
         "Bahasa Malaysia"
       ],
       "location": [
-        "Johor"
+        "Johor Bahru"
       ]
     }
   ],
   "defaultCalendarId": "primary",
-  "timezone": "Asia/Singapore",
-  "defaultTrainer": {
-    "name": "Nezo",
-    "email": "nezo.benardi@storehub.com",
-    "calendarId": "primary",
-    "larkUserId": "ou_bc49381e883793739ca325f982c21c80",
-    "salesforceId": "",
-    "languages": [
-      "English",
-      "Bahasa Malaysia"
-    ],
-    "location": [
-      "Within Klang Valley"
-    ],
-    "larkOpenId": "ou_bc49381e883793739ca325f982c21c80"
-  }
+  "timezone": "Asia/Singapore"
 }

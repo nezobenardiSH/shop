@@ -4,10 +4,16 @@ import installersConfig from '@/config/installers.json'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get all configured internal installers
-    const configuredInstallers = installersConfig.internal.installers.filter(i =>
-      i.email && i.isActive
-    )
+    // Get all configured internal installers from all locations
+    const configuredInstallers: any[] = []
+    for (const location of ['klangValley', 'penang', 'johorBahru']) {
+      const locationConfig = (installersConfig as any)[location]
+      if (locationConfig && locationConfig.installers) {
+        configuredInstallers.push(...locationConfig.installers.filter((i: any) =>
+          i.email && i.isActive
+        ))
+      }
+    }
 
     // Get authorized installers from database
     const authorizedInstallers = await larkOAuthService.getAuthorizedInstallers()

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Get availability for internal installers
-    const availability = await getInternalInstallersAvailability(startDate, endDate)
+    const availability = await getInternalInstallersAvailability(startDate, endDate, merchantId)
     
     return NextResponse.json({
       type: 'internal',

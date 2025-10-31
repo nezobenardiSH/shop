@@ -1,6 +1,6 @@
 {
-  "internal": {
-    "description": "Internal StoreHub installers (when Merchant_Location__c = 'Within Klang Valley')",
+  "klangValley": {
+    "description": "Internal StoreHub installers for Klang Valley area",
     "locationValue": "Within Klang Valley",
     "scheduling": "calendar",
     "installers": [
@@ -11,16 +11,54 @@
         "isActive": true
       },
       {
-        "name": "Mazni",
-        "email": "mazni.noah@storehub.com",
+        "name": "Fattah",
+        "email": "fattah.osman@storehub.com",
+        "larkCalendarId": "",
+        "isActive": true
+      },
+      {
+        "name": "Fairul",
+        "email": "fairul.ismail@storehub.com",
+        "larkCalendarId": "",
+        "isActive": true
+      },
+      {
+        "name": "Azroll",
+        "email": "azroll.jamil@storehub.com",
+        "larkCalendarId": "",
+        "isActive": true
+      }
+    ]
+  },
+  "penang": {
+    "description": "Internal StoreHub installers for Penang area",
+    "locationValue": "Penang",
+    "scheduling": "calendar",
+    "installers": [
+      {
+        "name": "Steven Tan",
+        "email": "steven.tan@storehub.com",
+        "larkCalendarId": "",
+        "isActive": true
+      }
+    ]
+  },
+  "johorBahru": {
+    "description": "Internal StoreHub installers for Johor Bahru area",
+    "locationValue": "Johor Bahru",
+    "scheduling": "calendar",
+    "installers": [
+      {
+        "name": "Faizul",
+        "email": "norfaizul.salam@storehub.com",
         "larkCalendarId": "",
         "isActive": true
       }
     ]
   },
   "external": {
-    "description": "External vendor (when Merchant_Location__c = 'Outside of Klang Valley')",
-    "locationValue": "Outside of Klang Valley",
+    "description": "External vendor for areas outside Klang Valley, Penang, and JB",
+    "locationValues": ["Outside of Klang Valley", "Others"],
     "scheduling": "request",
     "vendors": [
       {

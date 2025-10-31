@@ -31,7 +31,8 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
     }
 
     const query = `
-      SELECT Merchant_Location__c, Name, Id, Assigned_Installer__c 
+      SELECT Merchant_Location__c, Name, Id, Assigned_Installer__c,
+             Shipping_City__c, Shipping_State__c
       FROM Onboarding_Trainer__c 
       WHERE Id = '${merchantId}'
       LIMIT 1
@@ -43,6 +44,8 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
     const record = result.records[0]
     const merchantLocation = record?.Merchant_Location__c
     const assignedInstaller = record?.Assigned_Installer__c
+    const shippingCity = record?.Shipping_City__c
+    const shippingState = record?.Shipping_State__c
     
     console.log('🔍 Installer type query result:', {
       merchantId,
@@ -50,7 +53,9 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
       recordName: record?.Name,
       recordId: record?.Id,
       merchantLocation,
-      assignedInstaller
+      assignedInstaller,
+      shippingCity,
+      shippingState
     })
     
     // Check if already assigned to external vendor (Surfstek)
@@ -63,7 +68,34 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
     // Check location value from Salesforce
     if (merchantLocation === 'Within Klang Valley') {
       return 'internal'
+    } else if (merchantLocation === 'Penang') {
+      return 'internal'
+    } else if (merchantLocation === 'Johor Bahru') {
+      return 'internal'
     } else if (merchantLocation === 'Outside of Klang Valley') {
+      // Fallback: Check shipping city/state for Johor Bahru and Penang
+      // This handles cases where picklist hasn't been updated yet
+      if (shippingCity && (shippingCity.toLowerCase().includes('johor') || 
+                           shippingCity.toLowerCase() === 'jb')) {
+        console.log('📍 Detected Johor Bahru from shipping city, using internal installers')
+        return 'internal'
+      }
+      if (shippingState && shippingState.toLowerCase().includes('johor')) {
+        console.log('📍 Detected Johor Bahru from shipping state, using internal installers')
+        return 'internal'
+      }
+      if (shippingCity && shippingCity.toLowerCase().includes('penang')) {
+        console.log('📍 Detected Penang from shipping city, using internal installers')
+        return 'internal'
+      }
+      if (shippingState && (shippingState.toLowerCase().includes('penang') || 
+                           shippingState.toLowerCase().includes('pulau pinang'))) {
+        console.log('📍 Detected Penang from shipping state, using internal installers')
+        return 'internal'
+      }
+      // Otherwise, it's truly outside our service areas
+      return 'external'
+    } else if (merchantLocation === 'Others') {
       return 'external'
     }
     
@@ -75,21 +107,78 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
   }
 }
 
+// Get location category from merchant location
+export async function getLocationCategory(merchantId: string): Promise<'klangValley' | 'penang' | 'johorBahru' | 'external'> {
+  try {
+    const conn = await getSalesforceConnection()
+    if (!conn) {
+      console.error('Failed to get Salesforce connection')
+      return 'external'
+    }
+    const query = `
+      SELECT Merchant_Location__c, Shipping_City__c, Shipping_State__c
+      FROM Onboarding_Trainer__c 
+      WHERE Id = '${merchantId}'
+      LIMIT 1
+    `
+    const result = await conn.query(query)
+    const merchantLocation = result.records[0]?.Merchant_Location__c
+    const shippingCity = result.records[0]?.Shipping_City__c
+    const shippingState = result.records[0]?.Shipping_State__c
+    
+    if (merchantLocation === 'Within Klang Valley') {
+      return 'klangValley'
+    } else if (merchantLocation === 'Penang') {
+      return 'penang'
+    } else if (merchantLocation === 'Johor Bahru') {
+      return 'johorBahru'
+    } else if (merchantLocation === 'Outside of Klang Valley') {
+      // Fallback logic for location detection
+      if ((shippingCity && (shippingCity.toLowerCase().includes('johor') || shippingCity.toLowerCase() === 'jb')) ||
+          (shippingState && shippingState.toLowerCase().includes('johor'))) {
+        return 'johorBahru'
+      }
+      if ((shippingCity && shippingCity.toLowerCase().includes('penang')) ||
+          (shippingState && (shippingState.toLowerCase().includes('penang') || shippingState.toLowerCase().includes('pulau pinang')))) {
+        return 'penang'
+      }
+    }
+    return 'external'
+  } catch (error) {
+    console.error('Error getting location category:', error)
+    return 'external'
+  }
+}
+
 // Check availability for internal installers (using same mechanism as trainers)
 export async function getInternalInstallersAvailability(
   startDate: string,
-  endDate: string
+  endDate: string,
+  merchantId?: string
 ): Promise<InstallerAvailability[]> {
   console.log('Getting installer availability...')
   
-  const installers = installersConfig.internal.installers.filter(i => i.isActive)
+  // Determine which location's installers to use
+  let locationKey = 'klangValley' // default
+  if (merchantId) {
+    const location = await getLocationCategory(merchantId)
+    if (location !== 'external') {
+      locationKey = location
+    }
+  }
+  
+  console.log(`Using installers for location: ${locationKey}`)
+  
+  // Get the appropriate installer config
+  const locationConfig = installersConfig[locationKey] || installersConfig.klangValley
+  const installers = locationConfig.installers.filter(i => i.isActive)
   console.log(`Checking availability for ${installers.length} installers:`, installers.map(i => i.name))
   
   // Map to store each installer's availability
   const installerAvailabilities: Map<string, Array<{start: string; end: string}>> = new Map()
   
   // Fetch availability for each installer
-  for (const installer of installers) {
+  for (const installer of installers as any[]) {
     try {
       // Check if installer has OAuth token
       const { larkOAuthService } = await import('./lark-oauth-service')
@@ -219,8 +308,13 @@ export async function bookInternalInstallation(
     existingEventId
   })
 
+  // Get location category for the merchant
+  const locationCategory = await getLocationCategory(merchantId)
+  const locationKey = locationCategory === 'external' ? 'klangValley' : locationCategory
+  
   const assignedInstaller = assignInstaller(availableInstallers)
-  const installer = installersConfig.internal.installers.find(i => i.name === assignedInstaller)
+  const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
+  const installer = locationConfig.installers.find((i: any) => i.name === assignedInstaller)
 
   if (!installer) {
     throw new Error('Installer configuration not found')
@@ -340,7 +434,8 @@ export async function bookInternalInstallation(
       // since we don't know which installer originally created it
       let deleted = false
       
-      for (const inst of installersConfig.internal.installers) {
+      // Try to delete from all active installers in the same location
+      for (const inst of locationConfig.installers) {
         if (!inst.isActive) continue
         
         try {

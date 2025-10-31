@@ -208,24 +208,16 @@ export default function MerchantDetailsPage() {
                     };
 
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
                         {/* Column 1 */}
                         <div className="space-y-2">
                           <div>
                             <span className="text-xs font-semibold text-gray-500 uppercase">Merchant: </span>
-                            <span className="text-gray-900">{trainer.name || 'N/A'}</span>
+                            <span className="text-sm text-gray-900">{trainer.name || 'N/A'}</span>
                           </div>
                           <div>
                             <span className="text-xs font-semibold text-gray-500 uppercase">Account: </span>
-                            <span className="text-gray-900">{trainer.accountName || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Address: </span>
-                            <span className="text-gray-900 text-xs">{formatAddress()}</span>
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Services: </span>
-                            <span className="text-gray-900">{trainer.onboardingServicesBought || 'N/A'}</span>
+                            <span className="text-sm text-gray-900">{trainer.accountName || 'N/A'}</span>
                           </div>
                         </div>
 
@@ -233,45 +225,111 @@ export default function MerchantDetailsPage() {
                         <div className="space-y-2">
                           <div>
                             <span className="text-xs font-semibold text-gray-500 uppercase">Industry: </span>
-                            <span className="text-gray-900">{trainer.subIndustry || 'N/A'}</span>
+                            <span className="text-sm text-gray-900">{trainer.subIndustry || 'N/A'}</span>
                           </div>
                           <div>
                             <span className="text-xs font-semibold text-gray-500 uppercase">Language: </span>
-                            <span className="text-gray-900">{trainer.preferredLanguage || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Merchant PIC: </span>
-                            <span className="text-gray-900">{trainer.merchantPICContactNumber || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Features: </span>
-                            <span className="text-gray-900 text-xs">{trainer.requiredFeaturesByMerchant || 'N/A'}</span>
+                            <span className="text-sm text-gray-900">{trainer.preferredLanguage || 'N/A'}</span>
                           </div>
                         </div>
 
                         {/* Column 3 */}
                         <div className="space-y-2">
                           <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Owner: </span>
-                            <span className="text-gray-900">
-                              {trainer.businessOwnerContact ? 
-                                `${trainer.businessOwnerContact.name}${trainer.businessOwnerContact.phone ? ` (${trainer.businessOwnerContact.phone})` : ''}` 
-                                : 'N/A'}
-                            </span>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Merchant Location: </span>
+                            <span className="text-sm text-gray-900">{trainer.merchantLocation || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Op Manager: </span>
-                            <span className="text-gray-900">
-                              {trainer.operationManagerContact ? 
-                                `${trainer.operationManagerContact.name}${trainer.operationManagerContact.phone ? ` (${trainer.operationManagerContact.phone})` : ''}` 
-                                : 'N/A'}
-                            </span>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Address: </span>
+                            <span className="text-sm text-gray-900">{formatAddress()}</span>
                           </div>
                         </div>
                       </div>
                     );
                   })()}
                 </div>
+            </div>
+          )}
+
+          {/* Services and Features Section */}
+          {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
+            <div className="mt-4">
+              <h3 className="text-xl font-semibold text-[#0b0707] mb-4">Services & Features</h3>
+              <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+                {(() => {
+                  const trainer = trainerData.onboardingTrainerData.trainers[0];
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Onboarding Service</div>
+                        <div className="text-sm text-gray-900">{trainer.onboardingServicesBought || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Service Type</div>
+                        <div className="text-sm text-gray-900">{trainer.serviceType || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Required Features</div>
+                        <div className="text-sm text-gray-900">{trainer.requiredFeaturesByMerchant || 'N/A'}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Contacts Section */}
+          {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
+            <div className="mt-4">
+              <h3 className="text-xl font-semibold text-[#0b0707] mb-4">Contacts</h3>
+              <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+                {(() => {
+                  const trainer = trainerData.onboardingTrainerData.trainers[0];
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
+                      {/* Merchant PIC */}
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold text-gray-500 uppercase">Merchant PIC</div>
+                        <div className="text-sm text-gray-900">
+                          {trainer.merchantPICName || 'N/A'}
+                        </div>
+                        {trainer.merchantPICContactNumber && (
+                          <div className="text-sm text-gray-600">
+                            {trainer.merchantPICContactNumber}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Business Owner */}
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold text-gray-500 uppercase">Business Owner</div>
+                        <div className="text-sm text-gray-900">
+                          {trainer.businessOwnerContact?.name || 'N/A'}
+                        </div>
+                        {trainer.businessOwnerContact?.phone && (
+                          <div className="text-sm text-gray-600">
+                            {trainer.businessOwnerContact.phone}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Operation Manager */}
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold text-gray-500 uppercase">Operation Manager</div>
+                        <div className="text-sm text-gray-900">
+                          {trainer.operationManagerContact?.name || 'N/A'}
+                        </div>
+                        {trainer.operationManagerContact?.phone && (
+                          <div className="text-sm text-gray-600">
+                            {trainer.operationManagerContact.phone}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
 

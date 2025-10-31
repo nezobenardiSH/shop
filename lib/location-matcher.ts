@@ -67,7 +67,7 @@ export function isWithinKlangValley(address: string | null | undefined): boolean
 /**
  * Determine the location category for trainer assignment
  * @param address - Full address string
- * @returns "Within Klang Valley", "Penang", "Johor", or "Outside of Klang Valley"
+ * @returns "Within Klang Valley", "Penang", "Johor Bahru", or "Outside of Klang Valley"
  */
 export function getLocationCategory(address: string | null | undefined): string {
   if (!address) return 'Within Klang Valley' // Default to Klang Valley if no address
@@ -89,7 +89,7 @@ export function getLocationCategory(address: string | null | undefined): string 
   }
   
   if (matchedStates.includes('Johor')) {
-    return 'Johor'
+    return 'Johor Bahru'
   }
   
   // All other states are considered "Outside of Klang Valley"

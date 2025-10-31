@@ -74,7 +74,7 @@ export async function GET(
       // Fields that DON'T exist: Days_to_Go_Live__c, First_Call__c, Installer_Name__c, POS_Training_Date__c
       let trainerQuery = `
         SELECT Id, Name,
-               Phone_Number__c, Merchant_PIC_Contact_Number__c,
+               Phone_Number__c, Merchant_PIC_Contact_Number__c, Merchant_PIC_Name__c,
                Operation_Manager_Contact__c, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Name,
                Business_Owner_Contact__c, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Name,
                Account_Name__c, Account_Name__r.POS_QR_Delivery_Tnx_Count_Past_30_Days__c,
@@ -96,7 +96,7 @@ export async function GET(
                Merchant_Location__c,
                Subscription_Activation_Date__c,
                BO_Account_Name__c,
-               Onboarding_Services_Bought__c,
+               Onboarding_Services_Bought__c, Service_Type__c,
                Shipping_Street__c, Shipping_City__c, Shipping_State__c,
                Shipping_Zip_Postal_Code__c, Shipping_Country__c,
                Sub_Industry__c, Preferred_Language__c,
@@ -367,6 +367,7 @@ export async function GET(
         installationDate: portalData.installationDate || trainer.Installation_Date__c, // Use Portal date if available
         phoneNumber: trainer.Phone_Number__c,
         merchantPICContactNumber: trainer.Merchant_PIC_Contact_Number__c,
+        merchantPICName: trainer.Merchant_PIC_Name__c,
         operationManagerContact: trainer.Operation_Manager_Contact__r ? {
           id: trainer.Operation_Manager_Contact__c,
           name: trainer.Operation_Manager_Contact__r.Name,
@@ -389,6 +390,7 @@ export async function GET(
         plannedGoLiveDate: trainer.Planned_Go_Live_Date__c,
         requiredFeaturesByMerchant: trainer.Required_Features_by_Merchant__c,
         onboardingServicesBought: trainer.Onboarding_Services_Bought__c,
+        serviceType: trainer.Service_Type__c,
         syncedQuoteTotalAmount: trainer.Synced_Quote_Total_Amount__c,
         pendingPayment: trainer.Pending_Payment__c,
         welcomeCallStatus: trainer.Welcome_Call_Status__c,
@@ -404,7 +406,7 @@ export async function GET(
         trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         merchantLocation: trainer.Merchant_Location__c,
-        installerName: portalData.installerName || trainer.Assigned_Installer__c, // Use Portal installer name if available
+        installerName: portalData.installerName || null, // Only use Portal installer name
 
         // Event IDs for rescheduling (from Onboarding_Portal__c object)
         installationEventId: portalData.installationEventId,

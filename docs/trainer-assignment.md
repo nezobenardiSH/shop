@@ -40,6 +40,7 @@ Location: Kuala Lumpur
 Language: Bahasa Malaysia
 Service: Onsite training
 
+
 → Location Category: Within Klang Valley
 → Filters to: Nezo (covers "Within Klang Valley", speaks Bahasa Malaysia)
 ```
