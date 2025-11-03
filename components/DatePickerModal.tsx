@@ -199,21 +199,22 @@ export default function DatePickerModal({
             // External vendor - set flag and generate availability
             setIsExternalVendor(true)
             // Generate availability for external vendor (weekdays 9am-6pm)
+            // External vendors require 2 days advance booking (start from day after tomorrow)
             const externalAvailability = []
             const startDate = new Date()
-            startDate.setDate(startDate.getDate() + 1) // Start from tomorrow
-            
+            startDate.setDate(startDate.getDate() + 2) // Start from day after tomorrow (2 days advance)
+
             for (let i = 0; i < 14; i++) {
               const currentDate = new Date(startDate)
               currentDate.setDate(currentDate.getDate() + i)
-              
+
               // Skip weekends (0 = Sunday, 6 = Saturday)
               if (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
                 continue
               }
-              
+
               const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
-              
+
               // Add time slots for 9am-6pm
               externalAvailability.push({
                 date: dateStr,
@@ -225,7 +226,7 @@ export default function DatePickerModal({
                 ]
               })
             }
-            
+
             setAvailability(externalAvailability)
           }
         } else {
@@ -443,10 +444,22 @@ export default function DatePickerModal({
     let minDate = new Date()
     minDate.setHours(0, 0, 0, 0)
 
-    // For training and installation bookings, the soonest they can book is tomorrow (not today)
-    if (bookingType === 'training' || bookingType === 'installation') {
+    // For training bookings, the soonest they can book is tomorrow (not today)
+    if (bookingType === 'training') {
       minDate.setDate(minDate.getDate() + 1) // Add 1 day - earliest is tomorrow
-      console.log('  -> Training/Installation cannot be booked today. Earliest date:', minDate.toDateString())
+      console.log('  -> Training cannot be booked today. Earliest date:', minDate.toDateString())
+    }
+
+    // For installation bookings with external vendor, require 2 days advance booking
+    // For internal installers, earliest is tomorrow
+    if (bookingType === 'installation') {
+      if (isExternalVendor) {
+        minDate.setDate(minDate.getDate() + 2) // Add 2 days - earliest is day after tomorrow
+        console.log('  -> External vendor installation requires 2 days advance. Earliest date:', minDate.toDateString())
+      } else {
+        minDate.setDate(minDate.getDate() + 1) // Add 1 day - earliest is tomorrow
+        console.log('  -> Internal installation cannot be booked today. Earliest date:', minDate.toDateString())
+      }
     }
 
     // For training bookings, installation date is the lower bound
@@ -611,9 +624,14 @@ export default function DatePickerModal({
               <ul className="space-y-1.5 text-sm text-blue-800">
                 {/* External Vendor Message */}
                 {isExternalVendor && bookingType === 'installation' && (
-                  <li className="font-medium text-blue-900">
-                    • Choose preferred date and vendor will call to finalise
-                  </li>
+                  <>
+                    <li className="font-medium text-blue-900">
+                      • Choose preferred date and vendor will call to finalise
+                    </li>
+                    <li className="text-blue-700">
+                      • External vendor requires 2 days advance booking (earliest: day after tomorrow)
+                    </li>
+                  </>
                 )}
 
                 {/* Rescheduling Info */}
