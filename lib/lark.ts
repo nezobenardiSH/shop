@@ -1204,6 +1204,8 @@ class LarkService {
       salesforceId?: string
       language?: string[]  // Selected training language(s)
       requiredFeatures?: string  // Required features by merchant
+      onboardingSummary?: string  // Onboarding summary
+      workaroundElaboration?: string  // Workaround elaboration
       merchantPICName?: string  // Merchant PIC Name from Salesforce
       merchantPICPhone?: string  // Merchant PIC Contact Number from Salesforce
     },
@@ -1326,9 +1328,6 @@ class LarkService {
         if (merchantInfo.language && merchantInfo.language.length > 0) {
           description += `Language: ${merchantInfo.language.join(', ')}\n`
         }
-        if (merchantInfo.requiredFeatures) {
-          description += `Required Features: ${merchantInfo.requiredFeatures}\n`
-        }
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`
         }
@@ -1346,11 +1345,15 @@ class LarkService {
         if (merchantInfo.businessType) {
           description += `Business Type: ${merchantInfo.businessType}\n`
         }
-        description += `\nTraining Topics:\n`
-        description += `• System setup and configuration\n`
-        description += `• POS operations training\n`
-        description += `• Payment processing\n`
-        description += `• Reporting and analytics\n`
+        if (merchantInfo.requiredFeatures) {
+          description += `\nRequired Features:\n${merchantInfo.requiredFeatures}\n`
+        }
+        if (merchantInfo.onboardingSummary) {
+          description += `\nOnboarding Summary:\n${merchantInfo.onboardingSummary}\n`
+        }
+        if (merchantInfo.workaroundElaboration) {
+          description += `\nWorkaround Elaboration:\n${merchantInfo.workaroundElaboration}\n`
+        }
         break
     }
     

@@ -18,6 +18,8 @@ interface DatePickerModalProps {
   bookingType?: string
   onboardingServicesBought?: string | null
   requiredFeatures?: string  // Required features by merchant
+  onboardingSummary?: string  // Onboarding summary
+  workaroundElaboration?: string  // Workaround elaboration
   currentBooking?: {
     eventId: string
     date: string
@@ -60,6 +62,8 @@ export default function DatePickerModal({
   bookingType = 'training',
   onboardingServicesBought,
   requiredFeatures,
+  onboardingSummary,
+  workaroundElaboration,
   currentBooking,
   dependentDate,
   goLiveDate,
@@ -324,7 +328,9 @@ export default function DatePickerModal({
             existingEventId: currentBooking?.eventId,  // Pass existing event ID for rescheduling
             ...(bookingType === 'training' && {
               trainerLanguages: selectedLanguages,
-              requiredFeatures: requiredFeatures  // Pass required features for training bookings
+              requiredFeatures: requiredFeatures,  // Pass required features for training bookings
+              onboardingSummary: onboardingSummary,  // Pass onboarding summary
+              workaroundElaboration: workaroundElaboration  // Pass workaround elaboration
             })
           })
         })

@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
       bookingType = 'training',
       trainerLanguages,  // Required languages for the training session
       requiredFeatures,  // Required features by merchant
+      onboardingSummary,  // Onboarding summary
+      workaroundElaboration,  // Workaround elaboration
       onboardingServicesBought,  // To determine if onsite or remote training
       existingEventId  // Event ID of existing booking to be cancelled (for rescheduling)
     } = body
@@ -163,15 +165,18 @@ export async function POST(request: NextRequest) {
       existingEventId
     })
 
-    // Step 5.5: Fetch Merchant PIC contact information from Salesforce
+    // Step 5.5: Fetch Merchant PIC contact information and additional fields from Salesforce
     let merchantPICName: string | undefined
     let merchantPICPhone: string | undefined
+    let fetchedOnboardingSummary: string | undefined
+    let fetchedWorkaroundElaboration: string | undefined
 
     try {
       const conn = await getSalesforceConnection()
       if (conn) {
         const trainerQuery = `
-          SELECT Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c
+          SELECT Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c,
+                 Onboarding_Summary__c, Workaround_Elaboration__c
           FROM Onboarding_Trainer__c
           WHERE Id = '${merchantId}'
           LIMIT 1
@@ -181,12 +186,19 @@ export async function POST(request: NextRequest) {
           const trainerRecord = trainerResult.records[0] as any
           merchantPICName = trainerRecord.Merchant_PIC_Name__c
           merchantPICPhone = trainerRecord.Merchant_PIC_Contact_Number__c
-          console.log('📞 Fetched Merchant PIC contact:', { merchantPICName, merchantPICPhone })
+          fetchedOnboardingSummary = trainerRecord.Onboarding_Summary__c
+          fetchedWorkaroundElaboration = trainerRecord.Workaround_Elaboration__c
+          console.log('📞 Fetched Merchant PIC contact and additional fields:', {
+            merchantPICName,
+            merchantPICPhone,
+            fetchedOnboardingSummary: fetchedOnboardingSummary ? 'Yes' : 'No',
+            fetchedWorkaroundElaboration: fetchedWorkaroundElaboration ? 'Yes' : 'No'
+          })
         }
       }
     } catch (error) {
-      console.log('⚠️ Failed to fetch Merchant PIC contact, will use fallback:', error)
-      // Continue with booking even if we can't fetch PIC contact
+      console.log('⚠️ Failed to fetch Merchant PIC contact and additional fields, will use fallback:', error)
+      // Continue with booking even if we can't fetch these fields
     }
 
     // Step 5.6: If this is a reschedule (existingEventId provided), delete the old event first
@@ -233,6 +245,8 @@ export async function POST(request: NextRequest) {
             salesforceId: merchantId,
             language: trainerLanguages,  // Pass selected language to calendar event
             requiredFeatures: requiredFeatures,  // Pass required features to calendar event
+            onboardingSummary: onboardingSummary || fetchedOnboardingSummary,  // Use passed value or fetched from Salesforce
+            workaroundElaboration: workaroundElaboration || fetchedWorkaroundElaboration,  // Use passed value or fetched from Salesforce
             merchantPICName: merchantPICName,  // Merchant PIC Name from Salesforce
             merchantPICPhone: merchantPICPhone  // Merchant PIC Contact Number from Salesforce
           },
@@ -518,8 +532,9 @@ export async function POST(request: NextRequest) {
         assignedPersonName: assignment.assigned,
         assignedPersonEmail: trainer.email,
         location: merchantAddress,
-        contactPerson: merchantContactPerson,
-        contactPhone: merchantPhone
+        // Use Merchant PIC contact if available, otherwise fall back to provided contact
+        contactPerson: merchantPICName || merchantContactPerson,
+        contactPhone: merchantPICPhone || merchantPhone
       })
       console.log('📧 Notification sent to trainer:', trainer.email)
     } catch (notificationError) {

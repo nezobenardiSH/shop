@@ -123,6 +123,8 @@ export default function MerchantDetailsPage() {
       displayName: trainer.name, // Keep the Salesforce trainer name for display
       bookingType: trainer.bookingType || 'training', // Pass the booking type
       requiredFeatures: trainer.requiredFeaturesByMerchant, // Pass required features for training bookings
+      onboardingSummary: trainer.onboardingSummary, // Pass onboarding summary
+      workaroundElaboration: trainer.workaroundElaboration, // Pass workaround elaboration
       existingBooking: null // Don't pass existing booking for now, let user select new date
     })
     setBookingModalOpen(true)
@@ -465,6 +467,8 @@ export default function MerchantDetailsPage() {
             trainerName={currentBookingInfo.trainerName}
             bookingType={currentBookingInfo.bookingType}
             requiredFeatures={currentBookingInfo.requiredFeatures}
+            onboardingSummary={currentBookingInfo.onboardingSummary}
+            workaroundElaboration={currentBookingInfo.workaroundElaboration}
             currentBooking={currentBookingInfo.existingBooking}
             onBookingComplete={handleBookingComplete}
           />
