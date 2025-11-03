@@ -437,11 +437,38 @@ export async function POST(request: NextRequest) {
         try {
           let userId: string | null = null
 
-          // Search by email first (most reliable), then by name
-          const searchQuery = `SELECT Id, Name, Email FROM User WHERE Email = '${trainer.email}' OR Name = '${trainer.name}' LIMIT 1`
-          console.log('🔍 Searching for User with query:', searchQuery)
-          const searchResult = await conn.query(searchQuery)
-          console.log('🔍 User search result:', JSON.stringify(searchResult, null, 2))
+          // Try multiple search strategies to find the User
+          console.log('🔍 Attempting to find Salesforce User for trainer:', {
+            name: trainer.name,
+            email: trainer.email
+          })
+
+          // Strategy 1: Search by email (most reliable)
+          let searchQuery = `SELECT Id, Name, Email, IsActive FROM User WHERE Email = '${trainer.email}' AND IsActive = true LIMIT 1`
+          console.log('🔍 Strategy 1 - Searching by email:', searchQuery)
+          let searchResult = await conn.query(searchQuery)
+          console.log('   Result:', searchResult.totalSize, 'record(s) found')
+
+          // Strategy 2: If email search fails, try by name
+          if (searchResult.totalSize === 0) {
+            searchQuery = `SELECT Id, Name, Email, IsActive FROM User WHERE Name = '${trainer.name}' AND IsActive = true LIMIT 1`
+            console.log('🔍 Strategy 2 - Searching by name:', searchQuery)
+            searchResult = await conn.query(searchQuery)
+            console.log('   Result:', searchResult.totalSize, 'record(s) found')
+          }
+
+          // Strategy 3: If still not found, try case-insensitive LIKE search on name
+          if (searchResult.totalSize === 0) {
+            const nameParts = trainer.name.split(' ')
+            if (nameParts.length >= 2) {
+              const firstName = nameParts[0]
+              const lastName = nameParts[nameParts.length - 1]
+              searchQuery = `SELECT Id, Name, Email, IsActive FROM User WHERE (Name LIKE '%${firstName}%' AND Name LIKE '%${lastName}%') AND IsActive = true LIMIT 1`
+              console.log('🔍 Strategy 3 - Searching by name parts:', searchQuery)
+              searchResult = await conn.query(searchQuery)
+              console.log('   Result:', searchResult.totalSize, 'record(s) found')
+            }
+          }
 
           if (searchResult.records && searchResult.records.length > 0) {
             userId = searchResult.records[0].Id
@@ -449,18 +476,23 @@ export async function POST(request: NextRequest) {
             console.log('✅ Found User:', {
               id: userId,
               name: foundUser.Name,
-              email: foundUser.Email
+              email: foundUser.Email,
+              isActive: foundUser.IsActive
             })
             console.log('   Matched trainer config:', {
               configName: trainer.name,
               configEmail: trainer.email
             })
           } else {
-            console.log('❌ No User found for trainer:', trainer.name, '/', trainer.email)
-            console.log('   CSM fields cannot be set without a valid User in Salesforce')
-            console.log('   Make sure the trainer has a Salesforce User account with email:', trainer.email)
-            console.log('   Search query used:', searchQuery)
-            console.log('   Total records found:', searchResult.totalSize)
+            console.log('❌ No User found for trainer after trying all strategies')
+            console.log('   Trainer config:', {
+              name: trainer.name,
+              email: trainer.email
+            })
+            console.log('   Please verify:')
+            console.log('   1. User exists in Salesforce with this email or name')
+            console.log('   2. User is Active (IsActive = true)')
+            console.log('   3. Email/name in trainers.json matches Salesforce exactly')
           }
 
           // If we have a User ID, update the CSM field for training
@@ -468,12 +500,17 @@ export async function POST(request: NextRequest) {
             if (bookingType === 'training') {
               updateData.CSM_Name__c = userId
               console.log('📝 Setting CSM_Name__c (Training) to User ID:', userId)
+              console.log('   This will link the trainer to the merchant record')
+            } else {
+              console.log('ℹ️ Booking type is not training, skipping CSM_Name__c update')
             }
           } else {
             console.log('⚠️ Could not get User ID for trainer, CSM_Name__c will not be updated')
+            console.log('   Trainer name will show as "Not Assigned" in the UI')
           }
         } catch (userError: any) {
           console.log('❌ Error searching for User for CSM fields:', userError.message)
+          console.log('   Full error:', userError)
           console.log('   CSM fields will not be updated, but training date will still be saved')
         }
 
