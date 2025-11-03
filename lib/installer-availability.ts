@@ -2,6 +2,7 @@ import { getSalesforceConnection } from './salesforce'
 import { larkService } from './lark'
 import { sendBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
 import installersConfig from '../config/installers.json'
+import { extractLocationFromAddress } from './location-matcher'
 
 interface TimeSlot {
   start: string
@@ -73,27 +74,28 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
     } else if (merchantLocation === 'Johor Bahru') {
       return 'internal'
     } else if (merchantLocation === 'Outside of Klang Valley') {
-      // Fallback: Check shipping city/state for Johor Bahru and Penang
+      // Fallback: Use robust location detection from shipping address
       // This handles cases where picklist hasn't been updated yet
-      if (shippingCity && (shippingCity.toLowerCase().includes('johor') || 
-                           shippingCity.toLowerCase() === 'jb')) {
-        console.log('📍 Detected Johor Bahru from shipping city, using internal installers')
+      const fullAddress = [shippingCity, shippingState].filter(Boolean).join(', ')
+      console.log('📍 Merchant location is "Outside of Klang Valley", checking shipping address:', fullAddress)
+
+      const detectedStates = extractLocationFromAddress(fullAddress)
+      console.log('📍 Detected states from address:', detectedStates)
+
+      // Check if it's Johor (we have internal installers in JB)
+      if (detectedStates.includes('Johor')) {
+        console.log('✅ Detected Johor - using internal installers (Johor Bahru team)')
         return 'internal'
       }
-      if (shippingState && shippingState.toLowerCase().includes('johor')) {
-        console.log('📍 Detected Johor Bahru from shipping state, using internal installers')
+
+      // Check if it's Penang (we have internal installers)
+      if (detectedStates.includes('Penang')) {
+        console.log('✅ Detected Penang - using internal installers (Penang team)')
         return 'internal'
       }
-      if (shippingCity && shippingCity.toLowerCase().includes('penang')) {
-        console.log('📍 Detected Penang from shipping city, using internal installers')
-        return 'internal'
-      }
-      if (shippingState && (shippingState.toLowerCase().includes('penang') || 
-                           shippingState.toLowerCase().includes('pulau pinang'))) {
-        console.log('📍 Detected Penang from shipping state, using internal installers')
-        return 'internal'
-      }
-      // Otherwise, it's truly outside our service areas
+
+      // Otherwise, it's truly outside our service areas (external vendor)
+      console.log('❌ Location not in Johor or Penang - using external vendor')
       return 'external'
     } else if (merchantLocation === 'Others') {
       return 'external'
