@@ -20,23 +20,33 @@ export async function POST(request: NextRequest) {
     }
     
     // Exchange code for access token
-    console.log('Exchanging code for token with app_id:', process.env.LARK_APP_ID)
+    const tokenPayload = {
+      grant_type: 'authorization_code',
+      code,
+      app_id: process.env.LARK_APP_ID,
+      app_secret: process.env.LARK_APP_SECRET
+    }
+    console.log('Exchanging code for token with payload:', {
+      ...tokenPayload,
+      code: code.substring(0, 10) + '...',
+      app_secret: 'REDACTED'
+    })
     const tokenResponse = await fetch('https://open.larksuite.com/open-apis/authen/v1/access_token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        grant_type: 'authorization_code',
-        code,
-        app_id: process.env.LARK_APP_ID,
-        app_secret: process.env.LARK_APP_SECRET
-      })
+      body: JSON.stringify(tokenPayload)
     })
     
     const tokenData = await tokenResponse.json()
-    console.log('Token response:', { code: tokenData.code, msg: tokenData.msg })
+    console.log('Token response:', { 
+      code: tokenData.code, 
+      msg: tokenData.msg,
+      data: tokenData.data ? 'exists' : 'missing',
+      fullResponse: JSON.stringify(tokenData)
+    })
     
     if (tokenData.code !== 0) {
-      console.error('Token exchange failed:', tokenData)
+      console.error('Token exchange failed with full response:', JSON.stringify(tokenData, null, 2))
       throw new Error(tokenData.msg || 'Failed to get access token')
     }
     

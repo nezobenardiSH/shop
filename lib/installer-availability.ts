@@ -744,10 +744,10 @@ export async function submitExternalInstallationRequest(
       const dateOnly = preferredDate.split('T')[0]
       console.log(`📅 External vendor - Converting date for Salesforce: ${preferredDate} -> ${dateOnly}`)
       
-      // For external vendors, we don't have a specific time slot, but we need to provide Installation_Date_Time__c
-      // Use a default time of 09:00 AM Singapore time
-      const installationDateTime = `${dateOnly}T09:00:00+08:00`  // Default 9 AM Singapore timezone (GMT+8)
-      console.log(`📅 External vendor - Installation DateTime for Salesforce: ${installationDateTime}`)
+      // For external vendors, use the preferred time from the booking
+      // Convert time (e.g., "14:00") to datetime format with Singapore timezone
+      const installationDateTime = `${dateOnly}T${preferredTime}:00+08:00`  // Singapore timezone (GMT+8)
+      console.log(`📅 External vendor - Installation DateTime for Salesforce: ${installationDateTime} (from preferred time: ${preferredTime})`)
       
       const updateData = {
         Id: merchantId,
