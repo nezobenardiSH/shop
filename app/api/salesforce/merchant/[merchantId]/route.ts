@@ -141,7 +141,35 @@ export async function GET(
       }, { status: 404 })
     }
 
-    const trainer = trainerResult.records[0]
+    const trainer = trainerResult.records[0] as any
+
+    // Debug CSM_Name field
+    console.log('🔍 CSM_Name__c value:', trainer.CSM_Name__c)
+    console.log('🔍 CSM_Name__r value:', trainer.CSM_Name__r)
+    console.log('🔍 CSM_Name__r.Name value:', trainer.CSM_Name__r?.Name)
+
+    // If CSM_Name__c exists but CSM_Name__r.Name doesn't, query the User separately
+    let csmName: string | null = null
+    if (trainer.CSM_Name__r?.Name) {
+      csmName = trainer.CSM_Name__r.Name
+      console.log('✅ Got CSM name from relationship:', csmName)
+    } else if (trainer.CSM_Name__c) {
+      console.log('⚠️ CSM_Name__c exists but relationship not populated, querying User separately...')
+      try {
+        const userQuery = `SELECT Id, Name FROM User WHERE Id = '${trainer.CSM_Name__c}' LIMIT 1`
+        const userResult = await conn.query(userQuery)
+        if (userResult.totalSize > 0) {
+          csmName = (userResult.records[0] as any).Name
+          console.log('✅ Got CSM name from separate User query:', csmName)
+        } else {
+          console.log('❌ No User found with ID:', trainer.CSM_Name__c)
+        }
+      } catch (userError) {
+        console.log('❌ Error querying User for CSM name:', userError)
+      }
+    } else {
+      console.log('ℹ️ No CSM assigned yet')
+    }
 
     // Get Event IDs and dates from Onboarding_Portal__c
     let portalData: any = {
@@ -412,7 +440,7 @@ export async function GET(
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
         trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
-        csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
+        csmName: csmName, // Use the CSM name we resolved earlier
         merchantLocation: trainer.Merchant_Location__c,
         assignedInstaller: trainer.Assigned_Installer__c, // For checking if external vendor (e.g., "Surfstek")
         installerName: portalData.installerName || null, // Only use Portal installer name
