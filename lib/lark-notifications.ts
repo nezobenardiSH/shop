@@ -98,12 +98,23 @@ export async function sendExternalVendorNotificationToManager(
   contactPhone?: string
 ): Promise<void> {
   try {
+    // Format time from 24h to 12h format (e.g., "14:00" to "2:00 PM")
+    const formatTime = (time: string) => {
+      const [hour, minute] = time.split(':')
+      const h = parseInt(hour)
+      const ampm = h >= 12 ? 'PM' : 'AM'
+      const h12 = h % 12 || 12
+      return `${h12}:${minute} ${ampm}`
+    }
+    
+    const formattedTime = preferredTime.includes(':') ? formatTime(preferredTime) : preferredTime
+    
     const message = `🏪 External Vendor Assignment Notification\n\n` +
                    `Merchant: ${merchantName}\n` +
                    `Merchant ID: ${merchantId}\n` +
                    `Assigned Vendor: ${vendorName}\n` +
                    `Preferred Installation Date: ${preferredDate}\n` +
-                   `Preferred Installation Time: ${preferredTime}\n` +
+                   `Preferred Installation Time: ${formattedTime}\n` +
                    (contactPhone ? `Contact Phone: ${contactPhone}\n` : '') +
                    `\nThis merchant has been assigned to an external vendor for installation. ` +
                    `The vendor will contact the merchant directly to schedule the installation.`

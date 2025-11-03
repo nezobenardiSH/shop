@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Submit request for external vendor
-      const preferredTime = timeSlot?.label || 'Flexible'
+      // Use the actual time (e.g., "14:00") not the label for Salesforce update
+      const preferredTime = timeSlot?.time || '09:00' // Default to 9 AM if no time provided
       
       const result = await submitExternalInstallationRequest(
         merchantId,
