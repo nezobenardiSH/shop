@@ -406,6 +406,7 @@ export async function GET(
         trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
         csmName: trainer.CSM_Name__r ? trainer.CSM_Name__r.Name : trainer.CSM_Name__c,
         merchantLocation: trainer.Merchant_Location__c,
+        assignedInstaller: trainer.Assigned_Installer__c, // For checking if external vendor (e.g., "Surfstek")
         installerName: portalData.installerName || null, // Only use Portal installer name
 
         // Event IDs for rescheduling (from Onboarding_Portal__c object)

@@ -92,10 +92,14 @@ export async function sendExternalVendorNotificationToManager(
   managerEmail: string,
   merchantName: string,
   merchantId: string,
-  vendorName: string,
+  merchantEmail: string,
+  storeAddress: string,
   preferredDate: string,
   preferredTime: string,
-  contactPhone?: string
+  orderNumber: string,
+  hardwareItems: string[],
+  requesterName: string,
+  requesterPhone: string
 ): Promise<void> {
   try {
     // Format time from 24h to 12h format (e.g., "14:00" to "2:00 PM")
@@ -106,19 +110,37 @@ export async function sendExternalVendorNotificationToManager(
       const h12 = h % 12 || 12
       return `${h12}:${minute} ${ampm}`
     }
-    
+
     const formattedTime = preferredTime.includes(':') ? formatTime(preferredTime) : preferredTime
-    
-    const message = `🏪 External Vendor Assignment Notification\n\n` +
-                   `Merchant: ${merchantName}\n` +
+
+    // Format date (e.g., "2025-11-12" to "12/11/2025")
+    const formatDate = (date: string) => {
+      const d = new Date(date)
+      const day = String(d.getDate()).padStart(2, '0')
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const year = d.getFullYear()
+      return `${day}/${month}/${year}`
+    }
+
+    const formattedDate = preferredDate.includes('-') ? formatDate(preferredDate) : preferredDate
+
+    // Build hardware list
+    const hardwareList = hardwareItems.length > 0
+      ? hardwareItems.map(item => `  - ${item}`).join('\n')
+      : '  - No hardware items found'
+
+    const message = `🏪 External Vendor Installation Request\n\n` +
+                   `Merchant Name: ${merchantName}\n` +
                    `Merchant ID: ${merchantId}\n` +
-                   `Assigned Vendor: ${vendorName}\n` +
-                   `Preferred Installation Date: ${preferredDate}\n` +
-                   `Preferred Installation Time: ${formattedTime}\n` +
-                   (contactPhone ? `Contact Phone: ${contactPhone}\n` : '') +
-                   `\nThis merchant has been assigned to an external vendor for installation. ` +
-                   `The vendor will contact the merchant directly to schedule the installation.`
-    
+                   `Merchant Email: ${merchantEmail}\n` +
+                   `Store Address: ${storeAddress}\n\n` +
+                   `Preferred Date: ${formattedDate}\n` +
+                   `Preferred Time: ${formattedTime}\n\n` +
+                   `Sales Order Number: ${orderNumber}\n` +
+                   `Hardware:\n${hardwareList}\n\n` +
+                   `Requester: ${requesterName}\n` +
+                   `Requester Phone Number: ${requesterPhone}`
+
     await larkService.sendAppMessage(managerEmail, message, 'text')
     console.log(`📧 External vendor notification sent to onboarding manager: ${managerEmail}`)
   } catch (error) {

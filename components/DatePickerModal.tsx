@@ -290,6 +290,7 @@ export default function DatePickerModal({
           body: JSON.stringify({
             merchantId: merchantId,  // Use merchantId directly - it's the Salesforce record ID
             merchantName,
+            onboardingTrainerName,  // Pass the Salesforce Onboarding_Trainer__c.Name
             date: dateStr,
             timeSlot: {
               start: selectedSlot.start,
@@ -604,64 +605,66 @@ export default function DatePickerModal({
             </button>
           </div>
 
-          {/* External Vendor Banner */}
-          {isExternalVendor && bookingType === 'installation' && (
-            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm font-medium text-amber-900">
-                📞 Choose preferred date and vendor will call to finalise
-              </p>
-            </div>
-          )}
-
-          {/* Current Booking Info (when rescheduling) */}
-          {currentBooking?.eventId && currentBooking?.date && (
-            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm font-semibold text-yellow-900 mb-1">
-                🔄 Rescheduling Existing Booking
-              </p>
-              <p className="text-sm text-yellow-800">
-                Current Date: <span className="font-medium">{formatDate(currentBooking.date)}</span>
-              </p>
-              <p className="text-xs text-yellow-700 mt-1">
-                Select a new date below. The old booking will be automatically cancelled.
-              </p>
-            </div>
-          )}
-
-          {/* Dependency Message */}
-          {(dependentDate || goLiveDate || installationDate || trainingDate) && (
+          {/* Combined Info Box */}
+          {(isExternalVendor && bookingType === 'installation') || currentBooking?.eventId || dependentDate || goLiveDate || installationDate || trainingDate ? (
             <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                ℹ️ {bookingType === 'installation' && (
+              <ul className="space-y-1.5 text-sm text-blue-800">
+                {/* External Vendor Message */}
+                {isExternalVendor && bookingType === 'installation' && (
+                  <li className="font-medium text-blue-900">
+                    • Choose preferred date and vendor will call to finalise
+                  </li>
+                )}
+
+                {/* Rescheduling Info */}
+                {currentBooking?.eventId && currentBooking?.date && (
+                  <>
+                    <li className="font-semibold text-blue-900">
+                      • Rescheduling Existing Booking
+                    </li>
+                    <li className="ml-4">
+                      Current Date: <span className="font-medium">{formatDate(currentBooking.date)}</span>
+                    </li>
+                    <li className="ml-4 text-xs text-blue-700">
+                      Select a new date below. The old booking will be automatically cancelled.
+                    </li>
+                  </>
+                )}
+
+                {/* Dependency Message */}
+                {bookingType === 'installation' && (
                   <>
                     {dependentDate && trainingDate && (
-                      <>Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)}) and before Training date ({formatDate(trainingDate)}). </>
+                      <li>• Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)}) and before Training date ({formatDate(trainingDate)})</li>
                     )}
                     {dependentDate && !trainingDate && (
-                      <>Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)}). </>
+                      <li>• Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)})</li>
                     )}
                     {!dependentDate && trainingDate && (
-                      <>Installation must be scheduled before Training date ({formatDate(trainingDate)}). </>
+                      <li>• Installation must be scheduled before Training date ({formatDate(trainingDate)})</li>
                     )}
                   </>
                 )}
                 {bookingType === 'training' && (
                   <>
                     {installationDate && goLiveDate && (
-                      <>Training must be scheduled after Installation date ({formatDate(installationDate)}) and before Go-Live date ({formatDate(goLiveDate)}). </>
+                      <li>• Training must be scheduled after Installation date ({formatDate(installationDate)}) and before Go-Live date ({formatDate(goLiveDate)})</li>
                     )}
                     {installationDate && !goLiveDate && (
-                      <>Training must be scheduled after Installation date ({formatDate(installationDate)}). </>
+                      <li>• Training must be scheduled after Installation date ({formatDate(installationDate)})</li>
                     )}
                     {!installationDate && goLiveDate && (
-                      <>Training must be scheduled before Go-Live date ({formatDate(goLiveDate)}). </>
+                      <li>• Training must be scheduled before Go-Live date ({formatDate(goLiveDate)})</li>
                     )}
                   </>
                 )}
-                You can select dates up to 14 days from the earliest eligible date.
-              </p>
+
+                {(dependentDate || goLiveDate || installationDate || trainingDate) && (
+                  <li>• You can select dates up to 14 days from the earliest eligible date</li>
+                )}
+              </ul>
             </div>
-          )}
+          ) : null}
           {bookingType === 'training' && (
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -729,14 +732,14 @@ export default function DatePickerModal({
                 )}
                 {serviceType === 'none' && (
                   <div className="text-xs text-amber-600">
-                    ⚠️ {getServiceTypeMessage(serviceType)}
+                    {getServiceTypeMessage(serviceType)}
                   </div>
                 )}
 
                 {/* Show warning if no trainers available */}
                 {availableLanguages.length === 0 && !loading && (
                   <div className="text-xs text-amber-600 mt-1">
-                    ⚠️ No trainers available for this location
+                    No trainers available for this location
                   </div>
                 )}
               </div>

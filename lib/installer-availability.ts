@@ -776,15 +776,17 @@ export async function submitExternalInstallationRequest(
         if (portalResult.totalSize > 0) {
           const portalId = portalResult.records[0].Id
           console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
-          
+
           // Update the Onboarding_Portal__c record with the installation date
+          // For external vendors, clear the Installer_Name__c field (set to null)
           const portalUpdateData = {
             Id: portalId,
-            Installation_Date__c: installationDateTime  // DateTime field with timezone
+            Installation_Date__c: installationDateTime,  // DateTime field with timezone
+            Installer_Name__c: null  // Clear installer name for external vendors
           }
-          
+
           const portalUpdateResult = await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
-          console.log(`✅ Updated Onboarding_Portal__c.Installation_Date__c:`, JSON.stringify(portalUpdateResult))
+          console.log(`✅ Updated Onboarding_Portal__c.Installation_Date__c and cleared Installer_Name__c:`, JSON.stringify(portalUpdateResult))
         } else {
           console.log(`⚠️ No Onboarding_Portal__c record found for merchant ${merchantId}`)
           
@@ -797,15 +799,17 @@ export async function submitExternalInstallationRequest(
           `
           const merchantResult = await conn.query(merchantQuery)
           const merchantName = merchantResult.totalSize > 0 ? merchantResult.records[0].Name : 'Unknown Merchant'
-          
+
+          // For external vendors, don't set Installer_Name__c (leave it null)
           const createData = {
             Name: `Portal - ${merchantName}`,
             Onboarding_Trainer_Record__c: merchantId,
             Installation_Date__c: installationDateTime  // DateTime field with timezone
+            // Installer_Name__c is intentionally not set for external vendors
           }
-          
+
           const createResult = await conn.sobject('Onboarding_Portal__c').create(createData)
-          console.log(`✅ Created new Portal record with Installation_Date__c: ${createResult.id}`)
+          console.log(`✅ Created new Portal record with Installation_Date__c (no installer for external vendor): ${createResult.id}`)
         }
       } catch (portalError) {
         console.error('Failed to update Onboarding_Portal__c:', portalError)
@@ -819,32 +823,107 @@ export async function submitExternalInstallationRequest(
   
   // Notify the onboarding manager (MSM) about external vendor assignment
   try {
-    // Fetch MSM email from Salesforce
-    const msmQuery = `
-      SELECT MSM_Name__r.Email, MSM_Name__r.Name
+    // Fetch merchant details and MSM info from Salesforce
+    const merchantQuery = `
+      SELECT
+        Email__c,
+        Shipping_Street__c,
+        Shipping_City__c,
+        Shipping_State__c,
+        Shipping_Zip_Postal_Code__c,
+        Shipping_Country__c,
+        MSM_Name__r.Email,
+        MSM_Name__r.Name,
+        MSM_Name__r.Phone,
+        Account_Name__r.Id
       FROM Onboarding_Trainer__c
       WHERE Id = '${merchantId}'
       LIMIT 1
     `
-    const msmResult = await conn.query(msmQuery)
-    
-    if (msmResult.totalSize > 0 && msmResult.records[0].MSM_Name__r?.Email) {
-      const msmEmail = msmResult.records[0].MSM_Name__r.Email
-      const msmName = msmResult.records[0].MSM_Name__r.Name
-      
-      console.log(`📧 Notifying onboarding manager: ${msmName} (${msmEmail})`)
-      
-      await sendExternalVendorNotificationToManager(
-        msmEmail,
-        merchantName,
-        merchantId,
-        vendor.name,
-        preferredDate,
-        preferredTime,
-        contactPhone
-      )
+    const merchantResult = await conn.query(merchantQuery)
+
+    if (merchantResult.totalSize > 0) {
+      const merchant = merchantResult.records[0]
+      const msmEmail = merchant.MSM_Name__r?.Email
+      const msmName = merchant.MSM_Name__r?.Name
+      const msmPhone = merchant.MSM_Name__r?.Phone
+      const merchantEmail = merchant.Email__c
+
+      // Build store address
+      const addressParts = [
+        merchant.Shipping_Street__c,
+        merchant.Shipping_City__c,
+        merchant.Shipping_State__c,
+        merchant.Shipping_Zip_Postal_Code__c,
+        merchant.Shipping_Country__c
+      ].filter(Boolean)
+      const storeAddress = addressParts.join(', ') || 'Not provided'
+
+      // Fetch order and hardware details
+      let orderNumber = 'Not available'
+      let hardwareItems: string[] = []
+
+      if (merchant.Account_Name__r?.Id) {
+        try {
+          // Query for all orders for this account
+          const orderQuery = `
+            SELECT Id, NSOrderNumber__c, Type
+            FROM Order
+            WHERE AccountId = '${merchant.Account_Name__r.Id}'
+            ORDER BY CreatedDate DESC
+          `
+          const orderResult = await conn.query(orderQuery)
+
+          if (orderResult.totalSize > 0) {
+            // Get all order IDs
+            const orderIds = orderResult.records.map((order: any) => `'${order.Id}'`).join(',')
+
+            // Find the first order with NSOrderNumber__c
+            const orderWithNumber = orderResult.records.find((order: any) => order.NSOrderNumber__c)
+            if (orderWithNumber) {
+              orderNumber = orderWithNumber.NSOrderNumber__c
+            }
+
+            // Query for all order items across all orders
+            const orderItemsQuery = `
+              SELECT Product2.Name, Quantity
+              FROM OrderItem
+              WHERE OrderId IN (${orderIds})
+            `
+            const itemsResult = await conn.query(orderItemsQuery)
+
+            if (itemsResult.totalSize > 0) {
+              hardwareItems = itemsResult.records.map((item: any) =>
+                `${item.Product2?.Name || 'Unknown Product'} (Qty: ${item.Quantity || 1})`
+              )
+            }
+          }
+        } catch (orderError) {
+          console.error('Failed to fetch order details:', orderError)
+        }
+      }
+
+      if (msmEmail) {
+        console.log(`📧 Notifying onboarding manager: ${msmName} (${msmEmail})`)
+
+        await sendExternalVendorNotificationToManager(
+          msmEmail,
+          merchantName,
+          merchantId,
+          merchantEmail,
+          storeAddress,
+          preferredDate,
+          preferredTime,
+          orderNumber,
+          hardwareItems,
+          msmName || 'Not available',
+          msmPhone || 'Not available'
+        )
+      } else {
+        console.log('⚠️ No MSM email found for notification')
+      }
     } else {
-      console.log('⚠️ No MSM email found for notification')
+      console.log('⚠️ No merchant record found for notification')
     }
   } catch (notifyError) {
     console.error('Failed to notify onboarding manager:', notifyError)

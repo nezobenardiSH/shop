@@ -8,19 +8,21 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { 
-      merchantId, 
-      merchantName, 
-      date, 
-      timeSlot, 
+    const {
+      merchantId,
+      merchantName,
+      onboardingTrainerName,  // The Salesforce Onboarding_Trainer__c.Name field
+      date,
+      timeSlot,
       availableInstallers,
       contactPhone,
       existingEventId  // Event ID of existing booking to be cancelled (for rescheduling)
     } = body
-    
+
     console.log('📥 Installation booking request:', {
       merchantId,
       merchantName,
+      onboardingTrainerName,
       date,
       timeSlot,
       isRescheduling: !!existingEventId,
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
 
       const result = await submitExternalInstallationRequest(
         merchantId,
-        merchantName,
+        onboardingTrainerName || merchantName,  // Use Onboarding Trainer Name if available
         date,
         preferredTime,
         contactPhone || ''

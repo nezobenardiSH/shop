@@ -855,7 +855,22 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
         return (
           <div className="space-y-4">
             <div>
-              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Scheduled Installation Date</div>
+              {(() => {
+                // Check if external vendor (no installer name but has installation date)
+                const isExternalVendor = !trainerData?.installerName && trainerData?.installationDate
+                return (
+                  <>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">
+                      {isExternalVendor ? 'Proposed Installation Date' : 'Scheduled Installation Date'}
+                    </div>
+                    {isExternalVendor && (
+                      <div className="text-xs text-gray-500 mb-2 italic">
+                        Vendor will confirm directly to finalise the date
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
               <div className="flex items-center justify-between">
                 <span className="text-base font-medium text-gray-900">
                   {trainerData?.installationDate
@@ -884,7 +899,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Installer Name</div>
               <div className="text-base font-medium text-gray-900">
-                {trainerData?.installerName || 'Not Assigned'}
+                {(() => {
+                  // Show "External Vendor" if no installer name and installation date is set
+                  if (!trainerData?.installerName && trainerData?.installationDate) {
+                    return 'External Vendor'
+                  }
+                  return trainerData?.installerName || 'Not Assigned'
+                })()}
               </div>
             </div>
 
@@ -1914,7 +1935,22 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           <div className="space-y-4">
             {/* Installation Date - Editable */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Scheduled Installation Date</div>
+              {(() => {
+                // Check if external vendor (no installer name but has installation date)
+                const isExternalVendor = !trainerData?.installerName && trainerData?.installationDate
+                return (
+                  <>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                      {isExternalVendor ? 'Proposed Installation Date' : 'Scheduled Installation Date'}
+                    </div>
+                    {isExternalVendor && (
+                      <div className="text-xs text-gray-500 mb-1 italic">
+                        Vendor will confirm directly to finalise the date
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
               <div className="flex items-center gap-2">
                 <div className="text-sm font-medium text-gray-900">
                   {trainerData?.installationDate
@@ -1947,7 +1983,13 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installer Name</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.installerName || 'Not Assigned'}
+                {(() => {
+                  // Show "External Vendor" if no installer name and installation date is set
+                  if (!trainerData?.installerName && trainerData?.installationDate) {
+                    return 'External Vendor'
+                  }
+                  return trainerData?.installerName || 'Not Assigned'
+                })()}
               </div>
             </div>
 
