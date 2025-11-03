@@ -445,15 +445,22 @@ export async function POST(request: NextRequest) {
 
           if (searchResult.records && searchResult.records.length > 0) {
             userId = searchResult.records[0].Id
+            const foundUser = searchResult.records[0] as any
             console.log('✅ Found User:', {
               id: userId,
-              name: searchResult.records[0].Name,
-              email: searchResult.records[0].Email
+              name: foundUser.Name,
+              email: foundUser.Email
+            })
+            console.log('   Matched trainer config:', {
+              configName: trainer.name,
+              configEmail: trainer.email
             })
           } else {
             console.log('❌ No User found for trainer:', trainer.name, '/', trainer.email)
             console.log('   CSM fields cannot be set without a valid User in Salesforce')
             console.log('   Make sure the trainer has a Salesforce User account with email:', trainer.email)
+            console.log('   Search query used:', searchQuery)
+            console.log('   Total records found:', searchResult.totalSize)
           }
 
           // If we have a User ID, update the CSM field for training
@@ -478,13 +485,17 @@ export async function POST(request: NextRequest) {
         try {
           updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateData)
           console.log('✅ Successfully updated Salesforce with data:', JSON.stringify(updateResult, null, 2))
+          if (updateData.CSM_Name__c) {
+            console.log('✅ CSM_Name__c field was successfully saved to Salesforce')
+          }
         } catch (updateError: any) {
-          console.log('⚠️ Failed to update with User ID:', updateError.message)
+          console.log('⚠️ Failed to update Salesforce:', updateError.message)
+          console.log('   Full error:', JSON.stringify(updateError, null, 2))
 
           // If the CSM field update fails (likely due to invalid User ID),
           // retry without the CSM field to at least update the training date and event ID
           if (updateError.message && (updateError.message.includes('CSM') || updateError.message.includes('User'))) {
-            console.log('Retrying without CSM field update...')
+            console.log('❌ CSM field update failed, retrying without CSM field...')
             const updateDataWithoutCSM: any = {
               Id: merchantId,
               [mapping.field]: fieldValue
@@ -492,6 +503,7 @@ export async function POST(request: NextRequest) {
 
             updateResult = await conn.sobject('Onboarding_Trainer__c').update(updateDataWithoutCSM)
             console.log('✅ Successfully updated training date (without CSM field)')
+            console.log('⚠️ WARNING: Trainer name will show as "Not Assigned" because CSM_Name__c could not be saved')
           } else {
             throw updateError
           }
