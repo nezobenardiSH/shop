@@ -91,6 +91,17 @@ export async function POST(request: NextRequest) {
     const { PrismaClient } = await import('@prisma/client')
     const prisma = new PrismaClient()
     
+    // Calculate expiry time - default to 7 days if not provided
+    const expiresIn = tokenData.data.expire || tokenData.data.expires_in || 604800 // 7 days in seconds
+    const expiresAt = new Date(Date.now() + (expiresIn * 1000))
+    
+    console.log('Token expiry calculation:', {
+      expire: tokenData.data.expire,
+      expires_in: tokenData.data.expires_in,
+      calculatedExpiresIn: expiresIn,
+      expiresAt: expiresAt.toISOString()
+    })
+    
     try {
       await prisma.larkAuthToken.upsert({
         where: { userEmail: userInfo.email },
@@ -98,7 +109,7 @@ export async function POST(request: NextRequest) {
           larkUserId: userInfo.userId || userInfo.openId,
           accessToken: tokenData.data.access_token,
           refreshToken: tokenData.data.refresh_token,
-          expiresAt: new Date(Date.now() + (tokenData.data.expire * 1000)),
+          expiresAt: expiresAt,
           userName: userInfo.name
         },
         create: {
@@ -106,7 +117,7 @@ export async function POST(request: NextRequest) {
           larkUserId: userInfo.userId || userInfo.openId,
           accessToken: tokenData.data.access_token,
           refreshToken: tokenData.data.refresh_token,
-          expiresAt: new Date(Date.now() + (tokenData.data.expire * 1000)),
+          expiresAt: expiresAt,
           userName: userInfo.name
         }
       })
