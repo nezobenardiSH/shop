@@ -85,6 +85,8 @@ export default function MerchantDetailsPage() {
     try {
       const response = await fetch(`/api/salesforce/merchant/${merchantId}`)
       const data = await response.json()
+      console.log('📦 Merchant data received:', data)
+      console.log('📦 Order NS Number:', data.orderNSOrderNumber)
       setTrainerData(data)
 
       // Update page title with merchant name
@@ -357,6 +359,16 @@ export default function MerchantDetailsPage() {
                   {/* Payment Summary at the top */}
                   {trainer && (
                     <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+                      {/* Sales Order Number */}
+                      <div className="mb-4 pb-4 border-b border-gray-200">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          Sales Order Number
+                        </div>
+                        <div className="text-lg font-bold text-gray-900">
+                          {trainerData?.orderNSOrderNumber || 'N/A'}
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Quote Total Amount */}
                         <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
@@ -372,7 +384,7 @@ export default function MerchantDetailsPage() {
                             Synced from quote
                           </div>
                         </div>
-                        
+
                         {/* Pending Payment */}
                         <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                           <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider">

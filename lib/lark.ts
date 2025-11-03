@@ -1204,6 +1204,8 @@ class LarkService {
       salesforceId?: string
       language?: string[]  // Selected training language(s)
       requiredFeatures?: string  // Required features by merchant
+      merchantPICName?: string  // Merchant PIC Name from Salesforce
+      merchantPICPhone?: string  // Merchant PIC Contact Number from Salesforce
     },
     trainerEmail: string,
     trainerCalendarId: string,
@@ -1248,11 +1250,16 @@ class LarkService {
         if (merchantInfo.address) {
           description += `Delivery Address: ${merchantInfo.address}\n`
         }
-        if (merchantInfo.phone) {
-          description += `Phone: ${merchantInfo.phone}\n`
-        }
-        if (merchantInfo.contactPerson) {
+        // Use Merchant PIC contact if available, otherwise fall back to provided contact
+        if (merchantInfo.merchantPICName) {
+          description += `Contact Person: ${merchantInfo.merchantPICName}\n`
+        } else if (merchantInfo.contactPerson) {
           description += `Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        if (merchantInfo.merchantPICPhone) {
+          description += `Phone: ${merchantInfo.merchantPICPhone}\n`
+        } else if (merchantInfo.phone) {
+          description += `Phone: ${merchantInfo.phone}\n`
         }
         description += `\nHardware Delivery Checklist:\n`
         description += `• POS terminals\n`
@@ -1268,11 +1275,16 @@ class LarkService {
         if (merchantInfo.address) {
           description += `Installation Site: ${merchantInfo.address}\n`
         }
-        if (merchantInfo.phone) {
-          description += `Phone: ${merchantInfo.phone}\n`
-        }
-        if (merchantInfo.contactPerson) {
+        // Use Merchant PIC contact if available, otherwise fall back to provided contact
+        if (merchantInfo.merchantPICName) {
+          description += `Contact Person: ${merchantInfo.merchantPICName}\n`
+        } else if (merchantInfo.contactPerson) {
           description += `Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        if (merchantInfo.merchantPICPhone) {
+          description += `Phone: ${merchantInfo.merchantPICPhone}\n`
+        } else if (merchantInfo.phone) {
+          description += `Phone: ${merchantInfo.phone}\n`
         }
         description += `\nInstallation Tasks:\n`
         description += `• Hardware setup and configuration\n`
@@ -1288,11 +1300,16 @@ class LarkService {
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`
         }
-        if (merchantInfo.phone) {
-          description += `Phone: ${merchantInfo.phone}\n`
-        }
-        if (merchantInfo.contactPerson) {
+        // Use Merchant PIC contact if available, otherwise fall back to provided contact
+        if (merchantInfo.merchantPICName) {
+          description += `Contact Person: ${merchantInfo.merchantPICName}\n`
+        } else if (merchantInfo.contactPerson) {
           description += `Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        if (merchantInfo.merchantPICPhone) {
+          description += `Phone: ${merchantInfo.merchantPICPhone}\n`
+        } else if (merchantInfo.phone) {
+          description += `Phone: ${merchantInfo.phone}\n`
         }
         description += `\nGo-Live Checklist:\n`
         description += `• Final system checks\n`
@@ -1315,11 +1332,16 @@ class LarkService {
         if (merchantInfo.address) {
           description += `Address: ${merchantInfo.address}\n`
         }
-        if (merchantInfo.phone) {
-          description += `Phone: ${merchantInfo.phone}\n`
-        }
-        if (merchantInfo.contactPerson) {
+        // Use Merchant PIC contact if available, otherwise fall back to provided contact
+        if (merchantInfo.merchantPICName) {
+          description += `Contact Person: ${merchantInfo.merchantPICName}\n`
+        } else if (merchantInfo.contactPerson) {
           description += `Contact Person: ${merchantInfo.contactPerson}\n`
+        }
+        if (merchantInfo.merchantPICPhone) {
+          description += `Phone: ${merchantInfo.merchantPICPhone}\n`
+        } else if (merchantInfo.phone) {
+          description += `Phone: ${merchantInfo.phone}\n`
         }
         if (merchantInfo.businessType) {
           description += `Business Type: ${merchantInfo.businessType}\n`
@@ -1332,10 +1354,12 @@ class LarkService {
         break
     }
     
+    // Add Salesforce link if ID is available
     if (merchantInfo.salesforceId) {
-      description += `\n🔗 Salesforce ID: ${merchantInfo.salesforceId}`
+      const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantInfo.salesforceId}/view`
+      description += `\n🔗 Salesforce: ${salesforceUrl}`
     }
-    
+
     // Add location to description if available
     let finalDescription = description
     if (merchantInfo.address) {

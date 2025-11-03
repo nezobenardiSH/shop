@@ -334,7 +334,7 @@ export async function bookInternalInstallation(
                Shipping_Street__c, Shipping_City__c, Shipping_State__c, Shipping_Zip_Postal_Code__c, Shipping_Country__c,
                Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone,
                Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone,
-               Merchant_PIC_Contact_Number__c,
+               Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c,
                MSM_Name__r.Name,
                Onboarding_Summary__c
         FROM Onboarding_Trainer__c
@@ -357,13 +357,16 @@ export async function bookInternalInstallation(
             trainer.Shipping_Zip_Postal_Code__c,
             trainer.Shipping_Country__c
           ].filter(Boolean).join(', '),
-          primaryContactRole: trainer.Operation_Manager_Contact__r ? 'Operation Manager' :
+          // Prioritize Merchant PIC contact, then fall back to Operation Manager or Business Owner
+          primaryContactRole: trainer.Merchant_PIC_Name__c ? 'Merchant PIC' :
+                             trainer.Operation_Manager_Contact__r ? 'Operation Manager' :
                              trainer.Business_Owner_Contact__r ? 'Business Owner' : 'N/A',
-          primaryContactName: trainer.Operation_Manager_Contact__r?.Name ||
+          primaryContactName: trainer.Merchant_PIC_Name__c ||
+                             trainer.Operation_Manager_Contact__r?.Name ||
                              trainer.Business_Owner_Contact__r?.Name || 'N/A',
-          primaryContactPhone: trainer.Operation_Manager_Contact__r?.Phone ||
-                              trainer.Business_Owner_Contact__r?.Phone ||
-                              trainer.Merchant_PIC_Contact_Number__c || 'N/A',
+          primaryContactPhone: trainer.Merchant_PIC_Contact_Number__c ||
+                              trainer.Operation_Manager_Contact__r?.Phone ||
+                              trainer.Business_Owner_Contact__r?.Phone || 'N/A',
           msmName: trainer.MSM_Name__r?.Name || 'N/A',
           onboardingSummary: trainer.Onboarding_Summary__c || 'N/A',
           accountId: trainer.Account_Name__c
@@ -479,6 +482,8 @@ export async function bookInternalInstallation(
   // merchantDetails.name is always the correct Onboarding_Trainer__c.Name field
   const displayName = merchantDetails.name || merchantName
 
+  const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
+
   const eventDescription = `🔧 Pilot test: automated onboarding flow (manual Intercom ticket required)
 
 📋 Installation Details:
@@ -499,7 +504,7 @@ Phone: ${merchantDetails.primaryContactPhone || 'N/A'}
 📝 Onboarding Summary:
 ${merchantDetails.onboardingSummary || 'N/A'}
 
-🔗 Salesforce ID: ${merchantId}`
+🔗 Salesforce: ${salesforceUrl}`
 
   try {
     eventResponse = await larkService.createCalendarEvent(

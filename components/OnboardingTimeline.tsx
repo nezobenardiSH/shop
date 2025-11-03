@@ -2105,11 +2105,21 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </div>
             </div>
 
-            {/* Trainer Name */}
+            {/* Trainer Name - Only show if training date exists */}
+            {trainerData?.trainingDate && (
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Trainer Name</div>
+                <div className="text-sm font-medium text-gray-900">
+                  {trainerData?.csmName || 'Not Assigned'}
+                </div>
+              </div>
+            )}
+
+            {/* Preferred Language */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Trainer Name</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Preferred Language</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.csmName || 'Not Assigned'}
+                {trainerData?.preferredLanguage || 'Not Specified'}
               </div>
             </div>
 

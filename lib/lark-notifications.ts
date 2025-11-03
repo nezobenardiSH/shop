@@ -129,6 +129,8 @@ export async function sendExternalVendorNotificationToManager(
       ? hardwareItems.map(item => `  - ${item}`).join('\n')
       : '  - No hardware items found'
 
+    const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
+
     const message = `🏪 External Vendor Installation Request\n\n` +
                    `Merchant Name: ${merchantName}\n` +
                    `Merchant ID: ${merchantId}\n` +
@@ -139,7 +141,8 @@ export async function sendExternalVendorNotificationToManager(
                    `Sales Order Number: ${orderNumber}\n` +
                    `Hardware:\n${hardwareList}\n\n` +
                    `Requester: ${requesterName}\n` +
-                   `Requester Phone Number: ${requesterPhone}`
+                   `Requester Phone Number: ${requesterPhone}\n\n` +
+                   `🔗 Salesforce: ${salesforceUrl}`
 
     await larkService.sendAppMessage(managerEmail, message, 'text')
     console.log(`📧 External vendor notification sent to onboarding manager: ${managerEmail}`)

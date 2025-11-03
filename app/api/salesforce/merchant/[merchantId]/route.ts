@@ -224,13 +224,14 @@ export async function GET(
     let hardwareFulfillmentDate: string | null = null
     let trackingLink: string | null = null
     let orderNSStatus: string | null = null
+    let orderNSOrderNumber: string | null = null
     let orderShippingAddress: any = null
     if (account) {
       try {
         // First get Orders for this Account with Type field and Hardware Fulfillment Date
         // ShippingAddress is a compound field - query all its components
         const ordersQuery = `
-          SELECT Id, Type, Hardware_Fulfillment_Date__c, NSStatus__c,
+          SELECT Id, Type, Hardware_Fulfillment_Date__c, NSStatus__c, NSOrderNumber__c,
                  ShippingStreet, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry
           FROM Order
           WHERE AccountId = '${account.Id}'
@@ -265,6 +266,9 @@ export async function GET(
             }
             if (order.NSStatus__c && !orderNSStatus) {
               orderNSStatus = order.NSStatus__c
+            }
+            if (order.NSOrderNumber__c && !orderNSOrderNumber) {
+              orderNSOrderNumber = order.NSOrderNumber__c
             }
             // Build shipping address from compound field components
             // Take the FIRST order (most recent due to ORDER BY CreatedDate DESC)
@@ -438,7 +442,8 @@ export async function GET(
       trainerName: trainer.Name,
       account: accountData,
       onboardingTrainerData: onboardingTrainerData,
-      orderItems: orderItems
+      orderItems: orderItems,
+      orderNSOrderNumber: orderNSOrderNumber
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',

@@ -163,7 +163,33 @@ export async function POST(request: NextRequest) {
       existingEventId
     })
 
-    // Step 5.5: If this is a reschedule (existingEventId provided), delete the old event first
+    // Step 5.5: Fetch Merchant PIC contact information from Salesforce
+    let merchantPICName: string | undefined
+    let merchantPICPhone: string | undefined
+
+    try {
+      const conn = await getSalesforceConnection()
+      if (conn) {
+        const trainerQuery = `
+          SELECT Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c
+          FROM Onboarding_Trainer__c
+          WHERE Id = '${merchantId}'
+          LIMIT 1
+        `
+        const trainerResult = await conn.query(trainerQuery)
+        if (trainerResult.totalSize > 0) {
+          const trainerRecord = trainerResult.records[0] as any
+          merchantPICName = trainerRecord.Merchant_PIC_Name__c
+          merchantPICPhone = trainerRecord.Merchant_PIC_Contact_Number__c
+          console.log('📞 Fetched Merchant PIC contact:', { merchantPICName, merchantPICPhone })
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Failed to fetch Merchant PIC contact, will use fallback:', error)
+      // Continue with booking even if we can't fetch PIC contact
+    }
+
+    // Step 5.6: If this is a reschedule (existingEventId provided), delete the old event first
     if (existingEventId && !mockMode) {
       try {
         console.log('🗑️ Rescheduling detected - cancelling existing event:', existingEventId)
@@ -206,7 +232,9 @@ export async function POST(request: NextRequest) {
             businessType: merchantBusinessType,
             salesforceId: merchantId,
             language: trainerLanguages,  // Pass selected language to calendar event
-            requiredFeatures: requiredFeatures  // Pass required features to calendar event
+            requiredFeatures: requiredFeatures,  // Pass required features to calendar event
+            merchantPICName: merchantPICName,  // Merchant PIC Name from Salesforce
+            merchantPICPhone: merchantPICPhone  // Merchant PIC Contact Number from Salesforce
           },
           trainer.email,
           calendarId,
@@ -323,11 +351,14 @@ export async function POST(request: NextRequest) {
           fieldValue = dateTimeValue
           console.log('Using datetime for field:', mapping.field)
         }
-        
+
         const updateData: any = {
           Id: merchantId,
           [mapping.field]: fieldValue
         }
+
+        // For training bookings, also store the datetime value for later use in Portal update
+        const trainingDateTime = bookingType === 'training' ? dateTimeValue : null
 
         // For installation bookings, also update the Assigned_Installer__c field
         if (bookingType === 'installation' && trainer && trainer.name) {
@@ -360,11 +391,19 @@ export async function POST(request: NextRequest) {
               const portalId = portalResult.records[0].Id
               console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
 
-              // Update the Onboarding_Portal__c record with the event ID
-              await conn.sobject('Onboarding_Portal__c').update({
+              // Update the Onboarding_Portal__c record with the event ID and datetime
+              const portalUpdateData: any = {
                 Id: portalId,
                 [eventIdField]: eventId
-              })
+              }
+
+              // For training bookings, also save the datetime to Training_Date__c
+              if (bookingType === 'training' && trainingDateTime) {
+                portalUpdateData.Training_Date__c = trainingDateTime
+                console.log(`📝 Also storing Training_Date__c in Portal: ${trainingDateTime}`)
+              }
+
+              await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
               console.log(`✅ Successfully stored event ID in Onboarding_Portal__c.${eventIdField}`)
             } else {
               console.log(`⚠️ No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
