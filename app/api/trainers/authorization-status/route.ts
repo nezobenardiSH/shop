@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
     const authorizedTrainers = await larkOAuthService.getAuthorizedTrainers()
     const authorizedEmails = new Set(authorizedTrainers.map(t => t.email))
     
-    // Combine information
+    // Combine information - ONLY show trainers that are in config file
     const trainers = configuredTrainers.map(trainer => {
       const authorized = authorizedEmails.has(trainer.email)
       const authInfo = authorizedTrainers.find(t => t.email === trainer.email)
-      
+
       return {
         email: trainer.email,
         name: trainer.name,
@@ -25,14 +25,7 @@ export async function GET(request: NextRequest) {
         authorized
       }
     })
-    
-    // Also include any authorized trainers not in config
-    authorizedTrainers.forEach(authTrainer => {
-      if (!configuredTrainers.find(t => t.email === authTrainer.email)) {
-        trainers.push(authTrainer)
-      }
-    })
-    
+
     return NextResponse.json({
       trainers,
       totalConfigured: configuredTrainers.length,

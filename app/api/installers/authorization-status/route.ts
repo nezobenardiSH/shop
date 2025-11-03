@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const authorizedInstallers = await larkOAuthService.getAuthorizedInstallers()
     const authorizedEmails = new Set(authorizedInstallers.map(i => i.email))
 
-    // Combine information
+    // Combine information - ONLY show installers that are in config file
     const installers = configuredInstallers.map(installer => {
       const authorized = authorizedEmails.has(installer.email)
       const authInfo = authorizedInstallers.find(i => i.email === installer.email)
@@ -29,13 +29,6 @@ export async function GET(request: NextRequest) {
         name: installer.name,
         calendarId: authInfo?.calendarId || installer.larkCalendarId || 'primary',
         authorized
-      }
-    })
-
-    // Also include any authorized installers not in config
-    authorizedInstallers.forEach(authInstaller => {
-      if (!configuredInstallers.find(i => i.email === authInstaller.email)) {
-        installers.push(authInstaller)
       }
     })
 
