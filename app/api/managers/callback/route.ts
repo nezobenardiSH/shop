@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
         where: { userEmail: userInfo.email },
         update: {
           larkUserId: userInfo.userId || userInfo.openId,
+          userType: 'manager',
           accessToken: tokenData.data.access_token,
           refreshToken: tokenData.data.refresh_token,
           expiresAt: expiresAt,
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
         create: {
           userEmail: userInfo.email,
           larkUserId: userInfo.userId || userInfo.openId,
+          userType: 'manager',
           accessToken: tokenData.data.access_token,
           refreshToken: tokenData.data.refresh_token,
           expiresAt: expiresAt,

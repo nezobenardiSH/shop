@@ -28,6 +28,7 @@ model LarkAuthToken {
   userEmail    String   @unique
   userName     String?
   larkUserId   String?
+  userType     String?  // 'trainer', 'installer', or 'manager'
   accessToken  String   @db.Text
   refreshToken String   @db.Text
   expiresAt    DateTime
@@ -38,4 +39,5 @@ model LarkAuthToken {
   
   @@index([userEmail])
   @@index([expiresAt])
+  @@index([userType])
 }

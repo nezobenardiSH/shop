@@ -85,7 +85,7 @@ export class LarkOAuthService {
   /**
    * Exchange authorization code for tokens and store in database
    */
-  async exchangeCodeForTokens(code: string, userType: 'trainer' | 'installer' = 'trainer'): Promise<string> {
+  async exchangeCodeForTokens(code: string, userType: 'trainer' | 'installer' | 'manager' = 'trainer'): Promise<string> {
     // Check credentials before making the request
     if (!this.appId || !this.appSecret) {
       console.error('Missing credentials:', {
@@ -154,6 +154,7 @@ export class LarkOAuthService {
         userEmail,
         userName: userInfo.data.name,
         larkUserId: larkUserId || larkOpenId,
+        userType,
         accessToken: tokenData.data.access_token,
         refreshToken: tokenData.data.refresh_token,
         expiresAt,
@@ -161,6 +162,7 @@ export class LarkOAuthService {
         scopes: 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read'
       },
       update: {
+        userType,
         accessToken: tokenData.data.access_token,
         refreshToken: tokenData.data.refresh_token,
         expiresAt,
@@ -381,6 +383,12 @@ export class LarkOAuthService {
     authorized: boolean
   }>> {
     const tokens = await prisma.larkAuthToken.findMany({
+      where: {
+        OR: [
+          { userType: 'trainer' },
+          { userType: null }  // Include legacy records without userType
+        ]
+      },
       select: {
         userEmail: true,
         userName: true,
@@ -406,6 +414,9 @@ export class LarkOAuthService {
     authorized: boolean
   }>> {
     const tokens = await prisma.larkAuthToken.findMany({
+      where: {
+        userType: 'installer'
+      },
       select: {
         userEmail: true,
         userName: true,

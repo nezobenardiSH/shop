@@ -5,8 +5,11 @@ const prisma = new PrismaClient()
 
 export async function GET() {
   try {
-    // Get all authorized managers from the database
+    // Get only authorized managers from the database
     const authorizedManagers = await prisma.larkAuthToken.findMany({
+      where: {
+        userType: 'manager'
+      },
       select: {
         userEmail: true,
         userName: true,

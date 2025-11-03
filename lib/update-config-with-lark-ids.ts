@@ -142,11 +142,12 @@ export async function updateConfigWithLarkIds(
   email: string,
   larkUserId: string,
   larkOpenId: string,
-  userType: 'trainer' | 'installer' = 'trainer'
+  userType: 'trainer' | 'installer' | 'manager' = 'trainer'
 ): Promise<void> {
   if (userType === 'trainer') {
     await updateTrainerLarkIds(email, larkUserId, larkOpenId)
-  } else {
+  } else if (userType === 'installer') {
     await updateInstallerLarkIds(email, larkUserId, larkOpenId)
   }
+  // Managers don't have a config file to update
 }
