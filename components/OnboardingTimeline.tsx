@@ -856,8 +856,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           <div className="space-y-4">
             <div>
               {(() => {
-                // Check if external vendor (no installer name but has installation date)
-                const isExternalVendor = !trainerData?.installerName && trainerData?.installationDate
+                // Check if external vendor using installerType from API
+                const installerType = (trainerData as any)?.installerType
+                const isExternalVendor = installerType === 'external'
                 return (
                   <>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">
@@ -1942,8 +1943,9 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             {/* Installation Date - Editable */}
             <div>
               {(() => {
-                // Check if external vendor (no installer name but has installation date)
-                const isExternalVendor = !trainerData?.installerName && trainerData?.installationDate
+                // Check if external vendor using installerType from API
+                const installerType = (trainerData as any)?.installerType
+                const isExternalVendor = installerType === 'external'
                 return (
                   <>
                     <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
