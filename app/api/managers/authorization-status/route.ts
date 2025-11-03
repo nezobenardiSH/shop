@@ -1,60 +1,42 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 export async function GET() {
   try {
-    // For managers, we check based on email from a session/cookie
-    // You might want to implement a proper session management here
-    const cookieStore = await cookies()
-    const managerEmail = cookieStore.get('manager_email')?.value
-    
-    if (!managerEmail) {
-      return NextResponse.json({
-        isAuthorized: false,
-        message: 'No manager session found'
-      })
-    }
-    
-    // Check if this manager has authorized
-    const { PrismaClient } = await import('@prisma/client')
-    const prisma = new PrismaClient()
-    
-    try {
-      const authToken = await prisma.larkAuthToken.findUnique({
-        where: { userEmail: managerEmail },
-        select: {
-          userEmail: true,
-          userName: true,
-          larkUserId: true,
-          expiresAt: true
-        }
-      })
-      
-      if (authToken && authToken.expiresAt > new Date()) {
-        return NextResponse.json({
-          isAuthorized: true,
-          userInfo: {
-            email: authToken.userEmail,
-            name: authToken.userName
-          }
-        })
-      }
-      
-      return NextResponse.json({
-        isAuthorized: false,
-        message: 'Authorization expired or not found'
-      })
-    } finally {
-      await prisma.$disconnect()
-    }
-  } catch (error) {
-    console.error('Failed to check manager authorization:', error)
-    return NextResponse.json(
-      { 
-        isAuthorized: false,
-        error: 'Failed to check authorization status' 
+    // Get all authorized managers from the database
+    const authorizedManagers = await prisma.larkAuthToken.findMany({
+      select: {
+        userEmail: true,
+        userName: true,
+        larkUserId: true,
+        expiresAt: true
       },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+    
+    // Transform the data for the frontend
+    const managers = authorizedManagers.map(manager => ({
+      email: manager.userEmail,
+      name: manager.userName || 'Unknown',
+      authorized: true,
+      expiresAt: manager.expiresAt
+    }))
+    
+    return NextResponse.json({
+      managers,
+      count: managers.length
+    })
+  } catch (error) {
+    console.error('Failed to fetch manager authorization status:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch authorization status' },
       { status: 500 }
     )
+  } finally {
+    await prisma.$disconnect()
   }
 }

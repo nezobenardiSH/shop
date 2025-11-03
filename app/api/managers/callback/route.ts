@@ -19,21 +19,37 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Exchange code for access token
+    // First, get app access token
+    const appTokenResponse = await fetch('https://open.larksuite.com/open-apis/auth/v3/app_access_token/internal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        app_id: process.env.LARK_APP_ID,
+        app_secret: process.env.LARK_APP_SECRET
+      })
+    })
+    
+    const appTokenData = await appTokenResponse.json()
+    if (appTokenData.code !== 0) {
+      throw new Error(`Failed to get app token: ${appTokenData.msg}`)
+    }
+    
+    // Exchange code for user access token using app token
     const tokenPayload = {
       grant_type: 'authorization_code',
-      code,
-      app_id: process.env.LARK_APP_ID,
-      app_secret: process.env.LARK_APP_SECRET
+      code
     }
     console.log('Exchanging code for token with payload:', {
       ...tokenPayload,
-      code: code.substring(0, 10) + '...',
-      app_secret: 'REDACTED'
+      code: code.substring(0, 10) + '...'
     })
-    const tokenResponse = await fetch('https://open.larksuite.com/open-apis/authen/v1/access_token', {
+    
+    const tokenResponse = await fetch('https://open.larksuite.com/open-apis/authen/v1/oidc/access_token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${appTokenData.app_access_token}`
+      },
       body: JSON.stringify(tokenPayload)
     })
     
@@ -117,9 +133,11 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Manager authorization failed:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Authorization failed' },
-      { status: 500 }
-    )
+    const errorDetails = {
+      error: error instanceof Error ? error.message : 'Authorization failed',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    }
+    return NextResponse.json(errorDetails, { status: 500 })
   }
 }
