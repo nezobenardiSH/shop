@@ -414,9 +414,9 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Update the appropriate CSM field based on booking type
-        // CSM_Name__c and CSM_Name_BO__c are lookup fields to User (internal Salesforce users)
-        console.log('📝 Attempting to set CSM fields for trainer:', trainer.name, '(', trainer.email, ')')
+        // Update the CSM field for training bookings
+        // CSM_Name__c is a lookup field to User (internal Salesforce users)
+        console.log('📝 Attempting to set CSM_Name__c for trainer:', trainer.name, '(', trainer.email, ')')
         console.log('📝 Booking type:', bookingType)
 
         // Search for User (internal Salesforce user) using trainer info from trainers.json
@@ -445,11 +445,11 @@ export async function POST(request: NextRequest) {
           // If we have a User ID, update the CSM field for training
           if (userId) {
             if (bookingType === 'training') {
-              updateData.CSM_Name_BO__c = userId
-              console.log('📝 Setting CSM_Name_BO__c (Training) to User ID:', userId)
+              updateData.CSM_Name__c = userId
+              console.log('📝 Setting CSM_Name__c (Training) to User ID:', userId)
             }
           } else {
-            console.log('⚠️ Could not get User ID for trainer, CSM fields will not be updated')
+            console.log('⚠️ Could not get User ID for trainer, CSM_Name__c will not be updated')
           }
         } catch (userError: any) {
           console.log('❌ Error searching for User for CSM fields:', userError.message)
@@ -458,7 +458,7 @@ export async function POST(request: NextRequest) {
 
         console.log('📦 Final update data being sent to Salesforce:', JSON.stringify(updateData, null, 2))
         console.log('Update data keys:', Object.keys(updateData))
-        console.log('CSM_Name_BO__c value:', updateData.CSM_Name_BO__c)
+        console.log('CSM_Name__c value:', updateData.CSM_Name__c)
         
         // Try to update with User ID first
         try {
