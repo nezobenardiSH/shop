@@ -893,10 +893,13 @@ function TrainerPortalContent() {
           {/* Onboarding Timeline Section */}
           {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
             <div className="mt-4">
-              <OnboardingTimeline 
+              <OnboardingTimeline
                 currentStage={trainerData.onboardingTrainerData.trainers[0].onboardingTrainerStage}
                 stageData={trainerData.onboardingTrainerData.trainers[0]}
-                trainerData={trainerData.onboardingTrainerData.trainers[0]}
+                trainerData={{
+                  ...trainerData.onboardingTrainerData.trainers[0],
+                  installerType: trainerData.installerType // Pass installer type from top-level response
+                }}
                 onBookingComplete={handleBookingComplete}
                 onOpenBookingModal={handleOpenBookingModal}
               />

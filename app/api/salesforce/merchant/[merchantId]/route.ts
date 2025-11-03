@@ -1,6 +1,7 @@
 // API Version: 2.0 - Direct SOQL query with trailing hyphen preservation (Oct 27, 2025)
 import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
+import { getInstallerType } from '@/lib/installer-availability'
 
 // Disable caching for this route - always fetch fresh data from Salesforce
 export const dynamic = 'force-dynamic'
@@ -467,6 +468,10 @@ export async function GET(
 
     console.log('✅ Final orderShippingAddress being returned:', orderShippingAddress)
 
+    // Get installer type for this merchant
+    const installerType = await getInstallerType(trainerId)
+    console.log('🔧 Installer type for merchant:', { trainerId, installerType })
+
     return NextResponse.json({
       success: true,
       message: `Successfully loaded data for trainer: ${trainer.Name}`,
@@ -475,7 +480,8 @@ export async function GET(
       account: accountData,
       onboardingTrainerData: onboardingTrainerData,
       orderItems: orderItems,
-      orderNSOrderNumber: orderNSOrderNumber
+      orderNSOrderNumber: orderNSOrderNumber,
+      installerType: installerType // Add installer type to response
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',

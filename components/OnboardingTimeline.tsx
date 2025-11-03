@@ -900,11 +900,17 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Installer Name</div>
               <div className="text-base font-medium text-gray-900">
                 {(() => {
-                  // Show "External Vendor" if no installer name and installation date is set
-                  if (!trainerData?.installerName && trainerData?.installationDate) {
-                    return 'External Vendor'
+                  // If installer name is set, show it
+                  if (trainerData?.installerName) {
+                    return trainerData.installerName
                   }
-                  return trainerData?.installerName || 'Not Assigned'
+                  // If installation date is set but no installer name, check installer type
+                  if (trainerData?.installationDate) {
+                    // Use installerType from parent trainerData object (not nested in trainers array)
+                    const installerType = (trainerData as any)?.installerType
+                    return installerType === 'external' ? 'External Vendor' : 'Not Assigned'
+                  }
+                  return 'Not Assigned'
                 })()}
               </div>
             </div>
@@ -1984,11 +1990,17 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installer Name</div>
               <div className="text-sm font-medium text-gray-900">
                 {(() => {
-                  // Show "External Vendor" if no installer name and installation date is set
-                  if (!trainerData?.installerName && trainerData?.installationDate) {
-                    return 'External Vendor'
+                  // If installer name is set, show it
+                  if (trainerData?.installerName) {
+                    return trainerData.installerName
                   }
-                  return trainerData?.installerName || 'Not Assigned'
+                  // If installation date is set but no installer name, check installer type
+                  if (trainerData?.installationDate) {
+                    // Use installerType from parent trainerData object (not nested in trainers array)
+                    const installerType = (trainerData as any)?.installerType
+                    return installerType === 'external' ? 'External Vendor' : 'Not Assigned'
+                  }
+                  return 'Not Assigned'
                 })()}
               </div>
             </div>
