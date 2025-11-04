@@ -198,12 +198,11 @@ export default function BookingModal({
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00')
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    }
-    return date.toLocaleDateString('en-US', options)
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
   }
 
   if (!isOpen) return null

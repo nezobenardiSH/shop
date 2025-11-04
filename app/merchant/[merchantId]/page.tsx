@@ -616,10 +616,10 @@ function TrainerPortalContent() {
                   </div>
                 </div>
                 <div className="text-sm font-bold text-gray-900">
-                  {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate 
-                    ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
+                  {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate
+                    ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
                         year: 'numeric'
                       })
                     : 'Not Set'}
@@ -683,12 +683,11 @@ function TrainerPortalContent() {
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-gray-900 truncate">
-                    {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate 
-                      ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
+                    {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate
+                      ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
                         })
                       : 'Not Set'}
                   </div>

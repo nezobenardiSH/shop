@@ -29,7 +29,14 @@ export default function PageHeader({
           </h1>
           {lastModifiedDate && (
             <p className="text-xs text-[#6b6a6a]">
-              Last Modified: {new Date(lastModifiedDate).toLocaleString()}
+              Last Modified: {new Date(lastModifiedDate).toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              })}
             </p>
           )}
         </div>
@@ -41,7 +48,14 @@ export default function PageHeader({
           </h1>
           {lastModifiedDate && (
             <p className="text-sm text-[#6b6a6a]">
-              Last Modified: {new Date(lastModifiedDate).toLocaleString()}
+              Last Modified: {new Date(lastModifiedDate).toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              })}
             </p>
           )}
         </div>

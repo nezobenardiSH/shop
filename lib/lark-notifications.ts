@@ -55,6 +55,17 @@ export async function sendCancellationNotification(
 }
 
 /**
+ * Format date to dd/mm/yyyy
+ */
+function formatDateToDDMMYYYY(dateStr: string): string {
+  const date = new Date(dateStr)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${day}/${month}/${year}`
+}
+
+/**
  * Format booking message
  */
 function formatBookingMessage(data: BookingNotificationData): string {
@@ -64,9 +75,12 @@ function formatBookingMessage(data: BookingNotificationData): string {
     w.charAt(0).toUpperCase() + w.slice(1)
   ).join(' ')
 
+  // Format date to dd/mm/yyyy
+  const formattedDate = formatDateToDDMMYYYY(data.date)
+
   let message = `${emoji} ${action} ${typeLabel} Booking\n\n` +
                 `Merchant: ${data.merchantName}\n` +
-                `Date: ${data.date}\n` +
+                `Date: ${formattedDate}\n` +
                 `Time: ${data.startTime} - ${data.endTime}\n`
 
   if (data.onboardingServicesBought) {
@@ -118,16 +132,8 @@ export async function sendExternalVendorNotificationToManager(
 
     const formattedTime = preferredTime.includes(':') ? formatTime(preferredTime) : preferredTime
 
-    // Format date (e.g., "2025-11-12" to "12/11/2025")
-    const formatDate = (date: string) => {
-      const d = new Date(date)
-      const day = String(d.getDate()).padStart(2, '0')
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const year = d.getFullYear()
-      return `${day}/${month}/${year}`
-    }
-
-    const formattedDate = preferredDate.includes('-') ? formatDate(preferredDate) : preferredDate
+    // Format date to dd/mm/yyyy using shared helper
+    const formattedDate = preferredDate.includes('-') ? formatDateToDDMMYYYY(preferredDate) : preferredDate
 
     // Build hardware list
     const hardwareList = hardwareItems.length > 0
@@ -162,10 +168,13 @@ export async function sendExternalVendorNotificationToManager(
 export function createBookingCard(data: BookingNotificationData): any {
   const emoji = data.isRescheduling ? '📅' : '🆕'
   const action = data.isRescheduling ? 'Rescheduled' : 'New'
-  const typeLabel = data.bookingType.split('-').map(w => 
+  const typeLabel = data.bookingType.split('-').map(w =>
     w.charAt(0).toUpperCase() + w.slice(1)
   ).join(' ')
-  
+
+  // Format date to dd/mm/yyyy
+  const formattedDate = formatDateToDDMMYYYY(data.date)
+
   return {
     config: {
       wide_screen_mode: true
@@ -191,7 +200,7 @@ export function createBookingCard(data: BookingNotificationData): any {
           {
             is_short: true,
             text: {
-              content: `**Date:** ${data.date}`,
+              content: `**Date:** ${formattedDate}`,
               tag: 'lark_md'
             }
           },
