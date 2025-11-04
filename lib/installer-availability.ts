@@ -230,17 +230,19 @@ export async function getInternalInstallersAvailability(
   const combinedAvailability: InstallationAvailability[] = []
   const TIME_SLOTS = installersConfig.settings.defaultTimeSlots
 
-  const current = new Date(`${startDate}T00:00:00+08:00`)
-  const end = new Date(`${endDate}T23:59:59+08:00`)
+  // Parse dates directly as strings to avoid timezone conversion issues
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const current = new Date(start)
 
   while (current <= end) {
-    const dayOfWeek = current.getDay()
+    const dayOfWeek = current.getUTCDay()
 
     // Only weekdays (Monday=1 to Friday=5)
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      const year = current.getFullYear()
-      const month = String(current.getMonth() + 1).padStart(2, '0')
-      const day = String(current.getDate()).padStart(2, '0')
+      const year = current.getUTCFullYear()
+      const month = String(current.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(current.getUTCDate()).padStart(2, '0')
       const dateStr = `${year}-${month}-${day}`
       
       const slots = TIME_SLOTS.map(timeSlot => {
@@ -275,8 +277,8 @@ export async function getInternalInstallersAvailability(
         slots
       })
     }
-    
-    current.setDate(current.getDate() + 1)
+
+    current.setUTCDate(current.getUTCDate() + 1)
   }
   
   return combinedAvailability
