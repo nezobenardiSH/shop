@@ -654,6 +654,33 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </button>
               {expandedItems['mobile-product'] && (
                 <div className="pl-12 pr-4 pb-4 space-y-3 pt-3 text-left">
+                  {/* Menu Submission Deadline Notice - Mobile */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="text-sm font-semibold text-red-900 mb-2">
+                      ⚠️ Important: Menu Submission Deadline
+                    </div>
+                    <p className="text-sm text-gray-700">
+                      {trainerData?.actualInstallationDate ? (
+                        <>
+                          Please send us the menu maximum 3 days before the installation date (
+                          <span className="font-semibold text-red-700">
+                            {(() => {
+                              const installDate = new Date(trainerData.actualInstallationDate);
+                              const deadlineDate = new Date(installDate);
+                              deadlineDate.setDate(installDate.getDate() - 3);
+                              return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                            })()}
+                          </span>
+                          ). If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                        </>
+                      ) : (
+                        <>
+                          Please send us the menu maximum 3 days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                        </>
+                      )}
+                    </p>
+                  </div>
+
                   <div>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">Menu Collection Form</div>
                     {trainerData?.menuCollectionFormLink ? (
@@ -1627,6 +1654,33 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 {/* Expanded Details for Product Setup */}
                 {expandedItems['product-setup'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    {/* Menu Submission Deadline Notice */}
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="text-sm font-semibold text-red-900 mb-2">
+                        ⚠️ Important: Menu Submission Deadline
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        {trainerData?.actualInstallationDate ? (
+                          <>
+                            Please send us the menu maximum 3 days before the installation date (
+                            <span className="font-semibold text-red-700">
+                              {(() => {
+                                const installDate = new Date(trainerData.actualInstallationDate);
+                                const deadlineDate = new Date(installDate);
+                                deadlineDate.setDate(installDate.getDate() - 3);
+                                return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                              })()}
+                            </span>
+                            ). If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                          </>
+                        ) : (
+                          <>
+                            Please send us the menu maximum 3 days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                          </>
+                        )}
+                      </p>
+                    </div>
+
                     <div>
                       <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection Form</div>
                       {trainerData?.menuCollectionFormLink ? (
