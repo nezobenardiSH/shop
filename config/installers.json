@@ -75,24 +75,24 @@
   "settings": {
     "defaultTimeSlots": [
       {
-        "start": "09:00",
+        "start": "10:00",
         "end": "11:00",
-        "label": "9:00 AM - 11:00 AM"
+        "label": "10:00 AM - 11:00 AM"
       },
       {
-        "start": "11:00",
+        "start": "12:00",
         "end": "13:00",
-        "label": "11:00 AM - 1:00 PM"
+        "label": "12:00 PM - 1:00 PM"
       },
       {
-        "start": "14:00",
+        "start": "15:00",
         "end": "16:00",
-        "label": "2:00 PM - 4:00 PM"
+        "label": "3:00 PM - 4:00 PM"
       },
       {
-        "start": "16:00",
+        "start": "17:00",
         "end": "18:00",
-        "label": "4:00 PM - 6:00 PM"
+        "label": "5:00 PM - 6:00 PM"
       }
     ],
     "workingDays": [
