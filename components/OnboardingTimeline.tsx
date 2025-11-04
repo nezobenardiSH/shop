@@ -57,7 +57,8 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
   // Hardware delivery is completed when tracking link is provided
   const hardwareDeliveryCompleted = !!trainerData?.trackingLink
   const productSetupCompleted = trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve'
-  const storeSetupCompleted = !!trainerData?.videoProofLink
+  // Store setup is completed when video link exists and is not "NA"
+  const storeSetupCompleted = !!trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA'
 
   const preparationSubStagesCompleted = [
     hardwareDeliveryCompleted,

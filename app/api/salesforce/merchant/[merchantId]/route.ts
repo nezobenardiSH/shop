@@ -91,6 +91,7 @@ export async function GET(
                Video_Proof_Link__c,
                Installation_Date__c,
                Actual_Installation_Date__c,
+               Installation_ST_Ticket_No__c,
                Assigned_Installer__c,
                Training_Date__c,
                CSM_Name__c, CSM_Name__r.Name,
@@ -441,6 +442,7 @@ export async function GET(
         hardwareDeliveryStatus: trainer.Hardware_Delivery_Status__c,
         hardwareInstallationStatus: trainer.Hardware_Installation_Status__c,
         actualInstallationDate: trainer.Actual_Installation_Date__c,
+        installationSTTicketNo: trainer.Installation_ST_Ticket_No__c,
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
         trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
