@@ -658,7 +658,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   {/* Menu Submission Deadline Notice - Mobile */}
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                     <div className="text-sm font-semibold text-red-900 mb-2">
-                      ⚠️ Important: Menu Submission Deadline
+                      ⚠️ Important Reminder
                     </div>
                     <p className="text-sm text-gray-700">
                       {trainerData?.actualInstallationDate ? (
@@ -775,13 +775,33 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               </button>
               {expandedItems['mobile-video'] && (
                 <div className="pl-12 pr-4 pb-4 space-y-3 pt-3 text-left">
-                  <div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">Store Setup Guide</div>
-                    <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
-                       target="_blank" rel="noopener noreferrer"
-                       className="inline-block text-base text-blue-600 hover:text-blue-700">
-                      View Setup Guide
-                    </a>
+                  {/* Important Notices - Mobile */}
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
+                    <div className="text-sm font-semibold text-orange-900">
+                      ⚠️ Important Reminders
+                    </div>
+
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="font-medium text-gray-900 mb-2">1. Video Submission Deadline</p>
+                        <p className="mb-2">
+                          Please send us the video <span className="font-semibold text-orange-700">before the installation date</span>. If we don't receive it by then, we will still go ahead with the installation as planned.
+                        </p>
+                        <p className="text-orange-700 font-medium">
+                          However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, there will be an extra charge of RM200.
+                        </p>
+                        <p className="mt-2 text-gray-600">
+                          We want to help you avoid those extra charges, so please send us the video before the installation date.
+                        </p>
+                      </div>
+
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="font-medium text-gray-900 mb-2">2. Pre-Installation Requirements</p>
+                        <p>
+                          Make sure the <span className="font-semibold">WiFi, LAN cables & power plugs are already set up</span> before the installation date.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Video Checklist Instructions */}
@@ -825,34 +845,17 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         </ul>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Important Notices - Mobile */}
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
-                    <div className="text-sm font-semibold text-orange-900">
-                      ⚠️ Important Reminders
-                    </div>
-
-                    <div className="space-y-2 text-sm text-gray-700">
-                      <div className="bg-white rounded p-3 border border-orange-100">
-                        <p className="font-medium text-gray-900 mb-2">1. Video Submission Deadline</p>
-                        <p className="mb-2">
-                          Please send us the video <span className="font-semibold text-orange-700">before the installation date</span>. If we don't receive it by then, we will still go ahead with the installation as planned.
-                        </p>
-                        <p className="text-orange-700 font-medium">
-                          However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, there will be an extra charge of RM200.
-                        </p>
-                        <p className="mt-2 text-gray-600">
-                          We want to help you avoid those extra charges, so please send us the video before the installation date.
-                        </p>
-                      </div>
-
-                      <div className="bg-white rounded p-3 border border-orange-100">
-                        <p className="font-medium text-gray-900 mb-2">2. Pre-Installation Requirements</p>
-                        <p>
-                          Make sure the <span className="font-semibold">WiFi, LAN cables & power plugs are already set up</span> before the installation date.
-                        </p>
-                      </div>
+                    {/* Guide link inside Quick Tip box */}
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
+                         target="_blank" rel="noopener noreferrer"
+                         className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1">
+                        Guide for your store network setup (cabling and wiring)
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
                     </div>
                   </div>
 
@@ -1668,7 +1671,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     {/* Menu Submission Deadline Notice */}
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                       <div className="text-sm font-semibold text-red-900 mb-2">
-                        ⚠️ Important: Menu Submission Deadline
+                        ⚠️ Important Reminder
                       </div>
                       <p className="text-sm text-gray-700">
                         {trainerData?.actualInstallationDate ? (
@@ -1802,20 +1805,32 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                 {/* Expanded Details for Store Setup */}
                 {expandedItems['store-setup'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Setup Guide</div>
-                      <div className="text-sm font-medium text-gray-900">
-                        <a
-                          href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                        >
-                          Guide for your store network setup (cabling and wiring)
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
+                    {/* Important Notices */}
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
+                      <div className="text-sm font-semibold text-orange-900">
+                        ⚠️ Important Reminders
+                      </div>
+
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <div className="bg-white rounded p-3 border border-orange-100">
+                          <p className="font-medium text-gray-900 mb-2">1. Video Submission Deadline</p>
+                          <p className="mb-2">
+                            Please send us the video <span className="font-semibold text-orange-700">before the installation date</span>. If we don't receive it by then, we will still go ahead with the installation as planned.
+                          </p>
+                          <p className="text-orange-700 font-medium">
+                            However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, there will be an extra charge of RM200.
+                          </p>
+                          <p className="mt-2 text-gray-600">
+                            We want to help you avoid those extra charges, so please send us the video before the installation date.
+                          </p>
+                        </div>
+
+                        <div className="bg-white rounded p-3 border border-orange-100">
+                          <p className="font-medium text-gray-900 mb-2">2. Pre-Installation Requirements</p>
+                          <p>
+                            Make sure the <span className="font-semibold">WiFi, LAN cables & power plugs are already set up</span> before the installation date.
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -1860,34 +1875,20 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           </ul>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Important Notices */}
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
-                      <div className="text-sm font-semibold text-orange-900">
-                        ⚠️ Important Reminders
-                      </div>
-
-                      <div className="space-y-2 text-sm text-gray-700">
-                        <div className="bg-white rounded p-3 border border-orange-100">
-                          <p className="font-medium text-gray-900 mb-2">1. Video Submission Deadline</p>
-                          <p className="mb-2">
-                            Please send us the video <span className="font-semibold text-orange-700">before the installation date</span>. If we don't receive it by then, we will still go ahead with the installation as planned.
-                          </p>
-                          <p className="text-orange-700 font-medium">
-                            However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, there will be an extra charge of RM200.
-                          </p>
-                          <p className="mt-2 text-gray-600">
-                            We want to help you avoid those extra charges, so please send us the video before the installation date.
-                          </p>
-                        </div>
-
-                        <div className="bg-white rounded p-3 border border-orange-100">
-                          <p className="font-medium text-gray-900 mb-2">2. Pre-Installation Requirements</p>
-                          <p>
-                            Make sure the <span className="font-semibold">WiFi, LAN cables & power plugs are already set up</span> before the installation date.
-                          </p>
-                        </div>
+                      {/* Guide link inside Quick Tip box */}
+                      <div className="mt-3 pt-3 border-t border-blue-200">
+                        <a
+                          href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
+                        >
+                          Guide for your store network setup (cabling and wiring)
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
                       </div>
                     </div>
 
