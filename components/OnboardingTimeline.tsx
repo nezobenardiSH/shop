@@ -987,13 +987,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Installation ST Ticket No</div>
-              <div className="text-base font-medium text-gray-900">
-                {trainerData?.installationSTTicketNo || 'Not Available'}
-              </div>
-            </div>
-
-            <div>
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Store Address</div>
               <div className="text-base font-medium text-gray-900">
                 {trainerData?.merchantLocation || 'Not Available'}
@@ -2138,14 +2131,6 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   }
                   return 'Not Assigned'
                 })()}
-              </div>
-            </div>
-
-            {/* Installation ST Ticket No */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation ST Ticket No</div>
-              <div className="text-sm font-medium text-gray-900">
-                {trainerData?.installationSTTicketNo || 'Not Available'}
               </div>
             </div>
 
