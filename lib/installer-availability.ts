@@ -490,16 +490,16 @@ export async function bookInternalInstallation(
     ? hardwareList.join('\n  • ')
     : 'No hardware items found'
 
-  // Use Onboarding Trainer Name (e.g., "Nasi Lemak") from Salesforce
+  // Use Onboarding Trainer Name (e.g., "Nasi Lemak") for the merchant field in description
   // merchantDetails.name is always the correct Onboarding_Trainer__c.Name field
-  const displayName = merchantDetails.name || merchantName
+  const merchantDisplayName = merchantDetails.name || merchantName
 
   const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
 
   const eventDescription = `🔧 Pilot test: automated onboarding flow (manual Intercom ticket required)
 
 📋 Installation Details:
-Merchant Name: ${displayName}
+Merchant: ${merchantDisplayName}
 Merchant Address: ${merchantDetails.address || 'N/A'}
 Invoice Number: ${merchantDetails.invoiceNumber || 'N/A'}
 
@@ -522,7 +522,7 @@ ${merchantDetails.onboardingSummary || 'N/A'}
     eventResponse = await larkService.createCalendarEvent(
       calendarId,
       {
-        summary: `Installation: ${displayName}`,
+        summary: `Installation: ${assignedInstaller}`,
         description: eventDescription,
         start_time: {
           timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString()
