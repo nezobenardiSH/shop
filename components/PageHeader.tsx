@@ -31,7 +31,7 @@ export default function PageHeader({
             <p className="text-xs text-[#6b6a6a]">
               Last Modified: {new Date(lastModifiedDate).toLocaleString('en-GB', {
                 day: '2-digit',
-                month: '2-digit',
+                month: 'short',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
@@ -50,7 +50,7 @@ export default function PageHeader({
             <p className="text-sm text-[#6b6a6a]">
               Last Modified: {new Date(lastModifiedDate).toLocaleString('en-GB', {
                 day: '2-digit',
-                month: '2-digit',
+                month: 'short',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',

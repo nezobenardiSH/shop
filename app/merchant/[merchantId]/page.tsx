@@ -619,7 +619,7 @@ function TrainerPortalContent() {
                   {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate
                     ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-GB', {
                         day: '2-digit',
-                        month: '2-digit',
+                        month: 'short',
                         year: 'numeric'
                       })
                     : 'Not Set'}
@@ -686,7 +686,7 @@ function TrainerPortalContent() {
                     {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate
                       ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-GB', {
                           day: '2-digit',
-                          month: '2-digit',
+                          month: 'short',
                           year: 'numeric'
                         })
                       : 'Not Set'}

@@ -55,14 +55,15 @@ export async function sendCancellationNotification(
 }
 
 /**
- * Format date to dd/mm/yyyy
+ * Format date to dd mmm yyyy (e.g., 04 Nov 2025)
  */
 function formatDateToDDMMYYYY(dateStr: string): string {
   const date = new Date(dateStr)
   const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const month = monthNames[date.getMonth()]
   const year = date.getFullYear()
-  return `${day}/${month}/${year}`
+  return `${day} ${month} ${year}`
 }
 
 /**

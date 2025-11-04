@@ -26,7 +26,7 @@ const formatDateTime = (dateString: string | null | undefined): string => {
   const date = new Date(dateString)
   return date.toLocaleString('en-GB', {
     day: '2-digit',
-    month: '2-digit',
+    month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
@@ -34,14 +34,14 @@ const formatDateTime = (dateString: string | null | undefined): string => {
   })
 }
 
-// Helper function to format date only (dd/mm/yyyy)
+// Helper function to format date only (dd mmm yyyy)
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Not Set'
 
   const date = new Date(dateString)
   return date.toLocaleDateString('en-GB', {
     day: '2-digit',
-    month: '2-digit',
+    month: 'short',
     year: 'numeric'
   })
 }

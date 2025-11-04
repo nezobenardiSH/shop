@@ -200,7 +200,7 @@ export default function BookingModal({
     const date = new Date(dateStr + 'T00:00:00')
     return date.toLocaleDateString('en-GB', {
       day: '2-digit',
-      month: '2-digit',
+      month: 'short',
       year: 'numeric'
     })
   }
