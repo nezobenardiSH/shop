@@ -522,7 +522,7 @@ ${merchantDetails.onboardingSummary || 'N/A'}
     eventResponse = await larkService.createCalendarEvent(
       calendarId,
       {
-        summary: `Installation: ${assignedInstaller}`,
+        summary: `Installation: ${merchantDisplayName}`,  // Use Onboarding Trainer Name (e.g., "activate175")
         description: eventDescription,
         start_time: {
           timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString()
