@@ -592,77 +592,13 @@ ${merchantDetails.onboardingSummary || 'N/A'}
         // Don't throw - allow booking to succeed even if Salesforce update fails
       }
 
-      // Store the Lark event ID and installer in Onboarding_Portal__c object (same pattern as training bookings)
+      // Store the Lark event ID and installer name in Onboarding_Portal__c object
       console.error(`📝 [PORTAL-SAVE] Storing event ID in Onboarding_Portal__c.Installation_Event_ID__c: ${eventId}`)
       console.error(`📏 [PORTAL-SAVE] Event ID length: ${eventId?.length} characters`)
       console.error(`🔍 [PORTAL-SAVE] Merchant ID: ${merchantId}`)
-      console.error(`👤 [PORTAL-SAVE] Installer: ${assignedInstaller} (email: ${installer.email})`)
+      console.error(`👤 [PORTAL-SAVE] Installer: ${assignedInstaller}`)
 
       try {
-        // First, find the User ID by installer email (for Onboarding_Portal__c.Installer_Name__c)
-        // Use 3-tier search strategy like we do for CSM names
-        let installerUserId = null
-        try {
-          console.error(`🔍 [PORTAL-SAVE] Looking up User for installer: ${assignedInstaller} (${installer.email})`)
-
-          // Tier 1: Try exact email match
-          let userQuery = `
-            SELECT Id, Name, Email
-            FROM User
-            WHERE Email = '${installer.email}'
-            AND IsActive = true
-            LIMIT 1
-          `
-          console.error(`🔍 [PORTAL-SAVE] Tier 1: Exact email match query`)
-          let userResult = await conn.query(userQuery)
-
-          if (userResult.totalSize > 0) {
-            installerUserId = userResult.records[0].Id
-            console.error(`✅ [PORTAL-SAVE] Tier 1 SUCCESS: Found User ID: ${installerUserId} (${userResult.records[0].Name})`)
-          } else {
-            console.error(`⚠️ [PORTAL-SAVE] Tier 1 FAILED: No User found with email: ${installer.email}`)
-
-            // Tier 2: Try exact name match
-            userQuery = `
-              SELECT Id, Name, Email
-              FROM User
-              WHERE Name = '${assignedInstaller}'
-              AND IsActive = true
-              LIMIT 1
-            `
-            console.error(`🔍 [PORTAL-SAVE] Tier 2: Exact name match query for: ${assignedInstaller}`)
-            userResult = await conn.query(userQuery)
-
-            if (userResult.totalSize > 0) {
-              installerUserId = userResult.records[0].Id
-              console.error(`✅ [PORTAL-SAVE] Tier 2 SUCCESS: Found User ID: ${installerUserId} (${userResult.records[0].Email})`)
-            } else {
-              console.error(`⚠️ [PORTAL-SAVE] Tier 2 FAILED: No User found with name: ${assignedInstaller}`)
-
-              // Tier 3: Try fuzzy name match (contains)
-              userQuery = `
-                SELECT Id, Name, Email
-                FROM User
-                WHERE Name LIKE '%${assignedInstaller}%'
-                AND IsActive = true
-                LIMIT 1
-              `
-              console.error(`🔍 [PORTAL-SAVE] Tier 3: Fuzzy name match query`)
-              userResult = await conn.query(userQuery)
-
-              if (userResult.totalSize > 0) {
-                installerUserId = userResult.records[0].Id
-                console.error(`✅ [PORTAL-SAVE] Tier 3 SUCCESS: Found User ID: ${installerUserId} (${userResult.records[0].Name}, ${userResult.records[0].Email})`)
-              } else {
-                console.error(`❌ [PORTAL-SAVE] ALL TIERS FAILED: No User found for installer: ${assignedInstaller}`)
-                console.error(`❌ [PORTAL-SAVE] Please ensure a User record exists in Salesforce with email: ${installer.email} or name: ${assignedInstaller}`)
-              }
-            }
-          }
-        } catch (userError: any) {
-          console.error(`❌ [PORTAL-SAVE] Error looking up User:`, userError.message)
-          console.error(`❌ [PORTAL-SAVE] Full error:`, userError)
-        }
         
         // Now find the Portal record
         const portalQuery = `
@@ -688,15 +624,8 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           const updateData: any = {
             Id: portalId,
             Installation_Event_ID__c: eventId,
-            Installation_Date__c: installationDateTime  // Send with timezone offset, not UTC
-          }
-          
-          // Only set Installer_Name__c if we found a User ID
-          if (installerUserId) {
-            updateData.Installer_Name__c = installerUserId
-            console.error(`📝 [PORTAL-SAVE] Setting Installer_Name__c to User ID: ${installerUserId}`)
-          } else {
-            console.error(`⚠️ [PORTAL-SAVE] No installer User ID found - Installer_Name__c will not be set`)
+            Installation_Date__c: installationDateTime,  // Send with timezone offset, not UTC
+            Installer_Name__c: assignedInstaller  // Save installer name as text
           }
 
           console.error(`📦 [PORTAL-SAVE] Final update data:`, JSON.stringify(updateData, null, 2))
@@ -706,7 +635,7 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           // Verify what was actually saved
           if (updateResult.success) {
             const verifyQuery = `
-              SELECT Id, Installation_Event_ID__c, Installation_Date__c, Installer_Name__c, Installer_Name__r.Name
+              SELECT Id, Installation_Event_ID__c, Installation_Date__c, Installer_Name__c
               FROM Onboarding_Portal__c
               WHERE Id = '${portalId}'
               LIMIT 1
@@ -717,8 +646,7 @@ ${merchantDetails.onboardingSummary || 'N/A'}
               console.error(`🔍 [PORTAL-SAVE] VERIFICATION - What was actually saved:`)
               console.error(`   - Installation_Event_ID__c: ${savedRecord.Installation_Event_ID__c}`)
               console.error(`   - Installation_Date__c: ${savedRecord.Installation_Date__c}`)
-              console.error(`   - Installer_Name__c (User ID): ${savedRecord.Installer_Name__c}`)
-              console.error(`   - Installer_Name__r.Name: ${savedRecord.Installer_Name__r?.Name || 'NULL (relationship not populated)'}`)
+              console.error(`   - Installer_Name__c: ${savedRecord.Installer_Name__c}`)
             }
           }
 
@@ -745,21 +673,14 @@ ${merchantDetails.onboardingSummary || 'N/A'}
             Name: `Portal - ${merchantName}`,
             Onboarding_Trainer_Record__c: merchantId,
             Installation_Event_ID__c: eventId,
-            Installation_Date__c: installationDateTime  // Send with timezone offset, not UTC
-          }
-          
-          // Only set Installer_Name__c if we found a User ID
-          if (installerUserId) {
-            createData.Installer_Name__c = installerUserId
-            console.error(`📝 [PORTAL-SAVE] Setting Installer_Name__c to User ID: ${installerUserId}`)
-          } else {
-            console.error(`⚠️ [PORTAL-SAVE] No installer User ID found - Installer_Name__c will not be set`)
+            Installation_Date__c: installationDateTime,  // Send with timezone offset, not UTC
+            Installer_Name__c: assignedInstaller  // Save installer name as text
           }
 
           console.error(`📦 [PORTAL-SAVE] Final create data:`, JSON.stringify(createData, null, 2))
           const createResult = await conn.sobject('Onboarding_Portal__c').create(createData)
           console.error(`✅ [PORTAL-SAVE] Created new Portal record: ${createResult.id}`)
-          console.error(`✅ [PORTAL-SAVE] Successfully created Onboarding_Portal__c with all fields`)
+          console.error(`✅ [PORTAL-SAVE] Successfully created Onboarding_Portal__c with installer name: ${assignedInstaller}`)
         }
       } catch (portalError: any) {
         console.error(`❌ [PORTAL-SAVE] Error storing event ID in Onboarding_Portal__c:`, portalError.message)
