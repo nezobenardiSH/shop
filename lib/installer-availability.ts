@@ -566,39 +566,13 @@ ${merchantDetails.onboardingSummary || 'N/A'}
       const installationDateTime = `${date}T${timeSlot.start}:00+08:00`  // Singapore timezone (GMT+8)
       console.log(`📅 Installation DateTime for Salesforce: ${installationDateTime}`)
 
-      // First, find the User ID by installer email (need this for both Portal and Trainer records)
-      let installerUserId = null
-      try {
-        const userQuery = `
-          SELECT Id, Name
-          FROM User
-          WHERE Email = '${installer.email}'
-          LIMIT 1
-        `
-        console.log(`🔍 Looking up User by email: ${installer.email}`)
-        const userResult = await conn.query(userQuery)
-
-        if (userResult.totalSize > 0) {
-          installerUserId = userResult.records[0].Id
-          console.log(`✅ Found User ID: ${installerUserId} (${userResult.records[0].Name})`)
-        } else {
-          console.log(`⚠️ No User found for email: ${installer.email}`)
-        }
-      } catch (userError: any) {
-        console.error(`❌ Error looking up User:`, userError.message)
-      }
-
-      // Update Onboarding_Trainer__c with installation date, datetime, and installer
+      // Update Onboarding_Trainer__c with both installation date and datetime fields
+      // NOTE: We do NOT update Assigned_Installer__c here - that field is for external vendors only
+      // Internal installer assignment is tracked in Onboarding_Portal__c.Installer_Name__c
       const updateData: any = {
         Id: merchantId,  // Use merchantId directly as it's already the record ID
         Installation_Date__c: dateOnly,  // Date only field
         Installation_Date_Time__c: installationDateTime  // DateTime field with timezone
-      }
-
-      // Add installer User ID if found
-      if (installerUserId) {
-        updateData.Assigned_Installer__c = installerUserId
-        console.log(`📝 Setting Assigned_Installer__c to User ID: ${installerUserId}`)
       }
 
       console.log('📦 Update data for Onboarding_Trainer__c:', JSON.stringify(updateData, null, 2))
@@ -618,13 +592,34 @@ ${merchantDetails.onboardingSummary || 'N/A'}
         // Don't throw - allow booking to succeed even if Salesforce update fails
       }
 
-      // Store the Lark event ID in Onboarding_Portal__c object (same pattern as training bookings)
+      // Store the Lark event ID and installer in Onboarding_Portal__c object (same pattern as training bookings)
       console.error(`📝 [PORTAL-SAVE] Storing event ID in Onboarding_Portal__c.Installation_Event_ID__c: ${eventId}`)
       console.error(`📏 [PORTAL-SAVE] Event ID length: ${eventId?.length} characters`)
       console.error(`🔍 [PORTAL-SAVE] Merchant ID: ${merchantId}`)
       console.error(`👤 [PORTAL-SAVE] Installer: ${assignedInstaller} (email: ${installer.email})`)
 
       try {
+        // First, find the User ID by installer email (for Onboarding_Portal__c.Installer_Name__c)
+        let installerUserId = null
+        try {
+          const userQuery = `
+            SELECT Id, Name
+            FROM User
+            WHERE Email = '${installer.email}'
+            LIMIT 1
+          `
+          console.error(`🔍 [PORTAL-SAVE] Looking up User by email: ${installer.email}`)
+          const userResult = await conn.query(userQuery)
+
+          if (userResult.totalSize > 0) {
+            installerUserId = userResult.records[0].Id
+            console.error(`✅ [PORTAL-SAVE] Found User ID: ${installerUserId} (${userResult.records[0].Name})`)
+          } else {
+            console.error(`⚠️ [PORTAL-SAVE] No User found for email: ${installer.email}`)
+          }
+        } catch (userError: any) {
+          console.error(`❌ [PORTAL-SAVE] Error looking up User:`, userError.message)
+        }
         
         // Now find the Portal record
         const portalQuery = `

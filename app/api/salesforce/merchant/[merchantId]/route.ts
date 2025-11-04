@@ -195,9 +195,33 @@ export async function GET(
         portalData.trainingEventId = portal.Training_Event_ID__c
         portalData.installationEventId = portal.Installation_Event_ID__c
         portalData.installationDate = portal.Installation_Date__c
-        // Get the actual name from the User relationship, not the ID
-        portalData.installerName = portal.Installer_Name__r ? portal.Installer_Name__r.Name : null
         portalData.trainingDate = portal.Training_Date__c
+
+        // Get the actual installer name from the User relationship, not the ID
+        console.log('🔍 Installer_Name__c value:', portal.Installer_Name__c)
+        console.log('🔍 Installer_Name__r value:', portal.Installer_Name__r)
+
+        if (portal.Installer_Name__r && portal.Installer_Name__r.Name) {
+          portalData.installerName = portal.Installer_Name__r.Name
+          console.log('✅ Got installer name from relationship:', portalData.installerName)
+        } else if (portal.Installer_Name__c) {
+          // Fallback: If relationship not populated, query User table separately
+          console.log('⚠️ Installer_Name__c exists but relationship not populated, querying User table...')
+          try {
+            const userQuery = `SELECT Name FROM User WHERE Id = '${portal.Installer_Name__c}' LIMIT 1`
+            const userResult = await conn.query(userQuery)
+            if (userResult.totalSize > 0) {
+              portalData.installerName = userResult.records[0].Name
+              console.log('✅ Got installer name from User query:', portalData.installerName)
+            }
+          } catch (userError) {
+            console.error('❌ Failed to query User for installer name:', userError)
+          }
+        } else {
+          portalData.installerName = null
+          console.log('ℹ️ No installer assigned yet')
+        }
+
         console.log('✅ Found Onboarding_Portal__c record with data:', portalData)
       } else {
         console.log('⚠️ No Onboarding_Portal__c record found for this merchant')
