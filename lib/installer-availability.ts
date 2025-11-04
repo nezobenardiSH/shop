@@ -600,25 +600,68 @@ ${merchantDetails.onboardingSummary || 'N/A'}
 
       try {
         // First, find the User ID by installer email (for Onboarding_Portal__c.Installer_Name__c)
+        // Use 3-tier search strategy like we do for CSM names
         let installerUserId = null
         try {
-          const userQuery = `
-            SELECT Id, Name
+          console.error(`🔍 [PORTAL-SAVE] Looking up User for installer: ${assignedInstaller} (${installer.email})`)
+
+          // Tier 1: Try exact email match
+          let userQuery = `
+            SELECT Id, Name, Email
             FROM User
             WHERE Email = '${installer.email}'
+            AND IsActive = true
             LIMIT 1
           `
-          console.error(`🔍 [PORTAL-SAVE] Looking up User by email: ${installer.email}`)
-          const userResult = await conn.query(userQuery)
+          console.error(`🔍 [PORTAL-SAVE] Tier 1: Exact email match query`)
+          let userResult = await conn.query(userQuery)
 
           if (userResult.totalSize > 0) {
             installerUserId = userResult.records[0].Id
-            console.error(`✅ [PORTAL-SAVE] Found User ID: ${installerUserId} (${userResult.records[0].Name})`)
+            console.error(`✅ [PORTAL-SAVE] Tier 1 SUCCESS: Found User ID: ${installerUserId} (${userResult.records[0].Name})`)
           } else {
-            console.error(`⚠️ [PORTAL-SAVE] No User found for email: ${installer.email}`)
+            console.error(`⚠️ [PORTAL-SAVE] Tier 1 FAILED: No User found with email: ${installer.email}`)
+
+            // Tier 2: Try exact name match
+            userQuery = `
+              SELECT Id, Name, Email
+              FROM User
+              WHERE Name = '${assignedInstaller}'
+              AND IsActive = true
+              LIMIT 1
+            `
+            console.error(`🔍 [PORTAL-SAVE] Tier 2: Exact name match query for: ${assignedInstaller}`)
+            userResult = await conn.query(userQuery)
+
+            if (userResult.totalSize > 0) {
+              installerUserId = userResult.records[0].Id
+              console.error(`✅ [PORTAL-SAVE] Tier 2 SUCCESS: Found User ID: ${installerUserId} (${userResult.records[0].Email})`)
+            } else {
+              console.error(`⚠️ [PORTAL-SAVE] Tier 2 FAILED: No User found with name: ${assignedInstaller}`)
+
+              // Tier 3: Try fuzzy name match (contains)
+              userQuery = `
+                SELECT Id, Name, Email
+                FROM User
+                WHERE Name LIKE '%${assignedInstaller}%'
+                AND IsActive = true
+                LIMIT 1
+              `
+              console.error(`🔍 [PORTAL-SAVE] Tier 3: Fuzzy name match query`)
+              userResult = await conn.query(userQuery)
+
+              if (userResult.totalSize > 0) {
+                installerUserId = userResult.records[0].Id
+                console.error(`✅ [PORTAL-SAVE] Tier 3 SUCCESS: Found User ID: ${installerUserId} (${userResult.records[0].Name}, ${userResult.records[0].Email})`)
+              } else {
+                console.error(`❌ [PORTAL-SAVE] ALL TIERS FAILED: No User found for installer: ${assignedInstaller}`)
+                console.error(`❌ [PORTAL-SAVE] Please ensure a User record exists in Salesforce with email: ${installer.email} or name: ${assignedInstaller}`)
+              }
+            }
           }
         } catch (userError: any) {
           console.error(`❌ [PORTAL-SAVE] Error looking up User:`, userError.message)
+          console.error(`❌ [PORTAL-SAVE] Full error:`, userError)
         }
         
         // Now find the Portal record
@@ -659,6 +702,26 @@ ${merchantDetails.onboardingSummary || 'N/A'}
           console.error(`📦 [PORTAL-SAVE] Final update data:`, JSON.stringify(updateData, null, 2))
           const updateResult = await conn.sobject('Onboarding_Portal__c').update(updateData)
           console.error(`✅ [PORTAL-SAVE] Update result:`, JSON.stringify(updateResult))
+
+          // Verify what was actually saved
+          if (updateResult.success) {
+            const verifyQuery = `
+              SELECT Id, Installation_Event_ID__c, Installation_Date__c, Installer_Name__c, Installer_Name__r.Name
+              FROM Onboarding_Portal__c
+              WHERE Id = '${portalId}'
+              LIMIT 1
+            `
+            const verifyResult = await conn.query(verifyQuery)
+            if (verifyResult.totalSize > 0) {
+              const savedRecord = verifyResult.records[0] as any
+              console.error(`🔍 [PORTAL-SAVE] VERIFICATION - What was actually saved:`)
+              console.error(`   - Installation_Event_ID__c: ${savedRecord.Installation_Event_ID__c}`)
+              console.error(`   - Installation_Date__c: ${savedRecord.Installation_Date__c}`)
+              console.error(`   - Installer_Name__c (User ID): ${savedRecord.Installer_Name__c}`)
+              console.error(`   - Installer_Name__r.Name: ${savedRecord.Installer_Name__r?.Name || 'NULL (relationship not populated)'}`)
+            }
+          }
+
           console.error(`✅ [PORTAL-SAVE] Successfully updated Onboarding_Portal__c`)
         } else {
           console.error(`⚠️ [PORTAL-SAVE] No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
