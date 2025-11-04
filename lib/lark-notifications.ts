@@ -13,6 +13,7 @@ interface BookingNotificationData {
   location?: string
   contactPerson?: string
   contactPhone?: string
+  onboardingServicesBought?: string  // Onboarding Services Bought (to show onsite/remote)
 }
 
 /**
@@ -59,29 +60,33 @@ export async function sendCancellationNotification(
 function formatBookingMessage(data: BookingNotificationData): string {
   const emoji = data.isRescheduling ? '📅' : '🆕'
   const action = data.isRescheduling ? 'Rescheduled' : 'New'
-  const typeLabel = data.bookingType.split('-').map(w => 
+  const typeLabel = data.bookingType.split('-').map(w =>
     w.charAt(0).toUpperCase() + w.slice(1)
   ).join(' ')
-  
+
   let message = `${emoji} ${action} ${typeLabel} Booking\n\n` +
                 `Merchant: ${data.merchantName}\n` +
                 `Date: ${data.date}\n` +
                 `Time: ${data.startTime} - ${data.endTime}\n`
-  
+
+  if (data.onboardingServicesBought) {
+    message += `Service Type: ${data.onboardingServicesBought}\n`
+  }
+
   if (data.location) {
     message += `Location: ${data.location}\n`
   }
-  
+
   if (data.contactPerson) {
     message += `Contact: ${data.contactPerson}\n`
   }
-  
+
   if (data.contactPhone) {
     message += `Phone: ${data.contactPhone}\n`
   }
-  
+
   message += `\nYou have been assigned to this ${data.bookingType.toLowerCase()} session.`
-  
+
   return message
 }
 

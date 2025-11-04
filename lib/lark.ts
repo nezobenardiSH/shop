@@ -1208,6 +1208,8 @@ class LarkService {
       workaroundElaboration?: string  // Workaround elaboration
       merchantPICName?: string  // Merchant PIC Name from Salesforce
       merchantPICPhone?: string  // Merchant PIC Contact Number from Salesforce
+      merchantEmail?: string | null  // Merchant Email from Salesforce
+      onboardingServicesBought?: string  // Onboarding Services Bought (to show onsite/remote)
     },
     trainerEmail: string,
     trainerCalendarId: string,
@@ -1325,6 +1327,12 @@ class LarkService {
         eventTitle = trainerName ? `Training: ${trainerName}` : `Training: ${merchantInfo.name}`
         description = `Onboarding Training Session\n\n`
         description += `Merchant: ${trainerName || merchantInfo.name}\n`
+        if (merchantInfo.merchantEmail) {
+          description += `Email: ${merchantInfo.merchantEmail}\n`
+        }
+        if (merchantInfo.onboardingServicesBought) {
+          description += `Service Type: ${merchantInfo.onboardingServicesBought}\n`
+        }
         if (merchantInfo.language && merchantInfo.language.length > 0) {
           description += `Language: ${merchantInfo.language.join(', ')}\n`
         }

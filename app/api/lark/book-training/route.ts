@@ -171,12 +171,16 @@ export async function POST(request: NextRequest) {
     let fetchedOnboardingSummary: string | undefined
     let fetchedWorkaroundElaboration: string | undefined
 
+    // Fetch merchant email from Salesforce
+    let merchantEmail: string | null = null
+
     try {
       const conn = await getSalesforceConnection()
       if (conn) {
         const trainerQuery = `
           SELECT Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c,
-                 Onboarding_Summary__c, Workaround_Elaboration__c
+                 Onboarding_Summary__c, Workaround_Elaboration__c,
+                 Email__c
           FROM Onboarding_Trainer__c
           WHERE Id = '${merchantId}'
           LIMIT 1
@@ -188,9 +192,11 @@ export async function POST(request: NextRequest) {
           merchantPICPhone = trainerRecord.Merchant_PIC_Contact_Number__c
           fetchedOnboardingSummary = trainerRecord.Onboarding_Summary__c
           fetchedWorkaroundElaboration = trainerRecord.Workaround_Elaboration__c
+          merchantEmail = trainerRecord.Email__c
           console.log('📞 Fetched Merchant PIC contact and additional fields:', {
             merchantPICName,
             merchantPICPhone,
+            merchantEmail,
             fetchedOnboardingSummary: fetchedOnboardingSummary ? 'Yes' : 'No',
             fetchedWorkaroundElaboration: fetchedWorkaroundElaboration ? 'Yes' : 'No'
           })
@@ -248,7 +254,9 @@ export async function POST(request: NextRequest) {
             onboardingSummary: onboardingSummary || fetchedOnboardingSummary,  // Use passed value or fetched from Salesforce
             workaroundElaboration: workaroundElaboration || fetchedWorkaroundElaboration,  // Use passed value or fetched from Salesforce
             merchantPICName: merchantPICName,  // Merchant PIC Name from Salesforce
-            merchantPICPhone: merchantPICPhone  // Merchant PIC Contact Number from Salesforce
+            merchantPICPhone: merchantPICPhone,  // Merchant PIC Contact Number from Salesforce
+            merchantEmail: merchantEmail,  // Merchant Email from Salesforce
+            onboardingServicesBought: onboardingServicesBought  // Onboarding Services Bought (to show onsite/remote)
           },
           trainer.email,
           calendarId,
@@ -583,7 +591,8 @@ export async function POST(request: NextRequest) {
         location: merchantAddress,
         // Use Merchant PIC contact if available, otherwise fall back to provided contact
         contactPerson: merchantPICName || merchantContactPerson,
-        contactPhone: merchantPICPhone || merchantPhone
+        contactPhone: merchantPICPhone || merchantPhone,
+        onboardingServicesBought: onboardingServicesBought  // Add onboarding services bought to notification
       })
       console.log('📧 Notification sent to trainer:', trainer.email)
     } catch (notificationError) {
