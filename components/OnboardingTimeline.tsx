@@ -696,7 +696,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">Menu Collection Form</div>
                     {trainerData?.menuCollectionFormLink ? (
                       <a href={trainerData.menuCollectionFormLink} target="_blank" rel="noopener noreferrer"
-                         className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-xs font-medium rounded transition-all duration-200">
+                         className="inline-flex items-center px-3 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
                         Submit Form
                       </a>
                     ) : (
@@ -910,8 +910,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <button
                       onClick={() => document.getElementById(`mobile-video-upload-${trainerData?.id}`)?.click()}
                       disabled={uploadingVideo}
-                      className="px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200"
+                      className="inline-flex items-center px-3 py-2 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:cursor-not-allowed"
                     >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                      </svg>
                       {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
                     </button>
                   </div>
@@ -942,25 +945,25 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </>
                 )
               })()}
-              <div className="flex items-center justify-between">
-                <span className="text-base font-medium text-gray-900">
+              <div>
+                <div className="text-base font-medium text-gray-900 mb-2">
                   {trainerData?.installationDate
                     ? formatDateTime(trainerData.installationDate)
                     : 'Not Scheduled'}
-                </span>
+                </div>
                 {(() => {
                   const isPastDate = trainerData?.installationDate && new Date(trainerData.installationDate) < new Date()
                   return (
                     <button
                       onClick={() => !isPastDate && handleBookingClick('installation', trainerData?.installationDate)}
                       disabled={isPastDate}
-                      className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-all duration-200 ${
+                      className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
                         isPastDate
                           ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#ff630f] hover:bg-[#fe5b25]'
+                          : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                       }`}
                     >
-                      {trainerData?.installationDate ? 'Reschedule' : 'Schedule'}
+                      {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
                     </button>
                   )
                 })()}
@@ -1038,25 +1041,25 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
           <div className="space-y-4">
             <div>
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Training Date</div>
-              <div className="flex items-center justify-between">
-                <span className="text-base font-medium text-gray-900">
+              <div>
+                <div className="text-base font-medium text-gray-900 mb-2">
                   {trainerData?.trainingDate
                     ? formatDateTime(trainerData.trainingDate)
                     : 'Not Scheduled'}
-                </span>
+                </div>
                 {(() => {
                   const isPastDate = trainerData?.trainingDate && new Date(trainerData.trainingDate) < new Date()
                   return (
                     <button
                       onClick={() => !isPastDate && handleBookingClick('training', trainerData?.trainingDate)}
                       disabled={isPastDate}
-                      className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-all duration-200 ${
+                      className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
                         isPastDate
                           ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#ff630f] hover:bg-[#fe5b25]'
+                          : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                       }`}
                     >
-                      {trainerData?.trainingDate ? 'Reschedule' : 'Schedule'}
+                      {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
                     </button>
                   )
                 })()}
@@ -1460,7 +1463,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             {/* 1. Hardware Delivery */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
-                <div className="flex items-center justify-between">
+                <button
+                  onClick={() => toggleItemExpansion('hardware-delivery')}
+                  className="w-full flex items-center justify-between text-left"
+                >
                   <div className="flex items-center gap-3">
                     {(() => {
                       // Hardware Delivery status icons
@@ -1507,16 +1513,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         return <span className="text-orange-600">Pending</span>;
                       })()}
                     </div>
-                    <button
-                      onClick={() => toggleItemExpansion('hardware-delivery')}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <svg className={`w-4 h-4 transition-transform ${expandedItems['hardware-delivery'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
+                    <svg className={`w-4 h-4 transition-transform text-gray-400 ${expandedItems['hardware-delivery'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                </div>
+                </button>
 
                 {/* Expanded Details for Hardware Delivery */}
                 {expandedItems['hardware-delivery'] && (
@@ -1605,7 +1606,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             {/* 2. Product Setup */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
-                <div className="flex items-center justify-between">
+                <button
+                  onClick={() => toggleItemExpansion('product-setup')}
+                  className="w-full flex items-center justify-between text-left"
+                >
                   <div className="flex items-center gap-3">
                     {(() => {
                       const productComplete = trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve';
@@ -1647,16 +1651,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         return <span className="text-orange-600">Pending Menu</span>;
                       })()}
                     </div>
-                    <button
-                      onClick={() => toggleItemExpansion('product-setup')}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <svg className={`w-4 h-4 transition-transform ${expandedItems['product-setup'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
+                    <svg className={`w-4 h-4 transition-transform text-gray-400 ${expandedItems['product-setup'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                </div>
+                </button>
 
                 {/* Expanded Details for Product Setup */}
                 {expandedItems['product-setup'] && (
@@ -1705,7 +1704,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           href={trainerData.menuCollectionFormLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center px-3 py-1 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-medium rounded transition-all duration-200"
+                          className="inline-flex items-center px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
                         >
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -1755,7 +1754,10 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
             {/* 3. Store Setup */}
             <div className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
               <div className="p-3">
-                <div className="flex items-center justify-between">
+                <button
+                  onClick={() => toggleItemExpansion('store-setup')}
+                  className="w-full flex items-center justify-between text-left"
+                >
                   <div className="flex items-center gap-3">
                     {(() => {
                       const storeSetupComplete = !!trainerData?.videoProofLink;
@@ -1784,16 +1786,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         <span className="text-orange-600">Pending Upload</span>
                       )}
                     </div>
-                    <button
-                      onClick={() => toggleItemExpansion('store-setup')}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <svg className={`w-4 h-4 transition-transform ${expandedItems['store-setup'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
+                    <svg className={`w-4 h-4 transition-transform text-gray-400 ${expandedItems['store-setup'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                </div>
+                </button>
 
                 {/* Expanded Details for Store Setup */}
                 {expandedItems['store-setup'] && (
@@ -1950,8 +1947,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           <button
                             onClick={() => document.getElementById(`store-video-upload-${trainerData?.id}`)?.click()}
                             disabled={uploadingVideo}
-                            className="inline-flex items-center px-2 py-1 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-xs font-medium rounded transition-all duration-200 disabled:cursor-not-allowed"
+                            className="inline-flex items-center px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:cursor-not-allowed"
                           >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                            </svg>
                             {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Store Setup Video')}
                           </button>
                         </div>
@@ -2098,16 +2098,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <button
                       onClick={() => !isPastDate && handleBookingClick('installation', trainerData?.installationDate)}
                       disabled={isPastDate}
-                      className={`inline-flex items-center px-2 py-1 text-white text-xs font-medium rounded transition-all duration-200 ${
+                      className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
                         isPastDate
                           ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#ff630f] hover:bg-[#fe5b25]'
+                          : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                       }`}
                     >
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      {trainerData?.installationDate ? 'Reschedule' : 'Schedule'}
+                      {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
                     </button>
                   )
                 })()}
@@ -2222,16 +2222,16 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <button
                       onClick={() => !isPastDate && handleBookingClick('training', trainerData?.trainingDate)}
                       disabled={isPastDate}
-                      className={`inline-flex items-center px-2 py-1 text-white text-xs font-medium rounded transition-all duration-200 ${
+                      className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
                         isPastDate
                           ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#ff630f] hover:bg-[#fe5b25]'
+                          : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                       }`}
                     >
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      {trainerData?.trainingDate ? 'Reschedule' : 'Schedule'}
+                      {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
                     </button>
                   )
                 })()}
