@@ -494,6 +494,10 @@ export async function bookInternalInstallation(
   // merchantDetails.name is always the correct Onboarding_Trainer__c.Name field
   const merchantDisplayName = merchantDetails.name || merchantName
 
+  console.error(`🏷️ [EVENT-TITLE] merchantDetails.name: ${merchantDetails.name}`)
+  console.error(`🏷️ [EVENT-TITLE] merchantName (parameter): ${merchantName}`)
+  console.error(`🏷️ [EVENT-TITLE] merchantDisplayName (final): ${merchantDisplayName}`)
+
   const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
 
   const eventDescription = `🔧 Pilot test: automated onboarding flow (manual Intercom ticket required)
