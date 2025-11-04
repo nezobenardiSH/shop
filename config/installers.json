@@ -5,12 +5,6 @@
     "scheduling": "calendar",
     "installers": [
       {
-        "name": "Nejojo",
-        "email": "nezo.benardi@storehub.com",
-        "larkCalendarId": "",
-        "isActive": true
-      },
-      {
         "name": "Fattah",
         "email": "fattah.osman@storehub.com",
         "larkCalendarId": "",

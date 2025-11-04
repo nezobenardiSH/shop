@@ -1,21 +1,6 @@
 {
   "trainers": [
     {
-      "name": "Nezo Benardi",
-      "email": "nezo.benardi@storehub.com",
-      "calendarId": "primary",
-      "salesforceId": "",
-      "languages": [
-        "English",
-        "Bahasa Malaysia"
-      ],
-      "location": [
-        "Within Klang Valley"
-      ],
-      "larkUserId": "ou_bc49381e883793739ca325f982c21c80",
-      "larkOpenId": "ou_bc49381e883793739ca325f982c21c80"
-    },
-    {
       "name": "John Lai",
       "email": "john.lai@storehub.com",
       "calendarId": "primary",
