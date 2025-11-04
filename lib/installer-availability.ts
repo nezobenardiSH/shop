@@ -484,9 +484,9 @@ export async function bookInternalInstallation(
   let eventResponse: any
   let eventId: string
 
-  // Build hardware list for description
+  // Build hardware list for description with proper formatting
   const hardwareListText = hardwareList.length > 0
-    ? hardwareList.join(' • ')
+    ? hardwareList.map(item => `  • ${item}`).join('\n')
     : 'No hardware items found'
 
   // Use Onboarding Trainer Name (e.g., "Nasi Lemak") for the merchant field in description
@@ -499,12 +499,25 @@ export async function bookInternalInstallation(
 
   const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
 
-  // Build description with location included (location field causes Lark API validation errors)
+  // Build description with structured formatting
   let eventDescription = ''
+
+  // Location
   if (merchantDetails.address) {
-    eventDescription = `📍 Location: ${merchantDetails.address}\n\n`
+    eventDescription += `📍 Location:\n${merchantDetails.address}\n\n`
   }
-  eventDescription += `${hardwareListText} • ${merchantDetails.primaryContactName || 'N/A'} (${merchantDetails.primaryContactPhone || 'N/A'}) • MSM: ${merchantDetails.msmName || 'N/A'} • ${salesforceUrl}`
+
+  // Hardware items
+  eventDescription += `🛠️ Hardware Items:\n${hardwareListText}\n\n`
+
+  // Contact information
+  eventDescription += `👤 Contact: ${merchantDetails.primaryContactName || 'N/A'} (${merchantDetails.primaryContactPhone || 'N/A'})\n\n`
+
+  // MSM
+  eventDescription += `👨‍💼 MSM: ${merchantDetails.msmName || 'N/A'}\n\n`
+
+  // Salesforce link
+  eventDescription += `🔗 Salesforce: ${salesforceUrl}`
 
   try {
     eventResponse = await larkService.createCalendarEvent(
