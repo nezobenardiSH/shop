@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-      
+
       const result = await bookInternalInstallation(
         merchantId,
-        merchantName,
+        onboardingTrainerName || merchantName,  // Use Onboarding Trainer Name (e.g., "activate175")
         date,
         timeSlot,
         availableInstallers,
