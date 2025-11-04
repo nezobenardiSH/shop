@@ -487,8 +487,8 @@ export async function bookInternalInstallation(
 
   // Build detailed description for calendar event
   const hardwareListText = hardwareList.length > 0
-    ? hardwareList.join('\n  • ')
-    : 'No hardware items found'
+    ? hardwareList.map(item => `  • ${item}`).join('\n')
+    : '  • No hardware items found'
 
   // Use Onboarding Trainer Name (e.g., "Nasi Lemak") for the merchant field in description
   // merchantDetails.name is always the correct Onboarding_Trainer__c.Name field
@@ -513,7 +513,7 @@ Name: ${merchantDetails.primaryContactName || 'N/A'}
 Phone: ${merchantDetails.primaryContactPhone || 'N/A'}
 
 📦 List of Hardware (Non-Software):
-  • ${hardwareListText}
+${hardwareListText}
 
 👨‍💼 MSM Name: ${merchantDetails.msmName || 'N/A'}
 
@@ -720,7 +720,8 @@ ${merchantDetails.onboardingSummary || 'N/A'}
       bookingType: 'installation',
       isRescheduling: !!existingEventId,
       assignedPersonName: assignedInstaller,
-      assignedPersonEmail: installer.email
+      assignedPersonEmail: installer.email,
+      location: merchantDetails.address  // Add merchant address to notification
     })
     console.log('📧 Notification sent to installer:', installer.email)
   } catch (notificationError) {
