@@ -666,13 +666,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           <span className="font-semibold text-red-700">
                             {(() => {
                               const installDate = new Date(trainerData.actualInstallationDate);
-                              const deadlineDate = new Date(installDate);
+                              let deadlineDate = new Date(installDate);
                               let workingDaysToSubtract = 3;
-                              let daysSubtracted = 0;
 
                               while (workingDaysToSubtract > 0) {
-                                daysSubtracted++;
-                                deadlineDate.setDate(installDate.getDate() - daysSubtracted);
+                                deadlineDate.setDate(deadlineDate.getDate() - 1);
                                 const dayOfWeek = deadlineDate.getDay();
                                 // Skip weekends (0 = Sunday, 6 = Saturday)
                                 if (dayOfWeek !== 0 && dayOfWeek !== 6) {
@@ -1678,13 +1676,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                             <span className="font-semibold text-red-700">
                               {(() => {
                                 const installDate = new Date(trainerData.actualInstallationDate);
-                                const deadlineDate = new Date(installDate);
+                                let deadlineDate = new Date(installDate);
                                 let workingDaysToSubtract = 3;
-                                let daysSubtracted = 0;
 
                                 while (workingDaysToSubtract > 0) {
-                                  daysSubtracted++;
-                                  deadlineDate.setDate(installDate.getDate() - daysSubtracted);
+                                  deadlineDate.setDate(deadlineDate.getDate() - 1);
                                   const dayOfWeek = deadlineDate.getDay();
                                   // Skip weekends (0 = Sunday, 6 = Saturday)
                                   if (dayOfWeek !== 0 && dayOfWeek !== 6) {
