@@ -437,7 +437,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">First Call Timestamp</div>
               <div className="text-base font-medium text-gray-900">
                 {trainerData?.firstCallTimestamp
-                  ? new Date(trainerData.firstCallTimestamp).toLocaleString()
+                  ? formatDateTime(trainerData.firstCallTimestamp)
                   : 'Not Recorded'}
               </div>
             </div>
@@ -456,7 +456,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   <span className="text-sm text-gray-600">Go live date:</span>
                   <span className="text-sm font-medium text-gray-900">
                     {trainerData?.plannedGoLiveDate
-                      ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString()
+                      ? formatDate(trainerData.plannedGoLiveDate)
                       : 'Not Set'}
                   </span>
                 </div>
@@ -464,7 +464,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   <span className="text-sm text-gray-600">Hardware delivery:</span>
                   <span className="text-sm font-medium text-gray-900">
                     {trainerData?.hardwareFulfillmentDate
-                      ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                      ? formatDate(trainerData.hardwareFulfillmentDate)
                       : 'Not Set'}
                   </span>
                 </div>
@@ -593,7 +593,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     </div>
                     <div className="text-base text-gray-900">
                       {trainerData?.hardwareFulfillmentDate
-                        ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                        ? formatDate(trainerData.hardwareFulfillmentDate)
                         : 'Not Scheduled'}
                     </div>
                   </div>
@@ -669,7 +669,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Submission Timestamp</div>
                     <div className="text-base text-gray-900">
                       {trainerData?.menuCollectionSubmissionTimestamp
-                        ? new Date(trainerData.menuCollectionSubmissionTimestamp).toLocaleString()
+                        ? formatDateTime(trainerData.menuCollectionSubmissionTimestamp)
                         : 'Not Submitted'}
                     </div>
                   </div>
@@ -934,7 +934,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Actual Installation Date</div>
               <div className="text-sm font-medium text-gray-900">
                 {trainerData?.actualInstallationDate
-                  ? new Date(trainerData.actualInstallationDate).toLocaleDateString()
+                  ? formatDate(trainerData.actualInstallationDate)
                   : 'Not Completed'}
               </div>
             </div>
@@ -1529,7 +1529,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         </div>
                         <div className="text-sm text-gray-900">
                           {trainerData?.hardwareFulfillmentDate
-                            ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                            ? formatDate(trainerData.hardwareFulfillmentDate)
                             : 'Not Scheduled'}
                         </div>
                       </div>
@@ -1620,7 +1620,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                       <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection Submission Timestamp</div>
                       <div className="text-sm text-gray-900">
                         {trainerData?.menuCollectionSubmissionTimestamp
-                          ? new Date(trainerData.menuCollectionSubmissionTimestamp).toLocaleString()
+                          ? formatDateTime(trainerData.menuCollectionSubmissionTimestamp)
                           : 'Not Submitted'}
                       </div>
                     </div>
@@ -1872,7 +1872,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Call Timestamp</div>
               <div className="text-sm font-medium text-gray-900">
                 {trainerData?.firstCallTimestamp
-                  ? new Date(trainerData.firstCallTimestamp).toLocaleString()
+                  ? formatDateTime(trainerData.firstCallTimestamp)
                   : 'Not Recorded'}
               </div>
             </div>
@@ -1893,7 +1893,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   <span className="text-sm text-gray-600">• Go live date:</span>
                   <span className="text-sm font-medium text-gray-900">
                     {trainerData?.plannedGoLiveDate
-                      ? new Date(trainerData.plannedGoLiveDate).toLocaleDateString()
+                      ? formatDate(trainerData.plannedGoLiveDate)
                       : 'Not Set'}
                   </span>
                 </div>
@@ -1901,7 +1901,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   <span className="text-sm text-gray-600">• Hardware delivery date:</span>
                   <span className="text-sm font-medium text-gray-900">
                     {trainerData?.hardwareFulfillmentDate
-                      ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                      ? formatDate(trainerData.hardwareFulfillmentDate)
                       : 'Not Set'}
                   </span>
                 </div>
@@ -2047,7 +2047,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Actual Installation Date</div>
               <div className="text-sm font-medium text-gray-900">
                 {trainerData?.actualInstallationDate
-                  ? new Date(trainerData.actualInstallationDate).toLocaleDateString()
+                  ? formatDate(trainerData.actualInstallationDate)
                   : 'Not Completed'}
               </div>
             </div>
@@ -2207,7 +2207,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </div>
                   <span className="text-sm text-gray-500">
                     {trainerData?.hardwareFulfillmentDate
-                      ? new Date(trainerData.hardwareFulfillmentDate).toLocaleDateString()
+                      ? formatDate(trainerData.hardwareFulfillmentDate)
                       : 'Pending'}
                   </span>
                 </div>
@@ -2293,7 +2293,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                   </div>
                   <span className="text-sm text-gray-500">
                     {trainerData?.subscriptionActivationDate
-                      ? new Date(trainerData.subscriptionActivationDate).toLocaleDateString()
+                      ? formatDate(trainerData.subscriptionActivationDate)
                       : 'Pending'}
                   </span>
                 </div>
