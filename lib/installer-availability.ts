@@ -497,8 +497,12 @@ export async function bookInternalInstallation(
 
   const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
 
-  // Simplified description - location field will show address separately
-  const eventDescription = `${hardwareListText} • ${merchantDetails.primaryContactName || 'N/A'} (${merchantDetails.primaryContactPhone || 'N/A'}) • MSM: ${merchantDetails.msmName || 'N/A'} • ${salesforceUrl}`
+  // Build description with location included (location field causes Lark API validation errors)
+  let eventDescription = ''
+  if (merchantDetails.address) {
+    eventDescription = `📍 Location: ${merchantDetails.address}\n\n`
+  }
+  eventDescription += `${hardwareListText} • ${merchantDetails.primaryContactName || 'N/A'} (${merchantDetails.primaryContactPhone || 'N/A'}) • MSM: ${merchantDetails.msmName || 'N/A'} • ${salesforceUrl}`
 
   try {
     eventResponse = await larkService.createCalendarEvent(
@@ -506,7 +510,8 @@ export async function bookInternalInstallation(
       {
         summary: `Installation: ${merchantDisplayName}`,  // Use Onboarding Trainer Name (e.g., "activate175")
         description: eventDescription,
-        location: merchantDetails.address || 'N/A',  // Add location field for proper display in calendar
+        // Note: location field is NOT included because Lark API rejects it with validation errors
+        // The address is included in the description instead
         start_time: {
           timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString()
         },
