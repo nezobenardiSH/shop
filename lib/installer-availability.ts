@@ -58,19 +58,16 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
       shippingState
     })
     
-    // Check if already assigned to external vendor (Surfstek)
-    // This takes precedence over location-based logic
-    if (assignedInstaller && assignedInstaller.toLowerCase() === 'surfstek') {
-      console.log('📦 Assigned to Surfstek - treating as external vendor')
-      return 'external'
-    }
-    
-    // Check location value from Salesforce
+    // Location takes precedence over Assigned_Installer__c field
+    // Check location value from Salesforce first
     if (merchantLocation === 'Within Klang Valley') {
+      console.log('✅ Within Klang Valley - using internal installers')
       return 'internal'
     } else if (merchantLocation === 'Penang') {
+      console.log('✅ Penang - using internal installers')
       return 'internal'
     } else if (merchantLocation === 'Johor Bahru') {
+      console.log('✅ Johor Bahru - using internal installers')
       return 'internal'
     } else if (merchantLocation === 'Outside of Klang Valley') {
       // Fallback: Check shipping address for specific cities we cover
