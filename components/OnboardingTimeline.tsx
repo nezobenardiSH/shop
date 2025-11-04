@@ -662,12 +662,24 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     <p className="text-sm text-gray-700">
                       {trainerData?.actualInstallationDate ? (
                         <>
-                          Please send us the menu maximum 3 days before the installation date (
+                          Please send us the menu maximum 3 working days before the installation date (
                           <span className="font-semibold text-red-700">
                             {(() => {
                               const installDate = new Date(trainerData.actualInstallationDate);
                               const deadlineDate = new Date(installDate);
-                              deadlineDate.setDate(installDate.getDate() - 3);
+                              let workingDaysToSubtract = 3;
+                              let daysSubtracted = 0;
+
+                              while (workingDaysToSubtract > 0) {
+                                daysSubtracted++;
+                                deadlineDate.setDate(installDate.getDate() - daysSubtracted);
+                                const dayOfWeek = deadlineDate.getDay();
+                                // Skip weekends (0 = Sunday, 6 = Saturday)
+                                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                                  workingDaysToSubtract--;
+                                }
+                              }
+
                               return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                             })()}
                           </span>
@@ -675,7 +687,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         </>
                       ) : (
                         <>
-                          Please send us the menu maximum 3 days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                          Please send us the menu maximum 3 working days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
                         </>
                       )}
                     </p>
@@ -1662,12 +1674,24 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                       <p className="text-sm text-gray-700">
                         {trainerData?.actualInstallationDate ? (
                           <>
-                            Please send us the menu maximum 3 days before the installation date (
+                            Please send us the menu maximum 3 working days before the installation date (
                             <span className="font-semibold text-red-700">
                               {(() => {
                                 const installDate = new Date(trainerData.actualInstallationDate);
                                 const deadlineDate = new Date(installDate);
-                                deadlineDate.setDate(installDate.getDate() - 3);
+                                let workingDaysToSubtract = 3;
+                                let daysSubtracted = 0;
+
+                                while (workingDaysToSubtract > 0) {
+                                  daysSubtracted++;
+                                  deadlineDate.setDate(installDate.getDate() - daysSubtracted);
+                                  const dayOfWeek = deadlineDate.getDay();
+                                  // Skip weekends (0 = Sunday, 6 = Saturday)
+                                  if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                                    workingDaysToSubtract--;
+                                  }
+                                }
+
                                 return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                               })()}
                             </span>
@@ -1675,7 +1699,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           </>
                         ) : (
                           <>
-                            Please send us the menu maximum 3 days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                            Please send us the menu maximum 3 working days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
                           </>
                         )}
                       </p>
