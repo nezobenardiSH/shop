@@ -686,7 +686,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                         </svg>
                         {/* Tooltip */}
                         <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                          Product setup will be completed within 3 days of menu submission
+                          Product setup will be completed within 3 working days of menu submission
                           <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                         </div>
                       </div>
@@ -1667,7 +1667,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           </svg>
                           {/* Tooltip */}
                           <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                            Product setup will be completed within 3 days of menu submission
+                            Product setup will be completed within 3 working days of menu submission
                             <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                           </div>
                         </div>
