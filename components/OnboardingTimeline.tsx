@@ -789,6 +789,35 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     </div>
                   </div>
 
+                  {/* Important Notices - Mobile */}
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
+                    <div className="text-sm font-semibold text-orange-900">
+                      ⚠️ Important Reminders
+                    </div>
+
+                    <div className="space-y-2 text-sm text-gray-700">
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="font-medium text-gray-900 mb-2">1. Video Submission Deadline</p>
+                        <p className="mb-2">
+                          Please send us the video <span className="font-semibold text-orange-700">before the installation date</span>. If we don't receive it by then, we will still go ahead with the installation as planned.
+                        </p>
+                        <p className="text-orange-700 font-medium">
+                          However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, there will be an extra charge of RM200.
+                        </p>
+                        <p className="mt-2 text-gray-600">
+                          We want to help you avoid those extra charges, so please send us the video before the installation date.
+                        </p>
+                      </div>
+
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="font-medium text-gray-900 mb-2">2. Pre-Installation Requirements</p>
+                        <p>
+                          Make sure the <span className="font-semibold">WiFi, LAN cables & power plugs are already set up</span> before the installation date.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Video Proof Status</div>
                     <div className="text-base text-gray-900">
@@ -1754,6 +1783,35 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                             <li><span className="font-medium">Zoom in on:</span> Its power socket and LAN port.</li>
                             <li><span className="font-medium">Say:</span> "Bar ready!"</li>
                           </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Important Notices */}
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
+                      <div className="text-sm font-semibold text-orange-900">
+                        ⚠️ Important Reminders
+                      </div>
+
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <div className="bg-white rounded p-3 border border-orange-100">
+                          <p className="font-medium text-gray-900 mb-2">1. Video Submission Deadline</p>
+                          <p className="mb-2">
+                            Please send us the video <span className="font-semibold text-orange-700">before the installation date</span>. If we don't receive it by then, we will still go ahead with the installation as planned.
+                          </p>
+                          <p className="text-orange-700 font-medium">
+                            However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, there will be an extra charge of RM200.
+                          </p>
+                          <p className="mt-2 text-gray-600">
+                            We want to help you avoid those extra charges, so please send us the video before the installation date.
+                          </p>
+                        </div>
+
+                        <div className="bg-white rounded p-3 border border-orange-100">
+                          <p className="font-medium text-gray-900 mb-2">2. Pre-Installation Requirements</p>
+                          <p>
+                            Make sure the <span className="font-semibold">WiFi, LAN cables & power plugs are already set up</span> before the installation date.
+                          </p>
                         </div>
                       </div>
                     </div>
