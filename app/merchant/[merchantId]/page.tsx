@@ -640,11 +640,24 @@ function TrainerPortalContent() {
   // Get merchant name from API response
   const merchantName = trainerData?.success && trainerData?.name ? trainerData.name : 'Loading...'
 
-  // Track page view with stage parameter
+  // Track page view with all URL parameters
   usePageTracking(
     merchantId,
     merchantName !== 'Loading...' ? merchantName : undefined,
-    currentStage ? `progress?stage=${currentStage}` : 'progress'
+    (() => {
+      const params = new URLSearchParams()
+      if (currentStage) params.append('stage', currentStage)
+      const bookingParam = searchParams.get('booking')
+      if (bookingParam) params.append('booking', bookingParam)
+      // Add any other parameters from the URL
+      searchParams.forEach((value, key) => {
+        if (key !== 'stage' && key !== 'booking') {
+          params.append(key, value)
+        }
+      })
+      const queryString = params.toString()
+      return queryString ? `progress?${queryString}` : 'progress'
+    })()
   )
 
   return (
