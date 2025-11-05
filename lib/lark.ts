@@ -552,21 +552,12 @@ class LarkService {
       // Step 2: Query Calendar Events API (gets primary calendar with recurring events)
       console.log('🔍 Step 2: Querying Calendar Events API for primary calendar events...')
 
-      let calendarId: string
-      try {
-        console.log(`🔍 Resolving calendar ID for availability checking using CalendarIdManager...`)
-        const { CalendarIdManager } = await import('@/lib/calendar-id-manager')
-        calendarId = await CalendarIdManager.getResolvedCalendarId(trainerEmail)
-        console.log(`📅 Using resolved calendar ID for availability: ${calendarId}`)
-      } catch (error) {
-        console.log(`⚠️ CalendarIdManager failed, using fallback logic:`, error)
-        // Fallback to old logic if CalendarIdManager fails
-        const tokenData = await import('@/lib/lark-oauth-service').then(m =>
-          m.larkOAuthService.getAuthorizedTrainers()
-        )
-        const trainer = tokenData.find(t => t.email === trainerEmail)
-        calendarId = trainer?.calendarId || 'primary'
-      }
+      // CRITICAL FIX: Always use 'primary' for availability checking
+      // The stored calendarId might be a group calendar, but we need to check the user's PRIMARY calendar
+      // where their personal events (installations, meetings, etc.) are stored
+      const calendarId = 'primary'
+      console.log(`📅 Using PRIMARY calendar for availability checking (not group calendar)`)
+      console.log(`   This ensures we check the user's personal calendar where events are actually stored`)
 
       const timeMin = Math.floor(startDate.getTime() / 1000)
       const timeMax = Math.floor(endDate.getTime() / 1000)
