@@ -25,6 +25,8 @@ interface TimeSeriesDataPoint {
   pageViews: number
   uniqueSessions: number
   uniqueMerchants: number
+  merchantPageViews: number
+  internalPageViews: number
 }
 
 interface TopMerchant {
@@ -579,7 +581,19 @@ export default function AnalyticsPage() {
 
             {/* Time Series Chart */}
             <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Page Views Over Time</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Page Views Over Time</h2>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                    <span className="text-gray-600">Merchants</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-purple-500 rounded"></div>
+                    <span className="text-gray-600">Internal Team</span>
+                  </div>
+                </div>
+              </div>
               {analyticsData.timeSeriesData.length > 0 ? (
                 <div className="overflow-x-auto">
                   <div className="min-w-full">
@@ -603,21 +617,49 @@ export default function AnalyticsPage() {
 
                       {/* Chart area */}
                       <div className="flex-1">
-                        {/* Bar chart */}
+                        {/* Stacked Bar chart */}
                         <div className="relative h-64 border-l border-b border-gray-300 pl-2 pb-2">
                           <div className="absolute inset-0 flex items-end justify-between gap-1 pl-2 pb-2">
                             {analyticsData.timeSeriesData.map((point, index) => {
                               const maxViews = Math.max(...analyticsData.timeSeriesData.map(p => p.pageViews))
-                              const heightPercent = maxViews > 0 ? (point.pageViews / maxViews) * 100 : 0
+                              const totalHeightPercent = maxViews > 0 ? (point.pageViews / maxViews) * 100 : 0
+                              const merchantHeightPercent = maxViews > 0 ? (point.merchantPageViews / maxViews) * 100 : 0
+                              const internalHeightPercent = maxViews > 0 ? (point.internalPageViews / maxViews) * 100 : 0
 
                               return (
-                                <div key={index} className="flex-1 group relative" style={{ height: `${heightPercent}%` }}>
-                                  <div
-                                    className="bg-orange-500 hover:bg-orange-600 transition-all cursor-pointer rounded-t w-full h-full"
-                                    title={`${formatDate(point.date)}: ${point.pageViews} views`}
-                                  >
-                                    <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
-                                      <div>{formatDate(point.date)}: {point.pageViews} views</div>
+                                <div key={index} className="flex-1 group relative flex flex-col justify-end" style={{ height: '100%' }}>
+                                  {/* Stacked bars */}
+                                  <div className="flex flex-col justify-end w-full" style={{ height: `${totalHeightPercent}%` }}>
+                                    {/* Internal Team (top) */}
+                                    {point.internalPageViews > 0 && (
+                                      <div
+                                        className="bg-purple-500 hover:bg-purple-600 transition-all cursor-pointer w-full"
+                                        style={{ height: `${(internalHeightPercent / totalHeightPercent) * 100}%` }}
+                                        title={`Internal: ${point.internalPageViews}`}
+                                      />
+                                    )}
+                                    {/* Merchants (bottom) */}
+                                    {point.merchantPageViews > 0 && (
+                                      <div
+                                        className="bg-blue-500 hover:bg-blue-600 transition-all cursor-pointer rounded-t w-full"
+                                        style={{ height: `${(merchantHeightPercent / totalHeightPercent) * 100}%` }}
+                                        title={`Merchants: ${point.merchantPageViews}`}
+                                      />
+                                    )}
+                                  </div>
+                                  {/* Tooltip */}
+                                  <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                    <div className="font-semibold mb-1">{formatDate(point.date)}</div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 bg-blue-500 rounded"></div>
+                                      <span>Merchants: {point.merchantPageViews}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 bg-purple-500 rounded"></div>
+                                      <span>Internal: {point.internalPageViews}</span>
+                                    </div>
+                                    <div className="border-t border-gray-700 mt-1 pt-1">
+                                      Total: {point.pageViews}
                                     </div>
                                   </div>
                                 </div>

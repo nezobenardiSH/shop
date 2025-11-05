@@ -20,6 +20,8 @@ interface TimeSeriesDataPoint {
   date: string
   pageViews: number
   uniqueSessions: number
+  merchantPageViews: number
+  internalPageViews: number
 }
 
 interface PageBreakdown {
@@ -368,15 +370,29 @@ export default function MerchantAnalyticsPage() {
 
         {/* Page Views Over Time */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Page Views Over Time</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Page Views Over Time</h2>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                <span className="text-gray-600">Merchants</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-purple-500 rounded"></div>
+                <span className="text-gray-600">Internal Team</span>
+              </div>
+            </div>
+          </div>
           {analyticsData.timeSeriesData.length > 0 ? (
             <div className="space-y-2">
               {analyticsData.timeSeriesData.map((dataPoint, index) => {
                 const maxViews = Math.max(...analyticsData.timeSeriesData.map(d => d.pageViews))
-                const barWidth = maxViews > 0 ? (dataPoint.pageViews / maxViews) * 100 : 0
+                const totalBarWidth = maxViews > 0 ? (dataPoint.pageViews / maxViews) * 100 : 0
+                const merchantBarWidth = maxViews > 0 ? (dataPoint.merchantPageViews / maxViews) * 100 : 0
+                const internalBarWidth = maxViews > 0 ? (dataPoint.internalPageViews / maxViews) * 100 : 0
 
                 return (
-                  <div key={index} className="flex items-center gap-4">
+                  <div key={index} className="flex items-center gap-4 group">
                     <div className="w-32 text-sm text-gray-600 flex-shrink-0">
                       {new Date(dataPoint.date).toLocaleDateString('en-US', {
                         month: 'short',
@@ -386,21 +402,46 @@ export default function MerchantAnalyticsPage() {
                     </div>
                     <div className="flex-1 flex items-center gap-2">
                       <div className="flex-1 bg-gray-100 rounded-full h-8 relative overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-300 flex items-center justify-end pr-3"
-                          style={{ width: `${barWidth}%` }}
-                        >
-                          {barWidth > 15 && (
-                            <span className="text-xs font-semibold text-white">{dataPoint.pageViews}</span>
+                        {/* Stacked horizontal bars */}
+                        <div className="flex h-full">
+                          {/* Merchant views (left/first) */}
+                          {dataPoint.merchantPageViews > 0 && (
+                            <div
+                              className="bg-blue-500 h-full flex items-center justify-center transition-all duration-300"
+                              style={{ width: `${merchantBarWidth}%` }}
+                              title={`Merchants: ${dataPoint.merchantPageViews}`}
+                            >
+                              {merchantBarWidth > 10 && (
+                                <span className="text-xs font-semibold text-white px-2">{dataPoint.merchantPageViews}</span>
+                              )}
+                            </div>
+                          )}
+                          {/* Internal views (right/second) */}
+                          {dataPoint.internalPageViews > 0 && (
+                            <div
+                              className="bg-purple-500 h-full flex items-center justify-center transition-all duration-300"
+                              style={{ width: `${internalBarWidth}%` }}
+                              title={`Internal: ${dataPoint.internalPageViews}`}
+                            >
+                              {internalBarWidth > 10 && (
+                                <span className="text-xs font-semibold text-white px-2">{dataPoint.internalPageViews}</span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
-                      {barWidth <= 15 && (
+                      {totalBarWidth <= 15 && (
                         <span className="text-sm font-semibold text-gray-700 w-8">{dataPoint.pageViews}</span>
                       )}
                     </div>
-                    <div className="w-24 text-sm text-gray-500 text-right">
-                      {dataPoint.uniqueSessions} sessions
+                    <div className="w-32 text-sm text-gray-500 text-right">
+                      <div>{dataPoint.uniqueSessions} sessions</div>
+                      {/* Tooltip on hover */}
+                      <div className="hidden group-hover:block text-xs mt-1">
+                        <span className="text-blue-600">M:{dataPoint.merchantPageViews}</span>
+                        {' / '}
+                        <span className="text-purple-600">I:{dataPoint.internalPageViews}</span>
+                      </div>
                     </div>
                   </div>
                 )

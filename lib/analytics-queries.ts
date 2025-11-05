@@ -27,6 +27,8 @@ export interface TimeSeriesDataPoint {
   pageViews: number
   uniqueSessions: number
   uniqueMerchants: number
+  merchantPageViews: number
+  internalPageViews: number
 }
 
 export interface TopMerchant {
@@ -144,7 +146,8 @@ export async function getTimeSeriesData(
     select: {
       timestamp: true,
       sessionId: true,
-      merchantId: true
+      merchantId: true,
+      isInternalUser: true
     },
     orderBy: { timestamp: 'asc' }
   })
@@ -154,6 +157,8 @@ export async function getTimeSeriesData(
     pageViews: number
     sessions: Set<string>
     merchants: Set<string>
+    merchantPageViews: number
+    internalPageViews: number
   }>()
 
   pageViews.forEach(pv => {
@@ -174,7 +179,9 @@ export async function getTimeSeriesData(
       grouped.set(key, {
         pageViews: 0,
         sessions: new Set(),
-        merchants: new Set()
+        merchants: new Set(),
+        merchantPageViews: 0,
+        internalPageViews: 0
       })
     }
 
@@ -182,6 +189,13 @@ export async function getTimeSeriesData(
     group.pageViews++
     group.sessions.add(pv.sessionId)
     if (pv.merchantId) group.merchants.add(pv.merchantId)
+
+    // Track merchant vs internal page views
+    if (pv.isInternalUser) {
+      group.internalPageViews++
+    } else {
+      group.merchantPageViews++
+    }
   })
 
   // Convert to array
@@ -189,7 +203,9 @@ export async function getTimeSeriesData(
     date,
     pageViews: data.pageViews,
     uniqueSessions: data.sessions.size,
-    uniqueMerchants: data.merchants.size
+    uniqueMerchants: data.merchants.size,
+    merchantPageViews: data.merchantPageViews,
+    internalPageViews: data.internalPageViews
   }))
 }
 
