@@ -49,6 +49,7 @@ interface RecentActivity {
   merchantName: string | null
   page: string
   action: string | null
+  deviceType: string | null
   timestamp: string
   isInternalUser: boolean
   userType: string | null
@@ -1028,8 +1029,8 @@ export default function AnalyticsPage() {
                     {analyticsData.pageBreakdown.map((page) => (
                       <div key={page.page}>
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            <span className="text-sm font-medium text-gray-900 capitalize">
+                          <div className="flex items-center flex-1 min-w-0 mr-4">
+                            <span className="text-sm font-mono text-gray-700 truncate" title={page.page}>
                               {page.page}
                             </span>
                           </div>
@@ -1107,7 +1108,7 @@ export default function AnalyticsPage() {
                                             minute: '2-digit'
                                           })}
                                         </span>
-                                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                                        <span className="text-xs font-mono text-blue-800 break-all">
                                           {activity.page}
                                         </span>
                                         {activity.action && (
@@ -1151,10 +1152,13 @@ export default function AnalyticsPage() {
                           Merchant
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Page
+                          Page URL
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Action
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Device
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           User Type
@@ -1177,15 +1181,30 @@ export default function AnalyticsPage() {
                               </div>
                             )}
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                          <td className="px-4 py-4">
+                            <div className="text-xs font-mono text-gray-700 break-all">
                               {activity.page}
-                            </span>
+                            </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className="text-sm text-gray-500 capitalize">
                               {activity.action || '-'}
                             </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {activity.deviceType ? (
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${
+                                activity.deviceType === 'mobile' ? 'bg-purple-100 text-purple-800' :
+                                activity.deviceType === 'tablet' ? 'bg-indigo-100 text-indigo-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {activity.deviceType === 'mobile' ? '📱 ' : 
+                                 activity.deviceType === 'tablet' ? '📋 ' : 
+                                 '💻 '}{activity.deviceType}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             {activity.isInternalUser ? (

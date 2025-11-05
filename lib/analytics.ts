@@ -27,11 +27,60 @@ export function hashIpAddress(ip: string): string {
 }
 
 /**
+ * Detect device type from user agent string
+ */
+export function detectDeviceType(userAgent: string | null): 'mobile' | 'tablet' | 'desktop' {
+  if (!userAgent) return 'desktop'
+  
+  const ua = userAgent.toLowerCase()
+  
+  // Check for mobile devices
+  const mobileKeywords = [
+    'android',
+    'webos',
+    'iphone',
+    'ipod',
+    'blackberry',
+    'windows phone',
+    'mobile',
+    'opera mini',
+    'opera mobi'
+  ]
+  
+  // Check for tablets
+  const tabletKeywords = [
+    'ipad',
+    'tablet',
+    'kindle',
+    'silk',
+    'android(?!.*mobile)'
+  ]
+  
+  // Check if it's a tablet first (as tablets might contain 'mobile' keyword)
+  for (const keyword of tabletKeywords) {
+    if (keyword.includes('(?!') ? new RegExp(keyword).test(ua) : ua.includes(keyword)) {
+      return 'tablet'
+    }
+  }
+  
+  // Then check for mobile
+  for (const keyword of mobileKeywords) {
+    if (ua.includes(keyword)) {
+      return 'mobile'
+    }
+  }
+  
+  // Default to desktop
+  return 'desktop'
+}
+
+/**
  * Extract client information from request
  */
 export function getClientInfo(request: NextRequest): {
   userAgent: string | null
   ipAddress: string | null
+  deviceType: 'mobile' | 'tablet' | 'desktop'
 } {
   const userAgent = request.headers.get('user-agent')
   
@@ -44,7 +93,8 @@ export function getClientInfo(request: NextRequest): {
   
   return {
     userAgent,
-    ipAddress: ipAddress ? hashIpAddress(ipAddress) : null
+    ipAddress: ipAddress ? hashIpAddress(ipAddress) : null,
+    deviceType: detectDeviceType(userAgent)
   }
 }
 
@@ -59,6 +109,7 @@ export async function trackPageView(data: {
   action?: string
   sessionId: string
   userAgent?: string | null
+  deviceType?: 'mobile' | 'tablet' | 'desktop'
   ipAddress?: string | null
   isInternalUser?: boolean
   userType?: string
@@ -73,6 +124,7 @@ export async function trackPageView(data: {
         action: data.action || 'view',
         sessionId: data.sessionId,
         userAgent: data.userAgent || null,
+        deviceType: data.deviceType || detectDeviceType(data.userAgent || null),
         ipAddress: data.ipAddress || null,
         isInternalUser: data.isInternalUser || false,
         userType: data.userType || 'merchant',
@@ -97,6 +149,7 @@ export async function trackEvent(data: {
   action: string
   sessionId: string
   userAgent?: string | null
+  deviceType?: 'mobile' | 'tablet' | 'desktop'
   ipAddress?: string | null
   isInternalUser?: boolean
   userType?: string
@@ -114,6 +167,7 @@ export async function trackLogin(data: {
   success: boolean
   sessionId: string
   userAgent?: string | null
+  deviceType?: 'mobile' | 'tablet' | 'desktop'
   ipAddress?: string | null
   isInternalUser?: boolean
   userType?: string
@@ -126,6 +180,7 @@ export async function trackLogin(data: {
     action: data.success ? 'login_success' : 'login_failed',
     sessionId: data.sessionId,
     userAgent: data.userAgent,
+    deviceType: data.deviceType,
     ipAddress: data.ipAddress,
     isInternalUser: data.isInternalUser,
     userType: data.userType,
@@ -142,6 +197,7 @@ export async function trackBooking(data: {
   bookingType: 'training' | 'installation'
   sessionId: string
   userAgent?: string | null
+  deviceType?: 'mobile' | 'tablet' | 'desktop'
   ipAddress?: string | null
   isInternalUser?: boolean
   userType?: string
@@ -154,6 +210,7 @@ export async function trackBooking(data: {
     action: 'booking_created',
     sessionId: data.sessionId,
     userAgent: data.userAgent,
+    deviceType: data.deviceType,
     ipAddress: data.ipAddress,
     isInternalUser: data.isInternalUser,
     userType: data.userType,
@@ -173,6 +230,7 @@ export async function trackUpload(data: {
   fileType: string
   sessionId: string
   userAgent?: string | null
+  deviceType?: 'mobile' | 'tablet' | 'desktop'
   ipAddress?: string | null
   isInternalUser?: boolean
   userType?: string
@@ -185,6 +243,7 @@ export async function trackUpload(data: {
     action: 'file_uploaded',
     sessionId: data.sessionId,
     userAgent: data.userAgent,
+    deviceType: data.deviceType,
     ipAddress: data.ipAddress,
     isInternalUser: data.isInternalUser,
     userType: data.userType,

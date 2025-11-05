@@ -51,6 +51,7 @@ export interface RecentActivity {
   merchantName: string | null
   page: string
   action: string | null
+  deviceType: string | null
   timestamp: Date
   isInternalUser: boolean
   userType: string | null
@@ -347,6 +348,7 @@ export async function getRecentActivity(
       merchantName: true,
       page: true,
       action: true,
+      deviceType: true,
       timestamp: true,
       isInternalUser: true,
       userType: true

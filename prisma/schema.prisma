@@ -49,6 +49,7 @@ model PageView {
   page          String   // 'progress', 'details', 'login', 'admin', etc.
   action        String?  // 'view', 'login_success', 'login_failed', 'booking', 'upload'
   userAgent     String?  @db.Text
+  deviceType    String?  // 'mobile', 'tablet', 'desktop'
   ipAddress     String?  // Hashed IP for privacy
   sessionId     String   // To track unique sessions
   isInternalUser Boolean @default(false) // Flag for internal team access
@@ -63,4 +64,5 @@ model PageView {
   @@index([sessionId])
   @@index([isInternalUser])
   @@index([userType])
+  @@index([deviceType])
 }

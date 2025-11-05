@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Get client info
-    const { userAgent, ipAddress } = getClientInfo(request)
+    const { userAgent, ipAddress, deviceType } = getClientInfo(request)
     
     // Get user info from auth token if available
     let isInternalUser = false
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       action,
       sessionId,
       userAgent,
+      deviceType,
       ipAddress,
       isInternalUser,
       userType,
