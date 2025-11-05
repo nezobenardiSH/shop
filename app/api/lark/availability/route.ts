@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCombinedAvailability } from '@/lib/trainer-availability'
-import trainersConfig from '@/config/trainers.json'
+import fs from 'fs/promises'
+import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
+    // Read trainers config dynamically to pick up changes without restart
+    const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+    const configContent = await fs.readFile(configPath, 'utf-8')
+    const trainersConfig = JSON.parse(configContent)
+
     const searchParams = request.nextUrl.searchParams
     const mode = searchParams.get('mode') || 'combined' // 'combined' or 'single'
     const trainerName = searchParams.get('trainerName')
@@ -21,14 +27,14 @@ export async function GET(request: NextRequest) {
 
     // Get combined availability from all trainers (with optional location filtering)
     const availability = await getCombinedAvailability(startDate, endDate, merchantAddress || undefined)
-    
+
     console.log(`Combined availability: ${availability.length} days with slots`)
 
     return NextResponse.json({
       mode: 'combined',
       trainers: trainersConfig.trainers
-        .filter(t => t.email && t.name !== 'Nasi Lemak')
-        .map(t => ({ name: t.name, email: t.email, languages: t.languages })),
+        .filter((t: any) => t.email && t.name !== 'Nasi Lemak')
+        .map((t: any) => ({ name: t.name, email: t.email, languages: t.languages })),
       availability,
       timezone: trainersConfig.timezone,
       message: 'Showing combined availability from all trainers'

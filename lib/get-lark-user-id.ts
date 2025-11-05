@@ -1,12 +1,21 @@
-import trainersConfig from '../config/trainers.json'
-import installersConfig from '../config/installers.json'
+import fs from 'fs/promises'
+import path from 'path'
 
 /**
  * Get Lark user ID from config files or database
  */
 export async function getLarkUserId(email: string): Promise<{ userId: string; openId: string } | null> {
+  // Read configs dynamically to pick up changes without restart
+  const trainersConfigPath = path.join(process.cwd(), 'config', 'trainers.json')
+  const trainersConfigContent = await fs.readFile(trainersConfigPath, 'utf-8')
+  const trainersConfig = JSON.parse(trainersConfigContent)
+
+  const installersConfigPath = path.join(process.cwd(), 'config', 'installers.json')
+  const installersConfigContent = await fs.readFile(installersConfigPath, 'utf-8')
+  const installersConfig = JSON.parse(installersConfigContent)
+
   // Check trainers config
-  const trainer = trainersConfig.trainers.find(t => t.email === email) as any
+  const trainer = trainersConfig.trainers.find((t: any) => t.email === email) as any
   if (trainer?.larkUserId || trainer?.larkOpenId) {
     return {
       userId: trainer.larkUserId || trainer.larkOpenId || '',

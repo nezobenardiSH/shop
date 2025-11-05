@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { larkOAuthService } from '@/lib/lark-oauth-service'
-import trainersConfig from '@/config/trainers.json'
+import fs from 'fs/promises'
+import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
+    // Read trainers config dynamically to pick up changes without restart
+    const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+    const configContent = await fs.readFile(configPath, 'utf-8')
+    const trainersConfig = JSON.parse(configContent)
+
     // Get all configured trainers
-    const configuredTrainers = trainersConfig.trainers.filter(t => 
+    const configuredTrainers = trainersConfig.trainers.filter((t: any) =>
       t.email && t.name !== 'Nasi Lemak' // Filter out test entries
     )
     

@@ -1,5 +1,6 @@
 import { larkService } from './lark'
-import trainersConfig from '@/config/trainers.json'
+import fs from 'fs/promises'
+import path from 'path'
 
 /**
  * Create a date in Singapore timezone
@@ -48,8 +49,13 @@ export async function getCombinedAvailability(
     console.log('Filtering by merchant address:', merchantAddress)
   }
 
+  // Read trainers config dynamically to pick up changes without restart
+  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+  const configContent = await fs.readFile(configPath, 'utf-8')
+  const trainersConfig = JSON.parse(configContent)
+
   // Get all configured trainers
-  let trainers = trainersConfig.trainers.filter(t =>
+  let trainers = trainersConfig.trainers.filter((t: any) =>
     t.email && t.name !== 'Nasi Lemak' // Exclude merchant entries
   )
 

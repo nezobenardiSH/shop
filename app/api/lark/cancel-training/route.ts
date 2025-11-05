@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { larkService } from '@/lib/lark'
-import trainersConfig from '@/config/trainers.json'
 import { getSalesforceConnection } from '@/lib/salesforce'
+import fs from 'fs/promises'
+import path from 'path'
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Read trainers config dynamically to pick up changes without restart
+    const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+    const configContent = await fs.readFile(configPath, 'utf-8')
+    const trainersConfig = JSON.parse(configContent)
+
     const body = await request.json()
     const {
       merchantId,
@@ -22,9 +28,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     let trainer = trainersConfig.trainers.find(
-      t => t.name.toLowerCase().trim() === trainerName.toLowerCase().trim()
+      (t: any) => t.name.toLowerCase().trim() === trainerName.toLowerCase().trim()
     )
-    
+
     // If trainer not found by name, use first trainer as fallback
     if (!trainer) {
       console.log('Trainer not found, using first trainer as fallback')
@@ -36,7 +42,7 @@ export async function DELETE(request: NextRequest) {
         }
       }
     }
-    
+
     if (!trainer) {
       return NextResponse.json(
         { error: `Trainer "${trainerName}" not found in configuration` },

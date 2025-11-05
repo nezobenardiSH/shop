@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { larkService } from '@/lib/lark'
-import trainersConfig from '@/config/trainers.json'
 import fs from 'fs/promises'
 import path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
     console.log('Starting calendar sync...')
-    
+
+    // Read trainers config dynamically to pick up changes without restart
+    const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+    const configContent = await fs.readFile(configPath, 'utf-8')
+    const trainersConfig = JSON.parse(configContent)
+
     const results = []
     let updatedCount = 0
     let failedCount = 0
-    
+
     // Process each trainer
     for (const trainer of trainersConfig.trainers) {
       if (!trainer.email) {
@@ -80,7 +84,6 @@ export async function POST(request: NextRequest) {
     
     // Save the updated configuration
     if (updatedCount > 0) {
-      const configPath = path.join(process.cwd(), 'config', 'trainers.json')
       await fs.writeFile(
         configPath,
         JSON.stringify(trainersConfig, null, 2)
@@ -111,9 +114,14 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  // Read trainers config dynamically
+  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+  const configContent = await fs.readFile(configPath, 'utf-8')
+  const trainersConfig = JSON.parse(configContent)
+
   // Return current configuration
   return NextResponse.json({
-    trainers: trainersConfig.trainers.map(t => ({
+    trainers: trainersConfig.trainers.map((t: any) => ({
       name: t.name,
       email: t.email,
       calendarId: t.calendarId,

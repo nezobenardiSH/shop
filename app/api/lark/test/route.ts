@@ -64,7 +64,12 @@ export async function GET(request: NextRequest) {
 
   // Test 4: Check trainer config
   try {
-    const trainersConfig = require('@/config/trainers.json')
+    const fs = require('fs').promises
+    const path = require('path')
+    const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+    const configContent = await fs.readFile(configPath, 'utf-8')
+    const trainersConfig = JSON.parse(configContent)
+
     results.tests.push({
       name: 'Trainer Configuration',
       status: 'success',
