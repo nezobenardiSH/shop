@@ -106,19 +106,19 @@ export async function POST(request: NextRequest) {
     if (!mockMode) {
       const { larkOAuthService } = await import('@/lib/lark-oauth-service')
       const authCheckPromises = availableTrainers.map(async (trainerName) => {
-        const trainer = getTrainerDetails(trainerName)
+        const trainer = await getTrainerDetails(trainerName)
         const hasAuth = await larkOAuthService.isUserAuthorized(trainer.email)
         return hasAuth ? trainerName : null
       })
       const authResults = await Promise.all(authCheckPromises)
       trainersWithAuth = authResults.filter((t): t is string => t !== null)
-      
+
       console.log('Trainers with OAuth tokens:', trainersWithAuth)
-      
+
       if (trainersWithAuth.length === 0) {
         console.log('⚠️ No trainers with OAuth tokens available')
         return NextResponse.json(
-          { 
+          {
             error: 'No authorized trainers available',
             details: 'Available trainers have not yet connected their Lark calendars. Please contact support.'
           },
@@ -126,15 +126,15 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-    
+
     // Step 4: Intelligently assign a trainer based on language requirements
     console.log('Available trainers for slot:', trainersWithAuth)
     console.log('Required languages:', trainerLanguages)
-    const assignment = assignTrainer(trainersWithAuth, trainerLanguages)
+    const assignment = await assignTrainer(trainersWithAuth, trainerLanguages)
     console.log('Assigned trainer:', assignment)
-    
+
     // Step 5: Get the assigned trainer's details
-    const trainer = getTrainerDetails(assignment.assigned)
+    const trainer = await getTrainerDetails(assignment.assigned)
     console.log('Trainer details from getTrainerDetails:', {
       assignedName: assignment.assigned,
       fullName: trainer.name,

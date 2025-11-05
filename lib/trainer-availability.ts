@@ -281,8 +281,13 @@ export async function getSlotAvailability(
     console.log('Filtering by merchant address:', merchantAddress)
   }
 
+  // Read trainers config dynamically to pick up changes without restart
+  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+  const configContent = await fs.readFile(configPath, 'utf-8')
+  const trainersConfig = JSON.parse(configContent)
+
   // Get all configured trainers
-  let trainers = trainersConfig.trainers.filter(t =>
+  let trainers = trainersConfig.trainers.filter((t: any) =>
     t.email && t.name !== 'Nasi Lemak'
   )
 
@@ -291,7 +296,7 @@ export async function getSlotAvailability(
     const { filterTrainersByLocation } = await import('./location-matcher')
     const filteredTrainers = filterTrainersByLocation(trainers, merchantAddress)
     console.log(`Location filtering: ${trainers.length} trainers → ${filteredTrainers.length} trainers`)
-    console.log('Trainers after location filter:', filteredTrainers.map(t => t.name))
+    console.log('Trainers after location filter:', filteredTrainers.map((t: any) => t.name))
     trainers = filteredTrainers
   }
 
@@ -378,22 +383,24 @@ export async function getSlotAvailability(
  * @param requiredLanguages - Languages required for the training session (optional)
  * @returns Assignment result with trainer name and reason
  */
-export function assignTrainer(
+export async function assignTrainer(
   availableTrainers: string[],
   requiredLanguages?: string[]
-): {
+): Promise<{
   assigned: string;
   reason: string;
-} {
+}> {
   if (availableTrainers.length === 0) {
     throw new Error('No trainers available for this slot')
   }
 
   // Get trainer details for all available trainers
-  const trainerDetails = availableTrainers.map(name => ({
-    name,
-    details: getTrainerDetails(name)
-  }))
+  const trainerDetails = await Promise.all(
+    availableTrainers.map(async name => ({
+      name,
+      details: await getTrainerDetails(name)
+    }))
+  )
 
   // Step 1: Filter by required languages if specified
   let qualifiedTrainers = trainerDetails
@@ -483,15 +490,20 @@ export function assignTrainer(
 /**
  * Get trainer details by name
  */
-export function getTrainerDetails(trainerName: string) {
+export async function getTrainerDetails(trainerName: string) {
+  // Read trainers config dynamically to pick up changes without restart
+  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+  const configContent = await fs.readFile(configPath, 'utf-8')
+  const trainersConfig = JSON.parse(configContent)
+
   // First try exact match
-  let trainer = trainersConfig.trainers.find(t =>
+  let trainer = trainersConfig.trainers.find((t: any) =>
     t.name.toLowerCase() === trainerName.toLowerCase()
   )
-  
+
   // If no exact match, try partial match (e.g., "Nezo" matches "Nezo Benardi")
   if (!trainer) {
-    trainer = trainersConfig.trainers.find(t =>
+    trainer = trainersConfig.trainers.find((t: any) =>
       t.name.toLowerCase().includes(trainerName.toLowerCase()) ||
       trainerName.toLowerCase().includes(t.name.toLowerCase())
     )
