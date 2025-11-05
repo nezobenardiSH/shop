@@ -58,22 +58,23 @@ export interface RecentActivity {
  * Get summary statistics
  */
 export async function getSummaryStats(filters: AnalyticsFilters): Promise<SummaryStats> {
-  const whereClause: any = {}
-  
-  if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
-  }
-  
-  if (filters.merchantId) whereClause.merchantId = filters.merchantId
-  if (filters.page) whereClause.page = filters.page
-  if (filters.action) whereClause.action = filters.action
-  if (filters.isInternalUser !== undefined) whereClause.isInternalUser = filters.isInternalUser
-  if (filters.userType) whereClause.userType = filters.userType
+  try {
+    const whereClause: any = {}
 
-  // Total page views
-  const totalPageViews = await prisma.pageView.count({ where: whereClause })
+    if (filters.startDate || filters.endDate) {
+      whereClause.timestamp = {}
+      if (filters.startDate) whereClause.timestamp.gte = filters.startDate
+      if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+    }
+
+    if (filters.merchantId) whereClause.merchantId = filters.merchantId
+    if (filters.page) whereClause.page = filters.page
+    if (filters.action) whereClause.action = filters.action
+    if (filters.isInternalUser !== undefined) whereClause.isInternalUser = filters.isInternalUser
+    if (filters.userType) whereClause.userType = filters.userType
+
+    // Total page views
+    const totalPageViews = await prisma.pageView.count({ where: whereClause })
 
   // Unique merchants
   const uniqueMerchants = await prisma.pageView.findMany({

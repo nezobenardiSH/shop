@@ -130,10 +130,19 @@ export default function AnalyticsPage() {
           router.push('/admin')
           return
         }
-        throw new Error('Failed to fetch analytics data')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('[Analytics] API Error:', errorData)
+        throw new Error(errorData.details || errorData.error || 'Failed to fetch analytics data')
       }
 
       const data = await response.json()
+      console.log('[Analytics] Data received:', {
+        summary: data.summary,
+        timeSeriesCount: data.timeSeriesData?.length,
+        topMerchantsCount: data.topMerchants?.length,
+        pageBreakdownCount: data.pageBreakdown?.length,
+        recentActivityCount: data.recentActivity?.length
+      })
       setAnalyticsData(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
