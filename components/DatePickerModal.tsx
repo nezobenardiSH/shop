@@ -397,6 +397,23 @@ export default function DatePickerModal({
     })
   }
 
+  // Helper function to create a date in Singapore timezone
+  const createSingaporeDate = (year: number, month: number, day: number): Date => {
+    // Create date string in YYYY-MM-DD format
+    const monthStr = String(month + 1).padStart(2, '0')
+    const dayStr = String(day).padStart(2, '0')
+    // Create date at midnight Singapore time (GMT+8)
+    return new Date(`${year}-${monthStr}-${dayStr}T00:00:00+08:00`)
+  }
+
+  // Helper function to get current date in Singapore timezone
+  const getSingaporeNow = (): Date => {
+    const now = new Date()
+    // Convert to Singapore timezone
+    const singaporeNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}))
+    return singaporeNow
+  }
+
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
     const month = date.getMonth()
@@ -410,7 +427,8 @@ export default function DatePickerModal({
       days.push(null)
     }
     for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i))
+      // Create dates in Singapore timezone to match backend availability data
+      days.push(createSingaporeDate(year, month, i))
     }
     while (days.length % 7 !== 0) {
       days.push(null)
@@ -433,25 +451,31 @@ export default function DatePickerModal({
   const isDateAvailable = (date: Date | null) => {
     if (!date) return false
 
-    // Block weekends (Saturday = 6, Sunday = 0)
-    // Use the date's local day of week (already in local timezone)
-    const dayOfWeek = date.getDay()
-    console.log('Checking date:', date.toDateString(), 'Day of week:', dayOfWeek, ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek])
+    // Get day of week in Singapore timezone
+    // We need to check the day in Singapore time, not browser's local time
+    const singaporeDay = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Singapore"})).getDay()
+    console.log('Checking date:', date.toDateString(), 'Day of week (SGT):', singaporeDay, ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][singaporeDay])
 
     // Only block Saturday (6) and Sunday (0)
     // Friday is 5, so it should NOT be blocked
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      console.log('  -> Blocked (weekend)')
+    if (singaporeDay === 0 || singaporeDay === 6) {
+      console.log('  -> Blocked (weekend in Singapore timezone)')
       return false
     }
 
     // Calculate minimum date based on dependencies
-    let minDate = new Date()
-    minDate.setHours(0, 0, 0, 0)
+    // Use Singapore timezone for all date calculations
+    const singaporeNow = getSingaporeNow()
+    const year = singaporeNow.getFullYear()
+    const month = singaporeNow.getMonth()
+    const day = singaporeNow.getDate()
+    let minDate = createSingaporeDate(year, month, day)
 
     // For training bookings, the soonest they can book is tomorrow (not today)
     if (bookingType === 'training') {
-      minDate.setDate(minDate.getDate() + 1) // Add 1 day - earliest is tomorrow
+      const tomorrow = new Date(minDate)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      minDate = tomorrow
       console.log('  -> Training cannot be booked today. Earliest date:', minDate.toDateString())
     }
 
@@ -459,38 +483,54 @@ export default function DatePickerModal({
     // For internal installers, earliest is tomorrow
     if (bookingType === 'installation') {
       if (isExternalVendor) {
-        minDate.setDate(minDate.getDate() + 2) // Add 2 days - earliest is day after tomorrow
+        const dayAfterTomorrow = new Date(minDate)
+        dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
+        minDate = dayAfterTomorrow
         console.log('  -> External vendor installation requires 2 days advance. Earliest date:', minDate.toDateString())
       } else {
-        minDate.setDate(minDate.getDate() + 1) // Add 1 day - earliest is tomorrow
+        const tomorrow = new Date(minDate)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        minDate = tomorrow
         console.log('  -> Internal installation cannot be booked today. Earliest date:', minDate.toDateString())
       }
     }
 
     // For training bookings, installation date is the lower bound
     if (bookingType === 'training' && installationDate) {
-      const instDate = new Date(installationDate)
-      instDate.setHours(0, 0, 0, 0)
+      // Parse installation date in Singapore timezone
+      const instDateParts = installationDate.split('-')
+      const instDate = createSingaporeDate(
+        parseInt(instDateParts[0]),
+        parseInt(instDateParts[1]) - 1,
+        parseInt(instDateParts[2])
+      )
       // Training must be at least 1 day after installation
-      instDate.setDate(instDate.getDate() + 1)
+      const dayAfterInstallation = new Date(instDate)
+      dayAfterInstallation.setDate(dayAfterInstallation.getDate() + 1)
 
       // Use the later of tomorrow or installation date + 1
-      if (instDate > minDate) {
-        minDate = instDate
+      if (dayAfterInstallation > minDate) {
+        minDate = dayAfterInstallation
       }
 
       console.log('  -> Training must be after installation date:', installationDate, 'Min date:', minDate.toDateString())
     }
     // For installation bookings, use dependent date (hardware fulfillment) if provided
     else if (bookingType === 'installation' && dependentDate) {
-      const depDate = new Date(dependentDate)
-      depDate.setHours(0, 0, 0, 0)
+      // Parse dependent date in Singapore timezone
+      const depDateParts = dependentDate.split('-')
+      const depDate = createSingaporeDate(
+        parseInt(depDateParts[0]),
+        parseInt(depDateParts[1]) - 1,
+        parseInt(depDateParts[2])
+      )
       // Add one day to dependent date (must be at least 1 day after)
-      depDate.setDate(depDate.getDate() + 1)
+      const dayAfterDep = new Date(depDate)
+      dayAfterDep.setDate(dayAfterDep.getDate() + 1)
 
       // Use the later of tomorrow or dependent date + 1
-      if (depDate > minDate) {
-        minDate = depDate
+      if (dayAfterDep > minDate) {
+        minDate = dayAfterDep
       }
 
       console.log('  -> Installation must be after hardware fulfillment:', dependentDate, 'Min date:', minDate.toDateString())
@@ -499,26 +539,36 @@ export default function DatePickerModal({
     // Maximum date is 14 days from the minimum eligible date
     let maxDate = new Date(minDate)
     maxDate.setDate(maxDate.getDate() + 14)
-    maxDate.setHours(23, 59, 59, 999)
 
     // For installation bookings, training date is the upper bound
     if (bookingType === 'installation' && trainingDate) {
-      const trainDate = new Date(trainingDate)
-      trainDate.setHours(0, 0, 0, 0)
+      // Parse training date in Singapore timezone
+      const trainDateParts = trainingDate.split('-')
+      const trainDate = createSingaporeDate(
+        parseInt(trainDateParts[0]),
+        parseInt(trainDateParts[1]) - 1,
+        parseInt(trainDateParts[2])
+      )
       // Installation must be before training (at least 1 day before)
-      trainDate.setDate(trainDate.getDate() - 1)
+      const dayBeforeTraining = new Date(trainDate)
+      dayBeforeTraining.setDate(dayBeforeTraining.getDate() - 1)
 
       // Use the earlier of 14-day window or training date - 1
-      if (trainDate < maxDate) {
-        maxDate = trainDate
+      if (dayBeforeTraining < maxDate) {
+        maxDate = dayBeforeTraining
         console.log('  -> Installation limited by training date:', trainingDate, 'Max date:', maxDate.toDateString())
       }
     }
 
     // For training bookings, check against go-live date if provided
     if (bookingType === 'training' && goLiveDate) {
-      const goLive = new Date(goLiveDate)
-      goLive.setHours(23, 59, 59, 999)
+      // Parse go-live date in Singapore timezone
+      const goLiveParts = goLiveDate.split('-')
+      const goLive = createSingaporeDate(
+        parseInt(goLiveParts[0]),
+        parseInt(goLiveParts[1]) - 1,
+        parseInt(goLiveParts[2])
+      )
 
       // Use the earlier of 14-day window or go-live date
       if (goLive < maxDate) {
@@ -845,40 +895,57 @@ export default function DatePickerModal({
                 <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
                   {/* Show dates from eligible start to max allowed date */}
                   {(() => {
-                    // Calculate minimum date based on dependencies
-                    let startDate = new Date()
-                    startDate.setHours(0, 0, 0, 0)
-                    
+                    // Calculate minimum date based on dependencies (in Singapore timezone)
+                    const singaporeNow = getSingaporeNow()
+                    const year = singaporeNow.getFullYear()
+                    const month = singaporeNow.getMonth()
+                    const day = singaporeNow.getDate()
+                    let startDate = createSingaporeDate(year, month, day)
+
                     if (dependentDate) {
-                      const depDate = new Date(dependentDate)
-                      depDate.setHours(0, 0, 0, 0)
-                      depDate.setDate(depDate.getDate() + 1)
-                      if (depDate > startDate) {
-                        startDate = depDate
+                      const depDateParts = dependentDate.split('-')
+                      const depDate = createSingaporeDate(
+                        parseInt(depDateParts[0]),
+                        parseInt(depDateParts[1]) - 1,
+                        parseInt(depDateParts[2])
+                      )
+                      const dayAfterDep = new Date(depDate)
+                      dayAfterDep.setDate(dayAfterDep.getDate() + 1)
+                      if (dayAfterDep > startDate) {
+                        startDate = dayAfterDep
                       }
                     }
-                    
+
                     // Calculate max date (14 days or go-live date, whichever is earlier)
                     let endDate = new Date(startDate)
                     endDate.setDate(endDate.getDate() + 14)
-                    
+
                     if (goLiveDate) {
-                      const goLive = new Date(goLiveDate)
+                      const goLiveParts = goLiveDate.split('-')
+                      const goLive = createSingaporeDate(
+                        parseInt(goLiveParts[0]),
+                        parseInt(goLiveParts[1]) - 1,
+                        parseInt(goLiveParts[2])
+                      )
                       if (goLive < endDate) {
                         endDate = goLive
                       }
                     }
-                    
+
                     // Calculate number of days to show
                     const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
                     const daysToShow = Math.max(1, Math.min(15, daysDiff))
-                    
+
                     return Array.from({ length: daysToShow }, (_, i) => {
                       const date = new Date(startDate)
                       date.setDate(date.getDate() + i)
                       const available = isDateAvailable(date)
                       const selected = isSelectedDate(date)
-                      const isToday = date.toDateString() === new Date().toDateString()
+                      // Compare in Singapore timezone
+                      const singaporeToday = getSingaporeNow()
+                      const isToday = date.getDate() === singaporeToday.getDate() &&
+                                     date.getMonth() === singaporeToday.getMonth() &&
+                                     date.getFullYear() === singaporeToday.getFullYear()
                       
                       return (
                         <button
