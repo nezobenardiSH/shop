@@ -251,7 +251,7 @@ export async function getInternalInstallersAvailability(
       const day = String(current.getUTCDate()).padStart(2, '0')
       const dateStr = `${year}-${month}-${day}`
       
-      const slots = TIME_SLOTS.map(timeSlot => {
+      const slots = TIME_SLOTS.map((timeSlot: any) => {
         const slotStart = new Date(`${dateStr}T${timeSlot.start}:00+08:00`)
         const slotEnd = new Date(`${dateStr}T${timeSlot.end}:00+08:00`)
 
