@@ -116,9 +116,9 @@ export async function GET(request: NextRequest) {
       managers: managers,
       summary: {
         totalTrainers: configuredTrainers.length,
-        authorizedTrainers: configuredTrainers.filter(t => t.authorized).length,
+        authorizedTrainers: configuredTrainers.filter((t: any) => t.authorized).length,
         totalInstallers: configuredInstallers.length,
-        authorizedInstallers: configuredInstallers.filter(i => i.authorized).length,
+        authorizedInstallers: configuredInstallers.filter((i: any) => i.authorized).length,
         totalManagers: managers.length,
         authorizedManagers: managers.length
       }
