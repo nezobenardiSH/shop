@@ -8,6 +8,7 @@ import OnboardingTimeline from '@/components/OnboardingTimeline'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import MerchantHeader from '@/components/MerchantHeader'
 import PageHeader from '@/components/PageHeader'
+import { usePageTracking } from '@/lib/useAnalytics'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -580,6 +581,9 @@ function TrainerPortalContent() {
 
   // Get merchant name from API response
   const merchantName = trainerData?.success && trainerData?.name ? trainerData.name : 'Loading...'
+
+  // Track page view
+  usePageTracking(merchantId, merchantName !== 'Loading...' ? merchantName : undefined, 'progress')
 
   return (
     <div className="min-h-screen bg-[#faf9f6] py-4">

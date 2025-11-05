@@ -36,8 +36,31 @@ model LarkAuthToken {
   scopes       String?  @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  
+
   @@index([userEmail])
   @@index([expiresAt])
+  @@index([userType])
+}
+
+model PageView {
+  id            String   @id @default(cuid())
+  merchantId    String?  // Salesforce ID (nullable for login page visits)
+  merchantName  String?  // Cached for easier querying
+  page          String   // 'progress', 'details', 'login', 'admin', etc.
+  action        String?  // 'view', 'login_success', 'login_failed', 'booking', 'upload'
+  userAgent     String?  @db.Text
+  ipAddress     String?  // Hashed IP for privacy
+  sessionId     String   // To track unique sessions
+  isInternalUser Boolean @default(false) // Flag for internal team access
+  userType      String?  // 'merchant', 'internal_team', 'admin'
+  metadata      Json?    // Additional context (e.g., booking details, error messages)
+  timestamp     DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([merchantId])
+  @@index([page])
+  @@index([timestamp])
+  @@index([sessionId])
+  @@index([isInternalUser])
   @@index([userType])
 }

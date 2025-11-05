@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { validatePIN, validatePINWithUser, generateToken, checkRateLimit, recordLoginAttempt } from '@/lib/auth-utils'
+import { trackLogin, generateSessionId, getClientInfo } from '@/lib/analytics'
 import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
@@ -104,6 +105,21 @@ export async function POST(request: NextRequest) {
       recordLoginAttempt(merchantId, false)
       const updatedRateLimit = checkRateLimit(merchantId)
 
+      // Track failed login
+      const sessionId = generateSessionId(request)
+      const { userAgent, ipAddress } = getClientInfo(request)
+      trackLogin({
+        merchantId,
+        merchantName: trainer.Name,
+        success: false,
+        sessionId,
+        userAgent,
+        ipAddress,
+        isInternalUser: false,
+        userType: 'merchant',
+        errorMessage: 'Invalid PIN'
+      }).catch(err => console.error('[Analytics] Failed to track login:', err))
+
       return NextResponse.json(
         {
           error: 'Invalid PIN',
@@ -120,6 +136,20 @@ export async function POST(request: NextRequest) {
     if (validationResult.isInternalUser) {
       console.log('🔧 Internal team login detected for merchant:', trainer.Name)
     }
+
+    // Track successful login
+    const sessionId = generateSessionId(request)
+    const { userAgent, ipAddress } = getClientInfo(request)
+    trackLogin({
+      merchantId,
+      merchantName: trainer.Name,
+      success: true,
+      sessionId,
+      userAgent,
+      ipAddress,
+      isInternalUser: validationResult.isInternalUser,
+      userType: validationResult.isInternalUser ? 'internal_team' : 'merchant'
+    }).catch(err => console.error('[Analytics] Failed to track login:', err))
 
     // Generate JWT token (don't add exp field - jwt.sign handles it)
     const token = generateToken({

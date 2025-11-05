@@ -7,6 +7,7 @@ import DatePickerModal from '@/components/DatePickerModal'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import MerchantHeader from '@/components/MerchantHeader'
 import PageHeader from '@/components/PageHeader'
+import { usePageTracking } from '@/lib/useAnalytics'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -157,6 +158,9 @@ export default function MerchantDetailsPage() {
 
   // Get merchant name from API response
   const merchantName = trainerData?.success && trainerData?.name ? trainerData.name : 'Loading...'
+
+  // Track page view
+  usePageTracking(merchantId, merchantName !== 'Loading...' ? merchantName : undefined, 'details')
 
   return (
     <div className="min-h-screen bg-[#faf9f6] py-4">
