@@ -756,7 +756,12 @@ export async function submitExternalInstallationRequest(
   preferredTime: string,
   contactPhone: string
 ) {
-  const vendor = installersConfig.external.vendors.find(v => v.isActive)
+  // Read installers config dynamically to pick up changes without restart
+  const configPath = path.join(process.cwd(), 'config', 'installers.json')
+  const configContent = await fs.readFile(configPath, 'utf-8')
+  const installersConfig = JSON.parse(configContent)
+
+  const vendor = installersConfig.external.vendors.find((v: any) => v.isActive)
   
   if (!vendor) {
     throw new Error('No external vendor available')
