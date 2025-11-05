@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 
 interface TimelineStage {
   id: string
@@ -13,10 +14,12 @@ interface TimelineStage {
 
 interface OnboardingTimelineProps {
   currentStage?: string
+  currentStageFromUrl?: string
   stageData?: any
   trainerData?: any
   onBookingComplete?: (selectedDate?: string) => void
   onOpenBookingModal?: (bookingInfo: any) => void
+  onStageChange?: (stage: string) => void
 }
 
 // Helper function to format date with time
@@ -46,8 +49,40 @@ const formatDate = (dateString: string | null | undefined): string => {
   })
 }
 
-export default function OnboardingTimeline({ currentStage, stageData, trainerData, onBookingComplete, onOpenBookingModal }: OnboardingTimelineProps) {
+export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange }: OnboardingTimelineProps) {
+  const router = useRouter()
+  const params = useParams()
+  const merchantId = params.merchantId as string
   const [stages, setStages] = useState<TimelineStage[]>([])
+
+  // Handle stage click - update URL and scroll to section
+  const handleStageClick = (stageId: string) => {
+    // Update URL with stage parameter
+    router.push(`/merchant/${merchantId}?stage=${stageId}`, { scroll: false })
+
+    // Scroll to stage section
+    setTimeout(() => {
+      const element = document.getElementById(`stage-${stageId}`)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
+
+    // Notify parent component
+    onStageChange?.(stageId)
+  }
+
+  // Auto-scroll to stage when URL changes
+  useEffect(() => {
+    if (currentStageFromUrl) {
+      setTimeout(() => {
+        const element = document.getElementById(`stage-${currentStageFromUrl}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 300)
+    }
+  }, [currentStageFromUrl])
 
   // Calculate completion statuses at component level so they can be used throughout
   // Welcome stage is completed only when Welcome_Call_Status__c = 'Welcome Call Completed'
@@ -85,10 +120,18 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     ? new Date(trainerData.trainingDate) <= new Date()
     : false
 
-  // Initialize selectedStage based on welcome call completion status
-  const initialStage = (trainerData?.welcomeCallStatus === 'Welcome Call Completed' ||
-                        trainerData?.welcomeCallStatus === 'Completed') ? 'preparation' : 'welcome'
+  // Initialize selectedStage based on URL parameter or welcome call completion status
+  const initialStage = currentStageFromUrl ||
+                       ((trainerData?.welcomeCallStatus === 'Welcome Call Completed' ||
+                        trainerData?.welcomeCallStatus === 'Completed') ? 'preparation' : 'welcome')
   const [selectedStage, setSelectedStage] = useState<string>(initialStage)
+
+  // Update selectedStage when URL changes
+  useEffect(() => {
+    if (currentStageFromUrl) {
+      setSelectedStage(currentStageFromUrl)
+    }
+  }, [currentStageFromUrl])
   const [updatingField, setUpdatingField] = useState<string | null>(null)
   const [editingGoLiveDate, setEditingGoLiveDate] = useState(false)
   const [goLiveDateValue, setGoLiveDateValue] = useState('')
@@ -304,7 +347,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     timelineStages.push({
       id: 'live',
       label: 'Live',
-      status: readyToGoLive ? (isLive ? 'completed' : 'current') : 'pending',
+      status: isLive ? 'completed' : (readyToGoLive ? 'current' : 'pending'),
       completedDate: isLive ? trainerData?.subscriptionActivationDate : undefined
     })
 
@@ -1232,7 +1275,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                     ? 'bg-orange-50 shadow-sm'
                     : 'hover:bg-white hover:shadow-sm'
                 }`}
-                onClick={() => setSelectedStage(stage.id)}
+                onClick={() => handleStageClick(stage.id)}
               >
                 {/* Progress Bar Section */}
                 <div className="relative">
@@ -1261,6 +1304,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                           case 'welcome':
                             return stage.status === 'completed' ? 'Completed' : 'In Progress'
                           case 'preparation':
+                            if (stage.status === 'completed') return 'Completed'
                             if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
                               return `${stage.completedCount}/${stage.totalCount} Completed`
                             }
@@ -1378,7 +1422,12 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                                 }
                                 return stage.status === 'current' ? 'Going Live' : 'Not Started'
                               }
+                              // For stages with completion counts (Preparation, Ready to Go Live)
                               if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
+                                // Show "Completed" if stage status is completed
+                                if (stage.status === 'completed') {
+                                  return 'Completed'
+                                }
                                 return `${stage.completedCount}/${stage.totalCount} Completed`
                               }
                               if (stage.completedDate) {
@@ -1435,7 +1484,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
       {/* Desktop Only: Preparation Status Overview - Prominent */}
       {selectedStage === 'preparation' && (
-        <div className="hidden md:block">
+        <div id="stage-preparation" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Preparation</span>
             {(() => {
@@ -1974,7 +2023,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
       
       {/* Desktop Only: Welcome Stage Details */}
       {selectedStage === 'welcome' && (
-        <div className="hidden md:block">
+        <div id="stage-welcome" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Welcome to StoreHub</span>
             {(trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
@@ -2061,7 +2110,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
       {/* Desktop Only: Installation Stage Details */}
       {selectedStage === 'installation' && (
-        <div className="hidden md:block">
+        <div id="stage-installation" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Installation</span>
             <span className={`text-xs px-3 py-1 rounded-full font-medium ${
@@ -2201,7 +2250,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
       {/* Desktop Only: Training Stage Details */}
       {selectedStage === 'training' && (
-        <div className="hidden md:block">
+        <div id="stage-training" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Training</span>
             <span className={`text-xs px-3 py-1 rounded-full font-medium ${
@@ -2292,7 +2341,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
       {/* Desktop Only: Ready to Go Live Stage Details */}
       {selectedStage === 'ready-go-live' && (
-        <div className="hidden md:block">
+        <div id="stage-ready-go-live" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Ready to Go Live</span>
             {(() => {
@@ -2461,7 +2510,7 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
 
       {/* Desktop Only: Live Stage Details */}
       {selectedStage === 'live' && (
-        <div className="hidden md:block">
+        <div id="stage-live" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
             <span>Live</span>
             {(trainerData?.posQrDeliveryTnxCount ?? 0) > 30 &&

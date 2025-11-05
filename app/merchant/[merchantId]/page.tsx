@@ -58,11 +58,11 @@ const getCurrencyInfo = (country: string) => {
 // Helper function to format currency
 const formatCurrency = (amount: number | null | undefined, currencyInfo: { symbol: string, code: string }) => {
   if (amount === null || amount === undefined) return 'N/A'
-  
+
   // For currencies that typically don't use decimals (like IDR, VND, JPY)
   const noDecimalCurrencies = ['IDR', 'VND', 'JPY']
   const decimals = noDecimalCurrencies.includes(currencyInfo.code) ? 0 : 2
-  
+
   // Format based on currency
   if (currencyInfo.code === 'IDR' || currencyInfo.code === 'VND') {
     // For large number currencies, use different formatting
@@ -70,6 +70,37 @@ const formatCurrency = (amount: number | null | undefined, currencyInfo: { symbo
   } else {
     return `${currencyInfo.symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
   }
+}
+
+// Helper function to determine current stage based on onboarding data
+const getCurrentStage = (trainerData: any): string => {
+  if (!trainerData?.success) return 'welcome'
+
+  // Check completion status for each stage
+  const hasFirstCall = !!trainerData.firstCallTimestamp
+  const hasMenuSubmission = !!trainerData.menuCollectionSubmissionTimestamp
+  const hasCompletedProductSetup = trainerData.completedProductSetup === 'Yes'
+  const hasVideoProof = !!trainerData.videoProofLink
+  const hasHardwareDelivery = !!trainerData.hardwareFulfillmentDate
+  const hasActualInstallation = !!trainerData.actualInstallationDate
+  const hasPOSTraining = !!trainerData.posTrainingDate
+  const hasBOTraining = !!trainerData.backOfficeTrainingDate
+  const posQrCount = trainerData.posQrDeliveryCount || 0
+  const isLive = posQrCount > 30
+
+  // Determine current stage (most advanced incomplete stage)
+  if (isLive) return 'go-live'
+  if (hasPOSTraining || hasBOTraining) return 'go-live' // After training, focus on go-live
+  if (hasActualInstallation) return 'training' // After installation, focus on training
+  if (hasHardwareDelivery) return 'installation' // After hardware delivery, focus on installation
+
+  // Check preparation completion (3 items: menu, product setup, video)
+  const preparationComplete = hasMenuSubmission && hasCompletedProductSetup && hasVideoProof
+  if (preparationComplete) return 'hardware' // After preparation, focus on hardware
+
+  if (hasFirstCall) return 'preparation' // After welcome call, focus on preparation
+
+  return 'welcome' // Default to welcome stage
 }
 
 function TrainerPortalContent() {
@@ -92,6 +123,7 @@ function TrainerPortalContent() {
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
   const [hasProcessedUrlParam, setHasProcessedUrlParam] = useState(false)
   const [isInternalUser, setIsInternalUser] = useState(false)
+  const [currentStage, setCurrentStage] = useState<string>('welcome')
 
   const checkUserType = async () => {
     try {
@@ -207,6 +239,23 @@ function TrainerPortalContent() {
       loadAvailableStages()
     }
   }, [merchantId])
+
+  // Handle stage URL parameter and auto-redirect
+  useEffect(() => {
+    if (!trainerData?.success) return
+
+    const urlStage = searchParams.get('stage')
+    const calculatedStage = getCurrentStage(trainerData)
+
+    if (!urlStage) {
+      // No stage in URL - redirect to current stage
+      router.replace(`/merchant/${merchantId}?stage=${calculatedStage}`, { scroll: false })
+      setCurrentStage(calculatedStage)
+    } else {
+      // Stage in URL - use it
+      setCurrentStage(urlStage)
+    }
+  }, [trainerData, searchParams, merchantId, router])
 
 
 
@@ -582,8 +631,12 @@ function TrainerPortalContent() {
   // Get merchant name from API response
   const merchantName = trainerData?.success && trainerData?.name ? trainerData.name : 'Loading...'
 
-  // Track page view
-  usePageTracking(merchantId, merchantName !== 'Loading...' ? merchantName : undefined, 'progress')
+  // Track page view with stage parameter
+  usePageTracking(
+    merchantId,
+    merchantName !== 'Loading...' ? merchantName : undefined,
+    currentStage ? `progress?stage=${currentStage}` : 'progress'
+  )
 
   return (
     <div className="min-h-screen bg-[#faf9f6] py-4">
@@ -913,6 +966,7 @@ function TrainerPortalContent() {
             <div className="mt-4">
               <OnboardingTimeline
                 currentStage={trainerData.onboardingTrainerData.trainers[0].onboardingTrainerStage}
+                currentStageFromUrl={currentStage}
                 stageData={trainerData.onboardingTrainerData.trainers[0]}
                 trainerData={{
                   ...trainerData.onboardingTrainerData.trainers[0],
@@ -920,6 +974,7 @@ function TrainerPortalContent() {
                 }}
                 onBookingComplete={handleBookingComplete}
                 onOpenBookingModal={handleOpenBookingModal}
+                onStageChange={(stage) => setCurrentStage(stage)}
               />
             </div>
           )}

@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
+// Helper function to extract stage from page field
+const extractStage = (page: string): string | null => {
+  if (!page || !page.includes('?stage=')) return null
+  const match = page.match(/\?stage=([\w-]+)/)
+  return match ? match[1] : null
+}
+
 interface SummaryStats {
   totalPageViews: number
   uniqueMerchants: number
@@ -102,6 +109,7 @@ export default function AnalyticsPage() {
   const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'merchant' | 'internal_team'>('all')
   const [pageFilter, setPageFilter] = useState<string>('all')
   const [merchantFilter, setMerchantFilter] = useState<string>('all')
+  const [stageFilter, setStageFilter] = useState<string>('all')
   const [groupBy, setGroupBy] = useState<'day' | 'week' | 'month'>('day')
 
   // Merchant list
@@ -118,7 +126,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchAnalytics()
-  }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, merchantFilter, groupBy])
+  }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, merchantFilter, stageFilter, groupBy])
 
   // Fetch merchant stages when analytics data changes
   useEffect(() => {
@@ -208,6 +216,11 @@ export default function AnalyticsPage() {
       // Merchant filter
       if (merchantFilter !== 'all') {
         params.append('merchantId', merchantFilter)
+      }
+
+      // Stage filter - filter by page with stage parameter
+      if (stageFilter !== 'all') {
+        params.append('page', `progress?stage=${stageFilter}`)
       }
 
       // Group by
@@ -309,7 +322,7 @@ export default function AnalyticsPage() {
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Date Range */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -377,6 +390,27 @@ export default function AnalyticsPage() {
                     {merchant.name}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            {/* Stage Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Stage
+              </label>
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">All Stages</option>
+                <option value="welcome">Welcome</option>
+                <option value="preparation">Preparation</option>
+                <option value="hardware">Hardware</option>
+                <option value="installation">Installation</option>
+                <option value="training">Training</option>
+                <option value="ready-go-live">Ready to Go Live</option>
+                <option value="live">Live</option>
               </select>
             </div>
 
@@ -621,6 +655,107 @@ export default function AnalyticsPage() {
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-8">No data available for the selected period</p>
+              )}
+            </div>
+
+            {/* Stage Breakdown */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Stage Breakdown</h2>
+              {analyticsData.recentActivity.length > 0 ? (
+                (() => {
+                  // Calculate stage breakdown from recent activity
+                  const stageBreakdown: { [key: string]: { count: number, merchants: Set<string> } } = {
+                    'welcome': { count: 0, merchants: new Set() },
+                    'preparation': { count: 0, merchants: new Set() },
+                    'hardware': { count: 0, merchants: new Set() },
+                    'installation': { count: 0, merchants: new Set() },
+                    'training': { count: 0, merchants: new Set() },
+                    'ready-go-live': { count: 0, merchants: new Set() },
+                    'live': { count: 0, merchants: new Set() }
+                  }
+
+                  analyticsData.recentActivity.forEach(activity => {
+                    const stage = extractStage(activity.page)
+                    if (stage && stageBreakdown[stage]) {
+                      stageBreakdown[stage].count++
+                      if (activity.merchantId) {
+                        stageBreakdown[stage].merchants.add(activity.merchantId)
+                      }
+                    }
+                  })
+
+                  const stageLabels: { [key: string]: string } = {
+                    'welcome': 'Welcome',
+                    'preparation': 'Preparation',
+                    'hardware': 'Hardware',
+                    'installation': 'Installation',
+                    'training': 'Training',
+                    'ready-go-live': 'Ready to Go Live',
+                    'live': 'Live'
+                  }
+
+                  const stages = Object.entries(stageBreakdown)
+                    .filter(([_, data]) => data.count > 0)
+                    .sort((a, b) => b[1].count - a[1].count)
+
+                  return stages.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead>
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Stage
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Total Views
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Unique Merchants
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Percentage
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {stages.map(([stage, data]) => {
+                            const totalViews = Object.values(stageBreakdown).reduce((sum, s) => sum + s.count, 0)
+                            const percentage = totalViews > 0 ? ((data.count / totalViews) * 100).toFixed(1) : '0'
+
+                            return (
+                              <tr key={stage} className="hover:bg-gray-50">
+                                <td className="px-4 py-4">
+                                  <div className="text-sm font-medium text-gray-900">{stageLabels[stage]}</div>
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-semibold text-gray-900">{data.count}</div>
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-500">{data.merchants.size}</div>
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
+                                      <div
+                                        className="bg-orange-500 h-2 rounded-full"
+                                        style={{ width: `${percentage}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="text-sm text-gray-600">{percentage}%</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">No stage data available</p>
+                  )
+                })()
+              ) : (
+                <p className="text-gray-500 text-center py-8">No stage data available</p>
               )}
             </div>
 
