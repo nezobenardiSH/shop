@@ -87,6 +87,19 @@ export function verifyToken(token: string): any {
   }
 }
 
+export function verifyAdminToken(token: string): any {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any
+    // Verify it's actually an admin token
+    if (decoded.isAdmin === true || decoded.role === 'admin') {
+      return decoded
+    }
+    return null
+  } catch (error: any) {
+    return null
+  }
+}
+
 // Rate limiting logic (simple in-memory implementation)
 const loginAttempts: Map<string, { count: number; firstAttempt: number }> = new Map()
 const MAX_ATTEMPTS = 5
