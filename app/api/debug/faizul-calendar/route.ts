@@ -29,9 +29,33 @@ export async function GET() {
     }
     
     results.steps.push('✅ OAuth token found')
-    
+
+    // Step 1.5: Get Lark user ID from database
+    results.steps.push('🔍 Step 1.5: Getting Lark user ID from database...')
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+
+    const token = await prisma.larkAuthToken.findUnique({
+      where: { userEmail: installerEmail },
+      select: { larkUserId: true, calendarId: true }
+    })
+
+    await prisma.$disconnect()
+
+    if (!token?.larkUserId) {
+      results.error = 'No Lark user ID found'
+      results.steps.push('❌ No Lark user ID in database')
+      return NextResponse.json(results)
+    }
+
+    results.steps.push(`✅ Lark user ID: ${token.larkUserId}`)
+    results.steps.push(`📋 Stored calendar ID: ${token.calendarId}`)
+    results.larkUserId = token.larkUserId
+    results.storedCalendarId = token.calendarId
+
     // Step 2: Get raw busy times
     results.steps.push('🔍 Step 2: Getting raw busy times from calendar...')
+    results.steps.push('   This calls FreeBusy API with the Lark user ID above')
     const busyTimes = await larkService.getRawBusyTimes(
       installerEmail,
       startDate,
