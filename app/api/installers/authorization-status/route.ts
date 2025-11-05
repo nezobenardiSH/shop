@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { larkOAuthService } from '@/lib/lark-oauth-service'
-import installersConfig from '@/config/installers.json'
+import fs from 'fs/promises'
+import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
+    // Read installers config dynamically to pick up changes without restart
+    const configPath = path.join(process.cwd(), 'config', 'installers.json')
+    const configContent = await fs.readFile(configPath, 'utf-8')
+    const installersConfig = JSON.parse(configContent)
+
     // Get all configured internal installers from all locations
     const configuredInstallers: any[] = []
     for (const location of ['klangValley', 'penang', 'johorBahru']) {

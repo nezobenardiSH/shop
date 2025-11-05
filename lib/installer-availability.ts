@@ -1,7 +1,8 @@
 import { getSalesforceConnection } from './salesforce'
 import { larkService } from './lark'
 import { sendBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
-import installersConfig from '../config/installers.json'
+import fs from 'fs/promises'
+import path from 'path'
 
 interface TimeSlot {
   start: string
@@ -167,6 +168,11 @@ export async function getInternalInstallersAvailability(
 ): Promise<InstallerAvailability[]> {
   console.log('Getting installer availability...')
   
+  // Read installers config dynamically to pick up changes without restart
+  const configPath = path.join(process.cwd(), 'config', 'installers.json')
+  const configContent = await fs.readFile(configPath, 'utf-8')
+  const installersConfig = JSON.parse(configContent)
+
   // Determine which location's installers to use
   let locationKey = 'klangValley' // default
   if (merchantId) {
@@ -175,9 +181,9 @@ export async function getInternalInstallersAvailability(
       locationKey = location
     }
   }
-  
+
   console.log(`Using installers for location: ${locationKey}`)
-  
+
   // Get the appropriate installer config
   const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
   const installers = locationConfig.installers.filter((i: any) => i.isActive)
@@ -319,10 +325,15 @@ export async function bookInternalInstallation(
     existingEventId
   })
 
+  // Read installers config dynamically to pick up changes without restart
+  const configPath = path.join(process.cwd(), 'config', 'installers.json')
+  const configContent = await fs.readFile(configPath, 'utf-8')
+  const installersConfig = JSON.parse(configContent)
+
   // Get location category for the merchant
   const locationCategory = await getLocationCategory(merchantId)
   const locationKey = locationCategory === 'external' ? 'klangValley' : locationCategory
-  
+
   const assignedInstaller = assignInstaller(availableInstallers)
   const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
   const installer = locationConfig.installers.find((i: any) => i.name === assignedInstaller)

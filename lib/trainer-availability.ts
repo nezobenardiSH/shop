@@ -64,11 +64,11 @@ export async function getCombinedAvailability(
     const { filterTrainersByLocation } = await import('./location-matcher')
     const filteredTrainers = filterTrainersByLocation(trainers, merchantAddress)
     console.log(`Location filtering: ${trainers.length} trainers → ${filteredTrainers.length} trainers`)
-    console.log('Trainers after location filter:', filteredTrainers.map(t => t.name))
+    console.log('Trainers after location filter:', filteredTrainers.map((t: any) => t.name))
     trainers = filteredTrainers
   }
   
-  console.log(`Checking availability for ${trainers.length} trainers:`, trainers.map(t => t.name))
+  console.log(`Checking availability for ${trainers.length} trainers:`, trainers.map((t: any) => t.name))
   
   // Fetch availability for each trainer
   const trainerAvailabilities: Map<string, TrainerAvailability> = new Map()
