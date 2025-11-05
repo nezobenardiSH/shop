@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key-change-in-production'
+const INTERNAL_TEAM_PIN = process.env.INTERNAL_TEAM_PIN || '0000'
 
 export function extractPINFromPhone(phone: string | null | undefined): string | null {
   if (!phone) return null
@@ -35,28 +36,41 @@ export function validatePIN(
   return false
 }
 
+/**
+ * Check if the submitted PIN is the universal internal team PIN
+ */
+export function isInternalTeamPIN(submittedPIN: string): boolean {
+  const cleanPIN = submittedPIN.replace(/\D/g, '')
+  return cleanPIN === INTERNAL_TEAM_PIN
+}
+
 export function validatePINWithUser(
   submittedPIN: string,
   phoneData: Array<{ phone: string | null | undefined; name: string | null | undefined }>
-): { isValid: boolean; userName: string } {
+): { isValid: boolean; userName: string; isInternalUser: boolean } {
   // Clean submitted PIN
   const cleanPIN = submittedPIN.replace(/\D/g, '')
-  
+
   if (cleanPIN.length !== 4) {
-    return { isValid: false, userName: 'User' }
+    return { isValid: false, userName: 'User', isInternalUser: false }
   }
-  
+
+  // Check if it's the internal team PIN first
+  if (isInternalTeamPIN(submittedPIN)) {
+    return { isValid: true, userName: 'StoreHub Team', isInternalUser: true }
+  }
+
   // Check against all available phone numbers and their associated names
   for (const { phone, name } of phoneData) {
     const validPIN = extractPINFromPhone(phone)
     if (validPIN && validPIN === cleanPIN) {
       // Return the actual name from the database, or a default name
       const userName = name || 'User'
-      return { isValid: true, userName }
+      return { isValid: true, userName, isInternalUser: false }
     }
   }
-  
-  return { isValid: false, userName: 'User' }
+
+  return { isValid: false, userName: 'User', isInternalUser: false }
 }
 
 export function generateToken(payload: any): string {

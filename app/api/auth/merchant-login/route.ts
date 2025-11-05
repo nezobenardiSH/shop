@@ -103,25 +103,32 @@ export async function POST(request: NextRequest) {
     if (!validationResult.isValid) {
       recordLoginAttempt(merchantId, false)
       const updatedRateLimit = checkRateLimit(merchantId)
-      
+
       return NextResponse.json(
-        { 
+        {
           error: 'Invalid PIN',
           remainingAttempts: updatedRateLimit.remainingAttempts || 0
         },
         { status: 401 }
       )
     }
-    
+
     // Successful login - clear rate limit
     recordLoginAttempt(merchantId, true)
-    
+
+    // Log if internal team is logging in
+    if (validationResult.isInternalUser) {
+      console.log('🔧 Internal team login detected for merchant:', trainer.Name)
+    }
+
     // Generate JWT token (don't add exp field - jwt.sign handles it)
     const token = generateToken({
       merchantId: merchantId,
       trainerId: trainer.Id,
       trainerName: trainer.Name,
       userName: validationResult.userName,
+      isInternalUser: validationResult.isInternalUser,
+      userType: validationResult.isInternalUser ? 'internal_team' : 'merchant',
       pin: pin
     })
     
