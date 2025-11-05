@@ -58,15 +58,23 @@ export default function AdminPage() {
 
   const checkAuth = async () => {
     try {
+      console.log('Fetching users data...')
       const response = await fetch('/api/admin/users')
       if (response.ok) {
         setIsAuthenticated(true)
         const data = await response.json()
+        console.log('Users data received:', {
+          trainers: data.trainers?.length,
+          installers: data.installers?.length,
+          managers: data.managers?.length
+        })
         setUsersData(data)
       } else {
+        console.error('Failed to fetch users, status:', response.status)
         setIsAuthenticated(false)
       }
     } catch (error) {
+      console.error('Error fetching users:', error)
       setIsAuthenticated(false)
     } finally {
       setIsLoading(false)
@@ -154,17 +162,24 @@ export default function AdminPage() {
     e.preventDefault()
 
     try {
+      const payload = {
+        ...newUser,
+        languages: selectedLanguages
+      }
+
+      console.log('Adding user with payload:', payload)
+
       const response = await fetch('/api/admin/users/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newUser,
-          languages: selectedLanguages
-        })
+        body: JSON.stringify(payload)
       })
 
+      const data = await response.json()
+      console.log('Add user response:', data)
+
       if (response.ok) {
-        alert('User added successfully')
+        alert(`User added successfully: ${data.message}`)
         setShowAddModal(false)
         setNewUser({
           type: 'trainer',
@@ -174,13 +189,17 @@ export default function AdminPage() {
           languages: ['English']
         })
         setSelectedLanguages(['English'])
+
+        // Refresh the user list
+        console.log('Refreshing user list...')
         await checkAuth()
+        console.log('User list refreshed')
       } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to add user')
+        alert(`Error: ${data.error || 'Failed to add user'}`)
       }
     } catch (error) {
-      alert('Failed to add user')
+      console.error('Failed to add user:', error)
+      alert(`Failed to add user: ${error}`)
     }
   }
 
