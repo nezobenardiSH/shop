@@ -245,11 +245,17 @@ function TrainerPortalContent() {
     if (!trainerData?.success) return
 
     const urlStage = searchParams.get('stage')
+    const bookingParam = searchParams.get('booking')
     const calculatedStage = getCurrentStage(trainerData)
 
     if (!urlStage) {
       // No stage in URL - redirect to current stage
-      router.replace(`/merchant/${merchantId}?stage=${calculatedStage}`, { scroll: false })
+      // Preserve booking parameter if it exists
+      let redirectUrl = `/merchant/${merchantId}?stage=${calculatedStage}`
+      if (bookingParam && ['training', 'installation'].includes(bookingParam)) {
+        redirectUrl += `&booking=${bookingParam}`
+      }
+      router.replace(redirectUrl, { scroll: false })
       setCurrentStage(calculatedStage)
     } else {
       // Stage in URL - use it
@@ -502,8 +508,9 @@ function TrainerPortalContent() {
     setCurrentBookingInfo(bookingInfo)
     setBookingModalOpen(true)
 
-    // Update URL to include booking parameter
-    router.push(`/merchant/${merchantId}?booking=${bookingType}`, { scroll: false })
+    // Update URL to include both stage and booking parameters
+    const currentStageParam = searchParams.get('stage') || currentStage
+    router.push(`/merchant/${merchantId}?stage=${currentStageParam}&booking=${bookingType}`, { scroll: false })
   }
 
   const handleBookingComplete = async (selectedDate?: string) => {
@@ -523,8 +530,9 @@ function TrainerPortalContent() {
     setBookingModalOpen(false)
     setCurrentBookingInfo(null)
 
-    // Remove booking parameter from URL
-    router.push(`/merchant/${merchantId}`, { scroll: false })
+    // Remove booking parameter from URL but keep stage
+    const currentStageParam = searchParams.get('stage') || currentStage
+    router.push(`/merchant/${merchantId}?stage=${currentStageParam}`, { scroll: false })
 
     // Show success message for a few seconds
     const bookingType = currentBookingInfo?.bookingType
@@ -539,8 +547,9 @@ function TrainerPortalContent() {
     setBookingModalOpen(false)
     setCurrentBookingInfo(null)
 
-    // Remove booking parameter from URL
-    router.push(`/merchant/${merchantId}`, { scroll: false })
+    // Remove booking parameter from URL but keep stage
+    const currentStageParam = searchParams.get('stage') || currentStage
+    router.push(`/merchant/${merchantId}?stage=${currentStageParam}`, { scroll: false })
   }
 
   const startEditing = (trainer: any) => {
