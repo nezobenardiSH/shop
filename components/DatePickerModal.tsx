@@ -527,16 +527,25 @@ export default function DatePickerModal({
       }
     }
 
-    if (date < minDate || date > maxDate) {
-      console.log('  -> Date out of range. Min:', minDate.toDateString(), 'Max:', maxDate.toDateString())
+    // Normalize the date for comparison (set to midnight)
+    const normalizedDate = new Date(date)
+    normalizedDate.setHours(0, 0, 0, 0)
+
+    if (normalizedDate < minDate || normalizedDate > maxDate) {
+      console.log('  -> Date out of range. Date:', normalizedDate.toDateString(), 'Min:', minDate.toDateString(), 'Max:', maxDate.toDateString())
       return false
     }
 
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     const dayAvailability = availability.find(day => day.date === dateStr)
-    const isAvailable = dayAvailability && dayAvailability.slots.some(slot => slot.available)
-    console.log('  -> Available:', isAvailable, 'Date string:', dateStr)
-    return isAvailable
+    const hasAvailableSlots = dayAvailability && dayAvailability.slots.some(slot => slot.available)
+
+    console.log('  -> Date string:', dateStr, 'Found in availability:', !!dayAvailability, 'Has available slots:', hasAvailableSlots)
+    if (dayAvailability) {
+      console.log('     Slots:', dayAvailability.slots.map(s => `${s.start}-${s.end}:${s.available}`).join(', '))
+    }
+
+    return hasAvailableSlots
   }
 
   const getDateSlots = (date: Date | null) => {
