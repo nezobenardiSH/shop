@@ -70,6 +70,25 @@ interface Merchant {
   name: string
 }
 
+interface MerchantStage {
+  id: string
+  name: string
+  onboardingStage: string | null
+  welcomeStatus: string
+  preparationStatus: string
+  hardwareDeliveryStatus: string | null
+  installationStatus: string
+  trainingStatus: string | null
+  goLiveStatus: string
+  isLive: boolean
+  productSetupStatus: string | null
+  hardwareInstallationStatus: string | null
+  actualInstallationDate: string | null
+  trainingDate: string | null
+  plannedGoLiveDate: string | null
+  posQrDeliveryCount: number
+}
+
 export default function AnalyticsPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
@@ -89,6 +108,10 @@ export default function AnalyticsPage() {
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [loadingMerchants, setLoadingMerchants] = useState(true)
 
+  // Merchant stages
+  const [merchantStages, setMerchantStages] = useState<MerchantStage[]>([])
+  const [loadingStages, setLoadingStages] = useState(false)
+
   useEffect(() => {
     fetchMerchants()
   }, [])
@@ -96,6 +119,13 @@ export default function AnalyticsPage() {
   useEffect(() => {
     fetchAnalytics()
   }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, merchantFilter, groupBy])
+
+  // Fetch merchant stages when analytics data changes
+  useEffect(() => {
+    if (analyticsData?.topMerchants && analyticsData.topMerchants.length > 0) {
+      fetchMerchantStages(analyticsData.topMerchants.map(m => m.merchantId))
+    }
+  }, [analyticsData?.topMerchants])
 
   const fetchMerchants = async () => {
     setLoadingMerchants(true)
@@ -112,6 +142,29 @@ export default function AnalyticsPage() {
       console.error('Error fetching merchants:', err)
     } finally {
       setLoadingMerchants(false)
+    }
+  }
+
+  const fetchMerchantStages = async (merchantIds: string[]) => {
+    if (merchantIds.length === 0) {
+      setMerchantStages([])
+      return
+    }
+
+    setLoadingStages(true)
+    try {
+      const response = await fetch(`/api/admin/merchant-stages?merchantIds=${merchantIds.join(',')}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch merchant stages')
+      }
+      const data = await response.json()
+      if (data.success) {
+        setMerchantStages(data.merchants || [])
+      }
+    } catch (err) {
+      console.error('Error fetching merchant stages:', err)
+    } finally {
+      setLoadingStages(false)
     }
   }
 
@@ -626,7 +679,167 @@ export default function AnalyticsPage() {
                 )}
               </div>
 
-              {/* Page Breakdown */}
+              {/* Merchant Stages */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Merchant Onboarding Stages</h2>
+                {loadingStages ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                  </div>
+                ) : merchantStages.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Merchant
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Stage
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {merchantStages.map((merchant) => {
+                          // Determine overall status badge
+                          let statusBadge = { text: 'In Progress', color: 'bg-blue-100 text-blue-800' }
+                          if (merchant.isLive) {
+                            statusBadge = { text: 'Live', color: 'bg-green-100 text-green-800' }
+                          } else if (merchant.installationStatus === 'completed') {
+                            statusBadge = { text: 'Post-Installation', color: 'bg-purple-100 text-purple-800' }
+                          } else if (merchant.welcomeStatus === 'pending') {
+                            statusBadge = { text: 'New', color: 'bg-gray-100 text-gray-800' }
+                          }
+
+                          return (
+                            <tr key={merchant.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-4">
+                                <div className="text-sm font-medium text-gray-900 truncate max-w-[150px]">
+                                  {merchant.name}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate max-w-[150px]">
+                                  {merchant.id}
+                                </div>
+                              </td>
+                              <td className="px-3 py-4">
+                                <div className="text-xs text-gray-600">
+                                  {merchant.onboardingStage || 'Not Set'}
+                                </div>
+                              </td>
+                              <td className="px-3 py-4">
+                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusBadge.color}`}>
+                                  {statusBadge.text}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No stage data available</p>
+                )}
+              </div>
+            </div>
+
+            {/* Merchant Stages Detail - Full Width */}
+            {merchantStages.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Detailed Onboarding Status</h2>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Merchant
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Welcome
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Preparation
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Hardware
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Installation
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Training
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Go Live
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {merchantStages.map((merchant) => (
+                        <tr key={merchant.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {merchant.name}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className={`text-xs ${merchant.welcomeStatus === 'completed' ? 'text-green-600' : 'text-gray-400'}`}>
+                              {merchant.welcomeStatus === 'completed' ? '✓ Done' : '○ Pending'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-xs text-gray-600">{merchant.preparationStatus}</div>
+                            <div className="text-xs text-gray-400">{merchant.productSetupStatus || '-'}</div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-xs text-gray-600">{merchant.hardwareDeliveryStatus || 'Not Started'}</div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-xs text-gray-600">{merchant.hardwareInstallationStatus || 'Not Started'}</div>
+                            {merchant.actualInstallationDate && (
+                              <div className="text-xs text-gray-400">
+                                {new Date(merchant.actualInstallationDate).toLocaleDateString()}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-xs text-gray-600">{merchant.trainingStatus || 'Not Started'}</div>
+                            {merchant.trainingDate && (
+                              <div className="text-xs text-gray-400">
+                                {new Date(merchant.trainingDate).toLocaleDateString()}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {merchant.isLive ? (
+                              <div>
+                                <span className="text-xs text-green-600 font-semibold">✓ Live</span>
+                                <div className="text-xs text-gray-400">{merchant.posQrDeliveryCount} txns</div>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="text-xs text-gray-400">Pending</span>
+                                {merchant.plannedGoLiveDate && (
+                                  <div className="text-xs text-gray-400">
+                                    {new Date(merchant.plannedGoLiveDate).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Page Breakdown - Move to single column below */}
+            <div className="grid grid-cols-1 gap-6 mb-6">
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Page Breakdown</h2>
                 {analyticsData.pageBreakdown.length > 0 ? (
