@@ -262,11 +262,6 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       completedDate: trainerData?.firstCallTimestamp
     })
 
-    // If welcome is completed, automatically set selected stage to preparation
-    if (welcomeCompleted && selectedStage === 'welcome') {
-      setSelectedStage('preparation')
-    }
-
     // Preparation Stage - (completion statuses calculated at component level)
     timelineStages.push({
       id: 'preparation',
