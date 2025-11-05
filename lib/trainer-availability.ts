@@ -156,7 +156,7 @@ export async function getCombinedAvailability(
       // Create slots based on real trainer availability
       const slots: TimeSlot[] = []
       
-      TIME_SLOTS.forEach(slot => {
+      TIME_SLOTS.forEach((slot: any) => {
         // Create slot times in configured timezone
         const slotStart = createLocalDate(dateStr, slot.start)
         const slotEnd = createLocalDate(dateStr, slot.end)
@@ -214,13 +214,13 @@ export async function getCombinedAvailability(
             availableTrainers.push(trainerName)
 
             // Add this trainer's languages and locations to the available sets
-            const trainer = trainers.find(t => t.name === trainerName)
+            const trainer = trainers.find((t: any) => t.name === trainerName)
             if (trainer) {
               if (trainer.languages) {
-                trainer.languages.forEach(lang => availableLanguagesSet.add(lang))
+                trainer.languages.forEach((lang: any) => availableLanguagesSet.add(lang))
               }
               if (trainer.location) {
-                trainer.location.forEach(loc => availableLocationsSet.add(loc))
+                trainer.location.forEach((loc: any) => availableLocationsSet.add(loc))
               }
             }
           }
