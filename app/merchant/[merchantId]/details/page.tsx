@@ -79,6 +79,19 @@ export default function MerchantDetailsPage() {
   const [loading, setLoading] = useState(false)
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
+  const [isInternalUser, setIsInternalUser] = useState(false)
+
+  const checkUserType = async () => {
+    try {
+      const response = await fetch('/api/auth/me')
+      const data = await response.json()
+      if (data.success && data.user) {
+        setIsInternalUser(data.user.isInternalUser || false)
+      }
+    } catch (error) {
+      console.error('Failed to check user type:', error)
+    }
+  }
 
   const loadTrainerData = async () => {
     setLoading(true)
@@ -101,6 +114,7 @@ export default function MerchantDetailsPage() {
   }
 
   useEffect(() => {
+    checkUserType()
     loadTrainerData()
   }, [merchantId])
 
@@ -160,6 +174,7 @@ export default function MerchantDetailsPage() {
           merchantName={merchantName}
           lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
           currentPage="details"
+          isInternalUser={isInternalUser}
         />
         
         <div>

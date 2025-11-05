@@ -1,15 +1,15 @@
 require('dotenv').config({ path: '.env' })
 
 /**
- * Test script to verify the internal team PIN (0000) works correctly
+ * Test script to verify the internal team PIN (6666) works correctly
  * This tests the logic inline since auth-utils is TypeScript
  */
 
 async function testInternalTeamPIN() {
-  console.log('🔧 Testing Internal Team PIN (0000)')
+  console.log('🔧 Testing Internal Team PIN (6666)')
   console.log('=' . repeat(60))
 
-  const INTERNAL_TEAM_PIN = process.env.INTERNAL_TEAM_PIN || '0000'
+  const INTERNAL_TEAM_PIN = process.env.INTERNAL_TEAM_PIN || '6666'
 
   console.log('\n📋 Configuration:')
   console.log('  INTERNAL_TEAM_PIN:', INTERNAL_TEAM_PIN)
@@ -56,10 +56,10 @@ async function testInternalTeamPIN() {
   console.log('-' . repeat(60))
   
   const testPINs = [
-    { pin: '0000', expected: true, description: 'Internal team PIN' },
+    { pin: '6666', expected: true, description: 'Internal team PIN' },
     { pin: '1234', expected: false, description: 'Regular merchant PIN' },
     { pin: '9999', expected: false, description: 'Different PIN' },
-    { pin: '00-00', expected: true, description: 'Internal PIN with formatting' },
+    { pin: '66-66', expected: true, description: 'Internal PIN with formatting' },
   ]
   
   for (const test of testPINs) {

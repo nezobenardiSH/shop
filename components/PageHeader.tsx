@@ -7,13 +7,15 @@ interface PageHeaderProps {
   merchantName: string
   lastModifiedDate?: string
   currentPage: 'progress' | 'details'
+  isInternalUser?: boolean
 }
 
 export default function PageHeader({
   merchantId,
   merchantName,
   lastModifiedDate,
-  currentPage
+  currentPage,
+  isInternalUser = false
 }: PageHeaderProps) {
   // merchantName is now the actual name from Salesforce, no need to format
   
@@ -24,9 +26,16 @@ export default function PageHeader({
       <div className="mb-6">
         {/* Mobile Layout: Title and timestamp stacked */}
         <div className="block sm:hidden">
-          <h1 className="text-2xl font-bold text-[#0b0707] mb-1">
-            {merchantName}
-          </h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold text-[#0b0707]">
+              {merchantName}
+            </h1>
+            {isInternalUser && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-300">
+                StoreHub Team
+              </span>
+            )}
+          </div>
           {lastModifiedDate && (
             <p className="text-xs text-[#6b6a6a]">
               Last Modified: {new Date(lastModifiedDate).toLocaleString('en-GB', {
@@ -43,9 +52,16 @@ export default function PageHeader({
 
         {/* Desktop Layout: Title and timestamp side by side */}
         <div className="hidden sm:flex sm:justify-between sm:items-center">
-          <h1 className="text-3xl font-bold text-[#0b0707]">
-            {merchantName}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-[#0b0707]">
+              {merchantName}
+            </h1>
+            {isInternalUser && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 border border-orange-300">
+                StoreHub Team
+              </span>
+            )}
+          </div>
           {lastModifiedDate && (
             <p className="text-sm text-[#6b6a6a]">
               Last Modified: {new Date(lastModifiedDate).toLocaleString('en-GB', {

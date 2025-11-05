@@ -2,20 +2,20 @@
 
 ## Overview
 
-The internal team can use a universal PIN code **`0000`** to log into **any merchant page** without needing to know the merchant's actual phone numbers. This allows the StoreHub team to access merchant portals for support, testing, and monitoring purposes.
+The internal team can use a universal PIN code **`6666`** to log into **any merchant page** without needing to know the merchant's actual phone numbers. This allows the StoreHub team to access merchant portals for support, testing, and monitoring purposes.
 
 ## How It Works
 
 ### For Internal Team Members
 
 1. Navigate to any merchant page: `/merchant/[merchantId]`
-2. Enter PIN: **`0000`**
+2. Enter PIN: **`6666`**
 3. Click "Login"
 4. You will be logged in as **"StoreHub Team"**
 
 ### What Happens Behind the Scenes
 
-When PIN `0000` is entered:
+When PIN `6666` is entered:
 - ✅ Access is granted to the merchant page (regardless of which merchant)
 - ✅ Session is flagged as `isInternalUser: true`
 - ✅ User type is set to `internal_team`
@@ -34,7 +34,7 @@ Sessions using the internal team PIN include these fields:
   "userName": "StoreHub Team",
   "isInternalUser": true,
   "userType": "internal_team",
-  "pin": "0000"
+  "pin": "6666"
 }
 ```
 
@@ -45,7 +45,7 @@ Sessions using the internal team PIN include these fields:
 The PIN is configured in `.env`:
 
 ```env
-INTERNAL_TEAM_PIN=0000
+INTERNAL_TEAM_PIN=6666
 ```
 
 ### Changing the PIN
@@ -129,7 +129,7 @@ Expected output:
 
 1. **Test Internal Team Login**:
    - Go to: `/merchant/a0yBE000002SwCnYAK` (or any merchant ID)
-   - Enter PIN: `0000`
+   - Enter PIN: `6666`
    - Expected: Login successful, shows "Welcome, StoreHub Team"
 
 2. **Test Merchant Login Still Works**:
@@ -138,7 +138,7 @@ Expected output:
    - Expected: Login successful, shows merchant's actual name
 
 3. **Check Browser Console**:
-   - After logging in with `0000`
+   - After logging in with `6666`
    - Open browser console (F12)
    - Look for: `🔧 Internal team login detected for merchant: [Merchant Name]`
 
@@ -153,7 +153,7 @@ Expected output:
 ### Code Flow
 
 ```
-User enters PIN 0000
+User enters PIN 6666
     ↓
 validatePINWithUser() checks if PIN === INTERNAL_TEAM_PIN
     ↓
@@ -168,7 +168,7 @@ User is logged in as "StoreHub Team"
 
 ## Troubleshooting
 
-### PIN 0000 Not Working
+### PIN 6666 Not Working
 
 1. **Check Environment Variable**:
    ```bash
@@ -211,9 +211,9 @@ Potential improvements for the internal team PIN feature:
 ## FAQ
 
 **Q: Can merchants accidentally discover this PIN?**
-A: It's unlikely, but possible. The PIN is not documented anywhere public. If a merchant tries `0000`, they would be logged in as "StoreHub Team" which would be confusing but not harmful.
+A: It's unlikely, but possible. The PIN is not documented anywhere public. If a merchant tries `6666`, they would be logged in as "StoreHub Team" which would be confusing but not harmful.
 
-**Q: What if a merchant's actual PIN is 0000?**
+**Q: What if a merchant's actual PIN is 6666?**
 A: The internal team PIN check happens first, so it would always log them in as "StoreHub Team" instead of their actual name. This is a rare edge case. If it happens, ask the merchant to update one of their phone numbers.
 
 **Q: Can I use this PIN on the admin page?**
@@ -222,7 +222,7 @@ A: No, this PIN only works for merchant pages (`/merchant/[merchantId]`). The ad
 **Q: Is this PIN logged in Salesforce?**
 A: No, the PIN is only used for portal authentication. It's not stored or logged in Salesforce.
 
-**Q: Can I change the PIN to something other than 0000?**
+**Q: Can I change the PIN to something other than 6666?**
 A: Yes, update the `INTERNAL_TEAM_PIN` environment variable to any 4-digit code.
 
 ---

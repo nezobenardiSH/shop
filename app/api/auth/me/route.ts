@@ -24,14 +24,16 @@ export async function GET(request: NextRequest) {
     
     // Get the user name from the token (stored during login)
     const userName = decoded.userName || decoded.trainerName || 'User'
-    
+
     return NextResponse.json({
       success: true,
       user: {
         name: userName,
         merchantId: decoded.merchantId,
         trainerId: decoded.trainerId,
-        trainerName: decoded.trainerName
+        trainerName: decoded.trainerName,
+        isInternalUser: decoded.isInternalUser || false,
+        userType: decoded.userType || 'merchant'
       }
     })
     
