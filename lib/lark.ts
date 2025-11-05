@@ -168,7 +168,7 @@ class LarkService {
   /**
    * Make authenticated request to Lark API
    */
-  private async makeRequest(endpoint: string, options: RequestInit & { userEmail?: string } = {}) {
+  async makeRequest(endpoint: string, options: RequestInit & { userEmail?: string } = {}) {
     let token: string
     
     // Check if we should use a user token for this request
@@ -528,19 +528,47 @@ class LarkService {
           trainerEmail
         )
 
-        if (freeBusyResponse.data?.freebusy_list && freeBusyResponse.data.freebusy_list.length > 0) {
-          const userFreeBusy = freeBusyResponse.data.freebusy_list[0]
-          if (userFreeBusy.busy_time && userFreeBusy.busy_time.length > 0) {
-            freeBusyTimes = userFreeBusy.busy_time.map(busy => ({
-              start_time: busy.start_time,
-              end_time: busy.end_time
-            }))
-            console.log(`✅ FreeBusy API returned ${freeBusyTimes.length} busy periods`)
-          } else {
-            console.log('⚠️ FreeBusy API returned no busy times')
+        // Updated to handle the actual FreeBusy API response format
+        // The API returns freebusy_list with user_id and busy_time array structure
+        if (freeBusyResponse.data?.freebusy_list && Array.isArray(freeBusyResponse.data.freebusy_list)) {
+          // Check if the response is in the nested format (user_id with busy_time array)
+          if (freeBusyResponse.data.freebusy_list.length > 0) {
+            const firstItem = freeBusyResponse.data.freebusy_list[0]
+            
+            // If the item has busy_time array, it's the nested format
+            if (firstItem.busy_time && Array.isArray(firstItem.busy_time)) {
+              // Extract busy times from the nested structure
+              for (const userFreeBusy of freeBusyResponse.data.freebusy_list) {
+                if (userFreeBusy.busy_time && Array.isArray(userFreeBusy.busy_time)) {
+                  const userBusyTimes = userFreeBusy.busy_time.map((busy: any) => ({
+                    start_time: busy.start_time,
+                    end_time: busy.end_time
+                  }))
+                  freeBusyTimes.push(...userBusyTimes)
+                }
+              }
+            } else if ((firstItem as any).start_time && (firstItem as any).end_time) {
+              // Flat array format (direct busy times)
+              freeBusyTimes = freeBusyResponse.data.freebusy_list.map((busy: any) => ({
+                start_time: busy.start_time,
+                end_time: busy.end_time
+              }))
+            }
+          }
+          console.log(`✅ FreeBusy API returned ${freeBusyTimes.length} busy periods`)
+          
+          // Log first 3 for debugging
+          if (freeBusyTimes.length > 0) {
+            console.log('  Sample busy times from FreeBusy:')
+            freeBusyTimes.slice(0, 3).forEach((busy, idx) => {
+              const start = new Date(busy.start_time)
+              const end = new Date(busy.end_time)
+              console.log(`    ${idx + 1}. ${start.toLocaleString('en-US', { timeZone: 'Asia/Singapore' })} - ${end.toLocaleString('en-US', { timeZone: 'Asia/Singapore' })}`)
+            })
           }
         } else {
-          console.log('⚠️ FreeBusy API returned empty response')
+          console.log('⚠️ FreeBusy API returned unexpected format or empty response')
+          console.log('  Response structure:', JSON.stringify(freeBusyResponse.data, null, 2).substring(0, 500))
         }
       } catch (error) {
         console.error('❌ FreeBusy API failed:', error)

@@ -120,7 +120,6 @@ export async function GET() {
     // Step 4: Check Calendar Events API to see ALL events (including Free ones)
     results.steps.push('🔍 Step 4: Checking Calendar Events API for ALL events (including Free)...')
 
-    const { larkService } = await import('@/lib/lark')
     const timeMin = Math.floor(startDate.getTime() / 1000)
     const timeMax = Math.floor(endDate.getTime() / 1000)
 
