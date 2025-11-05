@@ -460,17 +460,16 @@ export default function AnalyticsPage() {
                       {/* Chart area */}
                       <div className="flex-1">
                         {/* Bar chart */}
-                        <div className="flex items-end justify-between h-64 gap-1 border-l border-b border-gray-300 pl-2 pb-2">
-                          {analyticsData.timeSeriesData.map((point, index) => {
-                            const maxViews = Math.max(...analyticsData.timeSeriesData.map(p => p.pageViews))
-                            const height = maxViews > 0 ? (point.pageViews / maxViews) * 100 : 0
+                        <div className="relative h-64 border-l border-b border-gray-300 pl-2 pb-2">
+                          <div className="absolute inset-0 flex items-end justify-between gap-1 pl-2 pb-2">
+                            {analyticsData.timeSeriesData.map((point, index) => {
+                              const maxViews = Math.max(...analyticsData.timeSeriesData.map(p => p.pageViews))
+                              const heightPercent = maxViews > 0 ? (point.pageViews / maxViews) * 100 : 0
 
-                            return (
-                              <div key={index} className="flex-1 flex flex-col items-center group">
-                                <div className="relative w-full h-full flex items-end">
+                              return (
+                                <div key={index} className="flex-1 group relative" style={{ height: `${heightPercent}%` }}>
                                   <div
-                                    className="bg-orange-500 hover:bg-orange-600 transition-all cursor-pointer rounded-t w-full"
-                                    style={{ height: `${height}%` }}
+                                    className="bg-orange-500 hover:bg-orange-600 transition-all cursor-pointer rounded-t w-full h-full"
                                     title={`${formatDate(point.date)}: ${point.pageViews} views`}
                                   >
                                     <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
@@ -478,9 +477,9 @@ export default function AnalyticsPage() {
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            )
-                          })}
+                              )
+                            })}
+                          </div>
                         </div>
 
                         {/* X-axis labels */}
