@@ -663,6 +663,185 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
+            {/* All Merchants Activity - Show when "All Merchants" is selected */}
+            {merchantFilter === 'all' && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  All Merchants Activity by {groupBy === 'day' ? 'Day' : groupBy === 'week' ? 'Week' : 'Month'}
+                </h2>
+                {analyticsData.recentActivity.length > 0 ? (
+                  <div className="space-y-6">
+                    {(() => {
+                      // Group activities by merchant, then by date
+                      const groupedByMerchant = analyticsData.recentActivity.reduce((acc, activity) => {
+                        const merchantKey = activity.merchantId || 'unknown'
+                        if (!acc[merchantKey]) {
+                          acc[merchantKey] = {
+                            merchantName: activity.merchantName || 'Unknown',
+                            merchantId: activity.merchantId,
+                            activities: []
+                          }
+                        }
+                        acc[merchantKey].activities.push(activity)
+                        return acc
+                      }, {} as Record<string, { merchantName: string, merchantId: string | null, activities: typeof analyticsData.recentActivity }>)
+
+                      return Object.entries(groupedByMerchant)
+                        .sort(([, a], [, b]) => b.activities.length - a.activities.length)
+                        .map(([merchantKey, merchantData]) => {
+                          // Group this merchant's activities by date
+                          const groupedByDate = merchantData.activities.reduce((acc, activity) => {
+                            const date = new Date(activity.timestamp)
+                            const dateKey = groupBy === 'day'
+                              ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                              : groupBy === 'week'
+                              ? `Week of ${new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                              : date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+
+                            if (!acc[dateKey]) {
+                              acc[dateKey] = []
+                            }
+                            acc[dateKey].push(activity)
+                            return acc
+                          }, {} as Record<string, typeof analyticsData.recentActivity>)
+
+                          return (
+                            <div key={merchantKey} className="border border-gray-200 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+                                <div>
+                                  <h3 className="text-md font-semibold text-gray-900">{merchantData.merchantName}</h3>
+                                  {merchantData.merchantId && (
+                                    <p className="text-xs text-gray-500">{merchantData.merchantId}</p>
+                                  )}
+                                </div>
+                                <span className="text-sm font-medium text-gray-600">
+                                  {merchantData.activities.length} activities
+                                </span>
+                              </div>
+                              <div className="space-y-3">
+                                {Object.entries(groupedByDate)
+                                  .sort(([, activitiesA], [, activitiesB]) => {
+                                    return new Date(activitiesB[0].timestamp).getTime() - new Date(activitiesA[0].timestamp).getTime()
+                                  })
+                                  .map(([dateKey, activities]) => (
+                                    <div key={dateKey} className="pl-3 border-l-2 border-orange-300">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-gray-700">{dateKey}</span>
+                                        <span className="text-xs text-gray-500">{activities.length} activities</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2">
+                                        {activities.map((activity) => (
+                                          <div key={activity.id} className="inline-flex items-center gap-1 bg-gray-100 rounded px-2 py-1">
+                                            <span className="text-xs text-gray-600">
+                                              {new Date(activity.timestamp).toLocaleTimeString('en-US', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })}
+                                            </span>
+                                            <span className="text-xs font-medium text-blue-600 capitalize">
+                                              {activity.page}
+                                            </span>
+                                            {activity.action && (
+                                              <span className="text-xs text-gray-500 capitalize">
+                                                ({activity.action})
+                                              </span>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )
+                        })
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No activity data available</p>
+                )}
+              </div>
+            )}
+
+            {/* Merchant Activity Timeline - Only show when a specific merchant is selected */}
+            {merchantFilter !== 'all' && (
+              <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Activity Timeline for {merchants.find(m => m.id === merchantFilter)?.name || 'Selected Merchant'}
+                </h2>
+                {analyticsData.recentActivity.length > 0 ? (
+                  <div className="space-y-6">
+                    {(() => {
+                      // Group activities by date
+                      const groupedActivities = analyticsData.recentActivity.reduce((acc, activity) => {
+                        const date = new Date(activity.timestamp)
+                        const dateKey = groupBy === 'day'
+                          ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                          : groupBy === 'week'
+                          ? `Week of ${new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                          : date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+
+                        if (!acc[dateKey]) {
+                          acc[dateKey] = []
+                        }
+                        acc[dateKey].push(activity)
+                        return acc
+                      }, {} as Record<string, typeof analyticsData.recentActivity>)
+
+                      return Object.entries(groupedActivities)
+                        .sort(([dateA], [dateB]) => {
+                          // Sort by date descending (most recent first)
+                          const timeA = groupedActivities[dateA][0].timestamp
+                          const timeB = groupedActivities[dateB][0].timestamp
+                          return new Date(timeB).getTime() - new Date(timeA).getTime()
+                        })
+                        .map(([dateKey, activities]) => (
+                          <div key={dateKey} className="border-l-4 border-orange-500 pl-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-md font-semibold text-gray-900">{dateKey}</h3>
+                              <span className="text-sm text-gray-500">{activities.length} activities</span>
+                            </div>
+                            <div className="space-y-2">
+                              {activities.map((activity) => (
+                                <div key={activity.id} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs font-medium text-gray-500">
+                                          {new Date(activity.timestamp).toLocaleTimeString('en-US', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })}
+                                        </span>
+                                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                                          {activity.page}
+                                        </span>
+                                        {activity.action && (
+                                          <span className="text-xs text-gray-600 capitalize">
+                                            • {activity.action}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {activity.isInternalUser && (
+                                        <div className="text-xs text-orange-600 font-medium">
+                                          Internal Team Access
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No activity data available for this merchant</p>
+                )}
+              </div>
+            )}
+
             {/* Recent Activity */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
