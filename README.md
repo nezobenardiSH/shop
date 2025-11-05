@@ -155,6 +155,20 @@ Manual testing checklist:
 - [ ] JWT authentication works
 - [ ] Merchant dashboard loads
 
+## Documentation
+
+### Calendar Integration
+- [Lark FreeBusy API Fix Documentation](docs/LARK_FREEBUSY_API_FIX.md) - Details about the FreeBusy API response handling fix
+- [Calendar Troubleshooting Guide](docs/CALENDAR_TROUBLESHOOTING_GUIDE.md) - Step-by-step guide for diagnosing calendar availability issues
+
+### Troubleshooting
+
+If you encounter calendar availability issues:
+1. Check the [Calendar Troubleshooting Guide](docs/CALENDAR_TROUBLESHOOTING_GUIDE.md)
+2. Use the debug endpoints documented in the guide
+3. Verify events are marked as "Busy" in Lark Calendar
+4. Ensure users have completed OAuth authorization
+
 ## Future Production Deployment
 
 When ready for production, you can deploy to:
