@@ -407,8 +407,8 @@ export async function assignTrainer(
   if (requiredLanguages && requiredLanguages.length > 0) {
     qualifiedTrainers = trainerDetails.filter(({ details }) => {
       // Trainer must speak ALL required languages
-      return requiredLanguages.every(reqLang =>
-        details.languages?.some(trainerLang =>
+      return requiredLanguages.every((reqLang: any) =>
+        details.languages?.some((trainerLang: any) =>
           trainerLang.toLowerCase() === reqLang.toLowerCase()
         )
       )
@@ -422,8 +422,8 @@ export async function assignTrainer(
       // Fallback: No trainers match all required languages
       // Use trainers who match at least one language
       qualifiedTrainers = trainerDetails.filter(({ details }) => {
-        return requiredLanguages.some(reqLang =>
-          details.languages?.some(trainerLang =>
+        return requiredLanguages.some((reqLang: any) =>
+          details.languages?.some((trainerLang: any) =>
             trainerLang.toLowerCase() === reqLang.toLowerCase()
           )
         )
