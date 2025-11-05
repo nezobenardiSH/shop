@@ -116,22 +116,34 @@ export async function trackPageView(data: {
   metadata?: any
 }): Promise<void> {
   try {
-    await prisma.pageView.create({
-      data: {
-        merchantId: data.merchantId || null,
-        merchantName: data.merchantName || null,
-        page: data.page,
-        action: data.action || 'view',
-        sessionId: data.sessionId,
-        userAgent: data.userAgent || null,
-        deviceType: data.deviceType || detectDeviceType(data.userAgent || null),
-        ipAddress: data.ipAddress || null,
-        isInternalUser: data.isInternalUser || false,
-        userType: data.userType || 'merchant',
-        metadata: data.metadata || null,
-        timestamp: new Date()
+    // Prepare data with deviceType
+    const pageViewData: any = {
+      merchantId: data.merchantId || null,
+      merchantName: data.merchantName || null,
+      page: data.page,
+      action: data.action || 'view',
+      sessionId: data.sessionId,
+      userAgent: data.userAgent || null,
+      deviceType: data.deviceType || detectDeviceType(data.userAgent || null),
+      ipAddress: data.ipAddress || null,
+      isInternalUser: data.isInternalUser || false,
+      userType: data.userType || 'merchant',
+      metadata: data.metadata || null,
+      timestamp: new Date()
+    }
+    
+    try {
+      await prisma.pageView.create({ data: pageViewData })
+    } catch (error: any) {
+      // If deviceType column doesn't exist, try without it
+      if (error.message?.includes('deviceType') || error.message?.includes('column')) {
+        console.warn('[Analytics] deviceType column not found, tracking without it')
+        delete pageViewData.deviceType
+        await prisma.pageView.create({ data: pageViewData })
+      } else {
+        throw error
       }
-    })
+    }
   } catch (error) {
     // Log error but don't throw - tracking failures shouldn't break the app
     console.error('[Analytics] Failed to track page view:', error)

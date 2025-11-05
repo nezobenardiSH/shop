@@ -340,22 +340,52 @@ export async function getRecentActivity(
   if (filters.isInternalUser !== undefined) whereClause.isInternalUser = filters.isInternalUser
   if (filters.userType) whereClause.userType = filters.userType
 
-  const activities = await prisma.pageView.findMany({
-    where: whereClause,
-    select: {
-      id: true,
-      merchantId: true,
-      merchantName: true,
-      page: true,
-      action: true,
-      deviceType: true,
-      timestamp: true,
-      isInternalUser: true,
-      userType: true
-    },
-    orderBy: { timestamp: 'desc' },
-    take: limit
-  })
+  let activities: any[] = []
+  
+  try {
+    // Try with deviceType first
+    activities = await prisma.pageView.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        merchantId: true,
+        merchantName: true,
+        page: true,
+        action: true,
+        deviceType: true,
+        timestamp: true,
+        isInternalUser: true,
+        userType: true
+      },
+      orderBy: { timestamp: 'desc' },
+      take: limit
+    })
+  } catch (error: any) {
+    // If deviceType column doesn't exist yet, query without it
+    if (error.message?.includes('deviceType') || error.message?.includes('column')) {
+      console.warn('[Analytics] deviceType column not found, querying without it')
+      const activitiesWithoutDevice = await prisma.pageView.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          merchantId: true,
+          merchantName: true,
+          page: true,
+          action: true,
+          timestamp: true,
+          isInternalUser: true,
+          userType: true
+        },
+        orderBy: { timestamp: 'desc' },
+        take: limit
+      })
+      
+      // Add null deviceType to match interface
+      activities = activitiesWithoutDevice.map(a => ({ ...a, deviceType: null }))
+    } else {
+      throw error
+    }
+  }
 
   return activities
 }
