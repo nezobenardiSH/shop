@@ -439,35 +439,74 @@ export default function AnalyticsPage() {
               {analyticsData.timeSeriesData.length > 0 ? (
                 <div className="overflow-x-auto">
                   <div className="min-w-full">
-                    {/* Simple bar chart */}
-                    <div className="flex items-end justify-between h-64 gap-1">
-                      {analyticsData.timeSeriesData.map((point, index) => {
-                        const maxViews = Math.max(...analyticsData.timeSeriesData.map(p => p.pageViews))
-                        const height = maxViews > 0 ? (point.pageViews / maxViews) * 100 : 0
+                    {/* Chart with axes */}
+                    <div className="flex gap-4">
+                      {/* Y-axis */}
+                      <div className="flex flex-col justify-between h-64 py-2">
+                        {(() => {
+                          const maxViews = Math.max(...analyticsData.timeSeriesData.map(p => p.pageViews))
+                          const yAxisSteps = 5
+                          const stepValue = Math.ceil(maxViews / yAxisSteps)
+                          const yAxisValues = Array.from({ length: yAxisSteps + 1 }, (_, i) => stepValue * (yAxisSteps - i))
 
-                        return (
-                          <div key={index} className="flex-1 flex flex-col items-center group">
-                            <div className="relative w-full">
-                              <div
-                                className="bg-orange-500 hover:bg-orange-600 transition-all cursor-pointer rounded-t"
-                                style={{ height: `${height * 2}px` }}
-                                title={`${formatDate(point.date)}: ${point.pageViews} views`}
-                              >
-                                <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
-                                  <div>{formatDate(point.date)}</div>
-                                  <div>{point.pageViews} views</div>
-                                  <div>{point.uniqueSessions} sessions</div>
+                          return yAxisValues.map((value, i) => (
+                            <div key={i} className="text-xs text-gray-500 text-right pr-2">
+                              {value}
+                            </div>
+                          ))
+                        })()}
+                      </div>
+
+                      {/* Chart area */}
+                      <div className="flex-1">
+                        {/* Bar chart */}
+                        <div className="flex items-end justify-between h-64 gap-1 border-l border-b border-gray-300 pl-2 pb-2">
+                          {analyticsData.timeSeriesData.map((point, index) => {
+                            const maxViews = Math.max(...analyticsData.timeSeriesData.map(p => p.pageViews))
+                            const height = maxViews > 0 ? (point.pageViews / maxViews) * 100 : 0
+
+                            return (
+                              <div key={index} className="flex-1 flex flex-col items-center group">
+                                <div className="relative w-full h-full flex items-end">
+                                  <div
+                                    className="bg-orange-500 hover:bg-orange-600 transition-all cursor-pointer rounded-t w-full"
+                                    style={{ height: `${height}%` }}
+                                    title={`${formatDate(point.date)}: ${point.pageViews} views`}
+                                  >
+                                    <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                                      <div>{formatDate(point.date)}: {point.pageViews} views</div>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            {analyticsData.timeSeriesData.length <= 31 && (
-                              <div className="text-xs text-gray-500 mt-2 transform -rotate-45 origin-top-left">
-                                {new Date(point.date).getDate()}
+                            )
+                          })}
+                        </div>
+
+                        {/* X-axis labels */}
+                        <div className="flex justify-between mt-2 pl-2">
+                          {analyticsData.timeSeriesData.map((point, index) => {
+                            // Show labels based on data length
+                            const showLabel = analyticsData.timeSeriesData.length <= 7
+                              || index === 0
+                              || index === analyticsData.timeSeriesData.length - 1
+                              || index % Math.ceil(analyticsData.timeSeriesData.length / 7) === 0
+
+                            return (
+                              <div key={index} className="flex-1 text-center">
+                                {showLabel && (
+                                  <div className="text-xs text-gray-500">
+                                    {new Date(point.date).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        )
-                      })}
+                            )
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
