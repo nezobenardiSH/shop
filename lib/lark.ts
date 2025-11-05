@@ -1120,10 +1120,30 @@ class LarkService {
   ): Promise<FreeBusyResponse> {
     try {
       console.log('Fetching FreeBusy for user:', userEmails[0]);
-      
-      // For organizational accounts, we can try using the email directly
-      // Lark might accept the email as user_id
-      const userId = userEmails[0]
+
+      // CRITICAL FIX: FreeBusy API requires Lark user ID (ou_xxxxx), not email
+      // Get the Lark user ID from the database
+      const { PrismaClient } = await import('@prisma/client')
+      const prisma = new PrismaClient()
+
+      const token = await prisma.larkAuthToken.findUnique({
+        where: { userEmail: userEmails[0] },
+        select: { larkUserId: true }
+      })
+
+      await prisma.$disconnect()
+
+      if (!token?.larkUserId) {
+        console.error(`❌ No Lark user ID found for ${userEmails[0]}`)
+        return {
+          code: 0,
+          msg: 'No Lark user ID found',
+          data: { freebusy_list: [] }
+        }
+      }
+
+      const userId = token.larkUserId
+      console.log(`✅ Using Lark user ID: ${userId} for ${userEmails[0]}`)
       
       // Format times in RFC 3339 with timezone offset for Singapore (GMT+8)
       const formatRFC3339 = (date: Date): string => {
