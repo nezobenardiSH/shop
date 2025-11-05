@@ -42,6 +42,7 @@ interface RecentActivity {
   merchantName: string | null
   page: string
   action: string | null
+  deviceType: string | null
   timestamp: string
   isInternalUser: boolean
   userType: string | null
@@ -547,34 +548,41 @@ export default function MerchantAnalyticsPage() {
                                 })}
                               </div>
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium text-blue-600 capitalize">
-                                    {activity.page}
-                                  </span>
-                                  {activity.action && (
-                                    <>
-                                      <span className="text-gray-400">•</span>
-                                      <span className="text-sm text-gray-600 capitalize">
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-mono text-gray-700 break-all">
+                                      {activity.page}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {activity.action && (
+                                      <span className="text-xs text-gray-600 capitalize">
                                         {activity.action}
                                       </span>
-                                    </>
-                                  )}
-                                  {activity.isInternalUser && (
-                                    <>
-                                      <span className="text-gray-400">•</span>
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                                        Internal Team
-                                      </span>
-                                    </>
-                                  )}
-                                  {activity.userType && (
-                                    <>
-                                      <span className="text-gray-400">•</span>
-                                      <span className="text-xs text-gray-500 capitalize">
-                                        {activity.userType}
-                                      </span>
-                                    </>
-                                  )}
+                                    )}
+                                    {activity.deviceType && (
+                                      <>
+                                        {activity.action && <span className="text-gray-400">•</span>}
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${
+                                          activity.deviceType === 'mobile' ? 'bg-purple-100 text-purple-800' :
+                                          activity.deviceType === 'tablet' ? 'bg-indigo-100 text-indigo-800' :
+                                          'bg-gray-100 text-gray-800'
+                                        }`}>
+                                          {activity.deviceType === 'mobile' ? '📱' : 
+                                           activity.deviceType === 'tablet' ? '📋' : 
+                                           '💻'} {activity.deviceType}
+                                        </span>
+                                      </>
+                                    )}
+                                    {activity.isInternalUser && (
+                                      <>
+                                        <span className="text-gray-400">•</span>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
+                                          Internal Team
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
