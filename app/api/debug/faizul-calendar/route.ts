@@ -116,7 +116,51 @@ export async function GET() {
     
     results.slotAvailability = slotAvailability
     results.steps.push(`✅ Slot availability calculated`)
-    
+
+    // Step 4: Check Calendar Events API to see ALL events (including Free ones)
+    results.steps.push('🔍 Step 4: Checking Calendar Events API for ALL events (including Free)...')
+
+    const { larkService } = await import('@/lib/lark')
+    const timeMin = Math.floor(startDate.getTime() / 1000)
+    const timeMax = Math.floor(endDate.getTime() / 1000)
+
+    try {
+      const eventsResponse = await larkService.makeRequest(
+        `/open-apis/calendar/v4/calendars/primary/events?start_time=${timeMin}&end_time=${timeMax}`,
+        {
+          method: 'GET',
+          userEmail: installerEmail
+        }
+      )
+
+      if (eventsResponse.data?.items?.length > 0) {
+        results.steps.push(`✅ Found ${eventsResponse.data.items.length} calendar events`)
+        results.allEvents = eventsResponse.data.items.map((event: any) => ({
+          summary: event.summary || 'No title',
+          start: event.start_time?.timestamp ? new Date(parseInt(event.start_time.timestamp) * 1000).toLocaleString('en-US', { timeZone: 'Asia/Singapore' }) : 'N/A',
+          end: event.end_time?.timestamp ? new Date(parseInt(event.end_time.timestamp) * 1000).toLocaleString('en-US', { timeZone: 'Asia/Singapore' }) : 'N/A',
+          status: event.status,
+          freeBusyStatus: event.free_busy_status || 'not set',
+          isRecurring: !!event.recurrence
+        }))
+
+        const freeEvents = results.allEvents.filter((e: any) => e.freeBusyStatus === 'free')
+        const busyEvents = results.allEvents.filter((e: any) => e.freeBusyStatus === 'busy')
+
+        results.steps.push(`   📊 ${busyEvents.length} events marked as BUSY`)
+        results.steps.push(`   📊 ${freeEvents.length} events marked as FREE`)
+
+        if (freeEvents.length > 0) {
+          results.steps.push(`   ⚠️ FREE events will NOT block availability!`)
+          results.steps.push(`   💡 Solution: Mark these events as BUSY in Lark calendar`)
+        }
+      } else {
+        results.steps.push(`⚠️ No calendar events found`)
+      }
+    } catch (error: any) {
+      results.steps.push(`❌ Calendar Events API error: ${error.message}`)
+    }
+
     return NextResponse.json(results, { status: 200 })
     
   } catch (error: any) {
