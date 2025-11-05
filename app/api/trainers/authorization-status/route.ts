@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
     const authorizedEmails = new Set(authorizedTrainers.map(t => t.email))
     
     // Combine information - ONLY show trainers that are in config file
-    const trainers = configuredTrainers.map(trainer => {
+    const trainers = configuredTrainers.map((trainer: any) => {
       const authorized = authorizedEmails.has(trainer.email)
-      const authInfo = authorizedTrainers.find(t => t.email === trainer.email)
+      const authInfo = authorizedTrainers.find((t: any) => t.email === trainer.email)
 
       return {
         email: trainer.email,
