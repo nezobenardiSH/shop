@@ -1487,7 +1487,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               // Hardware delivery is completed when tracking link is provided
               const hardwareDeliveryCompleted = !!trainerData?.trackingLink;
               const productSetupCompleted = trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve';
-              const storeSetupCompleted = !!trainerData?.videoProofLink;
+              // Store setup is completed when video link exists and is not "NA"
+              const storeSetupCompleted = !!trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA';
 
               const completed = [
                 hardwareDeliveryCompleted,
@@ -1811,7 +1812,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 >
                   <div className="flex items-center gap-3">
                     {(() => {
-                      const storeSetupComplete = !!trainerData?.videoProofLink;
+                      // Store setup is completed when video link exists and is not "NA"
+                      const storeSetupComplete = !!trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA';
 
                       return storeSetupComplete ? (
                         <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
@@ -1831,7 +1833,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
-                      {trainerData?.videoProofLink || uploadedVideoUrl ? (
+                      {((trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA') || uploadedVideoUrl) ? (
                         <span>Completed</span>
                       ) : (
                         <span className="text-orange-600">Pending Upload</span>
