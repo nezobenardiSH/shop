@@ -97,7 +97,14 @@ export async function GET(request: NextRequest) {
       getTopMerchants(filters, limit),
       getPageBreakdown(filters),
       getRecentActivity(filters, limit)
-    ])
+    ]).catch((error) => {
+      // Check if it's a "table does not exist" error
+      if (error.message?.includes('does not exist')) {
+        console.error('[Analytics API] PageView table does not exist. Migration may not have run.')
+        throw new Error('Analytics database not initialized. Please contact support.')
+      }
+      throw error
+    })
 
     // Return combined response
     return NextResponse.json({
