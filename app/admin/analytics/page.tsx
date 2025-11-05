@@ -65,6 +65,11 @@ interface AnalyticsData {
   recentActivity: RecentActivity[]
 }
 
+interface Merchant {
+  id: string
+  name: string
+}
+
 export default function AnalyticsPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
@@ -77,11 +82,38 @@ export default function AnalyticsPage() {
   const [endDate, setEndDate] = useState('')
   const [userTypeFilter, setUserTypeFilter] = useState<'all' | 'merchant' | 'internal_team'>('all')
   const [pageFilter, setPageFilter] = useState<string>('all')
+  const [merchantFilter, setMerchantFilter] = useState<string>('all')
   const [groupBy, setGroupBy] = useState<'day' | 'week' | 'month'>('day')
+
+  // Merchant list
+  const [merchants, setMerchants] = useState<Merchant[]>([])
+  const [loadingMerchants, setLoadingMerchants] = useState(true)
+
+  useEffect(() => {
+    fetchMerchants()
+  }, [])
 
   useEffect(() => {
     fetchAnalytics()
-  }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, groupBy])
+  }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, merchantFilter, groupBy])
+
+  const fetchMerchants = async () => {
+    setLoadingMerchants(true)
+    try {
+      const response = await fetch('/api/admin/merchants')
+      if (!response.ok) {
+        throw new Error('Failed to fetch merchants')
+      }
+      const data = await response.json()
+      if (data.success) {
+        setMerchants(data.merchants || [])
+      }
+    } catch (err) {
+      console.error('Error fetching merchants:', err)
+    } finally {
+      setLoadingMerchants(false)
+    }
+  }
 
   const fetchAnalytics = async () => {
     setIsLoading(true)
@@ -118,6 +150,11 @@ export default function AnalyticsPage() {
       // Page filter
       if (pageFilter !== 'all') {
         params.append('page', pageFilter)
+      }
+
+      // Merchant filter
+      if (merchantFilter !== 'all') {
+        params.append('merchantId', merchantFilter)
       }
 
       // Group by
@@ -219,7 +256,7 @@ export default function AnalyticsPage() {
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Date Range */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -267,6 +304,26 @@ export default function AnalyticsPage() {
                 <option value="login">Login</option>
                 <option value="progress">Progress</option>
                 <option value="details">Details</option>
+              </select>
+            </div>
+
+            {/* Merchant Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Merchant
+              </label>
+              <select
+                value={merchantFilter}
+                onChange={(e) => setMerchantFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                disabled={loadingMerchants}
+              >
+                <option value="all">All Merchants</option>
+                {merchants.map(merchant => (
+                  <option key={merchant.id} value={merchant.id}>
+                    {merchant.name}
+                  </option>
+                ))}
               </select>
             </div>
 

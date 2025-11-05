@@ -235,10 +235,11 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
     })
     
     // Installation Stage - (completion status calculated at component level)
+    // Installation is completed if actualInstallationDate exists, regardless of Preparation status
     timelineStages.push({
       id: 'installation',
       label: 'Installation',
-      status: preparationStatus === 'completed' ? (installationCompleted ? 'completed' : 'current') : 'pending',
+      status: installationCompleted ? 'completed' : (preparationStatus === 'completed' ? 'current' : 'pending'),
       completedDate: trainerData?.actualInstallationDate
     })
 
@@ -1286,16 +1287,19 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                             }
                             return stage.status === 'current' ? 'Preparing' : 'Not Started'
                           case 'live':
-                            // Show "Overdue" if Days to Go Live < 0 and not on Live stage
-                            // Show "Done" if Days to Go Live < 0 and on Live stage
+                            // Show "Live" if merchant is Live (stage.status === 'completed')
+                            // Show "Overdue" if Days to Go Live < 0 and not Live
                             // Calculate days to go live on client side
                             const daysToGoLive = trainerData?.plannedGoLiveDate
                               ? Math.ceil((new Date(trainerData.plannedGoLiveDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                               : null
-                            if (daysToGoLive !== null && daysToGoLive < 0) {
-                              return stage.status === 'completed' ? 'Done' : 'Overdue'
+                            if (stage.status === 'completed') {
+                              return 'Live'
                             }
-                            return stage.status === 'completed' ? 'Live' : stage.status === 'current' ? 'Going Live' : 'Not Started'
+                            if (daysToGoLive !== null && daysToGoLive < 0) {
+                              return 'Overdue'
+                            }
+                            return stage.status === 'current' ? 'Going Live' : 'Not Started'
                           default:
                             return ''
                         }
@@ -1360,16 +1364,19 @@ export default function OnboardingTimeline({ currentStage, stageData, trainerDat
                                 return welcomeCompleted ? 'Completed' : 'In Progress'
                               }
                               if (stage.id === 'live') {
-                                // Show "Overdue" if Days to Go Live < 0 and not on Live stage
-                                // Show "Done" if Days to Go Live < 0 and on Live stage
+                                // Show "Live" if merchant is Live (stage.status === 'completed')
+                                // Show "Overdue" if Days to Go Live < 0 and not Live
                                 // Calculate days to go live on client side
                                 const daysToGoLive = trainerData?.plannedGoLiveDate
                                   ? Math.ceil((new Date(trainerData.plannedGoLiveDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                                   : null
-                                if (daysToGoLive !== null && daysToGoLive < 0) {
-                                  return stage.status === 'completed' ? 'Done' : 'Overdue'
+                                if (stage.status === 'completed') {
+                                  return 'Live'
                                 }
-                                return stage.status === 'completed' ? 'Live' : stage.status === 'current' ? 'Going Live' : 'Not Started'
+                                if (daysToGoLive !== null && daysToGoLive < 0) {
+                                  return 'Overdue'
+                                }
+                                return stage.status === 'current' ? 'Going Live' : 'Not Started'
                               }
                               if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
                                 return `${stage.completedCount}/${stage.totalCount} Completed`
