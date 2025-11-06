@@ -113,10 +113,10 @@ This document maps all data fields displayed in the Onboarding Portal to their c
 | Postal Code | `Shipping_Zip_Postal_Code__c` | Onboarding_Trainer__c | |
 | Country | `Shipping_Country__c` | Onboarding_Trainer__c | |
 
-**Alternative Source (from Order):**
+**Order Shipping Address (Separate from above - NO FALLBACK):**
 | Display Name | Salesforce Field | Object | Notes |
 |-------------|------------------|--------|-------|
-| Street | `ShippingStreet` | Order | Used if Onboarding_Trainer__c fields empty |
+| Street | `ShippingStreet` | Order | DO NOT use as fallback for other addresses |
 | City | `ShippingCity` | Order | From most recent order |
 | State | `ShippingState` | Order | |
 | Postal Code | `ShippingPostalCode` | Order | |
@@ -167,10 +167,11 @@ This document maps all data fields displayed in the Onboarding Portal to their c
 - Stored in `Onboarding_Portal__c` object (Text(100) fields)
 - Used for calendar event deletion during rescheduling
 
-### 4. Address Priority
-1. First check `Onboarding_Trainer__c` shipping fields
-2. If empty, use most recent `Order` shipping address
-3. Format: "Street, City, State PostalCode, Country"
+### 4. Address Policy - NO FALLBACKS
+- Only use the specific address field for its intended purpose
+- If a field is empty, display "Not Available" or "N/A"
+- DO NOT use alternative address sources as fallbacks
+- Format when present: "Street, City, State PostalCode, Country"
 
 ### 5. Training Date Consolidation
 - Previously had separate POS and Back Office training dates

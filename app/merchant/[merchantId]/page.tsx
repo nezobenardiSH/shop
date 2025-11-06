@@ -286,6 +286,7 @@ function TrainerPortalContent() {
         }
 
         // Use training location (orderShippingAddress) for location-based trainer filtering
+        // NO FALLBACKS - use exact address or nothing
         let merchantAddress = ''
         let merchantState = ''
         if (trainer.orderShippingAddress) {
@@ -299,10 +300,7 @@ function TrainerPortalContent() {
                            trainer.orderShippingAddress.stateCode || ''
           }
         }
-        // Fallback to shippingState if orderShippingAddress doesn't have it
-        if (!merchantState && trainer.shippingState) {
-          merchantState = trainer.shippingState
-        }
+        // REMOVED FALLBACK - Do not use shippingState as fallback
 
         // Get the existing event ID and date based on booking type
         let existingEventId = null
@@ -414,6 +412,7 @@ function TrainerPortalContent() {
     const bookingType = trainer.bookingType || 'training'
 
     // Use training location (orderShippingAddress) for location-based trainer filtering
+    // NO FALLBACKS - use exact address or nothing
     let merchantAddress = ''
     let merchantState = ''
     if (trainer.orderShippingAddress) {
@@ -427,10 +426,7 @@ function TrainerPortalContent() {
                        trainer.orderShippingAddress.stateCode || ''
       }
     }
-    // Fallback to shippingState if orderShippingAddress doesn't have it
-    if (!merchantState && trainer.shippingState) {
-      merchantState = trainer.shippingState
-    }
+    // REMOVED FALLBACK - Do not use shippingState as fallback
 
     // Determine dependent date based on booking type
     let dependentDate = null
