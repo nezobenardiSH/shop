@@ -1073,21 +1073,6 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 </div>
               </div>
             )}
-
-            {/* Merchant Location */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Location</div>
-              <div className="text-sm font-medium text-gray-900">
-                {(() => {
-                  const city = trainerData?.shippingCity || '';
-                  const state = trainerData?.shippingState || '';
-                  if (city && state) return `${city}, ${state}`;
-                  if (city) return city;
-                  if (state) return state;
-                  return 'Not Available';
-                })()}
-              </div>
-            </div>
           </div>
         )
       
