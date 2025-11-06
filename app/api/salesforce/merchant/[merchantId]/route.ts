@@ -110,6 +110,7 @@ export async function GET(
                Hardware_Installation_Status__c,
                Installation_Issues_Elaboration__c,
                Training_Status__c,
+               Completed_Training__c,
                First_Revised_EGLD__c,
                Onboarding_Trainer_Stage__c,
                CreatedDate, LastModifiedDate
@@ -444,6 +445,7 @@ export async function GET(
         installationSTTicketNo: trainer.Installation_ST_Ticket_No__c,
         installationIssuesElaboration: trainer.Installation_Issues_Elaboration__c,
         trainingStatus: trainer.Training_Status__c,
+        completedTraining: trainer.Completed_Training__c,
         trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
         csmName: csmName, // Use the CSM name we resolved earlier
         assignedInstaller: trainer.Assigned_Installer__c, // For checking if external vendor (e.g., "Surfstek")

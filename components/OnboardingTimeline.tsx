@@ -1128,17 +1128,19 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </div>
             </div>
 
-            {/* Merchant Location */}
+            {/* Store Address */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Location</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
               <div className="text-sm font-medium text-gray-900">
                 {(() => {
-                  const city = trainerData?.shippingCity || '';
-                  const state = trainerData?.shippingState || '';
-                  if (city && state) return `${city}, ${state}`;
-                  if (city) return city;
-                  if (state) return state;
-                  return 'Not Available';
+                  const parts = [
+                    trainerData?.shippingStreet,
+                    trainerData?.shippingCity,
+                    trainerData?.shippingState,
+                    trainerData?.shippingZipPostalCode,
+                    trainerData?.shippingCountry
+                  ].filter(Boolean);
+                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
                 })()}
               </div>
             </div>
@@ -1159,16 +1161,10 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Completion Status</div>
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                trainerData?.completedTraining === 'Yes' ? 'bg-green-100 text-green-800' :
-                trainerData?.completedTraining === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                trainerData?.completedTraining === 'Scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {trainerData?.completedTraining === 'Yes' ? 'Completed' : 
-                 trainerData?.completedTraining || 'Not Started'}
-              </span>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed Training</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.completedTraining ? 'Yes' : 'No'}
+              </div>
             </div>
           </div>
         )
