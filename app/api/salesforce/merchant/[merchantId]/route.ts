@@ -95,7 +95,6 @@ export async function GET(
                Assigned_Installer__c,
                Training_Date__c,
                CSM_Name__c, CSM_Name__r.Name,
-               Merchant_Location__c,
                Subscription_Activation_Date__c,
                BO_Account_Name__c,
                Onboarding_Services_Bought__c, Service_Type__c,
@@ -447,7 +446,6 @@ export async function GET(
         trainingStatus: trainer.Training_Status__c,
         trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
         csmName: csmName, // Use the CSM name we resolved earlier
-        merchantLocation: trainer.Merchant_Location__c,
         assignedInstaller: trainer.Assigned_Installer__c, // For checking if external vendor (e.g., "Surfstek")
         installerName: portalData.installerName || null, // Only use Portal installer name
 

@@ -259,8 +259,17 @@ export default function MerchantDetailsPage() {
                         {/* Column 3 */}
                         <div className="space-y-2">
                           <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Merchant Location: </span>
-                            <span className="text-sm text-gray-900">{trainer.merchantLocation || 'N/A'}</span>
+                            <span className="text-xs font-semibold text-gray-500 uppercase">Store Location: </span>
+                            <span className="text-sm text-gray-900">
+                              {(() => {
+                                const city = trainer.shippingCity || '';
+                                const state = trainer.shippingState || '';
+                                if (city && state) return `${city}, ${state}`;
+                                if (city) return city;
+                                if (state) return state;
+                                return 'N/A';
+                              })()}
+                            </span>
                           </div>
                           <div>
                             <span className="text-xs font-semibold text-gray-500 uppercase">Address: </span>

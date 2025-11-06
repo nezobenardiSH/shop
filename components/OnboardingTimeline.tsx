@@ -1031,7 +1031,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             <div>
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Store Address</div>
               <div className="text-base font-medium text-gray-900">
-                {trainerData?.merchantLocation || 'Not Available'}
+                {(() => {
+                  const parts = [
+                    trainerData?.shippingStreet,
+                    trainerData?.shippingCity,
+                    trainerData?.shippingState,
+                    trainerData?.shippingZipPostalCode,
+                    trainerData?.shippingCountry
+                  ].filter(Boolean);
+                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                })()}
               </div>
             </div>
 
@@ -1067,9 +1076,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Merchant Location */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Merchant Location</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Location</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.merchantLocation || 'Not Available'}
+                {(() => {
+                  const city = trainerData?.shippingCity || '';
+                  const state = trainerData?.shippingState || '';
+                  if (city && state) return `${city}, ${state}`;
+                  if (city) return city;
+                  if (state) return state;
+                  return 'Not Available';
+                })()}
               </div>
             </div>
           </div>
@@ -1114,9 +1130,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Merchant Location */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Merchant Location</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Location</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.merchantLocation || 'Not Available'}
+                {(() => {
+                  const city = trainerData?.shippingCity || '';
+                  const state = trainerData?.shippingState || '';
+                  if (city && state) return `${city}, ${state}`;
+                  if (city) return city;
+                  if (state) return state;
+                  return 'Not Available';
+                })()}
               </div>
             </div>
 
@@ -2236,9 +2259,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Merchant Location */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Merchant Location</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Location</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.merchantLocation || 'Not Available'}
+                {(() => {
+                  const city = trainerData?.shippingCity || '';
+                  const state = trainerData?.shippingState || '';
+                  if (city && state) return `${city}, ${state}`;
+                  if (city) return city;
+                  if (state) return state;
+                  return 'Not Available';
+                })()}
               </div>
             </div>
           </div>
@@ -2311,9 +2341,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Merchant Location */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Merchant Location</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Location</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.merchantLocation || 'Not Available'}
+                {(() => {
+                  const city = trainerData?.shippingCity || '';
+                  const state = trainerData?.shippingState || '';
+                  if (city && state) return `${city}, ${state}`;
+                  if (city) return city;
+                  if (state) return state;
+                  return 'Not Available';
+                })()}
               </div>
             </div>
 
