@@ -2191,26 +2191,18 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </div>
             </div>
 
-            {/* Shipping Address from Order */}
+            {/* Store Address from Onboarding_Trainer__c */}
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
               <div className="text-sm font-medium text-gray-900">
                 {(() => {
-                  if (!trainerData?.orderShippingAddress) return 'Not Available';
-                  
-                  // Handle if it's already a string
-                  if (typeof trainerData.orderShippingAddress === 'string') {
-                    return trainerData.orderShippingAddress;
-                  }
-                  
-                  // Handle if it's an address object
-                  const addr = trainerData.orderShippingAddress;
+                  // Build full address from Onboarding_Trainer__c shipping fields
                   const parts = [
-                    addr.street,
-                    addr.city,
-                    addr.state || addr.stateCode,
-                    addr.postalCode,
-                    addr.country || addr.countryCode
+                    trainerData?.shippingStreet,
+                    trainerData?.shippingCity,
+                    trainerData?.shippingState,
+                    trainerData?.shippingZipPostalCode,
+                    trainerData?.shippingCountry
                   ].filter(Boolean);
                   
                   return parts.length > 0 ? parts.join(', ') : 'Not Available';
@@ -2238,20 +2230,6 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </div>
             )}
 
-            {/* Merchant Location */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Location</div>
-              <div className="text-sm font-medium text-gray-900">
-                {(() => {
-                  const city = trainerData?.shippingCity || '';
-                  const state = trainerData?.shippingState || '';
-                  if (city && state) return `${city}, ${state}`;
-                  if (city) return city;
-                  if (state) return state;
-                  return 'Not Available';
-                })()}
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -2320,18 +2298,30 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </div>
             </div>
 
-            {/* Merchant Location */}
+            {/* Store Address from Onboarding_Trainer__c */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Location</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
               <div className="text-sm font-medium text-gray-900">
                 {(() => {
-                  const city = trainerData?.shippingCity || '';
-                  const state = trainerData?.shippingState || '';
-                  if (city && state) return `${city}, ${state}`;
-                  if (city) return city;
-                  if (state) return state;
-                  return 'Not Available';
+                  // Build full address from Onboarding_Trainer__c shipping fields
+                  const parts = [
+                    trainerData?.shippingStreet,
+                    trainerData?.shippingCity,
+                    trainerData?.shippingState,
+                    trainerData?.shippingZipPostalCode,
+                    trainerData?.shippingCountry
+                  ].filter(Boolean);
+                  
+                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
                 })()}
+              </div>
+            </div>
+
+            {/* Training Completed Status */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Completed</div>
+              <div className="text-sm font-medium text-gray-900">
+                {trainerData?.completedTraining ? 'Yes' : 'No'}
               </div>
             </div>
 
