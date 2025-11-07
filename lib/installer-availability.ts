@@ -601,6 +601,13 @@ export async function bookInternalInstallation(
     ? `Installation: ${merchantDisplayName} - ${summaryDetails}`
     : `Installation: ${merchantDisplayName}`
 
+  console.log('📋 Event Summary Details:')
+  console.log('   merchantDetails.address:', merchantDetails.address)
+  console.log('   merchantDetails.primaryContactName:', merchantDetails.primaryContactName)
+  console.log('   merchantDetails.primaryContactPhone:', merchantDetails.primaryContactPhone)
+  console.log('   summaryDetails:', summaryDetails)
+  console.log('   eventSummaryWithDetails:', eventSummaryWithDetails)
+
   // Build attendees list
   const attendees = []
   
