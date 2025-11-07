@@ -485,6 +485,7 @@ export default function DatePickerModal({
     if (bookingType === 'installation') {
       if (currentBooking?.eventId) {
         // This is a rescheduling - require 1 business day buffer (weekdays only)
+        // The buffer day itself cannot be selected, so earliest selectable is the day after the buffer
         console.log('🔄 RESCHEDULING DETECTED - Applying 1 business day buffer')
         console.log('   Current minDate:', minDate.toDateString())
 
@@ -502,8 +503,10 @@ export default function DatePickerModal({
           }
         }
 
+        // Move to the day after the buffer day
+        bufferDate.setDate(bufferDate.getDate() + 1)
         minDate = bufferDate
-        console.log('  -> Rescheduling requires 1 business day buffer. Earliest date:', minDate.toDateString())
+        console.log('  -> Rescheduling requires 1 business day buffer. Buffer day:', new Date(bufferDate.getTime() - 24*60*60*1000).toDateString(), 'Earliest selectable date:', minDate.toDateString())
       } else if (isExternalVendor) {
         const dayAfterTomorrow = new Date(minDate)
         dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
