@@ -448,8 +448,19 @@ function TrainerPortalContent() {
       dependentDate = trainer.installationDate || null
     }
 
-    // Get the go-live date (use Planned_Go_Live_Date__c which is the actual Go Live Date)
-    const goLiveDate = trainer.plannedGoLiveDate || trainer.firstRevisedEGLD || null
+    // Get the go-live date - check multiple possible fields
+    // Priority: Planned_Go_Live_Date__c on trainer, then account, then First_Revised_EGLD__c
+    const goLiveDate = trainer.plannedGoLiveDate || 
+                      trainerData?.account?.plannedGoLiveDate || 
+                      trainer.firstRevisedEGLD || 
+                      null
+    
+    console.log('📅 Go-Live Date Resolution:', {
+      trainerPlannedGoLive: trainer.plannedGoLiveDate,
+      accountPlannedGoLive: trainerData?.account?.plannedGoLiveDate,
+      firstRevisedEGLD: trainer.firstRevisedEGLD,
+      resolved: goLiveDate
+    })
 
     // Get installation date for training bookings (lower bound)
     const installationDate = trainer.installationDate || null

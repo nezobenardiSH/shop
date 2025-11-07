@@ -790,6 +790,9 @@ export default function DatePickerModal({
                     {!installationDate && goLiveDate && (
                       <li>• Training must be scheduled before Go-Live date ({formatDate(goLiveDate)})</li>
                     )}
+                    {!installationDate && !goLiveDate && (
+                      <li>• No go-live date set - please check with your onboarding manager</li>
+                    )}
                   </>
                 )}
 

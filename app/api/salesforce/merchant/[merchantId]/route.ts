@@ -217,7 +217,7 @@ export async function GET(
       try {
         // Account_Name__c contains the Account ID, not the name
         console.log(`📊 Fetching Account with ID: ${trainer.Account_Name__c}`)
-        const accountResult = await conn.query(`SELECT Id, Name, Business_Store_Name__c FROM Account WHERE Id = '${trainer.Account_Name__c}'`)
+        const accountResult = await conn.query(`SELECT Id, Name, Business_Store_Name__c, Planned_Go_Live_Date__c FROM Account WHERE Id = '${trainer.Account_Name__c}'`)
         console.log(`✅ Account query result: found ${accountResult.totalSize} records`)
         if (accountResult.totalSize > 0) {
           account = accountResult.records[0]
@@ -235,7 +235,7 @@ export async function GET(
     if (account) {
       try {
         const detailedAccountQuery = `
-          SELECT Id, Name, Business_Store_Name__c
+          SELECT Id, Name, Business_Store_Name__c, Planned_Go_Live_Date__c
           FROM Account
           WHERE Id = '${account.Id}'
         `
@@ -246,7 +246,8 @@ export async function GET(
           accountData = {
             id: acc.Id,
             name: acc.Name,
-            businessStoreName: acc.Business_Store_Name__c
+            businessStoreName: acc.Business_Store_Name__c,
+            plannedGoLiveDate: acc.Planned_Go_Live_Date__c
           }
         }
       } catch (error) {
