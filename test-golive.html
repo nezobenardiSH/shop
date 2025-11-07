@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Go-Live Date Validation</title>
+</head>
+<body>
+    <h1>Test Go-Live Date Validation</h1>
+    
+    <script>
+        // Simulate the date validation logic
+        function createSingaporeDate(year, month, day) {
+            const monthStr = String(month + 1).padStart(2, '0');
+            const dayStr = String(day).padStart(2, '0');
+            return new Date(`${year}-${monthStr}-${dayStr}T00:00:00+08:00`);
+        }
+        
+        function testDateValidation() {
+            const bookingType = 'training';
+            const goLiveDate = '2025-11-19'; // Nov 19, 2025
+            const installationDate = '2025-11-18'; // Nov 18, 2025
+            
+            console.log('Testing with:');
+            console.log('  Go-Live Date:', goLiveDate);
+            console.log('  Installation Date:', installationDate);
+            console.log('');
+            
+            // Test dates to check
+            const testDates = [
+                new Date('2025-11-17'),
+                new Date('2025-11-18'),
+                new Date('2025-11-19'),
+                new Date('2025-11-20'),
+                new Date('2025-11-21')
+            ];
+            
+            // Calculate min date (day after installation)
+            const instParts = installationDate.split('-');
+            const instDate = createSingaporeDate(
+                parseInt(instParts[0]),
+                parseInt(instParts[1]) - 1,
+                parseInt(instParts[2])
+            );
+            const minDate = new Date(instDate);
+            minDate.setDate(minDate.getDate() + 1); // Day after installation
+            
+            // Calculate max date (day before go-live)
+            let maxDate = new Date(minDate);
+            maxDate.setDate(maxDate.getDate() + 14); // 14 days from min
+            
+            if (goLiveDate) {
+                const goLiveParts = goLiveDate.split('-');
+                const goLive = createSingaporeDate(
+                    parseInt(goLiveParts[0]),
+                    parseInt(goLiveParts[1]) - 1,
+                    parseInt(goLiveParts[2])
+                );
+                
+                // Training must be BEFORE go-live date (at least 1 day before)
+                const lastTrainingDate = new Date(goLive);
+                lastTrainingDate.setDate(lastTrainingDate.getDate() - 1);
+                
+                console.log('Go-live date parsed:', goLive.toDateString());
+                console.log('Last allowed training date:', lastTrainingDate.toDateString());
+                
+                if (lastTrainingDate < maxDate) {
+                    maxDate = lastTrainingDate;
+                    console.log('Training LIMITED by go-live date. New max:', maxDate.toDateString());
+                }
+            }
+            
+            console.log('\nDate validation results:');
+            console.log('Min date (after installation):', minDate.toDateString());
+            console.log('Max date (before go-live):', maxDate.toDateString());
+            console.log('');
+            
+            testDates.forEach(date => {
+                const normalizedDate = new Date(date);
+                normalizedDate.setHours(0, 0, 0, 0);
+                
+                const isAvailable = normalizedDate >= minDate && normalizedDate <= maxDate;
+                console.log(`${date.toDateString()}: ${isAvailable ? '✅ AVAILABLE' : '❌ BLOCKED'}`);
+            });
+        }
+        
+        testDateValidation();
+    </script>
+    
+    <p>Check the console for test results</p>
+</body>
+</html>

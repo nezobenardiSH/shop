@@ -733,6 +733,13 @@ export default function DatePickerModal({
               <X className="h-6 w-6" />
             </button>
           </div>
+          {/* DEBUG INFO - REMOVE AFTER TESTING */}
+          {bookingType === 'training' && (
+            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs font-mono">
+              <div>DEBUG: Go-Live Date = {goLiveDate || 'NOT SET (null)'}</div>
+              <div>DEBUG: Installation Date = {installationDate || 'NOT SET'}</div>
+            </div>
+          )}
 
           {/* Combined Info Box */}
           {(isExternalVendor && bookingType === 'installation') || currentBooking?.eventId || dependentDate || goLiveDate || installationDate || trainingDate ? (
