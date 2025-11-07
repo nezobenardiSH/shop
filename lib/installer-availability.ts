@@ -399,13 +399,20 @@ export async function bookInternalInstallation(
         const trainer: any = trainerResult.records[0]
 
         console.log('🔍 Raw Salesforce trainer data:')
+        console.log('   Name:', trainer.Name)
         console.log('   Merchant_PIC_Name__c:', trainer.Merchant_PIC_Name__c)
         console.log('   Merchant_PIC_Contact_Number__c:', trainer.Merchant_PIC_Contact_Number__c)
-        console.log('   Operation_Manager_Contact__r:', trainer.Operation_Manager_Contact__r)
-        console.log('   Business_Owner_Contact__r:', trainer.Business_Owner_Contact__r)
-        console.log('   MSM_Name__r:', trainer.MSM_Name__r)
+        console.log('   Merchant_PIC_Email__c:', trainer.Merchant_PIC_Email__c)
+        console.log('   Operation_Manager_Contact__r:', JSON.stringify(trainer.Operation_Manager_Contact__r))
+        console.log('   Business_Owner_Contact__r:', JSON.stringify(trainer.Business_Owner_Contact__r))
+        console.log('   MSM_Name__r:', JSON.stringify(trainer.MSM_Name__r))
         console.log('   Shipping_Street__c:', trainer.Shipping_Street__c)
         console.log('   Shipping_City__c:', trainer.Shipping_City__c)
+        console.log('   Shipping_State__c:', trainer.Shipping_State__c)
+        console.log('   Shipping_Zip_Postal_Code__c:', trainer.Shipping_Zip_Postal_Code__c)
+        console.log('   Shipping_Country__c:', trainer.Shipping_Country__c)
+        console.log('   Pilot_Test__c:', trainer.Pilot_Test__c)
+        console.log('   Onboarding_Summary__c:', trainer.Onboarding_Summary__c)
 
         merchantDetails = {
           // trainer.Name is the Onboarding Trainer Name (e.g., "Nasi Lemak")
@@ -438,6 +445,9 @@ export async function bookInternalInstallation(
           onboardingSummary: trainer.Onboarding_Summary__c || 'N/A',
           accountId: trainer.Account_Name__c
         }
+
+        console.log('✅ Processed merchantDetails:')
+        console.log(JSON.stringify(merchantDetails, null, 2))
 
         console.log('✅ Processed merchantDetails:')
         console.log('   primaryContactName:', merchantDetails.primaryContactName)
