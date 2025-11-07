@@ -397,6 +397,16 @@ export async function bookInternalInstallation(
 
       if (trainerResult.totalSize > 0) {
         const trainer: any = trainerResult.records[0]
+
+        console.log('🔍 Raw Salesforce trainer data:')
+        console.log('   Merchant_PIC_Name__c:', trainer.Merchant_PIC_Name__c)
+        console.log('   Merchant_PIC_Contact_Number__c:', trainer.Merchant_PIC_Contact_Number__c)
+        console.log('   Operation_Manager_Contact__r:', trainer.Operation_Manager_Contact__r)
+        console.log('   Business_Owner_Contact__r:', trainer.Business_Owner_Contact__r)
+        console.log('   MSM_Name__r:', trainer.MSM_Name__r)
+        console.log('   Shipping_Street__c:', trainer.Shipping_Street__c)
+        console.log('   Shipping_City__c:', trainer.Shipping_City__c)
+
         merchantDetails = {
           // trainer.Name is the Onboarding Trainer Name (e.g., "Nasi Lemak")
           // This is what should be displayed as the merchant name
@@ -428,6 +438,12 @@ export async function bookInternalInstallation(
           onboardingSummary: trainer.Onboarding_Summary__c || 'N/A',
           accountId: trainer.Account_Name__c
         }
+
+        console.log('✅ Processed merchantDetails:')
+        console.log('   primaryContactName:', merchantDetails.primaryContactName)
+        console.log('   primaryContactPhone:', merchantDetails.primaryContactPhone)
+        console.log('   msmName:', merchantDetails.msmName)
+        console.log('   address:', merchantDetails.address)
 
         // Get hardware list and invoice number (non-software products) from Orders
         if (trainer.Account_Name__c) {
@@ -638,6 +654,7 @@ export async function bookInternalInstallation(
   const eventObject: any = {
     summary: eventSummaryWithDetails,  // Include key details in summary for better visibility
     description: eventDescription,
+    location: merchantDetails.address || 'TBD',  // Add merchant store address as location
     start_time: {
       timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString(),
       timezone: 'Asia/Singapore'
