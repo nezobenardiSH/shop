@@ -6,7 +6,10 @@ const nextConfig = {
   
   // Production optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    // Keep console logs for debugging - we can remove this later
+    removeConsole: false,
+    // Alternative: only remove console.log but keep console.error and console.warn
+    // removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
   
   // Security headers
