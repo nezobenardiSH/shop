@@ -153,6 +153,15 @@ export default function DatePickerModal({
 
   useEffect(() => {
     if (isOpen) {
+      console.log('📅 DatePickerModal opened with props:', {
+        bookingType,
+        installationDate,
+        goLiveDate,
+        dependentDate,
+        trainingDate,
+        merchantAddress,
+        filterByLocation
+      })
       fetchAvailability()
       setCurrentMonth(new Date())
       setSelectedDate(null)
@@ -455,6 +464,7 @@ export default function DatePickerModal({
     // We need to check the day in Singapore time, not browser's local time
     const singaporeDay = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Singapore"})).getDay()
     console.log('Checking date:', date.toDateString(), 'Day of week (SGT):', singaporeDay, ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][singaporeDay])
+    console.log('  Constraints:', { bookingType, installationDate, goLiveDate })
 
     // Only block Saturday (6) and Sunday (0)
     // Friday is 5, so it should NOT be blocked
@@ -586,24 +596,36 @@ export default function DatePickerModal({
     }
 
     // For training bookings, check against go-live date if provided
-    if (bookingType === 'training' && goLiveDate) {
-      // Parse go-live date in Singapore timezone
-      const goLiveParts = goLiveDate.split('-')
-      const goLive = createSingaporeDate(
-        parseInt(goLiveParts[0]),
-        parseInt(goLiveParts[1]) - 1,
-        parseInt(goLiveParts[2])
-      )
+    if (bookingType === 'training') {
+      console.log('  -> Checking go-live constraint. goLiveDate value:', goLiveDate)
+      
+      if (goLiveDate) {
+        // Parse go-live date in Singapore timezone
+        const goLiveParts = goLiveDate.split('-')
+        const goLive = createSingaporeDate(
+          parseInt(goLiveParts[0]),
+          parseInt(goLiveParts[1]) - 1,
+          parseInt(goLiveParts[2])
+        )
 
-      // Training must be BEFORE the go-live date (cannot be on or after)
-      // So if go-live is Nov 19, the last possible training date is Nov 18
-      const lastTrainingDate = new Date(goLive)
-      lastTrainingDate.setDate(lastTrainingDate.getDate() - 1)
+        // Training must be BEFORE the go-live date (at least 1 day before)
+        // So if go-live is Nov 19, the last possible training date is Nov 18
+        const lastTrainingDate = new Date(goLive)
+        lastTrainingDate.setDate(lastTrainingDate.getDate() - 1)
 
-      // Use the earlier of 14-day window or day before go-live
-      if (lastTrainingDate < maxDate) {
-        maxDate = lastTrainingDate
-        console.log('  -> Training limited by go-live date:', goLive.toDateString(), 'Last training date:', maxDate.toDateString())
+        console.log('  -> Go-live date parsed:', goLive.toDateString())
+        console.log('  -> Last allowed training date:', lastTrainingDate.toDateString())
+        console.log('  -> Current maxDate:', maxDate.toDateString())
+
+        // Use the earlier of 14-day window or day before go-live
+        if (lastTrainingDate < maxDate) {
+          maxDate = lastTrainingDate
+          console.log('  -> Training LIMITED by go-live date. New max:', maxDate.toDateString())
+        } else {
+          console.log('  -> Training NOT limited by go-live (go-live is far enough)')
+        }
+      } else {
+        console.log('  -> No go-live date provided - no constraint applied')
       }
     }
 
@@ -962,7 +984,7 @@ export default function DatePickerModal({
                         parseInt(goLiveParts[1]) - 1,
                         parseInt(goLiveParts[2])
                       )
-                      // Training must be BEFORE go-live date (not on or after)
+                      // Training must be BEFORE go-live date (at least 1 day before)
                       const lastTrainingDate = new Date(goLive)
                       lastTrainingDate.setDate(lastTrainingDate.getDate() - 1)
                       
