@@ -438,8 +438,8 @@ function TrainerPortalContent() {
       dependentDate = trainer.installationDate || null
     }
 
-    // Get the go-live date
-    const goLiveDate = trainer.plannedGoLiveDate || null
+    // Get the go-live date (use firstRevisedEGLD which is the Expected Go Live Date)
+    const goLiveDate = trainer.firstRevisedEGLD || null
 
     // Get installation date for training bookings (lower bound)
     const installationDate = trainer.installationDate || null
