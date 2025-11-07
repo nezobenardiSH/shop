@@ -814,6 +814,10 @@ class LarkService {
       calendarId,
       userEmail,
       eventSummary: event.summary,
+      eventDescription: event.description ? `${event.description.substring(0, 200)}...` : 'No description',
+      descriptionLength: event.description?.length || 0,
+      hasAttendees: !!event.attendees && event.attendees.length > 0,
+      attendeesCount: event.attendees?.length || 0,
       startTime: event.start_time,
       endTime: event.end_time
     })
@@ -869,6 +873,11 @@ class LarkService {
     }
 
     console.log(`Creating event in calendar ${actualCalendarId} for user ${userEmail}`)
+    
+    // Log the full event object being sent
+    console.log('📤 Full event object being sent to Lark API:')
+    console.log(JSON.stringify(event, null, 2))
+    
     const response = await this.makeRequest(`/open-apis/calendar/v4/calendars/${actualCalendarId}/events`, {
       method: 'POST',
       body: JSON.stringify(event),

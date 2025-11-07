@@ -598,6 +598,14 @@ export async function bookInternalInstallation(
     attendees.push({ email: merchantDetails.msmEmail })
   }
 
+  // Log the event description for debugging
+  console.log('📝 Event Description being sent to Lark:')
+  console.log('=====================================')
+  console.log(eventDescription)
+  console.log('=====================================')
+  console.log('Description length:', eventDescription.length, 'characters')
+  console.log('Attendees:', attendees)
+
   try {
     eventResponse = await larkService.createCalendarEvent(
       calendarId,
