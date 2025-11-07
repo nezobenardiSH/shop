@@ -419,9 +419,19 @@ function TrainerPortalContent() {
       if (typeof trainer.orderShippingAddress === 'string') {
         merchantAddress = trainer.orderShippingAddress
       } else {
-        // Extract state from orderShippingAddress object
-        merchantAddress = trainer.orderShippingAddress.state ||
-                        trainer.orderShippingAddress.stateCode || ''
+        // Build full address from orderShippingAddress object for proper location matching
+        const addressParts = [
+          trainer.orderShippingAddress.street,
+          trainer.orderShippingAddress.city,
+          trainer.orderShippingAddress.state || trainer.orderShippingAddress.stateCode,
+          trainer.orderShippingAddress.postalCode,
+          trainer.orderShippingAddress.country
+        ].filter(Boolean) // Remove any undefined/null parts
+        
+        // Join with comma to create full address
+        merchantAddress = addressParts.join(', ')
+        
+        // Also keep state separately for compatibility
         merchantState = trainer.orderShippingAddress.state ||
                        trainer.orderShippingAddress.stateCode || ''
       }
@@ -478,6 +488,15 @@ function TrainerPortalContent() {
     } else {
       console.log(`📝 NEW BOOKING MODE - No existing event for ${bookingType}`)
     }
+
+    // Log the merchant address for debugging
+    console.log('🏪 Merchant booking details:', {
+      bookingType: bookingType,
+      merchantAddress: merchantAddress,
+      merchantState: merchantState,
+      orderShippingAddress: trainer.orderShippingAddress,
+      merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant'
+    })
 
     const bookingInfo = {
       trainerId: trainer.id,

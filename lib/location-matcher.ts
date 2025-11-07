@@ -6,8 +6,8 @@
 // Malaysian states and common variations
 const MALAYSIAN_STATES = {
   'Kuala Lumpur': ['kuala lumpur', 'kl', 'k.l', 'wilayah persekutuan kuala lumpur', 'wp kuala lumpur'],
-  'Selangor': ['selangor', 'sel', 'selangor darul ehsan'],
-  'Penang': ['penang', 'pulau pinang', 'p. pinang', 'pg', 'pn'],
+  'Selangor': ['selangor', 'sel', 'selangor darul ehsan', 'petaling jaya', 'pj', 'subang', 'shah alam', 'klang', 'puchong', 'ampang', 'cheras'],
+  'Penang': ['penang', 'pulau pinang', 'p. pinang', 'pg', 'pn', 'georgetown', 'butterworth', 'balik pulau'],
   'Johor': ['johor', 'johor bahru', 'jb', 'j.b', 'johor darul takzim'],
   'Perak': ['perak', 'perak darul ridzuan', 'ipoh'],
   'Kedah': ['kedah', 'kedah darul aman', 'alor setar'],
@@ -108,19 +108,30 @@ export function isLocationMatch(
 ): boolean {
   if (!trainerLocations || trainerLocations.length === 0) {
     // If trainer has no location restrictions, they can serve anywhere
+    console.log('✅ Trainer has no location restrictions - can serve anywhere')
     return true
   }
   
   if (!merchantAddress) {
     // If merchant has no address, check if trainer serves "Within Klang Valley" (default)
-    return trainerLocations.includes('Within Klang Valley')
+    const canServe = trainerLocations.includes('Within Klang Valley')
+    console.log(`📍 No merchant address provided. Trainer serves [${trainerLocations.join(', ')}]. Can serve: ${canServe}`)
+    return canServe
   }
   
   // Get the location category for the merchant
   const merchantLocationCategory = getLocationCategory(merchantAddress)
   
   // Check if trainer serves this location category
-  return trainerLocations.includes(merchantLocationCategory)
+  const canServe = trainerLocations.includes(merchantLocationCategory)
+  
+  console.log(`📍 Location match check:
+    - Merchant address: "${merchantAddress}"
+    - Detected location: "${merchantLocationCategory}"
+    - Trainer locations: [${trainerLocations.join(', ')}]
+    - Match: ${canServe ? '✅ YES' : '❌ NO'}`)
+  
+  return canServe
 }
 
 /**
