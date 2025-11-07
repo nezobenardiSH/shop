@@ -425,7 +425,11 @@ export async function bookInternalInstallation(
             trainer.Shipping_State__c,
             trainer.Shipping_Zip_Postal_Code__c,
             trainer.Shipping_Country__c
-          ].filter(Boolean).join(', '),
+          ]
+            .filter(Boolean)
+            .map((part: string) => part.trim().replace(/,+$/, '')) // Remove trailing commas and trim
+            .filter(Boolean) // Remove empty strings after cleanup
+            .join(', '),
           // Prioritize Merchant PIC contact, then fall back to Operation Manager or Business Owner
           primaryContactRole: trainer.Merchant_PIC_Name__c ? 'Merchant PIC' :
                              trainer.Operation_Manager_Contact__r ? 'Operation Manager' :
