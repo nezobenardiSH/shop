@@ -49,23 +49,36 @@ const formatDate = (dateString: string | null | undefined): string => {
   })
 }
 
-// Helper function to check if date is within next day (D-1 or less)
+// Helper function to check if date is within next 2 business days (weekdays only)
+// Returns true if there are NOT at least 2 business days before the scheduled date
 const isWithinNextDay = (dateString: string | null | undefined): boolean => {
   if (!dateString) return false
-  
+
   const eventDate = new Date(dateString)
   const now = new Date()
-  
+
   // Set time to start of day for both dates for accurate comparison
   const eventDateStart = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate())
   const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  
-  // Calculate difference in days
-  const diffInMs = eventDateStart.getTime() - nowStart.getTime()
-  const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24))
-  
-  // Return true if event is today, tomorrow (D-1), or in the past
-  return diffInDays <= 1
+
+  // Count business days (Monday-Friday) between now and event date
+  let businessDaysRemaining = 0
+  let currentDate = new Date(nowStart)
+
+  // Loop through each day until we reach the event date
+  while (currentDate < eventDateStart) {
+    currentDate.setDate(currentDate.getDate() + 1)
+    const dayOfWeek = currentDate.getDay()
+
+    // Count only weekdays (Monday=1 to Friday=5)
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      businessDaysRemaining++
+    }
+  }
+
+  // Return true if there are less than 2 business days remaining
+  // This means rescheduling is NOT allowed
+  return businessDaysRemaining < 2
 }
 
 export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange }: OnboardingTimelineProps) {
