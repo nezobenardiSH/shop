@@ -595,14 +595,15 @@ export default function DatePickerModal({
         parseInt(goLiveParts[2])
       )
 
-      // Training must be before go-live date (at least 1 day before)
-      const dayBeforeGoLive = new Date(goLive)
-      dayBeforeGoLive.setDate(dayBeforeGoLive.getDate() - 1)
+      // Training must be BEFORE the go-live date (cannot be on or after)
+      // So if go-live is Nov 19, the last possible training date is Nov 18
+      const lastTrainingDate = new Date(goLive)
+      lastTrainingDate.setDate(lastTrainingDate.getDate() - 1)
 
-      // Use the earlier of 14-day window or go-live date - 1
-      if (dayBeforeGoLive < maxDate) {
-        maxDate = dayBeforeGoLive
-        console.log('  -> Training limited by go-live date:', goLive.toDateString(), 'Max date:', maxDate.toDateString())
+      // Use the earlier of 14-day window or day before go-live
+      if (lastTrainingDate < maxDate) {
+        maxDate = lastTrainingDate
+        console.log('  -> Training limited by go-live date:', goLive.toDateString(), 'Last training date:', maxDate.toDateString())
       }
     }
 
@@ -790,12 +791,12 @@ export default function DatePickerModal({
                       key={lang}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
                         !isAvailable
-                          ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-200'
+                          ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300 text-gray-400'
                           : selectedLanguages.includes(lang)
                             ? 'border-blue-500 bg-blue-50 cursor-pointer'
                             : 'border-gray-200 hover:border-gray-300 cursor-pointer'
                       }`}
-                      title={!isAvailable ? `No trainers available for this language` : ''}
+                      title={!isAvailable ? `No trainers available for ${lang} at this location` : ''}
                     >
                       <input
                         type="checkbox"
@@ -849,8 +850,13 @@ export default function DatePickerModal({
 
                 {/* Show warning if no trainers available */}
                 {availableLanguages.length === 0 && !loading && (
-                  <div className="text-xs text-amber-600 mt-1">
-                    No trainers available for this location
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="text-sm text-amber-800 font-medium">
+                      ⚠️ No trainers available for this location
+                    </div>
+                    <div className="text-xs text-amber-700 mt-1">
+                      Please contact support for assistance with scheduling training.
+                    </div>
                   </div>
                 )}
               </div>
@@ -949,15 +955,19 @@ export default function DatePickerModal({
                     let endDate = new Date(startDate)
                     endDate.setDate(endDate.getDate() + 14)
 
-                    if (goLiveDate) {
+                    if (bookingType === 'training' && goLiveDate) {
                       const goLiveParts = goLiveDate.split('-')
                       const goLive = createSingaporeDate(
                         parseInt(goLiveParts[0]),
                         parseInt(goLiveParts[1]) - 1,
                         parseInt(goLiveParts[2])
                       )
-                      if (goLive < endDate) {
-                        endDate = goLive
+                      // Training must be BEFORE go-live date (not on or after)
+                      const lastTrainingDate = new Date(goLive)
+                      lastTrainingDate.setDate(lastTrainingDate.getDate() - 1)
+                      
+                      if (lastTrainingDate < endDate) {
+                        endDate = lastTrainingDate
                       }
                     }
 

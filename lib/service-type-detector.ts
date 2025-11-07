@@ -65,9 +65,10 @@ export function shouldFilterByLocation(
     return false
   }
 
-  // For training, only filter by location if it's onsite
-  // If service type is 'none', treat as remote (no location filtering)
-  return serviceType === 'onsite'
+  // ALWAYS apply location filtering for training bookings
+  // This ensures trainers are matched to the correct regions
+  // (e.g., Penang trainers only for Penang merchants)
+  return true
 }
 
 /**
