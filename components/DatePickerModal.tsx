@@ -595,10 +595,14 @@ export default function DatePickerModal({
         parseInt(goLiveParts[2])
       )
 
-      // Use the earlier of 14-day window or go-live date
-      if (goLive < maxDate) {
-        maxDate = goLive
-        console.log('  -> Training limited by go-live date:', goLive.toDateString())
+      // Training must be before go-live date (at least 1 day before)
+      const dayBeforeGoLive = new Date(goLive)
+      dayBeforeGoLive.setDate(dayBeforeGoLive.getDate() - 1)
+
+      // Use the earlier of 14-day window or go-live date - 1
+      if (dayBeforeGoLive < maxDate) {
+        maxDate = dayBeforeGoLive
+        console.log('  -> Training limited by go-live date:', goLive.toDateString(), 'Max date:', maxDate.toDateString())
       }
     }
 
