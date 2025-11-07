@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     console.log(`🔍 Querying Onboarding_Trainer__c for ID: ${merchantId}`)
 
     const trainerQuery = `
-      SELECT Id, Name, Account_Name__c,
+      SELECT Id, Name, Account_Name__c, Hardware_Order__c, Opportunity_Name__c,
              Shipping_Street__c, Shipping_City__c, Shipping_State__c, Shipping_Zip_Postal_Code__c, Shipping_Country__c,
              Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Email,
              Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Email,
@@ -65,6 +65,8 @@ export async function GET(request: NextRequest) {
           id: trainer.Id,
           name: trainer.Name,
           accountId: trainer.Account_Name__c,
+          hardwareOrderId: trainer.Hardware_Order__c,
+          opportunityId: trainer.Opportunity_Name__c,
           shippingStreet: trainer.Shipping_Street__c,
           shippingCity: trainer.Shipping_City__c,
           shippingState: trainer.Shipping_State__c,

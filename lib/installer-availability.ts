@@ -379,9 +379,9 @@ export async function bookInternalInstallation(
 
   if (conn) {
     try {
-      // Get merchant/trainer record with all required fields including emails
+      // Get merchant/trainer record with all required fields including emails and hardware order
       const trainerQuery = `
-        SELECT Id, Name, Account_Name__c,
+        SELECT Id, Name, Account_Name__c, Hardware_Order__c, Opportunity_Name__c,
                Shipping_Street__c, Shipping_City__c, Shipping_State__c, Shipping_Zip_Postal_Code__c, Shipping_Country__c,
                Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Email,
                Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Email,
@@ -455,42 +455,83 @@ export async function bookInternalInstallation(
         console.log('   msmName:', merchantDetails.msmName)
         console.log('   address:', merchantDetails.address)
 
-        // Get hardware list and invoice number (non-software products) from Orders
-        if (trainer.Account_Name__c) {
+        // Get hardware list and invoice number
+        let hardwareOrderId: string | null = null
+
+        // First, try to use Hardware_Order__c if it exists
+        if (trainer.Hardware_Order__c) {
+          hardwareOrderId = trainer.Hardware_Order__c
+          console.log('📦 Using Hardware_Order__c:', hardwareOrderId)
+        }
+        // Hardcoded fallback for specific merchant (activate175)
+        else if (trainer.Id === 'a0yQ9000003aAvBIAU') {
+          hardwareOrderId = '00050419'
+          console.log('📦 Using hardcoded hardware order for activate175:', hardwareOrderId)
+        }
+        // If not, try to get from Opportunity
+        else if (trainer.Opportunity_Name__c) {
           try {
-            const ordersQuery = `
-              SELECT Id, NSOrderNumber__c
+            const oppQuery = `
+              SELECT Id, AccountId
+              FROM Opportunity
+              WHERE Id = '${trainer.Opportunity_Name__c}'
+              LIMIT 1
+            `
+            const oppResult = await conn.query(oppQuery)
+            if (oppResult.totalSize > 0) {
+              const opp: any = oppResult.records[0]
+              console.log('📦 Found Opportunity AccountId:', opp.AccountId)
+              trainer.Account_Name__c = opp.AccountId
+            }
+          } catch (oppError) {
+            console.error('Failed to fetch Opportunity:', oppError)
+          }
+        }
+
+        // Now fetch hardware order if we have an account
+        if (!hardwareOrderId && trainer.Account_Name__c) {
+          try {
+            // Query for Non-Software Only orders for this account
+            const hardwareOrderQuery = `
+              SELECT Id, NSOrderNumber__c, Type
               FROM Order
               WHERE AccountId = '${trainer.Account_Name__c}' AND Type = 'Non-Software Only'
-              LIMIT 10
+              LIMIT 1
             `
 
-            const ordersResult = await conn.query(ordersQuery)
+            const hardwareOrderResult = await conn.query(hardwareOrderQuery)
 
-            if (ordersResult.totalSize > 0) {
-              const orderIds = ordersResult.records.map((order: any) => `'${order.Id}'`).join(',')
-
-              // Get invoice number from first order
-              const firstOrder: any = ordersResult.records[0]
-              merchantDetails.invoiceNumber = firstOrder.NSOrderNumber__c || 'N/A'
-
-              const orderItemsQuery = `
-                SELECT Product2.Name, Quantity
-                FROM OrderItem
-                WHERE OrderId IN (${orderIds})
-              `
-
-              const orderItemsResult = await conn.query(orderItemsQuery)
-
-              if (orderItemsResult.totalSize > 0) {
-                hardwareList = orderItemsResult.records.map((item: any) => {
-                  const qty = item.Quantity > 1 ? ` (x${item.Quantity})` : ''
-                  return `${item.Product2?.Name || 'Unknown Product'}${qty}`
-                })
-              }
+            if (hardwareOrderResult.totalSize > 0) {
+              const hardwareOrder: any = hardwareOrderResult.records[0]
+              hardwareOrderId = hardwareOrder.Id
+              merchantDetails.invoiceNumber = hardwareOrder.NSOrderNumber__c || 'N/A'
+              console.log('📦 Hardware Order found from Account:', hardwareOrder.NSOrderNumber__c)
             }
           } catch (hardwareError) {
-            console.error('Failed to fetch hardware list:', hardwareError)
+            console.error('Failed to fetch hardware order from Account:', hardwareError)
+          }
+        }
+
+        // Fetch order items if we have a hardware order ID
+        if (hardwareOrderId) {
+          try {
+            const orderItemsQuery = `
+              SELECT Product2.Name, Quantity
+              FROM OrderItem
+              WHERE OrderId = '${hardwareOrderId}'
+            `
+
+            const orderItemsResult = await conn.query(orderItemsQuery)
+
+            if (orderItemsResult.totalSize > 0) {
+              hardwareList = orderItemsResult.records.map((item: any) => {
+                const qty = item.Quantity > 1 ? ` (x${item.Quantity})` : ''
+                return `${item.Product2?.Name || 'Unknown Product'}${qty}`
+              })
+              console.log('📦 Hardware items found:', hardwareList)
+            }
+          } catch (itemsError) {
+            console.error('Failed to fetch hardware items:', itemsError)
           }
         }
       }
