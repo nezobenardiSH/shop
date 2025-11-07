@@ -665,7 +665,6 @@ export async function bookInternalInstallation(
   const eventObject: any = {
     summary: eventSummaryWithDetails,  // Include key details in summary for better visibility
     description: eventDescription,
-    location: merchantDetails.address || 'TBD',  // Add merchant store address as location
     start_time: {
       timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString(),
       timezone: 'Asia/Singapore'
@@ -677,14 +676,14 @@ export async function bookInternalInstallation(
     visibility: 'default',
     need_notification: false
   }
-  
+
   // Only add attendees if we have any
   if (attendees.length > 0) {
     eventObject.attendees = attendees
   }
-  
-  // Add location separately (even though Lark sometimes rejects it)
-  if (merchantDetails.address) {
+
+  // Only add location if we have an actual address (Lark rejects empty/TBD values)
+  if (merchantDetails.address && merchantDetails.address.trim()) {
     eventObject.location = merchantDetails.address
   }
 
