@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
              Shipping_Street__c, Shipping_City__c, Shipping_State__c, Shipping_Zip_Postal_Code__c, Shipping_Country__c,
              Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Email,
              Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Email,
-             Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c, Merchant_PIC_Email__c,
+             Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c, Merchant_PIC_Role__c,
+             Email__c,
              MSM_Name__r.Name, MSM_Name__r.Email, MSM_Name__r.Phone,
              Onboarding_Summary__c, Pilot_Test__c
       FROM Onboarding_Trainer__c
@@ -71,7 +72,8 @@ export async function GET(request: NextRequest) {
           shippingCountry: trainer.Shipping_Country__c,
           merchantPicName: trainer.Merchant_PIC_Name__c,
           merchantPicPhone: trainer.Merchant_PIC_Contact_Number__c,
-          merchantPicEmail: trainer.Merchant_PIC_Email__c,
+          merchantPicRole: trainer.Merchant_PIC_Role__c,
+          email: trainer.Email__c,
           operationManager: trainer.Operation_Manager_Contact__r,
           businessOwner: trainer.Business_Owner_Contact__r,
           msm: trainer.MSM_Name__r,

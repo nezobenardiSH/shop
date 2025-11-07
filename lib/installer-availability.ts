@@ -385,7 +385,8 @@ export async function bookInternalInstallation(
                Shipping_Street__c, Shipping_City__c, Shipping_State__c, Shipping_Zip_Postal_Code__c, Shipping_Country__c,
                Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Email,
                Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Email,
-               Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c, Merchant_PIC_Email__c,
+               Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c, Merchant_PIC_Role__c,
+               Email__c,
                MSM_Name__r.Name, MSM_Name__r.Email, MSM_Name__r.Phone,
                Onboarding_Summary__c, Pilot_Test__c
         FROM Onboarding_Trainer__c
@@ -435,7 +436,7 @@ export async function bookInternalInstallation(
           primaryContactPhone: trainer.Merchant_PIC_Contact_Number__c ||
                               trainer.Operation_Manager_Contact__r?.Phone ||
                               trainer.Business_Owner_Contact__r?.Phone || 'N/A',
-          primaryContactEmail: trainer.Merchant_PIC_Email__c ||
+          primaryContactEmail: trainer.Email__c ||
                               trainer.Operation_Manager_Contact__r?.Email ||
                               trainer.Business_Owner_Contact__r?.Email || null,
           msmName: trainer.MSM_Name__r?.Name || 'N/A',
