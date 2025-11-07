@@ -1388,30 +1388,36 @@ class LarkService {
       case 'training':
       default:
         eventTitle = trainerName ? `Training: ${trainerName}` : `Training: ${merchantInfo.name}`
-        description = `Onboarding Training Session\n\n`
+        description = `Training Details\n`
+        description += `==================\n\n`
         description += `Merchant: ${trainerName || merchantInfo.name}\n`
-        if (merchantInfo.merchantEmail) {
-          description += `Email: ${merchantInfo.merchantEmail}\n`
-        }
-        if (merchantInfo.onboardingServicesBought) {
-          description += `Service Type: ${merchantInfo.onboardingServicesBought}\n`
-        }
-        if (merchantInfo.language && merchantInfo.language.length > 0) {
-          description += `Language: ${merchantInfo.language.join(', ')}\n`
-        }
+
         if (merchantInfo.address) {
-          description += `Address: ${merchantInfo.address}\n`
+          description += `\nStore Address:\n${merchantInfo.address}\n`
         }
+
+        description += `\nPrimary Contact:\n`
         // Use Merchant PIC contact if available, otherwise fall back to provided contact
         if (merchantInfo.merchantPICName) {
-          description += `Contact Person: ${merchantInfo.merchantPICName}\n`
+          description += `- Name: ${merchantInfo.merchantPICName}\n`
         } else if (merchantInfo.contactPerson) {
-          description += `Contact Person: ${merchantInfo.contactPerson}\n`
+          description += `- Name: ${merchantInfo.contactPerson}\n`
         }
         if (merchantInfo.merchantPICPhone) {
-          description += `Phone: ${merchantInfo.merchantPICPhone}\n`
+          description += `- Phone: ${merchantInfo.merchantPICPhone}\n`
         } else if (merchantInfo.phone) {
-          description += `Phone: ${merchantInfo.phone}\n`
+          description += `- Phone: ${merchantInfo.phone}\n`
+        }
+        if (merchantInfo.merchantEmail) {
+          description += `- Email: ${merchantInfo.merchantEmail}\n`
+        }
+
+        if (merchantInfo.language && merchantInfo.language.length > 0) {
+          description += `\nTraining Language: ${merchantInfo.language.join(', ')}\n`
+        }
+
+        if (merchantInfo.onboardingServicesBought) {
+          description += `\nService Type: ${merchantInfo.onboardingServicesBought}\n`
         }
         if (merchantInfo.businessType) {
           description += `Business Type: ${merchantInfo.businessType}\n`
