@@ -580,29 +580,41 @@ class LarkService {
       // Step 2: Query Calendar Events API (gets primary calendar with recurring events)
       console.log('🔍 Step 2: Querying Calendar Events API for primary calendar events...')
 
-      // CRITICAL FIX: Always use 'primary' for availability checking
-      // The stored calendarId might be a group calendar, but we need to check the user's PRIMARY calendar
-      // where their personal events (installations, meetings, etc.) are stored
-      const calendarId = 'primary'
-      console.log(`📅 Using PRIMARY calendar for availability checking (not group calendar)`)
+      // Get the actual primary calendar ID for this user
+      let calendarId = 'primary' // Default fallback
+      try {
+        calendarId = await this.getPrimaryCalendarId(trainerEmail)
+        console.log(`📅 Got actual calendar ID for ${trainerEmail}: ${calendarId}`)
+      } catch (error) {
+        console.log(`⚠️ Could not get calendar ID for ${trainerEmail}, using 'primary' as fallback`)
+        // Continue with 'primary' as fallback
+      }
       console.log(`   This ensures we check the user's personal calendar where events are actually stored`)
 
       const timeMin = Math.floor(startDate.getTime() / 1000)
       const timeMax = Math.floor(endDate.getTime() / 1000)
 
       // Query calendar events - the API should automatically expand recurring events within the time range
-      const eventsResponse = await this.makeRequest(
-        `/open-apis/calendar/v4/calendars/${calendarId}/events?start_time=${timeMin}&end_time=${timeMax}`,
-        {
-          method: 'GET',
-          userEmail: trainerEmail
-        }
-      )
+      let eventsResponse
+      try {
+        eventsResponse = await this.makeRequest(
+          `/open-apis/calendar/v4/calendars/${calendarId}/events?start_time=${timeMin}&end_time=${timeMax}`,
+          {
+            method: 'GET',
+            userEmail: trainerEmail
+          }
+        )
+      } catch (error) {
+        // If calendar events API fails (e.g., invalid calendar_id), skip it
+        console.log(`⚠️ Could not fetch calendar events for ${trainerEmail}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        console.log(`   Will rely on FreeBusy API results only`)
+        eventsResponse = null
+      }
 
-      console.log(`📅 Calendar Events API returned: ${eventsResponse.data?.items?.length || 0} events`)
-      console.log(`📅 First 3 events:`, JSON.stringify(eventsResponse.data?.items?.slice(0, 3), null, 2))
+      console.log(`📅 Calendar Events API returned: ${eventsResponse?.data?.items?.length || 0} events`)
+      console.log(`📅 First 3 events:`, JSON.stringify(eventsResponse?.data?.items?.slice(0, 3), null, 2))
 
-      if (eventsResponse.data?.items?.length > 0) {
+      if (eventsResponse?.data?.items?.length > 0) {
         const allEvents = eventsResponse.data.items
         console.log(`📅 Found ${allEvents.length} calendar events for ${trainerEmail}`)
 
