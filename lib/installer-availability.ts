@@ -430,6 +430,9 @@ export async function bookInternalInstallation(
             .map((part: string) => part.trim().replace(/,+$/, '')) // Remove trailing commas and trim
             .filter(Boolean) // Remove empty strings after cleanup
             .join(', '),
+          shippingCity: trainer.Shipping_City__c,
+          shippingState: trainer.Shipping_State__c,
+          shippingCountry: trainer.Shipping_Country__c,
           // Prioritize Merchant PIC contact, then fall back to Operation Manager or Business Owner
           primaryContactRole: trainer.Merchant_PIC_Name__c ? 'Merchant PIC' :
                              trainer.Operation_Manager_Contact__r ? 'Operation Manager' :
@@ -723,25 +726,17 @@ export async function bookInternalInstallation(
     eventObject.attendees = attendees
   }
 
-  // Only add location if we have an actual address (Lark rejects empty/TBD values)
-  // Use a shortened version - just city and state to avoid Lark API validation errors
-  if (merchantDetails.address && merchantDetails.address.trim()) {
-    // Extract city and state from the full address
-    // Address format: "Street, City, State, Postal, Country"
-    // We want: "City, State"
-    const addressParts = merchantDetails.address.split(', ')
-    let shortLocation = merchantDetails.address.substring(0, 100) // Default fallback
+  // Only add location if we have city, state, country (Lark rejects empty/TBD values)
+  // Use just city, state, and country to avoid Lark API validation errors
+  const locationParts = [
+    merchantDetails.shippingCity,
+    merchantDetails.shippingState,
+    merchantDetails.shippingCountry
+  ]
+    .filter(Boolean)
 
-    if (addressParts.length >= 3) {
-      // Get city (second to last non-postal part) and state (third to last)
-      // Typically: [..., City, State, Postal, Country]
-      // So we want parts[-3] and parts[-2]
-      const city = addressParts[addressParts.length - 3]
-      const state = addressParts[addressParts.length - 2]
-      shortLocation = `${city}, ${state}`
-    }
-
-    eventObject.location = shortLocation
+  if (locationParts.length > 0) {
+    eventObject.location = locationParts.join(', ')
   }
 
   console.log('📤 Full event object:', JSON.stringify(eventObject, null, 2))
