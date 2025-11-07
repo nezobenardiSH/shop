@@ -351,11 +351,25 @@ export async function bookInternalInstallation(
 
   const assignedInstaller = assignInstaller(availableInstallers)
   const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
-  const installer = locationConfig.installers.find((i: any) => i.name === assignedInstaller)
+  
+  // Find installer by name - handle both short names (from config) and full names (from Lark)
+  let installer = locationConfig.installers.find((i: any) => i.name === assignedInstaller)
+  
+  // If not found by exact match, try finding by partial match (e.g., "Fairul" in "Mohamad Fairul Ismail")
+  if (!installer) {
+    installer = locationConfig.installers.find((i: any) => 
+      assignedInstaller.toLowerCase().includes(i.name.toLowerCase()) ||
+      i.name.toLowerCase().includes(assignedInstaller.toLowerCase())
+    )
+  }
 
   if (!installer) {
-    throw new Error('Installer configuration not found')
+    console.error(`❌ Installer not found. Looking for: "${assignedInstaller}"`)
+    console.error(`   Available installers:`, locationConfig.installers.map((i: any) => i.name))
+    throw new Error(`Installer configuration not found for: ${assignedInstaller}`)
   }
+  
+  console.log(`✅ Found installer: ${installer.name} (${installer.email})`)
 
   // Fetch merchant details from Salesforce for calendar event
   console.log('📋 Fetching merchant details from Salesforce for calendar event...')
@@ -532,53 +546,53 @@ export async function bookInternalInstallation(
   const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
 
   // Build description with structured formatting
+  // Simplified version without emojis to test if Lark accepts it
   let eventDescription = ''
 
   // Pilot Test indicator (if applicable)
   if (merchantDetails.pilotTest === 'Yes') {
-    eventDescription += `⚠️ PILOT TEST - Automated Onboarding Flow\n`
-    eventDescription += `📝 Manual Intercom ticket required\n\n`
+    eventDescription += `PILOT TEST - Automated Onboarding Flow\n`
+    eventDescription += `Manual Intercom ticket required\n\n`
   }
 
-  // Merchant Details
-  eventDescription += `🏪 Merchant: ${merchantDetails.name || merchantName}\n\n`
-
-  // Location
+  // Core installation details
+  eventDescription += `Installation Details\n`
+  eventDescription += `==================\n\n`
+  
+  eventDescription += `Merchant: ${merchantDetails.name || merchantName}\n`
+  
   if (merchantDetails.address) {
-    eventDescription += `📍 Location:\n${merchantDetails.address}\n\n`
+    eventDescription += `Location: ${merchantDetails.address}\n`
   }
-
-  // Primary Contact information
-  eventDescription += `👤 Primary Contact:\n`
-  eventDescription += `   Name: ${merchantDetails.primaryContactName || 'N/A'}\n`
-  eventDescription += `   Role: ${merchantDetails.primaryContactRole || 'N/A'}\n`
-  eventDescription += `   Phone: ${merchantDetails.primaryContactPhone || 'N/A'}\n`
+  
+  eventDescription += `\nPrimary Contact:\n`
+  eventDescription += `- Name: ${merchantDetails.primaryContactName || 'N/A'}\n`
+  eventDescription += `- Role: ${merchantDetails.primaryContactRole || 'N/A'}\n`
+  eventDescription += `- Phone: ${merchantDetails.primaryContactPhone || 'N/A'}\n`
   if (merchantDetails.primaryContactEmail) {
-    eventDescription += `   Email: ${merchantDetails.primaryContactEmail}\n`
+    eventDescription += `- Email: ${merchantDetails.primaryContactEmail}\n`
   }
-  eventDescription += `\n`
-
-  // Hardware items
-  eventDescription += `🛠️ Hardware Purchased:\n${hardwareListText}\n\n`
-
-  // Onboarding Summary
+  
+  eventDescription += `\nHardware List:\n`
+  const simpleHardwareList = hardwareList.length > 0 
+    ? hardwareList.map(item => `- ${item}`).join('\n')
+    : '- No hardware items found'
+  eventDescription += simpleHardwareList + '\n'
+  
   if (merchantDetails.onboardingSummary && merchantDetails.onboardingSummary !== 'N/A') {
-    eventDescription += `📋 Onboarding Summary:\n${merchantDetails.onboardingSummary}\n\n`
+    eventDescription += `\nOnboarding Summary:\n${merchantDetails.onboardingSummary}\n`
   }
-
-  // Onboarding Manager
-  eventDescription += `👨‍💼 Onboarding Manager:\n`
-  eventDescription += `   Name: ${merchantDetails.msmName || 'N/A'}\n`
+  
+  eventDescription += `\nOnboarding Manager:\n`
+  eventDescription += `- Name: ${merchantDetails.msmName || 'N/A'}\n`
   if (merchantDetails.msmPhone && merchantDetails.msmPhone !== 'N/A') {
-    eventDescription += `   Phone: ${merchantDetails.msmPhone}\n`
+    eventDescription += `- Phone: ${merchantDetails.msmPhone}\n`
   }
   if (merchantDetails.msmEmail) {
-    eventDescription += `   Email: ${merchantDetails.msmEmail}\n`
+    eventDescription += `- Email: ${merchantDetails.msmEmail}\n`
   }
-  eventDescription += `\n`
-
-  // Salesforce link
-  eventDescription += `🔗 Salesforce: ${salesforceUrl}`
+  
+  eventDescription += `\nSalesforce: ${salesforceUrl}`
 
   // Build attendees list
   const attendees = []
