@@ -530,11 +530,6 @@ export async function bookInternalInstallation(
   let eventResponse: any
   let eventId: string
 
-  // Build hardware list for description with proper formatting
-  const hardwareListText = hardwareList.length > 0
-    ? hardwareList.map(item => `  • ${item}`).join('\n')
-    : 'No hardware items found'
-
   // Use Onboarding Trainer Name (e.g., "Nasi Lemak") for the merchant field in description
   // merchantDetails.name is always the correct Onboarding_Trainer__c.Name field
   const merchantDisplayName = merchantDetails.name || merchantName
@@ -594,6 +589,18 @@ export async function bookInternalInstallation(
   
   eventDescription += `\nSalesforce: ${salesforceUrl}`
 
+  // Build a summary line with key details for display in calendar
+  // This helps when description is not fully visible in calendar UI
+  const summaryDetails = [
+    merchantDetails.address ? `📍 ${merchantDetails.address}` : null,
+    merchantDetails.primaryContactName ? `👤 ${merchantDetails.primaryContactName}` : null,
+    merchantDetails.primaryContactPhone ? `📞 ${merchantDetails.primaryContactPhone}` : null
+  ].filter(Boolean).join(' | ')
+
+  const eventSummaryWithDetails = summaryDetails
+    ? `Installation: ${merchantDisplayName} - ${summaryDetails}`
+    : `Installation: ${merchantDisplayName}`
+
   // Build attendees list
   const attendees = []
   
@@ -622,7 +629,7 @@ export async function bookInternalInstallation(
 
   // Prepare the event object with proper structure
   const eventObject: any = {
-    summary: `Installation: ${merchantDisplayName}`,  // Use Onboarding Trainer Name (e.g., "activate175")
+    summary: eventSummaryWithDetails,  // Include key details in summary for better visibility
     description: eventDescription,
     start_time: {
       timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString(),
