@@ -49,9 +49,9 @@ const formatDate = (dateString: string | null | undefined): string => {
   })
 }
 
-// Helper function to check if date is within 1 business day (weekdays only)
-// Returns true if there is NOT at least 1 business day buffer before the scheduled date
-// Merchants need at least 1 business day advance notice to reschedule
+// Helper function to check if rescheduling is allowed
+// Returns true if rescheduling is NOT allowed (less than 1 business day buffer)
+// Requires at least 1 business day (weekdays only) between today and scheduled date
 const isWithinNextDay = (dateString: string | null | undefined): boolean => {
   if (!dateString) return false
 
@@ -77,9 +77,9 @@ const isWithinNextDay = (dateString: string | null | undefined): boolean => {
     }
   }
 
-  // Return true if there is 1 or fewer business days remaining
+  // Return true if there is less than 1 business day remaining
   // This means rescheduling is NOT allowed (need at least 1 business day buffer)
-  return businessDaysRemaining <= 1
+  return businessDaysRemaining < 1
 }
 
 export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange }: OnboardingTimelineProps) {

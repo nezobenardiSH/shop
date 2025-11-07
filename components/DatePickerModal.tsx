@@ -481,8 +481,26 @@ export default function DatePickerModal({
 
     // For installation bookings with external vendor, require 2 days advance booking
     // For internal installers, earliest is tomorrow
+    // For rescheduling, require 1 business day buffer (weekdays only)
     if (bookingType === 'installation') {
-      if (isExternalVendor) {
+      if (currentBooking?.eventId) {
+        // This is a rescheduling - require 1 business day buffer (weekdays only)
+        let businessDaysAdded = 0
+        let bufferDate = new Date(minDate)
+
+        // Add days until we have 1 business day buffer
+        while (businessDaysAdded < 1) {
+          bufferDate.setDate(bufferDate.getDate() + 1)
+          const dayOfWeek = bufferDate.getDay()
+          // Count only weekdays (Monday=1 to Friday=5)
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            businessDaysAdded++
+          }
+        }
+
+        minDate = bufferDate
+        console.log('  -> Rescheduling requires 1 business day buffer. Earliest date:', minDate.toDateString())
+      } else if (isExternalVendor) {
         const dayAfterTomorrow = new Date(minDate)
         dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
         minDate = dayAfterTomorrow
