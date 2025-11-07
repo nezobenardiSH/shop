@@ -388,7 +388,7 @@ export async function bookInternalInstallation(
                Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c, Merchant_PIC_Role__c,
                Email__c,
                MSM_Name__r.Name, MSM_Name__r.Email, MSM_Name__r.Phone,
-               Onboarding_Summary__c, Pilot_Test__c
+               Onboarding_Summary__c
         FROM Onboarding_Trainer__c
         WHERE Id = '${merchantId}'
         LIMIT 1
@@ -413,7 +413,6 @@ export async function bookInternalInstallation(
         console.log('   Shipping_State__c:', trainer.Shipping_State__c)
         console.log('   Shipping_Zip_Postal_Code__c:', trainer.Shipping_Zip_Postal_Code__c)
         console.log('   Shipping_Country__c:', trainer.Shipping_Country__c)
-        console.log('   Pilot_Test__c:', trainer.Pilot_Test__c)
         console.log('   Onboarding_Summary__c:', trainer.Onboarding_Summary__c)
 
         merchantDetails = {
@@ -443,7 +442,6 @@ export async function bookInternalInstallation(
           msmName: trainer.MSM_Name__r?.Name || 'N/A',
           msmEmail: trainer.MSM_Name__r?.Email || null,
           msmPhone: trainer.MSM_Name__r?.Phone || 'N/A',
-          pilotTest: trainer.Pilot_Test__c || 'No',
           onboardingSummary: trainer.Onboarding_Summary__c || 'N/A',
           accountId: trainer.Account_Name__c
         }
@@ -572,11 +570,8 @@ export async function bookInternalInstallation(
   // Simplified version without emojis to test if Lark accepts it
   let eventDescription = ''
 
-  // Pilot Test indicator (if applicable)
-  if (merchantDetails.pilotTest === 'Yes') {
-    eventDescription += `PILOT TEST - Automated Onboarding Flow\n`
-    eventDescription += `Manual Intercom ticket required\n\n`
-  }
+  // Add pilot merchant note
+  eventDescription += `⚠️ Pilot merchant. Intercom ticket creation required\n\n`
 
   // Core installation details
   eventDescription += `Installation Details\n`

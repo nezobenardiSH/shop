@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
              Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c, Merchant_PIC_Role__c,
              Email__c,
              MSM_Name__r.Name, MSM_Name__r.Email, MSM_Name__r.Phone,
-             Onboarding_Summary__c, Pilot_Test__c
+             Onboarding_Summary__c
       FROM Onboarding_Trainer__c
       WHERE Id = '${merchantId}'
       LIMIT 1
@@ -77,8 +77,7 @@ export async function GET(request: NextRequest) {
           operationManager: trainer.Operation_Manager_Contact__r,
           businessOwner: trainer.Business_Owner_Contact__r,
           msm: trainer.MSM_Name__r,
-          onboardingSummary: trainer.Onboarding_Summary__c,
-          pilotTest: trainer.Pilot_Test__c
+          onboardingSummary: trainer.Onboarding_Summary__c
         },
         fullRecord: trainer
       })
