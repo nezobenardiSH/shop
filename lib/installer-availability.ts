@@ -626,9 +626,9 @@ export async function bookInternalInstallation(
   eventDescription += `==================\n\n`
   
   eventDescription += `Merchant: ${merchantDetails.name || merchantName}\n`
-  
+
   if (merchantDetails.address) {
-    eventDescription += `Location: ${merchantDetails.address}\n`
+    eventDescription += `\nStore Address:\n${merchantDetails.address}\n`
   }
   
   eventDescription += `\nPrimary Contact:\n`
