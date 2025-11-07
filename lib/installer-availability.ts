@@ -365,15 +365,15 @@ export async function bookInternalInstallation(
 
   if (conn) {
     try {
-      // Get merchant/trainer record with all required fields
+      // Get merchant/trainer record with all required fields including emails
       const trainerQuery = `
         SELECT Id, Name, Account_Name__c,
                Shipping_Street__c, Shipping_City__c, Shipping_State__c, Shipping_Zip_Postal_Code__c, Shipping_Country__c,
-               Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone,
-               Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone,
-               Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c,
-               MSM_Name__r.Name,
-               Onboarding_Summary__c
+               Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Email,
+               Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Email,
+               Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c, Merchant_PIC_Email__c,
+               MSM_Name__r.Name, MSM_Name__r.Email, MSM_Name__r.Phone,
+               Onboarding_Summary__c, Pilot_Test__c
         FROM Onboarding_Trainer__c
         WHERE Id = '${merchantId}'
         LIMIT 1
@@ -404,7 +404,13 @@ export async function bookInternalInstallation(
           primaryContactPhone: trainer.Merchant_PIC_Contact_Number__c ||
                               trainer.Operation_Manager_Contact__r?.Phone ||
                               trainer.Business_Owner_Contact__r?.Phone || 'N/A',
+          primaryContactEmail: trainer.Merchant_PIC_Email__c ||
+                              trainer.Operation_Manager_Contact__r?.Email ||
+                              trainer.Business_Owner_Contact__r?.Email || null,
           msmName: trainer.MSM_Name__r?.Name || 'N/A',
+          msmEmail: trainer.MSM_Name__r?.Email || null,
+          msmPhone: trainer.MSM_Name__r?.Phone || 'N/A',
+          pilotTest: trainer.Pilot_Test__c || 'No',
           onboardingSummary: trainer.Onboarding_Summary__c || 'N/A',
           accountId: trainer.Account_Name__c
         }
@@ -528,22 +534,69 @@ export async function bookInternalInstallation(
   // Build description with structured formatting
   let eventDescription = ''
 
+  // Pilot Test indicator (if applicable)
+  if (merchantDetails.pilotTest === 'Yes') {
+    eventDescription += `⚠️ PILOT TEST - Automated Onboarding Flow\n`
+    eventDescription += `📝 Manual Intercom ticket required\n\n`
+  }
+
+  // Merchant Details
+  eventDescription += `🏪 Merchant: ${merchantDetails.name || merchantName}\n\n`
+
   // Location
   if (merchantDetails.address) {
     eventDescription += `📍 Location:\n${merchantDetails.address}\n\n`
   }
 
+  // Primary Contact information
+  eventDescription += `👤 Primary Contact:\n`
+  eventDescription += `   Name: ${merchantDetails.primaryContactName || 'N/A'}\n`
+  eventDescription += `   Role: ${merchantDetails.primaryContactRole || 'N/A'}\n`
+  eventDescription += `   Phone: ${merchantDetails.primaryContactPhone || 'N/A'}\n`
+  if (merchantDetails.primaryContactEmail) {
+    eventDescription += `   Email: ${merchantDetails.primaryContactEmail}\n`
+  }
+  eventDescription += `\n`
+
   // Hardware items
-  eventDescription += `🛠️ Hardware Items:\n${hardwareListText}\n\n`
+  eventDescription += `🛠️ Hardware Purchased:\n${hardwareListText}\n\n`
 
-  // Contact information
-  eventDescription += `👤 Contact: ${merchantDetails.primaryContactName || 'N/A'} (${merchantDetails.primaryContactPhone || 'N/A'})\n\n`
+  // Onboarding Summary
+  if (merchantDetails.onboardingSummary && merchantDetails.onboardingSummary !== 'N/A') {
+    eventDescription += `📋 Onboarding Summary:\n${merchantDetails.onboardingSummary}\n\n`
+  }
 
-  // MSM
-  eventDescription += `👨‍💼 MSM: ${merchantDetails.msmName || 'N/A'}\n\n`
+  // Onboarding Manager
+  eventDescription += `👨‍💼 Onboarding Manager:\n`
+  eventDescription += `   Name: ${merchantDetails.msmName || 'N/A'}\n`
+  if (merchantDetails.msmPhone && merchantDetails.msmPhone !== 'N/A') {
+    eventDescription += `   Phone: ${merchantDetails.msmPhone}\n`
+  }
+  if (merchantDetails.msmEmail) {
+    eventDescription += `   Email: ${merchantDetails.msmEmail}\n`
+  }
+  eventDescription += `\n`
 
   // Salesforce link
   eventDescription += `🔗 Salesforce: ${salesforceUrl}`
+
+  // Build attendees list
+  const attendees = []
+  
+  // Add installer as attendee
+  if (installer.email) {
+    attendees.push({ email: installer.email })
+  }
+  
+  // Add merchant contact if available
+  if (merchantDetails.primaryContactEmail) {
+    attendees.push({ email: merchantDetails.primaryContactEmail })
+  }
+  
+  // Add MSM if email is available
+  if (merchantDetails.msmEmail) {
+    attendees.push({ email: merchantDetails.msmEmail })
+  }
 
   try {
     eventResponse = await larkService.createCalendarEvent(
@@ -558,7 +611,8 @@ export async function bookInternalInstallation(
         },
         end_time: {
           timestamp: Math.floor(new Date(`${date}T${timeSlot.end}:00+08:00`).getTime() / 1000).toString()
-        }
+        },
+        attendees: attendees.length > 0 ? attendees : undefined
       },
       installer.email // Pass email as third parameter for user context
     )
