@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Try to fetch the created event to see if description was saved
     let createdEvent = null
     try {
-      const eventId = result.event_id || result.event?.event_id
+      const eventId = (result as any).event_id
       if (eventId) {
         const fetchResponse = await larkService.makeRequest(
           `/open-apis/calendar/v4/calendars/${primaryCalendar.calendar_id}/events/${eventId}`,
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       console.error('Could not fetch created event:', e)
     }
-    
+
     return NextResponse.json({
       success: true,
-      eventId: result.event_id || result.event?.event_id,
+      eventId: (result as any).event_id,
       descriptionSent: testDescription,
       descriptionLength: testDescription.length,
       createdEvent: createdEvent ? {
