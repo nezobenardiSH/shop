@@ -1437,18 +1437,12 @@ class LarkService {
     // Add Salesforce link if ID is available
     if (merchantInfo.salesforceId) {
       const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantInfo.salesforceId}/view`
-      description += `\n🔗 Salesforce: ${salesforceUrl}`
+      description += `\n\nSalesforce: ${salesforceUrl}`
     }
 
-    // Add location to description if available
-    let finalDescription = description
-    if (merchantInfo.address) {
-      finalDescription = `📍 Location: ${merchantInfo.address}\n\n${description}`
-    }
-    
     const event: LarkEvent = {
       summary: eventTitle,
-      description: finalDescription,
+      description: description,
       // Temporarily removing location as it's causing validation errors
       // location: merchantInfo.address,
       start_time: {
