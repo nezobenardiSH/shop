@@ -606,22 +606,38 @@ export async function bookInternalInstallation(
   console.log('Description length:', eventDescription.length, 'characters')
   console.log('Attendees:', attendees)
 
+  // Prepare the event object with proper structure
+  const eventObject: any = {
+    summary: `Installation: ${merchantDisplayName}`,  // Use Onboarding Trainer Name (e.g., "activate175")
+    description: eventDescription,
+    start_time: {
+      timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString(),
+      timezone: 'Asia/Singapore'
+    },
+    end_time: {
+      timestamp: Math.floor(new Date(`${date}T${timeSlot.end}:00+08:00`).getTime() / 1000).toString(),
+      timezone: 'Asia/Singapore'
+    },
+    visibility: 'default',
+    need_notification: false
+  }
+  
+  // Only add attendees if we have any
+  if (attendees.length > 0) {
+    eventObject.attendees = attendees
+  }
+  
+  // Add location separately (even though Lark sometimes rejects it)
+  if (merchantDetails.address) {
+    eventObject.location = merchantDetails.address
+  }
+
+  console.log('📤 Full event object:', JSON.stringify(eventObject, null, 2))
+
   try {
     eventResponse = await larkService.createCalendarEvent(
       calendarId,
-      {
-        summary: `Installation: ${merchantDisplayName}`,  // Use Onboarding Trainer Name (e.g., "activate175")
-        description: eventDescription,
-        // Note: location field is NOT included because Lark API rejects it with validation errors
-        // The address is included in the description instead
-        start_time: {
-          timestamp: Math.floor(new Date(`${date}T${timeSlot.start}:00+08:00`).getTime() / 1000).toString()
-        },
-        end_time: {
-          timestamp: Math.floor(new Date(`${date}T${timeSlot.end}:00+08:00`).getTime() / 1000).toString()
-        },
-        attendees: attendees.length > 0 ? attendees : undefined
-      },
+      eventObject,
       installer.email // Pass email as third parameter for user context
     )
     

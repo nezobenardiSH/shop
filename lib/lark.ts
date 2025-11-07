@@ -884,6 +884,21 @@ class LarkService {
       userEmail: userEmail
     })
 
+    // Log the response to see what Lark returns
+    console.log('📥 Lark API response:')
+    console.log(JSON.stringify(response.data, null, 2))
+    
+    // Check if description was included in the created event
+    if (response.data?.event) {
+      console.log('✅ Event created with ID:', response.data.event.event_id)
+      console.log('📋 Event has description:', !!response.data.event.description)
+      if (response.data.event.description) {
+        console.log('📝 Description preview:', response.data.event.description.substring(0, 100) + '...')
+      } else {
+        console.log('⚠️ WARNING: Event was created but description is missing in response!')
+      }
+    }
+
     return response.data
   }
 
