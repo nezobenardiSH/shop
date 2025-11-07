@@ -660,23 +660,11 @@ export async function bookInternalInstallation(
   
   eventDescription += `\nSalesforce: ${salesforceUrl}`
 
-  // Build a summary line with key details for display in calendar
-  // This helps when description is not fully visible in calendar UI
-  const summaryDetails = [
-    merchantDetails.address ? `📍 ${merchantDetails.address}` : null,
-    merchantDetails.primaryContactName ? `👤 ${merchantDetails.primaryContactName}` : null,
-    merchantDetails.primaryContactPhone ? `📞 ${merchantDetails.primaryContactPhone}` : null
-  ].filter(Boolean).join(' | ')
+  // Event title should be simple - just the installation type and merchant name
+  // All details go in the description
+  const eventSummaryWithDetails = `Installation: ${merchantDisplayName}`
 
-  const eventSummaryWithDetails = summaryDetails
-    ? `Installation: ${merchantDisplayName} - ${summaryDetails}`
-    : `Installation: ${merchantDisplayName}`
-
-  console.log('📋 Event Summary Details:')
-  console.log('   merchantDetails.address:', merchantDetails.address)
-  console.log('   merchantDetails.primaryContactName:', merchantDetails.primaryContactName)
-  console.log('   merchantDetails.primaryContactPhone:', merchantDetails.primaryContactPhone)
-  console.log('   summaryDetails:', summaryDetails)
+  console.log('📋 Event Summary:')
   console.log('   eventSummaryWithDetails:', eventSummaryWithDetails)
 
   // Build attendees list
