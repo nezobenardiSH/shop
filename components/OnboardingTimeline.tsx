@@ -49,6 +49,25 @@ const formatDate = (dateString: string | null | undefined): string => {
   })
 }
 
+// Helper function to check if date is within next day (D-1 or less)
+const isWithinNextDay = (dateString: string | null | undefined): boolean => {
+  if (!dateString) return false
+  
+  const eventDate = new Date(dateString)
+  const now = new Date()
+  
+  // Set time to start of day for both dates for accurate comparison
+  const eventDateStart = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate())
+  const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  
+  // Calculate difference in days
+  const diffInMs = eventDateStart.getTime() - nowStart.getTime()
+  const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24))
+  
+  // Return true if event is today, tomorrow (D-1), or in the past
+  return diffInDays <= 1
+}
+
 export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange }: OnboardingTimelineProps) {
   const router = useRouter()
   const params = useParams()
@@ -991,16 +1010,17 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     : 'Not Scheduled'}
                 </div>
                 {(() => {
-                  const isPastDate = trainerData?.installationDate && new Date(trainerData.installationDate) < new Date()
+                  const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
                   return (
                     <button
-                      onClick={() => !isPastDate && handleBookingClick('installation', trainerData?.installationDate)}
-                      disabled={isPastDate}
+                      onClick={() => !cannotReschedule && handleBookingClick('installation', trainerData?.installationDate)}
+                      disabled={cannotReschedule}
                       className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                        isPastDate
+                        cannotReschedule
                           ? 'bg-gray-400 cursor-not-allowed'
                           : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                       }`}
+                      title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
                     >
                       {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
                     </button>
@@ -1088,16 +1108,17 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     : 'Not Scheduled'}
                 </div>
                 {(() => {
-                  const isPastDate = trainerData?.trainingDate && new Date(trainerData.trainingDate) < new Date()
+                  const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
                   return (
                     <button
-                      onClick={() => !isPastDate && handleBookingClick('training', trainerData?.trainingDate)}
-                      disabled={isPastDate}
+                      onClick={() => !cannotReschedule && handleBookingClick('training', trainerData?.trainingDate)}
+                      disabled={cannotReschedule}
                       className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                        isPastDate
+                        cannotReschedule
                           ? 'bg-gray-400 cursor-not-allowed'
                           : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                       }`}
+                      title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
                     >
                       {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
                     </button>
@@ -2164,16 +2185,17 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     : 'Not Scheduled'}
                 </div>
                 {(() => {
-                  const isPastDate = trainerData?.installationDate && new Date(trainerData.installationDate) < new Date()
+                  const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
                   return (
                     <button
-                      onClick={() => !isPastDate && handleBookingClick('installation', trainerData?.installationDate)}
-                      disabled={isPastDate}
+                      onClick={() => !cannotReschedule && handleBookingClick('installation', trainerData?.installationDate)}
+                      disabled={cannotReschedule}
                       className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                        isPastDate
+                        cannotReschedule
                           ? 'bg-gray-400 cursor-not-allowed'
                           : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                       }`}
+                      title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
                     >
                       <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -2273,16 +2295,17 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     : 'Not Scheduled'}
                 </div>
                 {(() => {
-                  const isPastDate = trainerData?.trainingDate && new Date(trainerData.trainingDate) < new Date()
+                  const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
                   return (
                     <button
-                      onClick={() => !isPastDate && handleBookingClick('training', trainerData?.trainingDate)}
-                      disabled={isPastDate}
+                      onClick={() => !cannotReschedule && handleBookingClick('training', trainerData?.trainingDate)}
+                      disabled={cannotReschedule}
                       className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                        isPastDate
+                        cannotReschedule
                           ? 'bg-gray-400 cursor-not-allowed'
                           : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                       }`}
+                      title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
                     >
                       <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
