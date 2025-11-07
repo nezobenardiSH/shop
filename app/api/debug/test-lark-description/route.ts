@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import LarkService from '@/lib/lark'
+import { larkService } from '@/lib/lark'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { 
+    const {
       email = 'azroll.jamil@storehub.com',
       testDescription = 'This is a test description to see if Lark accepts it'
     } = body
-    
-    const larkService = new LarkService()
     
     // Get the calendar ID for the user
     const calendars = await larkService.getCalendarList(email)

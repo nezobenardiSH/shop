@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import LarkService from '@/lib/lark'
+import { larkService } from '@/lib/lark'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const eventId = searchParams.get('eventId')
   const email = searchParams.get('email') || 'azroll.jamil@storehub.com'
-  
+
   if (!eventId) {
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Please provide eventId parameter',
       usage: '/api/debug/check-lark-event?eventId=YOUR_EVENT_ID&email=installer@storehub.com'
     }, { status: 400 })
   }
   
   try {
-    const larkService = new LarkService()
-    
     // Get the calendar ID for the user
     const calendars = await larkService.getCalendarList(email)
     const primaryCalendar = calendars.find((cal: any) => cal.type === 'primary')
