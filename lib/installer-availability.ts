@@ -726,18 +726,8 @@ export async function bookInternalInstallation(
     eventObject.attendees = attendees
   }
 
-  // Only add location if we have city, state, country (Lark rejects empty/TBD values)
-  // Use just city, state, and country to avoid Lark API validation errors
-  const locationParts = [
-    merchantDetails.shippingCity,
-    merchantDetails.shippingState,
-    merchantDetails.shippingCountry
-  ]
-    .filter(Boolean)
-
-  if (locationParts.length > 0) {
-    eventObject.location = locationParts.join(', ')
-  }
+  // Don't add location field - Lark API has strict validation
+  // Address is already included in the event description
 
   console.log('📤 Full event object:', JSON.stringify(eventObject, null, 2))
 
