@@ -724,8 +724,15 @@ export async function bookInternalInstallation(
   }
 
   // Only add location if we have an actual address (Lark rejects empty/TBD values)
+  // Use a shortened version - just city and state to avoid Lark API validation errors
   if (merchantDetails.address && merchantDetails.address.trim()) {
-    eventObject.location = merchantDetails.address
+    // Extract just city and state from the full address
+    const addressParts = merchantDetails.address.split(', ')
+    // Use last 2 parts (usually State, Country) or just the city if available
+    const shortLocation = addressParts.length >= 2
+      ? addressParts.slice(-2).join(', ')
+      : merchantDetails.address.substring(0, 100) // Fallback to first 100 chars
+    eventObject.location = shortLocation
   }
 
   console.log('📤 Full event object:', JSON.stringify(eventObject, null, 2))
