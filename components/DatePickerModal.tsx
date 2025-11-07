@@ -485,6 +485,9 @@ export default function DatePickerModal({
     if (bookingType === 'installation') {
       if (currentBooking?.eventId) {
         // This is a rescheduling - require 1 business day buffer (weekdays only)
+        console.log('🔄 RESCHEDULING DETECTED - Applying 1 business day buffer')
+        console.log('   Current minDate:', minDate.toDateString())
+
         let businessDaysAdded = 0
         let bufferDate = new Date(minDate)
 
@@ -492,6 +495,7 @@ export default function DatePickerModal({
         while (businessDaysAdded < 1) {
           bufferDate.setDate(bufferDate.getDate() + 1)
           const dayOfWeek = bufferDate.getDay()
+          console.log('   Checking day:', bufferDate.toDateString(), 'Day of week:', dayOfWeek, 'Is weekday:', dayOfWeek >= 1 && dayOfWeek <= 5)
           // Count only weekdays (Monday=1 to Friday=5)
           if (dayOfWeek >= 1 && dayOfWeek <= 5) {
             businessDaysAdded++
