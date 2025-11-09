@@ -371,7 +371,7 @@ function TrainerPortalContent() {
         // For training bookings, check if go-live date exists before proceeding
         if (bookingType === 'training' && !goLiveDate) {
           console.error('❌ URL param: Cannot open training modal without go-live date')
-          setErrorMessage('Unable to open training scheduler: Go-live date not found. Please ensure the go-live date is set in Salesforce.')
+          alert('Unable to open training scheduler: Go-live date not found. Please ensure the go-live date is set in Salesforce.')
           setHasProcessedUrlParam(true)
           return
         }
@@ -569,7 +569,7 @@ function TrainerPortalContent() {
     // For training bookings, only open modal if go-live date exists
     if (bookingType === 'training' && !goLiveDate) {
       console.error('❌ Cannot open training modal without go-live date')
-      setErrorMessage('Unable to open training scheduler: Go-live date not found. Please ensure the go-live date is set in Salesforce.')
+      alert('Unable to open training scheduler: Go-live date not found. Please ensure the go-live date is set in Salesforce.')
       return
     }
 
