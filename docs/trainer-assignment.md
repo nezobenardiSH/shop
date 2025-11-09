@@ -4,13 +4,6 @@
 
 This document defines the rules for assigning trainers to merchants based on service type, location, and language requirements.
 
-## Training Types
-
-### 1. POS Training (`pos-training`)
-Training on Point of Sale system usage and features.
-
-### 2. Back Office Training (`backoffice-training`)
-Training on back office management, reporting, and administrative features.
 
 ## Service Type Classification
 
