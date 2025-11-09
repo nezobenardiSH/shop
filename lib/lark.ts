@@ -1103,40 +1103,40 @@ class LarkService {
    * Get user info by email
    */
   async getUserByEmail(email: string): Promise<{ user_id: string; open_id: string; name: string }> {
+    console.log(`📧 Getting user info for: ${email}`)
+    
+    // First, try to get the stored open_id from the OAuth tokens database
     try {
-      // Ensure we have app access token
-      await this.getAccessToken()
+      const { larkOAuthService } = await import('./lark-oauth-service')
+      const { PrismaClient } = await import('@prisma/client')
+      const prisma = new PrismaClient()
       
-      // Use the contact API to search for user by email - correct parameter name is 'user_ids'
-      const response = await this.makeRequest(
-        `/open-apis/contact/v3/users/batch?user_ids=${encodeURIComponent(email)}&user_id_type=email`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`
-          }
-        }
-      )
+      const tokenData = await prisma.larkAuthToken.findUnique({
+        where: { userEmail: email }
+      })
       
-      const users = response.data?.items || []
-      if (users.length > 0) {
+      if (tokenData && tokenData.larkUserId) {
+        console.log(`✅ Found stored Lark user ID for ${email}: ${tokenData.larkUserId}`)
+        await prisma.$disconnect()
         return {
-          user_id: users[0].user_id,
-          open_id: users[0].open_id,
-          name: users[0].name
+          user_id: tokenData.larkUserId,
+          open_id: tokenData.larkUserId, // larkUserId field stores either user_id or open_id
+          name: tokenData.userName || email.split('@')[0]
         }
       }
       
-      throw new Error(`User not found with email: ${email}`)
+      await prisma.$disconnect()
     } catch (error) {
-      console.error('Failed to get user by email:', error)
-      // Fallback: Return a placeholder for backwards compatibility
-      console.log('Using email as user identifier directly')
-      return {
-        user_id: email,
-        open_id: email,
-        name: email.split('@')[0]
-      }
+      console.log(`⚠️ Could not retrieve stored user ID: ${error}`)
+    }
+    
+    // Fallback: Use email directly as identifier
+    // Some Lark APIs may accept email as a user identifier
+    console.log(`📧 Using email as fallback identifier: ${email}`)
+    return {
+      user_id: email,
+      open_id: email,
+      name: email.split('@')[0]
     }
   }
 
