@@ -256,6 +256,7 @@ export async function GET(
             businessStoreName: acc.Business_Store_Name__c,
             plannedGoLiveDate: acc.Planned_Go_Live_Date__c
           }
+          console.log('📊 Account data fetched:', accountData)
         }
       } catch (error) {
         console.log('Detailed account query failed:', error)
@@ -434,7 +435,16 @@ export async function GET(
         shippingCountry: trainer.Shipping_Country__c,
         subIndustry: trainer.Sub_Industry__c,
         preferredLanguage: trainer.Preferred_Language__c,
-        plannedGoLiveDate: accountData?.plannedGoLiveDate || trainer.Planned_Go_Live_Date__c || trainer.First_Revised_EGLD__c,
+        plannedGoLiveDate: (() => {
+          const goLiveDate = accountData?.plannedGoLiveDate || trainer.Planned_Go_Live_Date__c || trainer.First_Revised_EGLD__c;
+          console.log('🔍 GO-LIVE DATE DEBUG:', {
+            fromAccount: accountData?.plannedGoLiveDate,
+            fromTrainer: trainer.Planned_Go_Live_Date__c,
+            fromEGLD: trainer.First_Revised_EGLD__c,
+            final: goLiveDate
+          });
+          return goLiveDate;
+        })(),
         requiredFeaturesByMerchant: trainer.Required_Features_by_Merchant__c,
         onboardingSummary: trainer.Onboarding_Summary__c,
         workaroundElaboration: trainer.Workaround_Elaboration__c,

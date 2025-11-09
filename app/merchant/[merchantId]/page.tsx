@@ -355,6 +355,26 @@ function TrainerPortalContent() {
             trainingDate = trainer.backOfficeTrainingDate || trainer.trainingDate
           }
         }
+        
+        // Get go-live date for training bookings
+        const goLiveDate = trainer.plannedGoLiveDate ||
+                          trainerData?.account?.plannedGoLiveDate ||
+                          trainer.firstRevisedEGLD ||
+                          null
+        
+        console.log('🎯 URL Param - Go-Live Date Resolution:', {
+          source: 'useEffect URL param handler',
+          goLiveDate,
+          bookingType
+        })
+
+        // For training bookings, check if go-live date exists before proceeding
+        if (bookingType === 'training' && !goLiveDate) {
+          console.error('❌ URL param: Cannot open training modal without go-live date')
+          setErrorMessage('Unable to open training scheduler: Go-live date not found. Please ensure the go-live date is set in Salesforce.')
+          setHasProcessedUrlParam(true)
+          return
+        }
 
         setCurrentBookingInfo({
           trainerId: trainer.id,
@@ -367,10 +387,12 @@ function TrainerPortalContent() {
           displayName: trainer.name,
           bookingType: bookingType,
           onboardingServicesBought: trainer.onboardingServicesBought,
+          goLiveDate: goLiveDate,
           installationDate: installationDate,
           trainingDate: trainingDate,
           existingBooking: existingBooking
         })
+        
         setBookingModalOpen(true)
         setHasProcessedUrlParam(true)
       }
@@ -536,6 +558,20 @@ function TrainerPortalContent() {
     }
 
     console.log('📦 About to set currentBookingInfo with existingBooking:', existingBooking)
+    console.log('🔍 Modal data ready:', {
+      hasGoLiveDate: !!goLiveDate,
+      goLiveDate,
+      bookingType,
+      installationDate,
+      trainingDate
+    })
+
+    // For training bookings, only open modal if go-live date exists
+    if (bookingType === 'training' && !goLiveDate) {
+      console.error('❌ Cannot open training modal without go-live date')
+      setErrorMessage('Unable to open training scheduler: Go-live date not found. Please ensure the go-live date is set in Salesforce.')
+      return
+    }
 
     // Set the booking info and open modal
     setCurrentBookingInfo(bookingInfo)

@@ -523,7 +523,9 @@ export async function getSingleTrainerAvailability(
     name: trainer.name,
     email: trainer.email,
     languages: trainer.languages,
-    location: trainer.location
+    location: trainer.location,
+    hasLanguages: !!trainer.languages,
+    languageCount: trainer.languages?.length || 0
   })
 
   // Check if trainer has OAuth token
@@ -602,7 +604,11 @@ export async function getSingleTrainerAvailability(
             availableLanguages: trainer.languages || [],
             availableLocations: trainer.location || []
           }
-          console.log(`✅ Available slot ${slot.start}-${slot.end}: languages=${JSON.stringify(availableSlot.availableLanguages)}`)
+          console.log(`✅ Available slot ${slot.start}-${slot.end}:`, {
+            languages: availableSlot.availableLanguages,
+            trainerName: trainer.name,
+            trainerLanguagesFromConfig: trainer.languages
+          })
           slots.push(availableSlot)
         } else {
           slots.push({
