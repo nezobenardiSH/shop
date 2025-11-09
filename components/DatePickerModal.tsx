@@ -328,30 +328,37 @@ export default function DatePickerModal({
         })
       } else {
         // For training bookings, use the existing training booking endpoint
+        // Build the request body without trainerName for training bookings
+        const trainingRequestBody: any = {
+          merchantId,
+          merchantName,
+          merchantAddress,
+          merchantPhone,
+          merchantContactPerson,
+          onboardingTrainerName,  // Pass the Salesforce Onboarding_Trainer__c.Name
+          date: dateStr,
+          startTime: selectedSlot.start,
+          endTime: selectedSlot.end,
+          bookingType: bookingType,
+          onboardingServicesBought,  // Pass to determine onsite vs remote
+        }
+        
+        // Add optional fields
+        if (currentBooking?.eventId) {
+          trainingRequestBody.existingEventId = currentBooking.eventId
+        }
+        
+        if (bookingType === 'training') {
+          trainingRequestBody.trainerLanguages = selectedLanguages
+          if (requiredFeatures) trainingRequestBody.requiredFeatures = requiredFeatures
+          if (onboardingSummary) trainingRequestBody.onboardingSummary = onboardingSummary
+          if (workaroundElaboration) trainingRequestBody.workaroundElaboration = workaroundElaboration
+        }
+        
         response = await fetch('/api/lark/book-training', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            merchantId,
-            merchantName,
-            merchantAddress,
-            merchantPhone,
-            merchantContactPerson,
-            trainerName,
-            onboardingTrainerName,  // Pass the Salesforce Onboarding_Trainer__c.Name
-            date: dateStr,
-            startTime: selectedSlot.start,
-            endTime: selectedSlot.end,
-            bookingType: bookingType,
-            onboardingServicesBought,  // Pass to determine onsite vs remote
-            existingEventId: currentBooking?.eventId,  // Pass existing event ID for rescheduling
-            ...(bookingType === 'training' && {
-              trainerLanguages: selectedLanguages,
-              requiredFeatures: requiredFeatures,  // Pass required features for training bookings
-              onboardingSummary: onboardingSummary,  // Pass onboarding summary
-              workaroundElaboration: workaroundElaboration  // Pass workaround elaboration
-            })
-          })
+          body: JSON.stringify(trainingRequestBody)
         })
       }
 
