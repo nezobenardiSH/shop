@@ -140,6 +140,7 @@ export default function MerchantDetailsPage() {
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
       merchantAddress: merchantAddress || '', // Use constructed address from shipping fields
+      merchantState: trainer.shippingState || '', // Add state for display
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
@@ -508,6 +509,7 @@ export default function MerchantDetailsPage() {
             merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
             merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
             merchantAddress={currentBookingInfo.merchantAddress}
+            merchantState={currentBookingInfo.merchantState}
             merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
             merchantContactPerson={currentBookingInfo.merchantContactPerson}
             trainerName={currentBookingInfo.trainerName}

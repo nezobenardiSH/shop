@@ -62,16 +62,31 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Filter trainers list based on merchantAddress if provided
+    let trainersToShow = trainersConfig.trainers.filter((t: any) => t.email && t.name !== 'Nasi Lemak')
+    
+    if (merchantAddress) {
+      // Apply location filtering to the trainers list
+      const { filterTrainersByLocation } = await import('@/lib/location-matcher')
+      trainersToShow = filterTrainersByLocation(trainersToShow, merchantAddress)
+      console.log(`📍 Location filtering trainers list: ${trainersConfig.trainers.length} → ${trainersToShow.length} trainers`)
+    }
+
     return NextResponse.json({
       mode,
-      trainers: trainersConfig.trainers
-        .filter((t: any) => t.email && t.name !== 'Nasi Lemak')
-        .map((t: any) => ({ name: t.name, email: t.email, languages: t.languages })),
+      trainers: trainersToShow.map((t: any) => ({ 
+        name: t.name, 
+        email: t.email, 
+        languages: t.languages,
+        location: t.location 
+      })),
       availability,
       timezone: trainersConfig.timezone,
       message: mode === 'single'
         ? `Showing availability for ${trainerName}`
-        : 'Showing combined availability from all trainers'
+        : merchantAddress 
+          ? `Showing availability for trainers in: ${merchantAddress}`
+          : 'Showing combined availability from all trainers'
     })
   } catch (error) {
     console.error('Error fetching availability:', error)
