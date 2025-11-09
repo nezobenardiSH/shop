@@ -306,7 +306,17 @@ export default function MerchantDetailsPage() {
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Service Type</div>
-                        <div className="text-sm text-gray-900">{trainer.serviceType || 'N/A'}</div>
+                        <div className="text-sm text-gray-900">
+                          {trainer.serviceType || 'N/A'}
+                          {trainer.shippingCity && trainer.shippingState && (
+                            <span className="text-gray-600 ml-1">
+                              • {trainer.shippingCity}, {trainer.shippingState}
+                            </span>
+                          )}
+                          {!trainer.shippingCity && trainer.shippingState && (
+                            <span className="text-gray-600 ml-1">• {trainer.shippingState}</span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Required Features</div>

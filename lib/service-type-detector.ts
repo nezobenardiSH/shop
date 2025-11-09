@@ -12,6 +12,8 @@ export type ServiceType = 'onsite' | 'remote' | 'none'
  */
 export function detectServiceType(onboardingServicesBought: string | null | undefined): ServiceType {
   if (!onboardingServicesBought) {
+    // No service type specified - cannot determine training delivery method
+    console.log('⚠️ No onboardingServicesBought value - service type is NONE')
     return 'none'
   }
   
@@ -28,6 +30,7 @@ export function detectServiceType(onboardingServicesBought: string | null | unde
   }
   
   // Unknown or unrecognized service type
+  console.log(`⚠️ Unrecognized service type "${onboardingServicesBought}" - returning NONE`)
   return 'none'
 }
 
@@ -44,7 +47,7 @@ export function getServiceTypeMessage(serviceType: ServiceType, state?: string):
     case 'remote':
       return 'Training: Remote'
     case 'none':
-      return 'Service type not set - booking will be treated as remote training'
+      return 'Service type not configured - Contact support to set training delivery method'
   }
 }
 
@@ -77,9 +80,9 @@ export function shouldFilterByLocation(
  * @returns true if booking is allowed
  */
 export function canBook(serviceType: ServiceType): boolean {
-  // Allow booking even if service type is 'none'
-  // The merchant can still book training, just show a warning
-  return true
+  // Only allow booking if service type is properly configured
+  // 'none' means the onboarding services field is not set or unrecognized
+  return serviceType !== 'none'
 }
 
 /**

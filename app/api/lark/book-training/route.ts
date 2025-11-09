@@ -58,8 +58,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Determine if location filtering should be applied
-    const { detectServiceType, shouldFilterByLocation } = await import('@/lib/service-type-detector')
+    const { detectServiceType, shouldFilterByLocation, canBook } = await import('@/lib/service-type-detector')
     const serviceType = detectServiceType(onboardingServicesBought)
+    
+    // Check if booking is allowed based on service type
+    if (!canBook(serviceType)) {
+      console.log('❌ Booking blocked - service type is not configured')
+      return NextResponse.json(
+        { 
+          error: 'Training delivery method not configured',
+          details: 'The Onboarding Services Bought field must be set to either "Onsite Training" or "Remote Training" before booking. Please contact support to update this field in Salesforce.'
+        },
+        { status: 400 }
+      )
+    }
+    
     const filterByLocation = shouldFilterByLocation(serviceType, bookingType)
 
     console.log('🔍 Service Type Detection:', {
