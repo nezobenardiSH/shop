@@ -488,6 +488,135 @@ export async function assignTrainer(
 }
 
 /**
+ * Get availability for a single trainer across multiple days
+ * Shows a slot as available only if the specific trainer is free
+ * @param trainerName - Name of the trainer
+ * @param startDate - Start date for availability check
+ * @param endDate - End date for availability check
+ * @param merchantAddress - Optional merchant address for location-based filtering
+ */
+export async function getSingleTrainerAvailability(
+  trainerName: string,
+  startDate: Date,
+  endDate: Date,
+  merchantAddress?: string
+): Promise<DayAvailability[]> {
+  console.log(`Getting availability for single trainer: ${trainerName}`)
+  if (merchantAddress) {
+    console.log('Filtering by merchant address:', merchantAddress)
+  }
+
+  // Read trainers config dynamically to pick up changes without restart
+  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+  const configContent = await fs.readFile(configPath, 'utf-8')
+  const trainersConfig = JSON.parse(configContent)
+
+  // Get the specific trainer
+  const trainer = await getTrainerDetails(trainerName)
+
+  if (!trainer) {
+    console.error(`Trainer ${trainerName} not found`)
+    return []
+  }
+
+  // Check if trainer has OAuth token
+  const { larkOAuthService } = await import('./lark-oauth-service')
+  const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
+
+  if (!hasToken) {
+    console.log(`⚠️ ${trainer.name} has no OAuth token - cannot fetch availability`)
+    return []
+  }
+
+  // Get busy times for this trainer
+  const busySlots: Array<{ start: string; end: string }> = []
+
+  try {
+    const { larkService } = await import('./lark')
+    const rawBusyTimes = await larkService.getRawBusyTimes(
+      trainer.email,
+      startDate,
+      endDate
+    )
+
+    rawBusyTimes.forEach((busy: {start_time: string; end_time: string}) => {
+      busySlots.push({
+        start: busy.start_time,
+        end: busy.end_time
+      })
+    })
+
+    console.log(`${trainer.name}: Found ${busySlots.length} busy periods`)
+  } catch (error) {
+    console.error(`Failed to get busy times for ${trainer.name}:`, error)
+    // Fallback to empty busy slots (assume available)
+  }
+
+  // Build availability for each day
+  const singleTrainerAvailability: DayAvailability[] = []
+  const TIME_SLOTS = [
+    { start: '10:00', end: '11:00' },
+    { start: '12:00', end: '13:00' },
+    { start: '14:30', end: '15:30' },
+    { start: '17:00', end: '18:00' }
+  ]
+
+  const current = new Date(startDate)
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay()
+
+    // Only weekdays (Monday=1 to Friday=5)
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      const year = current.getFullYear()
+      const month = String(current.getMonth() + 1).padStart(2, '0')
+      const day = String(current.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+
+      const slots: TimeSlot[] = []
+
+      TIME_SLOTS.forEach((slot: any) => {
+        const slotStart = createLocalDate(dateStr, slot.start)
+        const slotEnd = createLocalDate(dateStr, slot.end)
+
+        // Check if this trainer is busy during this slot
+        const isBusy = busySlots.some(busy => {
+          const busyStart = new Date(busy.start)
+          const busyEnd = new Date(busy.end)
+          const overlaps = (slotStart < busyEnd && slotEnd > busyStart)
+          return overlaps
+        })
+
+        if (!isBusy) {
+          slots.push({
+            start: slot.start,
+            end: slot.end,
+            available: true,
+            availableTrainers: [trainer.name],
+            availableLanguages: trainer.languages || [],
+            availableLocations: trainer.location || []
+          })
+        } else {
+          slots.push({
+            start: slot.start,
+            end: slot.end,
+            available: false
+          })
+        }
+      })
+
+      singleTrainerAvailability.push({
+        date: dateStr,
+        slots
+      })
+    }
+
+    current.setDate(current.getDate() + 1)
+  }
+
+  return singleTrainerAvailability
+}
+
+/**
  * Get trainer details by name
  */
 export async function getTrainerDetails(trainerName: string) {

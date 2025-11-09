@@ -455,11 +455,13 @@ function TrainerPortalContent() {
                       trainer.firstRevisedEGLD || 
                       null
     
-    console.log('📅 Go-Live Date Resolution:', {
+    console.log('🚨 DEBUG - Go-Live Date Resolution:', {
+      bookingType,
       trainerPlannedGoLive: trainer.plannedGoLiveDate,
       accountPlannedGoLive: trainerData?.account?.plannedGoLiveDate,
       firstRevisedEGLD: trainer.firstRevisedEGLD,
-      resolved: goLiveDate
+      resolved: goLiveDate,
+      trainerObject: JSON.stringify(trainer, null, 2).substring(0, 500)
     })
 
     // Get installation date for training bookings (lower bound)

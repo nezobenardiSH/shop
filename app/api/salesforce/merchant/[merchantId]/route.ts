@@ -126,6 +126,8 @@ export async function GET(
         console.log('   Merchant name:', trainerResult.records[0].Name)
         console.log('   Tracking Number:', trainerResult.records[0].Delivery_Tracking_Number__c)
         console.log('   Tracking Timestamp:', trainerResult.records[0].Delivery_Tracking_Number_Timestamp__c)
+        console.log('   Planned_Go_Live_Date__c:', trainerResult.records[0].Planned_Go_Live_Date__c)
+        console.log('   First_Revised_EGLD__c:', trainerResult.records[0].First_Revised_EGLD__c)
       }
 
     } catch (error: any) {

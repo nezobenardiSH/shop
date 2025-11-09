@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCombinedAvailability } from '@/lib/trainer-availability'
+import { getCombinedAvailability, getSingleTrainerAvailability } from '@/lib/trainer-availability'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
     const trainersConfig = JSON.parse(configContent)
 
     const searchParams = request.nextUrl.searchParams
-    const mode = searchParams.get('mode') || 'combined' // 'combined' or 'single'
     const trainerName = searchParams.get('trainerName')
     const merchantAddress = searchParams.get('merchantAddress') // For location-based filtering
 
@@ -25,19 +24,32 @@ export async function GET(request: NextRequest) {
     endDateSingapore.setDate(endDateSingapore.getDate() + 14)
     const endDate = new Date(`${endDateSingapore.getFullYear()}-${String(endDateSingapore.getMonth() + 1).padStart(2, '0')}-${String(endDateSingapore.getDate()).padStart(2, '0')}T23:59:59+08:00`)
 
-    // Get combined availability from all trainers (with optional location filtering)
-    const availability = await getCombinedAvailability(startDate, endDate, merchantAddress || undefined)
+    let availability
+    let mode = 'combined'
 
-    console.log(`Combined availability: ${availability.length} days with slots`)
+    // If trainerName is provided, get single trainer availability
+    if (trainerName) {
+      console.log(`📅 Fetching availability for single trainer: ${trainerName}`)
+      availability = await getSingleTrainerAvailability(trainerName, startDate, endDate, merchantAddress || undefined)
+      mode = 'single'
+      console.log(`Single trainer availability: ${availability.length} days with slots`)
+    } else {
+      // Otherwise get combined availability from all trainers
+      console.log('📅 Fetching combined availability from all trainers')
+      availability = await getCombinedAvailability(startDate, endDate, merchantAddress || undefined)
+      console.log(`Combined availability: ${availability.length} days with slots`)
+    }
 
     return NextResponse.json({
-      mode: 'combined',
+      mode,
       trainers: trainersConfig.trainers
         .filter((t: any) => t.email && t.name !== 'Nasi Lemak')
         .map((t: any) => ({ name: t.name, email: t.email, languages: t.languages })),
       availability,
       timezone: trainersConfig.timezone,
-      message: 'Showing combined availability from all trainers'
+      message: mode === 'single'
+        ? `Showing availability for ${trainerName}`
+        : 'Showing combined availability from all trainers'
     })
   } catch (error) {
     console.error('Error fetching availability:', error)
