@@ -237,22 +237,40 @@ export async function POST(request: NextRequest) {
         // Lark may add suffixes like _0 for event instances, and these are part of the valid ID
         console.log('🗑️ Rescheduling detected - attempting to cancel existing event:', {
           eventId: existingEventId,
+          eventIdLength: existingEventId.length,
           calendarId: calendarId,
           trainerEmail: trainer.email
         })
-        
-        // First, try to verify if the event exists
+
+        // CRITICAL: The calendar ID used for deletion MUST match the calendar where the event was created
+        // The trainer's calendar ID might have changed, so we need to find the correct calendar
+        console.log('🔍 Finding correct calendar for event deletion...')
+        let deleteCalendarId = calendarId
+
         try {
-          const checkResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3010'}/api/debug/check-event-exists?eventId=${existingEventId}&calendarId=${calendarId}&userEmail=${trainer.email}`)
-          const checkData = await checkResponse.json()
-          console.log('📝 Event existence check:', checkData)
-        } catch (checkError) {
-          console.log('⚠️ Could not verify event existence:', checkError)
+          // Get the trainer's current calendar list to find the right one
+          const calendars = await larkService.getCalendarList(trainer.email)
+          console.log(`📅 Trainer has ${calendars.length} calendars`)
+
+          // Try to find the primary calendar (most likely where the event was created)
+          const primaryCalendar = calendars.find((cal: any) =>
+            cal.type === 'primary' &&
+            cal.role === 'owner'
+          )
+
+          if (primaryCalendar) {
+            deleteCalendarId = primaryCalendar.calendar_id
+            console.log(`✅ Using primary calendar for deletion: ${deleteCalendarId}`)
+          } else {
+            console.log(`⚠️ No primary calendar found, using provided calendar ID: ${calendarId}`)
+          }
+        } catch (calError) {
+          console.log(`⚠️ Could not get calendar list, using provided calendar ID: ${calendarId}`)
         }
-        
+
         await larkService.cancelTraining(
           trainer.email,
-          calendarId,
+          deleteCalendarId,
           existingEventId, // Use the full event ID as-is
           merchantName
         )
@@ -262,18 +280,33 @@ export async function POST(request: NextRequest) {
         console.error('   Full error details:', {
           message: cancelError.message,
           eventId: existingEventId,
-          calendarId: calendarId
+          calendarId: calendarId,
+          errorStack: cancelError.stack
         })
-        
+
         // Check if it's a "not found" error - if so, we can continue
         // as the event may have been already deleted
         if (cancelError.message?.includes('not found') ||
             cancelError.message?.includes('404') ||
             cancelError.message?.includes('does not exist') ||
-            cancelError.message?.includes('event_not_found') ||
-            cancelError.message?.includes('invalid request parameters')) {
-          console.log('⚠️ Event not found or invalid, continuing with new booking (may have been already deleted or event ID is invalid)')
-          console.log('   This may indicate the event was manually deleted or the event ID is corrupted')
+            cancelError.message?.includes('event_not_found')) {
+          console.log('⚠️ Event not found, continuing with new booking (may have been already deleted)')
+          console.log('   This may indicate the event was manually deleted')
+        } else if (cancelError.message?.includes('invalid request parameters')) {
+          // This error usually means the event ID format is wrong or the calendar ID is wrong
+          console.error('❌ CRITICAL: Invalid request parameters - this usually means:')
+          console.error('   1. Event ID format is incorrect')
+          console.error('   2. Calendar ID is incorrect')
+          console.error('   3. Event does not exist in this calendar')
+          console.error('   NOT proceeding with new booking to prevent double booking')
+          return NextResponse.json(
+            {
+              error: 'Failed to reschedule training',
+              details: `Unable to cancel existing training session. The event may be in a different calendar or the event ID may be corrupted. Please contact support.`,
+              originalError: cancelError.message
+            },
+            { status: 500 }
+          )
         } else {
           // For other errors, don't proceed to avoid duplicates
           console.error('⚠️ Cancellation failed - NOT proceeding with new booking to avoid double booking')

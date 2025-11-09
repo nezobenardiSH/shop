@@ -980,10 +980,10 @@ export default function DatePickerModal({
                     className={`
                       h-10 rounded-lg text-sm font-medium transition-all
                       ${!date ? 'invisible' : ''}
-                      ${selected ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2' : ''}
-                      ${!selected && available ? 'hover:bg-gray-100 text-gray-900' : ''}
-                      ${!selected && !available ? 'text-gray-300 cursor-not-allowed' : ''}
-                      ${today && !selected ? 'ring-1 ring-gray-300' : ''}
+                      ${selected ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 cursor-pointer' : ''}
+                      ${!selected && available ? 'hover:bg-gray-100 text-gray-900 cursor-pointer' : ''}
+                      ${!selected && !available ? 'text-gray-300 cursor-not-allowed bg-gray-50' : ''}
+                      ${today && !selected && available ? 'ring-1 ring-gray-300' : ''}
                     `}
                   >
                     {date?.getDate()}
