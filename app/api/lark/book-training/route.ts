@@ -210,18 +210,27 @@ export async function POST(request: NextRequest) {
     // Step 5.6: If this is a reschedule (existingEventId provided), delete the old event first
     if (existingEventId && !mockMode) {
       try {
-        // Clean the event ID - remove any suffix like _0 from recurring events
-        const cleanEventId = existingEventId.split('_')[0]
-        console.log('🗑️ Rescheduling detected - cancelling existing event:', {
-          original: existingEventId,
-          cleaned: cleanEventId,
-          hasUnderscore: existingEventId.includes('_')
+        // Use the full event ID as returned by Lark - don't remove any suffixes
+        // Lark may add suffixes like _0 for event instances, and these are part of the valid ID
+        console.log('🗑️ Rescheduling detected - attempting to cancel existing event:', {
+          eventId: existingEventId,
+          calendarId: calendarId,
+          trainerEmail: trainer.email
         })
+        
+        // First, try to verify if the event exists
+        try {
+          const checkResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3010'}/api/debug/check-event-exists?eventId=${existingEventId}&calendarId=${calendarId}&userEmail=${trainer.email}`)
+          const checkData = await checkResponse.json()
+          console.log('📝 Event existence check:', checkData)
+        } catch (checkError) {
+          console.log('⚠️ Could not verify event existence:', checkError)
+        }
         
         await larkService.cancelTraining(
           trainer.email,
           calendarId,
-          cleanEventId, // Use cleaned event ID
+          existingEventId, // Use the full event ID as-is
           merchantName
         )
         console.log('✅ Successfully cancelled existing event')
@@ -438,9 +447,13 @@ export async function POST(request: NextRequest) {
 
               // Update the Onboarding_Portal__c record with the event ID and datetime
               // Check if eventId exceeds Salesforce field limit
+              // DO NOT truncate - this would break rescheduling!
               if (eventId.length > 255) {
-                console.warn(`⚠️ Event ID exceeds 255 chars (${eventId.length}), truncating...`)
-                eventId = eventId.substring(0, 255)
+                console.error(`❌ Event ID exceeds 255 chars (${eventId.length}) - cannot store in Salesforce`)
+                console.error(`   Event ID: ${eventId}`)
+                console.error(`   This will prevent rescheduling from working!`)
+                // Don't store a truncated ID - it's better to not store it at all
+                throw new Error('Event ID too long for Salesforce storage')
               }
               
               const portalUpdateData: any = {

@@ -213,8 +213,16 @@ class LarkService {
     }
     
     if (data.code !== 0) {
-      console.error(`Lark API error: ${data.msg}`, JSON.stringify(data, null, 2))
-      throw new Error(`Lark API error: ${data.msg}`)
+      console.error(`Lark API error: ${data.msg}`)
+      console.error('Full error response:', JSON.stringify(data, null, 2))
+      
+      // Include more details in the error message if available
+      let errorMessage = `Lark API error: ${data.msg}`
+      if (data.errors && Object.keys(data.errors).length > 0) {
+        errorMessage += `. Details: ${JSON.stringify(data.errors)}`
+      }
+      
+      throw new Error(errorMessage)
     }
 
     return data
@@ -925,8 +933,15 @@ class LarkService {
     console.log('🗑️ Attempting to delete calendar event:', {
       calendarId,
       eventId,
-      userEmail
+      userEmail,
+      eventIdLength: eventId?.length,
+      hasUnderscore: eventId?.includes('_')
     })
+
+    // Validate event ID format
+    if (!eventId || eventId.length === 0) {
+      throw new Error('Invalid event ID: empty or null')
+    }
 
     // CRITICAL FIX: Find the user's writable calendar
     // Google synced calendars (type: 'google') cannot be written to via Lark API
@@ -978,6 +993,13 @@ class LarkService {
     }
 
     try {
+      console.log('📝 Attempting DELETE request:', {
+        url: `/open-apis/calendar/v4/calendars/${actualCalendarId}/events/${eventId}`,
+        calendarId: actualCalendarId,
+        eventId: eventId,
+        userEmail: userEmail
+      })
+      
       const response = await this.makeRequest(`/open-apis/calendar/v4/calendars/${actualCalendarId}/events/${eventId}`, {
         method: 'DELETE',
         userEmail: userEmail
@@ -985,11 +1007,20 @@ class LarkService {
       console.log('✅ Successfully deleted calendar event:', eventId)
       return response
     } catch (error: any) {
-      console.error('❌ Failed to delete calendar event:', {
-        eventId,
-        error: error.message,
-        details: error.response || error
-      })
+      console.error('❌ Failed to delete calendar event:')
+      console.error('  Event ID:', eventId)
+      console.error('  Calendar ID:', actualCalendarId)
+      console.error('  Error:', error.message)
+      
+      // Log specific Lark API error codes for better debugging
+      if (error.message?.includes('invalid request parameters')) {
+        console.error('  💡 Possible causes:')
+        console.error('    - Event ID format is incorrect')
+        console.error('    - Event does not exist in this calendar')
+        console.error('    - Calendar ID is incorrect')
+        console.error('    - Insufficient permissions to delete event')
+      }
+      
       throw error
     }
   }
