@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { detectServiceType, getServiceTypeMessage } from '@/lib/service-type-detector'
 
 interface TimelineStage {
   id: string
@@ -440,7 +441,10 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       bookingType,
       existingDate,
       hasOnOpenBookingModal: !!onOpenBookingModal,
-      trainerDataKeys: Object.keys(trainerData || {})
+      trainerDataKeys: Object.keys(trainerData || {}),
+      shippingState: trainerData?.shippingState,
+      shippingCity: trainerData?.shippingCity,
+      shippingCountry: trainerData?.shippingCountry
     })
 
     if (onOpenBookingModal) {
@@ -1137,6 +1141,25 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
                     </button>
                   )
+                })()}
+              </div>
+            </div>
+
+            {/* Training Type */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Type</div>
+              <div className="text-sm font-medium text-gray-900">
+                {(() => {
+                  const serviceType = detectServiceType(trainerData?.onboardingServicesBought)
+                  const merchantState = trainerData?.shippingState || trainerData?.shippingCity || ''
+                  console.log('🏷️ Training Type Debug (Mobile):', {
+                    onboardingServicesBought: trainerData?.onboardingServicesBought,
+                    shippingState: trainerData?.shippingState,
+                    shippingCity: trainerData?.shippingCity,
+                    serviceType,
+                    merchantState
+                  })
+                  return getServiceTypeMessage(serviceType, merchantState)
                 })()}
               </div>
             </div>
@@ -2327,6 +2350,25 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
                     </button>
                   )
+                })()}
+              </div>
+            </div>
+
+            {/* Training Type */}
+            <div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Type</div>
+              <div className="text-sm font-medium text-gray-900">
+                {(() => {
+                  const serviceType = detectServiceType(trainerData?.onboardingServicesBought)
+                  const merchantState = trainerData?.shippingState || trainerData?.shippingCity || ''
+                  console.log('🏷️ Training Type Debug (Desktop):', {
+                    onboardingServicesBought: trainerData?.onboardingServicesBought,
+                    shippingState: trainerData?.shippingState,
+                    shippingCity: trainerData?.shippingCity,
+                    serviceType,
+                    merchantState
+                  })
+                  return getServiceTypeMessage(serviceType, merchantState)
                 })()}
               </div>
             </div>

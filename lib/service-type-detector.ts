@@ -41,18 +41,13 @@ export function detectServiceType(onboardingServicesBought: string | null | unde
  * @returns User-friendly message
  */
 export function getServiceTypeMessage(serviceType: ServiceType, state?: string): string {
-  console.log('🏷️ getServiceTypeMessage called with:', { serviceType, state })
-  
   switch (serviceType) {
     case 'onsite':
-      if (state && state.trim() !== '') {
-        return `Training: Onsite, ${state}`
-      }
-      return 'Training: Onsite'
+      return state ? `Training: Onsite, ${state}` : 'Training: Onsite'
     case 'remote':
       return 'Training: Remote'
     case 'none':
-      return 'Service type not configured - Contact support to set training delivery method'
+      return 'None'
   }
 }
 

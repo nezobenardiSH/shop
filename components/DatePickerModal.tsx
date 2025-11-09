@@ -74,6 +74,9 @@ export default function DatePickerModal({
   // Debug props
   console.log('📋 DatePickerModal Props:', {
     merchantState,
+    merchantStateType: typeof merchantState,
+    merchantStateLength: merchantState?.length,
+    merchantStateEmpty: !merchantState || merchantState.trim() === '',
     merchantAddress,
     onboardingServicesBought,
     bookingType
@@ -906,19 +909,27 @@ export default function DatePickerModal({
                     {getServiceTypeMessage(serviceType)}
                   </div>
                 )}
-
-                {/* Show warning if no trainers available */}
-                {availableLanguages.length === 0 && !loading && (
-                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                    <div className="text-sm text-amber-800 font-medium">
-                      ⚠️ No trainers available for this location
-                    </div>
-                    <div className="text-xs text-amber-700 mt-1">
-                      Please contact support for assistance with scheduling training.
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {/* Shipping State Display */}
+              {merchantState && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700">Shipping State</label>
+                  <div className="text-sm text-gray-900">{merchantState}</div>
+                </div>
+              )}
+
+              {/* Show warning if no trainers available */}
+              {availableLanguages.length === 0 && !loading && (
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="text-sm text-amber-800 font-medium">
+                    ⚠️ No trainers available for this location
+                  </div>
+                  <div className="text-xs text-amber-700 mt-1">
+                    Please contact support for assistance with scheduling training.
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

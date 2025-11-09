@@ -293,7 +293,6 @@ function TrainerPortalContent() {
         })
 
         // Use training location (orderShippingAddress) for location-based trainer filtering
-        // NO FALLBACKS - use exact address or nothing
         let merchantAddress = ''
         let merchantState = ''
         if (trainer.orderShippingAddress) {
@@ -307,7 +306,11 @@ function TrainerPortalContent() {
                            trainer.orderShippingAddress.stateCode || ''
           }
         }
-        // REMOVED FALLBACK - Do not use shippingState as fallback
+
+        // Fallback to shippingState from Salesforce if orderShippingAddress doesn't have state
+        if (!merchantState && trainer.shippingState) {
+          merchantState = trainer.shippingState
+        }
 
         // Get the existing event ID and date based on booking type
         let existingEventId = null
@@ -376,7 +379,7 @@ function TrainerPortalContent() {
           return
         }
 
-        setCurrentBookingInfo({
+        const bookingInfo = {
           trainerId: trainer.id,
           trainerName: actualTrainerName,
           merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
@@ -391,8 +394,15 @@ function TrainerPortalContent() {
           installationDate: installationDate,
           trainingDate: trainingDate,
           existingBooking: existingBooking
+        }
+
+        console.log('📋 Setting booking info from URL param:', {
+          merchantState: bookingInfo.merchantState,
+          bookingType: bookingInfo.bookingType,
+          goLiveDate: bookingInfo.goLiveDate
         })
-        
+
+        setCurrentBookingInfo(bookingInfo)
         setBookingModalOpen(true)
         setHasProcessedUrlParam(true)
       }
@@ -400,8 +410,13 @@ function TrainerPortalContent() {
   }, [trainerData, searchParams, hasProcessedUrlParam, router, merchantId])
 
   const handleOpenBookingModal = (trainer: any) => {
-    console.log('🎯 Opening booking modal with:', {
+    console.log('🎯 Opening booking modal with trainer object:', {
       bookingType: trainer.bookingType,
+      hasShippingState: !!trainer.shippingState,
+      hasShippingCity: !!trainer.shippingCity,
+      shippingState: trainer.shippingState,
+      shippingCity: trainer.shippingCity,
+      hasOrderShippingAddress: !!trainer.orderShippingAddress,
       trainerEventData: {
         trainingEventId: trainer.trainingEventId,
         trainingDate: trainer.trainingDate,
@@ -438,9 +453,7 @@ function TrainerPortalContent() {
     const bookingType = trainer.bookingType || 'training'
 
     // Use training location (orderShippingAddress) for location-based trainer filtering
-    // NO FALLBACKS - use exact address or nothing
     let merchantAddress = ''
-    let merchantState = ''
     if (trainer.orderShippingAddress) {
       if (typeof trainer.orderShippingAddress === 'string') {
         merchantAddress = trainer.orderShippingAddress
@@ -452,17 +465,18 @@ function TrainerPortalContent() {
           trainer.orderShippingAddress.state || trainer.orderShippingAddress.stateCode,
           trainer.orderShippingAddress.postalCode,
           trainer.orderShippingAddress.country
-        ].filter(Boolean) // Remove any undefined/null parts
-        
-        // Join with comma to create full address
+        ].filter(Boolean)
         merchantAddress = addressParts.join(', ')
-        
-        // Also keep state separately for compatibility
-        merchantState = trainer.orderShippingAddress.state ||
-                       trainer.orderShippingAddress.stateCode || ''
       }
     }
-    // REMOVED FALLBACK - Do not use shippingState as fallback
+
+    // Simply use shippingState from Onboarding_Trainer__c for display
+    const merchantState = trainer.shippingState || ''
+    console.log('🔍 DEBUG - Setting merchantState:', {
+      shippingState: trainer.shippingState,
+      merchantState: merchantState,
+      trainerKeys: Object.keys(trainer).filter(k => k.includes('shipping') || k.includes('Shipping'))
+    })
 
     // Determine dependent date based on booking type
     let dependentDate = null
@@ -535,6 +549,8 @@ function TrainerPortalContent() {
       merchantAddress: merchantAddress,
       merchantState: merchantState,
       orderShippingAddress: trainer.orderShippingAddress,
+      trainerShippingState: trainer.shippingState,
+      trainerShippingCity: trainer.shippingCity,
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant'
     })
 
@@ -1075,13 +1091,19 @@ function TrainerPortalContent() {
         
         {/* Booking Modal */}
         {bookingModalOpen && currentBookingInfo && (
-          <DatePickerModal
-            isOpen={bookingModalOpen}
-            onClose={handleCloseBookingModal}
-            merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
-            merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
-            merchantAddress={currentBookingInfo.merchantAddress}
-            merchantState={currentBookingInfo.merchantState}
+          <>
+            {console.log('🎯 About to render DatePickerModal with:', {
+              merchantState: currentBookingInfo.merchantState,
+              merchantAddress: currentBookingInfo.merchantAddress,
+              merchantName: currentBookingInfo.merchantName
+            })}
+            <DatePickerModal
+              isOpen={bookingModalOpen}
+              onClose={handleCloseBookingModal}
+              merchantId={currentBookingInfo.trainerId || currentBookingInfo.id}
+              merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
+              merchantAddress={currentBookingInfo.merchantAddress}
+              merchantState={currentBookingInfo.merchantState}
             merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
             merchantContactPerson={currentBookingInfo.merchantContactPerson}
             trainerName={currentBookingInfo.trainerName}
@@ -1096,8 +1118,9 @@ function TrainerPortalContent() {
             trainingDate={currentBookingInfo.trainingDate}
             onBookingComplete={handleBookingComplete}
           />
+            </>
         )}
-        
+
         {/* WhatsApp Floating Button */}
         <WhatsAppButton />
       </div>
