@@ -37,16 +37,16 @@ export interface TrainerAvailability {
  * Trainers without OAuth tokens are excluded from availability calculations
  * @param startDate - Start date for availability check
  * @param endDate - End date for availability check
- * @param merchantAddress - Optional merchant address for location-based filtering
+ * @param merchantState - Optional merchant state for location-based filtering
  */
 export async function getCombinedAvailability(
   startDate: Date,
   endDate: Date,
-  merchantAddress?: string
+  merchantState?: string
 ): Promise<DayAvailability[]> {
   console.log('Getting combined availability for all trainers...')
-  if (merchantAddress) {
-    console.log('Filtering by merchant address:', merchantAddress)
+  if (merchantState) {
+    console.log('Filtering by merchant state:', merchantState)
   }
 
   // Read trainers config dynamically to pick up changes without restart
@@ -59,10 +59,19 @@ export async function getCombinedAvailability(
     t.email && t.name !== 'Nasi Lemak' // Exclude merchant entries
   )
 
-  // Filter by location if merchant address is provided
-  if (merchantAddress) {
-    const { filterTrainersByLocation } = await import('./location-matcher')
-    const filteredTrainers = filterTrainersByLocation(trainers, merchantAddress)
+  // Filter by location if merchant state is provided
+  if (merchantState) {
+    const { getLocationCategoryFromState } = await import('./location-matcher')
+    const locationCategory = getLocationCategoryFromState(merchantState)
+    console.log(`📍 Merchant state "${merchantState}" → Location category: "${locationCategory}"`)
+
+    const filteredTrainers = trainers.filter((trainer: any) => {
+      if (!trainer.location || trainer.location.length === 0) {
+        // Trainer with no location restrictions can serve anywhere
+        return true
+      }
+      return trainer.location.includes(locationCategory)
+    })
     console.log(`Location filtering: ${trainers.length} trainers → ${filteredTrainers.length} trainers`)
     console.log('Trainers after location filter:', filteredTrainers.map((t: any) => t.name))
     trainers = filteredTrainers
@@ -268,17 +277,17 @@ export async function getCombinedAvailability(
  * @param date - Date string in YYYY-MM-DD format
  * @param startTime - Start time in HH:MM format
  * @param endTime - End time in HH:MM format
- * @param merchantAddress - Optional merchant address for location-based filtering (onsite training)
+ * @param merchantState - Optional merchant state for location-based filtering (onsite training)
  */
 export async function getSlotAvailability(
   date: string,
   startTime: string,
   endTime: string,
-  merchantAddress?: string
+  merchantState?: string
 ): Promise<{ available: boolean; availableTrainers: string[] }> {
   console.log(`\n=== Checking slot availability for ${date} ${startTime}-${endTime} ===`)
-  if (merchantAddress) {
-    console.log('Filtering by merchant address:', merchantAddress)
+  if (merchantState) {
+    console.log('Filtering by merchant state:', merchantState)
   }
 
   // Read trainers config dynamically to pick up changes without restart
@@ -291,10 +300,21 @@ export async function getSlotAvailability(
     t.email && t.name !== 'Nasi Lemak'
   )
 
-  // Filter by location if merchant address is provided (for onsite training)
-  if (merchantAddress) {
-    const { filterTrainersByLocation } = await import('./location-matcher')
-    const filteredTrainers = filterTrainersByLocation(trainers, merchantAddress)
+  // Filter by location if merchant state is provided (for onsite training)
+  if (merchantState) {
+    const { getLocationCategoryFromState } = await import('./location-matcher')
+    const locationCategory = getLocationCategoryFromState(merchantState)
+    console.log(`📍 Merchant state "${merchantState}" → Location category: "${locationCategory}"`)
+
+    // Filter trainers by location category
+    const filteredTrainers = trainers.filter((trainer: any) => {
+      if (!trainer.location || trainer.location.length === 0) {
+        // Trainer with no location restrictions can serve anywhere
+        return true
+      }
+      return trainer.location.includes(locationCategory)
+    })
+
     console.log(`Location filtering: ${trainers.length} trainers → ${filteredTrainers.length} trainers`)
     console.log('Trainers after location filter:', filteredTrainers.map((t: any) => t.name))
     trainers = filteredTrainers
@@ -493,23 +513,18 @@ export async function assignTrainer(
  * @param trainerName - Name of the trainer
  * @param startDate - Start date for availability check
  * @param endDate - End date for availability check
- * @param merchantAddress - Optional merchant address for location-based filtering
+ * @param merchantState - Optional merchant state for location-based filtering
  */
 export async function getSingleTrainerAvailability(
   trainerName: string,
   startDate: Date,
   endDate: Date,
-  merchantAddress?: string
+  merchantState?: string
 ): Promise<DayAvailability[]> {
   console.log(`Getting availability for single trainer: ${trainerName}`)
-  if (merchantAddress) {
-    console.log('Filtering by merchant address:', merchantAddress)
+  if (merchantState) {
+    console.log('Filtering by merchant state:', merchantState)
   }
-
-  // Read trainers config dynamically to pick up changes without restart
-  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
-  const configContent = await fs.readFile(configPath, 'utf-8')
-  const trainersConfig = JSON.parse(configContent)
 
   // Get the specific trainer
   const trainer = await getTrainerDetails(trainerName)

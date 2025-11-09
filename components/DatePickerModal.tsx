@@ -261,9 +261,9 @@ export default function DatePickerModal({
         // Don't pass trainerName - we want all trainers' availability
         url = `/api/lark/availability`
 
-        if (filterByLocation && merchantAddress) {
-          url += `?merchantAddress=${encodeURIComponent(merchantAddress)}`
-          console.log('🌍 Fetching availability WITH location filter:', merchantAddress)
+        if (filterByLocation && merchantState) {
+          url += `?merchantState=${encodeURIComponent(merchantState)}`
+          console.log('🌍 Fetching availability WITH location filter:', merchantState)
         } else {
           console.log('🌍 Fetching availability WITHOUT location filter')
         }

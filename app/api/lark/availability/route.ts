@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const trainerName = searchParams.get('trainerName')
-    const merchantAddress = searchParams.get('merchantAddress') // For location-based filtering
+    const merchantState = searchParams.get('merchantState') // For location-based filtering
 
     // Start from midnight of current day in Singapore timezone
     const now = new Date()
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     // If trainerName is provided, get single trainer availability
     if (trainerName) {
       console.log(`📅 Fetching availability for single trainer: ${trainerName}`)
-      availability = await getSingleTrainerAvailability(trainerName, startDate, endDate, merchantAddress || undefined)
+      availability = await getSingleTrainerAvailability(trainerName, startDate, endDate, merchantState || undefined)
       mode = 'single'
       console.log(`Single trainer availability: ${availability.length} days with slots`)
 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     } else {
       // Otherwise get combined availability from all trainers
       console.log('📅 Fetching combined availability from all trainers')
-      availability = await getCombinedAvailability(startDate, endDate, merchantAddress || undefined)
+      availability = await getCombinedAvailability(startDate, endDate, merchantState || undefined)
       console.log(`Combined availability: ${availability.length} days with slots`)
 
       // Debug: Log first 3 days of availability
@@ -62,21 +62,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Filter trainers list based on merchantAddress if provided
+    // Filter trainers list based on merchantState if provided
     let trainersToShow = trainersConfig.trainers.filter((t: any) => t.email && t.name !== 'Nasi Lemak')
-    
-    if (merchantAddress) {
+
+    if (merchantState) {
       // Apply location filtering to the trainers list
-      const { filterTrainersByLocation } = await import('@/lib/location-matcher')
-      trainersToShow = filterTrainersByLocation(trainersToShow, merchantAddress)
+      const { getLocationCategoryFromState } = await import('@/lib/location-matcher')
+      const locationCategory = getLocationCategoryFromState(merchantState)
+      console.log(`📍 Merchant state "${merchantState}" → Location category: "${locationCategory}"`)
+
+      trainersToShow = trainersToShow.filter((trainer: any) => {
+        if (!trainer.location || trainer.location.length === 0) {
+          // Trainer with no location restrictions can serve anywhere
+          return true
+        }
+        return trainer.location.includes(locationCategory)
+      })
       console.log(`📍 Location filtering trainers list: ${trainersConfig.trainers.length} → ${trainersToShow.length} trainers`)
     }
 
     return NextResponse.json({
       mode,
-      trainers: trainersToShow.map((t: any) => ({ 
-        name: t.name, 
-        email: t.email, 
+      trainers: trainersToShow.map((t: any) => ({
+        name: t.name,
+        email: t.email,
         languages: t.languages,
         location: t.location 
       })),
@@ -84,8 +93,8 @@ export async function GET(request: NextRequest) {
       timezone: trainersConfig.timezone,
       message: mode === 'single'
         ? `Showing availability for ${trainerName}`
-        : merchantAddress 
-          ? `Showing availability for trainers in: ${merchantAddress}`
+        : merchantState
+          ? `Showing availability for trainers in: ${merchantState}`
           : 'Showing combined availability from all trainers'
     })
   } catch (error) {

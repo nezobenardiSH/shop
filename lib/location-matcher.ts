@@ -144,6 +144,38 @@ export function getLocationDisplayName(location: string): string {
 }
 
 /**
+ * Convert merchant state to location category for trainer assignment
+ * @param merchantState - State name (e.g., "Selangor", "Penang", "Johor")
+ * @returns Location category ("Within Klang Valley", "Penang", "Johor Bahru", or "Outside of Klang Valley")
+ */
+export function getLocationCategoryFromState(merchantState: string | null | undefined): string {
+  if (!merchantState) return 'Within Klang Valley' // Default to Klang Valley if no state
+
+  const normalizedState = merchantState.toLowerCase().trim()
+
+  // Check if state is within Klang Valley
+  const klangValleyStates = ['kuala lumpur', 'kl', 'selangor', 'sel', 'putrajaya']
+  if (klangValleyStates.some(state => normalizedState.includes(state))) {
+    return 'Within Klang Valley'
+  }
+
+  // Check for Penang
+  const penangStates = ['penang', 'pulau pinang', 'pg', 'pn']
+  if (penangStates.some(state => normalizedState.includes(state))) {
+    return 'Penang'
+  }
+
+  // Check for Johor
+  const johorStates = ['johor', 'johor bahru', 'jb']
+  if (johorStates.some(state => normalizedState.includes(state))) {
+    return 'Johor Bahru'
+  }
+
+  // All other states are considered "Outside of Klang Valley"
+  return 'Outside of Klang Valley'
+}
+
+/**
  * Filter trainers by location match
  * @param trainers - Array of trainer objects
  * @param merchantAddress - Merchant's address

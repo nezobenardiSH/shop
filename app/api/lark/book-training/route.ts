@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
       merchantId,
       merchantName,
       merchantAddress,
+      merchantState,  // State for location-based trainer assignment
       merchantPhone,
       merchantContactPerson,
       merchantBusinessType,
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       onboardingServicesBought,
       serviceType,
       filterByLocation,
-      merchantAddress
+      merchantState
     })
 
     // Step 2: Check which trainers are available for this slot (skip in mock mode)
@@ -91,17 +92,17 @@ export async function POST(request: NextRequest) {
     if (!mockMode) {
       console.log('Checking availability for slot:', { date, startTime, endTime })
       console.log('🏢 Merchant details:', {
-        merchantAddress: merchantAddress,
+        merchantState: merchantState,
         onboardingServicesBought: onboardingServicesBought,
         serviceType: serviceType,
         filterByLocation: filterByLocation
       })
 
-      // Pass merchantAddress only if location filtering should be applied (onsite training)
-      const addressForFiltering = filterByLocation ? merchantAddress : undefined
-      console.log(`📍 Address for filtering: ${addressForFiltering || 'NONE (remote training)'}`)
-      
-      const slotResult = await getSlotAvailability(date, startTime, endTime, addressForFiltering)
+      // Pass merchantState only if location filtering should be applied (onsite training)
+      const stateForFiltering = filterByLocation ? merchantState : undefined
+      console.log(`📍 State for filtering: ${stateForFiltering || 'NONE (remote training)'}`)
+
+      const slotResult = await getSlotAvailability(date, startTime, endTime, stateForFiltering)
       available = slotResult.available
       availableTrainers = slotResult.availableTrainers
 
@@ -266,26 +267,18 @@ export async function POST(request: NextRequest) {
         
         // Check if it's a "not found" error - if so, we can continue
         // as the event may have been already deleted
-        if (cancelError.message?.includes('not found') || 
+        if (cancelError.message?.includes('not found') ||
             cancelError.message?.includes('404') ||
             cancelError.message?.includes('does not exist') ||
-            cancelError.message?.includes('event_not_found')) {
-          console.log('⚠️ Event not found, continuing with new booking (may have been already deleted)')
-        } else if (cancelError.message?.includes('invalid request parameters')) {
-          // This is the current error - let's log more details and continue
-          console.error('⚠️ Invalid request parameters error - possible causes:')
-          console.error('   - Event ID format is incorrect')
-          console.error('   - Calendar ID mismatch')
-          console.error('   - Event belongs to a different calendar')
-          console.error('   - Insufficient permissions')
-          
-          // For now, continue with the booking but warn the user
-          console.log('⚠️ Continuing with new booking despite cancellation failure')
-          console.log('   WARNING: This may create a duplicate event!')
+            cancelError.message?.includes('event_not_found') ||
+            cancelError.message?.includes('invalid request parameters')) {
+          console.log('⚠️ Event not found or invalid, continuing with new booking (may have been already deleted or event ID is invalid)')
+          console.log('   This may indicate the event was manually deleted or the event ID is corrupted')
         } else {
           // For other errors, don't proceed to avoid duplicates
+          console.error('⚠️ Cancellation failed - NOT proceeding with new booking to avoid double booking')
           return NextResponse.json(
-            { 
+            {
               error: 'Failed to reschedule training',
               details: `Unable to cancel existing training session. ${cancelError.message || 'Please try again or contact support.'}`,
               originalError: cancelError.message
