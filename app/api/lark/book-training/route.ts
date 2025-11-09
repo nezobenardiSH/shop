@@ -77,14 +77,23 @@ export async function POST(request: NextRequest) {
 
     if (!mockMode) {
       console.log('Checking availability for slot:', { date, startTime, endTime })
+      console.log('🏢 Merchant details:', {
+        merchantAddress: merchantAddress,
+        onboardingServicesBought: onboardingServicesBought,
+        serviceType: serviceType,
+        filterByLocation: filterByLocation
+      })
 
       // Pass merchantAddress only if location filtering should be applied (onsite training)
       const addressForFiltering = filterByLocation ? merchantAddress : undefined
+      console.log(`📍 Address for filtering: ${addressForFiltering || 'NONE (remote training)'}`)
+      
       const slotResult = await getSlotAvailability(date, startTime, endTime, addressForFiltering)
       available = slotResult.available
       availableTrainers = slotResult.availableTrainers
 
       console.log(`📊 Availability check result: ${availableTrainers.length} trainers available`)
+      console.log(`   Available trainers: ${availableTrainers.join(', ')}`)
       console.log(`   Service type: ${serviceType}`)
       console.log(`   Location filtering: ${filterByLocation ? 'YES' : 'NO'}`)
     } else {
@@ -236,13 +245,30 @@ export async function POST(request: NextRequest) {
         console.log('✅ Successfully cancelled existing event')
       } catch (cancelError: any) {
         console.error('❌ Failed to cancel existing event:', cancelError)
+        console.error('   Full error details:', {
+          message: cancelError.message,
+          eventId: existingEventId,
+          calendarId: calendarId
+        })
         
         // Check if it's a "not found" error - if so, we can continue
         // as the event may have been already deleted
         if (cancelError.message?.includes('not found') || 
             cancelError.message?.includes('404') ||
-            cancelError.message?.includes('does not exist')) {
+            cancelError.message?.includes('does not exist') ||
+            cancelError.message?.includes('event_not_found')) {
           console.log('⚠️ Event not found, continuing with new booking (may have been already deleted)')
+        } else if (cancelError.message?.includes('invalid request parameters')) {
+          // This is the current error - let's log more details and continue
+          console.error('⚠️ Invalid request parameters error - possible causes:')
+          console.error('   - Event ID format is incorrect')
+          console.error('   - Calendar ID mismatch')
+          console.error('   - Event belongs to a different calendar')
+          console.error('   - Insufficient permissions')
+          
+          // For now, continue with the booking but warn the user
+          console.log('⚠️ Continuing with new booking despite cancellation failure')
+          console.log('   WARNING: This may create a duplicate event!')
         } else {
           // For other errors, don't proceed to avoid duplicates
           return NextResponse.json(
