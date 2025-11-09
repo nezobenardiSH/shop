@@ -33,11 +33,33 @@ export async function GET(request: NextRequest) {
       availability = await getSingleTrainerAvailability(trainerName, startDate, endDate, merchantAddress || undefined)
       mode = 'single'
       console.log(`Single trainer availability: ${availability.length} days with slots`)
+
+      // Debug: Log first 3 days of availability
+      if (availability.length > 0) {
+        console.log('📊 First 3 days of availability:')
+        availability.slice(0, 3).forEach(day => {
+          console.log(`  ${day.date}: ${day.slots.length} slots`)
+          day.slots.forEach(slot => {
+            console.log(`    ${slot.start}-${slot.end}: available=${slot.available}, trainers=${slot.availableTrainers?.join(',')}`)
+          })
+        })
+      }
     } else {
       // Otherwise get combined availability from all trainers
       console.log('📅 Fetching combined availability from all trainers')
       availability = await getCombinedAvailability(startDate, endDate, merchantAddress || undefined)
       console.log(`Combined availability: ${availability.length} days with slots`)
+
+      // Debug: Log first 3 days of availability
+      if (availability.length > 0) {
+        console.log('📊 First 3 days of availability:')
+        availability.slice(0, 3).forEach(day => {
+          console.log(`  ${day.date}: ${day.slots.length} slots`)
+          day.slots.forEach(slot => {
+            console.log(`    ${slot.start}-${slot.end}: available=${slot.available}, trainers=${slot.availableTrainers?.join(',')}`)
+          })
+        })
+      }
     }
 
     return NextResponse.json({

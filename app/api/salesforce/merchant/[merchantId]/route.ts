@@ -152,6 +152,11 @@ export async function GET(
     console.log('🔍 CSM_Name__r value:', trainer.CSM_Name__r)
     console.log('🔍 CSM_Name__r.Name value:', trainer.CSM_Name__r?.Name)
 
+    // Debug Go-Live Date fields
+    console.log('🚨 DEBUG - Planned_Go_Live_Date__c from Salesforce:', trainer.Planned_Go_Live_Date__c)
+    console.log('🚨 DEBUG - First_Revised_EGLD__c from Salesforce:', trainer.First_Revised_EGLD__c)
+    console.log('🚨 DEBUG - All trainer fields:', Object.keys(trainer).filter(k => k.toLowerCase().includes('live') || k.toLowerCase().includes('egld') || k.toLowerCase().includes('go')))
+
     // If CSM_Name__c exists but CSM_Name__r.Name doesn't, query the User separately
     let csmName: string | null = null
     if (trainer.CSM_Name__r?.Name) {
@@ -429,7 +434,7 @@ export async function GET(
         shippingCountry: trainer.Shipping_Country__c,
         subIndustry: trainer.Sub_Industry__c,
         preferredLanguage: trainer.Preferred_Language__c,
-        plannedGoLiveDate: trainer.Planned_Go_Live_Date__c,
+        plannedGoLiveDate: accountData?.plannedGoLiveDate || trainer.Planned_Go_Live_Date__c || trainer.First_Revised_EGLD__c,
         requiredFeaturesByMerchant: trainer.Required_Features_by_Merchant__c,
         onboardingSummary: trainer.Onboarding_Summary__c,
         workaroundElaboration: trainer.Workaround_Elaboration__c,

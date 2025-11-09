@@ -157,8 +157,13 @@ function TrainerPortalContent() {
         installationEventId: data.onboardingTrainerData?.trainers?.[0]?.installationEventId,
         posTrainingDate: data.onboardingTrainerData?.trainers?.[0]?.posTrainingDate,
         backOfficeTrainingDate: data.onboardingTrainerData?.trainers?.[0]?.backOfficeTrainingDate,
-        trainingDate: data.onboardingTrainerData?.trainers?.[0]?.trainingDate
+        trainingDate: data.onboardingTrainerData?.trainers?.[0]?.trainingDate,
+        plannedGoLiveDate: data.onboardingTrainerData?.trainers?.[0]?.plannedGoLiveDate,
+        firstRevisedEGLD: data.onboardingTrainerData?.trainers?.[0]?.firstRevisedEGLD
       })
+
+      // Debug: Log all keys in trainer object to see what's available
+      console.log('🔍 All trainer object keys:', Object.keys(data.onboardingTrainerData?.trainers?.[0] || {}))
 
       setTrainerData(data)
 
@@ -279,11 +284,13 @@ function TrainerPortalContent() {
       const trainer = trainerData?.onboardingTrainerData?.trainers?.[0]
 
       if (trainer) {
-        // Determine which actual trainer to use
-        let actualTrainerName = 'Nezo' // Default trainer
-        if (trainer.operationManagerContact?.name) {
-          actualTrainerName = trainer.operationManagerContact.name
-        }
+        // Determine which actual trainer to use - use CSM name (the assigned trainer)
+        let actualTrainerName = trainer.csmName || 'Nezo' // Use CSM name, fallback to default
+        console.log('🎯 Using trainer name for availability:', {
+          csmName: trainer.csmName,
+          operationManagerName: trainer.operationManagerContact?.name,
+          selectedTrainerName: actualTrainerName
+        })
 
         // Use training location (orderShippingAddress) for location-based trainer filtering
         // NO FALLBACKS - use exact address or nothing
@@ -385,16 +392,13 @@ function TrainerPortalContent() {
     });
     
     // Determine which actual trainer to use based on Salesforce data
-    // This could be from a field like trainer.assignedTrainerEmail or trainer.operationManagerEmail
-    let actualTrainerName = 'Nezo'; // Default trainer
-    
-    // Option 1: Use Operation Manager name if it matches a configured trainer
-    if (trainer.operationManagerContact?.name) {
-      actualTrainerName = trainer.operationManagerContact.name;
-    }
-    
-    // Option 2: Map based on merchant name or other logic
-    // For example: Nasi Lemak -> Nezo, Other merchants -> Jia En
+    // Use CSM name (the assigned trainer from Salesforce)
+    let actualTrainerName = trainer.csmName || 'Nezo'; // Use CSM name, fallback to default
+    console.log('🎯 handleOpenBookingModal - Using trainer name:', {
+      csmName: trainer.csmName,
+      operationManagerName: trainer.operationManagerContact?.name,
+      selectedTrainerName: actualTrainerName
+    })
     
     // For future use: Determine which date to use based on bookingType
     // let existingDate = null;
@@ -450,17 +454,18 @@ function TrainerPortalContent() {
 
     // Get the go-live date - check multiple possible fields
     // Priority: Planned_Go_Live_Date__c on trainer, then account, then First_Revised_EGLD__c
-    const goLiveDate = trainer.plannedGoLiveDate || 
-                      trainerData?.account?.plannedGoLiveDate || 
-                      trainer.firstRevisedEGLD || 
+    const goLiveDate = trainer.plannedGoLiveDate ||
+                      trainerData?.account?.plannedGoLiveDate ||
+                      trainer.firstRevisedEGLD ||
                       null
-    
+
     console.log('🚨 DEBUG - Go-Live Date Resolution:', {
       bookingType,
       trainerPlannedGoLive: trainer.plannedGoLiveDate,
       accountPlannedGoLive: trainerData?.account?.plannedGoLiveDate,
       firstRevisedEGLD: trainer.firstRevisedEGLD,
       resolved: goLiveDate,
+      trainerKeys: Object.keys(trainer).filter(k => k.toLowerCase().includes('live') || k.toLowerCase().includes('egld') || k.toLowerCase().includes('go')),
       trainerObject: JSON.stringify(trainer, null, 2).substring(0, 500)
     })
 

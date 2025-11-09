@@ -519,6 +519,13 @@ export async function getSingleTrainerAvailability(
     return []
   }
 
+  console.log(`🎯 Trainer details for ${trainerName}:`, {
+    name: trainer.name,
+    email: trainer.email,
+    languages: trainer.languages,
+    location: trainer.location
+  })
+
   // Check if trainer has OAuth token
   const { larkOAuthService } = await import('./lark-oauth-service')
   const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
@@ -587,14 +594,16 @@ export async function getSingleTrainerAvailability(
         })
 
         if (!isBusy) {
-          slots.push({
+          const availableSlot = {
             start: slot.start,
             end: slot.end,
             available: true,
             availableTrainers: [trainer.name],
             availableLanguages: trainer.languages || [],
             availableLocations: trainer.location || []
-          })
+          }
+          console.log(`✅ Available slot ${slot.start}-${slot.end}: languages=${JSON.stringify(availableSlot.availableLanguages)}`)
+          slots.push(availableSlot)
         } else {
           slots.push({
             start: slot.start,
@@ -649,9 +658,10 @@ export async function getTrainerDetails(trainerName: string) {
       location: defaultTrainer?.location || []
     }
   }
-
+  
+  // Return the found trainer with all properties
   return {
-    name: trainer.name,  // Use the full name from config
+    name: trainer.name,
     email: trainer.email,
     calendarId: trainer.calendarId || trainersConfig.defaultCalendarId,
     languages: trainer.languages || [],

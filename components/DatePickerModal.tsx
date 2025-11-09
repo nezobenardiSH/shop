@@ -260,7 +260,16 @@ export default function DatePickerModal({
 
         response = await fetch(url)
         const data = await response.json()
-        
+
+        console.log('📊 Availability API Response:', {
+          status: response.status,
+          ok: response.ok,
+          dataKeys: Object.keys(data),
+          availabilityLength: data.availability?.length,
+          firstSlot: data.availability?.[0],
+          fullData: JSON.stringify(data).substring(0, 500)
+        })
+
         if (response.ok) {
           setAvailability(data.availability || [])
           if (!data.availability || data.availability.length === 0) {

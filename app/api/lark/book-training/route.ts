@@ -218,10 +218,18 @@ export async function POST(request: NextRequest) {
           merchantName
         )
         console.log('✅ Successfully cancelled existing event')
-      } catch (cancelError) {
-        console.error('⚠️ Failed to cancel existing event:', cancelError)
-        // Continue with new booking even if cancellation fails
-        // The old event might have already been deleted or may not exist
+      } catch (cancelError: any) {
+        console.error('❌ Failed to cancel existing event:', cancelError)
+        // If cancellation fails, DO NOT proceed with new booking
+        // This prevents duplicate events
+        return NextResponse.json(
+          { 
+            error: 'Failed to reschedule training',
+            details: `Unable to cancel existing training session (Event ID: ${existingEventId}). Please try again or contact support if the issue persists.`,
+            originalError: cancelError.message
+          },
+          { status: 500 }
+        )
       }
     }
 
@@ -414,6 +422,12 @@ export async function POST(request: NextRequest) {
               console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
 
               // Update the Onboarding_Portal__c record with the event ID and datetime
+              // Check if eventId exceeds Salesforce field limit
+              if (eventId.length > 255) {
+                console.warn(`⚠️ Event ID exceeds 255 chars (${eventId.length}), truncating...`)
+                eventId = eventId.substring(0, 255)
+              }
+              
               const portalUpdateData: any = {
                 Id: portalId,
                 [eventIdField]: eventId
