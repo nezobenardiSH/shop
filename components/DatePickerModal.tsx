@@ -71,6 +71,14 @@ export default function DatePickerModal({
   trainingDate,
   onBookingComplete
 }: DatePickerModalProps) {
+  // Debug props
+  console.log('📋 DatePickerModal Props:', {
+    merchantState,
+    merchantAddress,
+    onboardingServicesBought,
+    bookingType
+  })
+  
   const [availability, setAvailability] = useState<DayAvailability[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -333,6 +341,7 @@ export default function DatePickerModal({
           merchantId,
           merchantName,
           merchantAddress,
+          merchantState,  // Include state for location detection
           merchantPhone,
           merchantContactPerson,
           onboardingTrainerName,  // Pass the Salesforce Onboarding_Trainer__c.Name
@@ -881,7 +890,15 @@ export default function DatePickerModal({
               <div className="mt-3">
                 {serviceType !== 'none' && (
                   <label className="block text-sm font-medium text-gray-700">
-                    {getServiceTypeMessage(serviceType, merchantState)}
+                    {(() => {
+                      const message = getServiceTypeMessage(serviceType, merchantState)
+                      console.log('🏷️ Service Type Display:', {
+                        serviceType,
+                        merchantState,
+                        message
+                      })
+                      return message
+                    })()}
                   </label>
                 )}
                 {serviceType === 'none' && (

@@ -124,6 +124,15 @@ export async function GET(
       console.log('✅ Query completed, found:', trainerResult.totalSize, 'record(s)')
       if (trainerResult.totalSize > 0) {
         console.log('   Merchant name:', trainerResult.records[0].Name)
+        // Debug shipping fields
+        const record = trainerResult.records[0] as any
+        console.log('📍 Shipping fields from Salesforce:', {
+          street: record.Shipping_Street__c,
+          city: record.Shipping_City__c,
+          state: record.Shipping_State__c,
+          postalCode: record.Shipping_Zip_Postal_Code__c,
+          country: record.Shipping_Country__c
+        })
         console.log('   Tracking Number:', trainerResult.records[0].Delivery_Tracking_Number__c)
         console.log('   Tracking Timestamp:', trainerResult.records[0].Delivery_Tracking_Number_Timestamp__c)
         console.log('   Planned_Go_Live_Date__c:', trainerResult.records[0].Planned_Go_Live_Date__c)

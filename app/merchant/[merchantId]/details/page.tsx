@@ -134,13 +134,24 @@ export default function MerchantDetailsPage() {
       trainer.shippingState,
       trainer.shippingCountry
     ].filter(Boolean).join(', ');
+    
+    console.log('🏢 Setting booking info with:', {
+      shippingState: trainer.shippingState,
+      shippingCity: trainer.shippingCity,
+      shippingCountry: trainer.shippingCountry,
+      merchantAddress,
+      serviceType: trainer.serviceType,
+      onboardingServicesBought: trainer.onboardingServicesBought
+    });
 
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
       merchantAddress: merchantAddress || '', // Use constructed address from shipping fields
-      merchantState: trainer.shippingState || '', // Add state for display
+      merchantState: (trainer.shippingCity && trainer.shippingState 
+        ? `${trainer.shippingCity}, ${trainer.shippingState}`
+        : trainer.shippingState || trainer.shippingCity || ''), // Include city with state for better display
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display

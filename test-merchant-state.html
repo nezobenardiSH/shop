@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Merchant State</title>
+</head>
+<body>
+    <h1>Test Training Modal</h1>
+    <button onclick="testBooking()">Test Booking with State</button>
+    
+    <script>
+        async function testBooking() {
+            const data = {
+                merchantId: "test123",
+                merchantName: "Test Merchant",
+                merchantAddress: "Kuala Lumpur, Selangor, Malaysia",
+                merchantState: "Selangor",
+                merchantPhone: "0123456789",
+                merchantContactPerson: "Test Contact",
+                date: "2025-12-10",
+                startTime: "10:00",
+                endTime: "11:00",
+                bookingType: "training",
+                trainerLanguages: ["English"],
+                onboardingServicesBought: "Onsite Training"
+            };
+            
+            console.log('Sending data:', data);
+            
+            const response = await fetch('http://localhost:3010/api/lark/book-training?mock=true', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            console.log('Result:', result);
+            alert(JSON.stringify(result, null, 2));
+        }
+    </script>
+</body>
+</html>
