@@ -246,11 +246,12 @@ export default function DatePickerModal({
           setMessage(data.error || 'Failed to fetch installer availability')
         }
       } else {
-        // For training bookings, use the existing trainer availability endpoint
-        url = `/api/lark/availability?trainerName=${encodeURIComponent(trainerName)}`
+        // For training bookings, get combined availability from all trainers
+        // Don't pass trainerName - we want all trainers' availability
+        url = `/api/lark/availability`
 
         if (filterByLocation && merchantAddress) {
-          url += `&merchantAddress=${encodeURIComponent(merchantAddress)}`
+          url += `?merchantAddress=${encodeURIComponent(merchantAddress)}`
           console.log('🌍 Fetching availability WITH location filter:', merchantAddress)
         } else {
           console.log('🌍 Fetching availability WITHOUT location filter')

@@ -210,26 +210,41 @@ export async function POST(request: NextRequest) {
     // Step 5.6: If this is a reschedule (existingEventId provided), delete the old event first
     if (existingEventId && !mockMode) {
       try {
-        console.log('🗑️ Rescheduling detected - cancelling existing event:', existingEventId)
+        // Clean the event ID - remove any suffix like _0 from recurring events
+        const cleanEventId = existingEventId.split('_')[0]
+        console.log('🗑️ Rescheduling detected - cancelling existing event:', {
+          original: existingEventId,
+          cleaned: cleanEventId,
+          hasUnderscore: existingEventId.includes('_')
+        })
+        
         await larkService.cancelTraining(
           trainer.email,
           calendarId,
-          existingEventId,
+          cleanEventId, // Use cleaned event ID
           merchantName
         )
         console.log('✅ Successfully cancelled existing event')
       } catch (cancelError: any) {
         console.error('❌ Failed to cancel existing event:', cancelError)
-        // If cancellation fails, DO NOT proceed with new booking
-        // This prevents duplicate events
-        return NextResponse.json(
-          { 
-            error: 'Failed to reschedule training',
-            details: `Unable to cancel existing training session (Event ID: ${existingEventId}). Please try again or contact support if the issue persists.`,
-            originalError: cancelError.message
-          },
-          { status: 500 }
-        )
+        
+        // Check if it's a "not found" error - if so, we can continue
+        // as the event may have been already deleted
+        if (cancelError.message?.includes('not found') || 
+            cancelError.message?.includes('404') ||
+            cancelError.message?.includes('does not exist')) {
+          console.log('⚠️ Event not found, continuing with new booking (may have been already deleted)')
+        } else {
+          // For other errors, don't proceed to avoid duplicates
+          return NextResponse.json(
+            { 
+              error: 'Failed to reschedule training',
+              details: `Unable to cancel existing training session. ${cancelError.message || 'Please try again or contact support.'}`,
+              originalError: cancelError.message
+            },
+            { status: 500 }
+          )
+        }
       }
     }
 
@@ -238,7 +253,7 @@ export async function POST(request: NextRequest) {
     if (mockMode) {
       // Mock mode for testing without Lark permissions
       console.log('MOCK MODE: Simulating calendar event creation')
-      eventId = `mock-event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      eventId = `mock-event-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
       console.log('Mock event created:', eventId)
     } else {
       try {

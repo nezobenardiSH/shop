@@ -128,11 +128,18 @@ export default function MerchantDetailsPage() {
       actualTrainerName = trainer.operationManagerContact.name;
     }
 
+    // Use shipping state and country for location detection
+    // This is enough to determine if within Klang Valley, Penang, Johor, or outside
+    const merchantAddress = [
+      trainer.shippingState,
+      trainer.shippingCountry
+    ].filter(Boolean).join(', ');
+
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
-      merchantAddress: trainerData?.account?.billingAddress || '',
+      merchantAddress: merchantAddress || '', // Use constructed address from shipping fields
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
@@ -140,12 +147,13 @@ export default function MerchantDetailsPage() {
       requiredFeatures: trainer.requiredFeaturesByMerchant, // Pass required features for training bookings
       onboardingSummary: trainer.onboardingSummary, // Pass onboarding summary
       workaroundElaboration: trainer.workaroundElaboration, // Pass workaround elaboration
+      onboardingServicesBought: trainer.onboardingServicesBought, // Pass the service type for location filtering
       existingBooking: null // Don't pass existing booking for now, let user select new date
     })
     setBookingModalOpen(true)
   }
 
-  const handleBookingComplete = async (selectedDate?: string) => {
+  const handleBookingComplete = async () => {
     console.log('Booking completed, refreshing trainer data...')
 
     // Refresh the trainer data to show the new training date
@@ -494,6 +502,7 @@ export default function MerchantDetailsPage() {
             merchantContactPerson={currentBookingInfo.merchantContactPerson}
             trainerName={currentBookingInfo.trainerName}
             bookingType={currentBookingInfo.bookingType}
+            onboardingServicesBought={currentBookingInfo.onboardingServicesBought}
             requiredFeatures={currentBookingInfo.requiredFeatures}
             onboardingSummary={currentBookingInfo.onboardingSummary}
             workaroundElaboration={currentBookingInfo.workaroundElaboration}
