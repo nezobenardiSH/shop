@@ -223,6 +223,10 @@ export async function GET(
         if (portal.Trainer_Name__r && portal.Trainer_Name__r.Email) {
           portalData.assignedTrainerEmail = portal.Trainer_Name__r.Email
           console.log('🔍 Assigned Trainer Email:', portal.Trainer_Name__r.Email)
+        } else {
+          console.log('⚠️ No Trainer_Name__r or Email found in Portal record')
+          console.log('   Portal.Trainer_Name__c:', portal.Trainer_Name__c)
+          console.log('   Portal.Trainer_Name__r:', portal.Trainer_Name__r)
         }
 
         console.log('✅ Found Onboarding_Portal__c record with data:', portalData)

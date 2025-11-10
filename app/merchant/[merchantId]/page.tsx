@@ -576,6 +576,7 @@ function TrainerPortalContent() {
     }
 
     console.log('📦 About to set currentBookingInfo with existingBooking:', existingBooking)
+    console.log('🔍 DEBUG - assignedTrainerEmail from trainer object:', trainer.assignedTrainerEmail)
     console.log('🔍 Modal data ready:', {
       hasGoLiveDate: !!goLiveDate,
       goLiveDate,
