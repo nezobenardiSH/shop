@@ -55,6 +55,17 @@ interface RecentActivity {
   userType: string | null
 }
 
+interface ActorMetrics {
+  totalSubmissions?: number
+  totalBookings?: number
+  internalSubmissions?: number
+  merchantSubmissions?: number
+  internalBookings?: number
+  merchantBookings?: number
+  internalPercentage: number
+  merchantPercentage: number
+}
+
 interface AnalyticsData {
   success: boolean
   filters: {
@@ -73,6 +84,9 @@ interface AnalyticsData {
   topMerchants: TopMerchant[]
   pageBreakdown: PageBreakdown[]
   recentActivity: RecentActivity[]
+  menuSubmissionMetrics?: ActorMetrics
+  trainingSchedulingMetrics?: ActorMetrics
+  installationSchedulingMetrics?: ActorMetrics
 }
 
 interface Merchant {
@@ -1056,6 +1070,186 @@ export default function AnalyticsPage() {
                   <p className="text-gray-500 text-center py-8">No page data available</p>
                 )}
               </div>
+            </div>
+
+            {/* Feature Engagement Metrics - Menu Submissions, Training, Installation */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              {/* Menu Submissions */}
+              {analyticsData.menuSubmissionMetrics && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Menu Submissions</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-600">Total Submissions</span>
+                        <span className="text-2xl font-bold text-gray-900">
+                          {analyticsData.menuSubmissionMetrics.totalSubmissions || 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-4">
+                      <p className="text-xs font-semibold text-gray-500 uppercase mb-3">By Actor</p>
+
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-600">Internal Team</span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {analyticsData.menuSubmissionMetrics.internalSubmissions || 0}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-orange-500 h-2 rounded-full"
+                              style={{ width: `${analyticsData.menuSubmissionMetrics.internalPercentage}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {analyticsData.menuSubmissionMetrics.internalPercentage}%
+                          </p>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-600">Merchant</span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {analyticsData.menuSubmissionMetrics.merchantSubmissions || 0}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-green-500 h-2 rounded-full"
+                              style={{ width: `${analyticsData.menuSubmissionMetrics.merchantPercentage}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {analyticsData.menuSubmissionMetrics.merchantPercentage}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Training Scheduling */}
+              {analyticsData.trainingSchedulingMetrics && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Training Scheduling</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-600">Total Bookings</span>
+                        <span className="text-2xl font-bold text-gray-900">
+                          {analyticsData.trainingSchedulingMetrics.totalBookings || 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-4">
+                      <p className="text-xs font-semibold text-gray-500 uppercase mb-3">By Actor</p>
+
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-600">Internal Team</span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {analyticsData.trainingSchedulingMetrics.internalBookings || 0}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-orange-500 h-2 rounded-full"
+                              style={{ width: `${analyticsData.trainingSchedulingMetrics.internalPercentage}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {analyticsData.trainingSchedulingMetrics.internalPercentage}%
+                          </p>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-600">Merchant</span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {analyticsData.trainingSchedulingMetrics.merchantBookings || 0}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-green-500 h-2 rounded-full"
+                              style={{ width: `${analyticsData.trainingSchedulingMetrics.merchantPercentage}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {analyticsData.trainingSchedulingMetrics.merchantPercentage}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Installation Scheduling */}
+              {analyticsData.installationSchedulingMetrics && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Installation Scheduling</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-600">Total Bookings</span>
+                        <span className="text-2xl font-bold text-gray-900">
+                          {analyticsData.installationSchedulingMetrics.totalBookings || 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-4">
+                      <p className="text-xs font-semibold text-gray-500 uppercase mb-3">By Actor</p>
+
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-600">Internal Team</span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {analyticsData.installationSchedulingMetrics.internalBookings || 0}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-orange-500 h-2 rounded-full"
+                              style={{ width: `${analyticsData.installationSchedulingMetrics.internalPercentage}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {analyticsData.installationSchedulingMetrics.internalPercentage}%
+                          </p>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-gray-600">Merchant</span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {analyticsData.installationSchedulingMetrics.merchantBookings || 0}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-green-500 h-2 rounded-full"
+                              style={{ width: `${analyticsData.installationSchedulingMetrics.merchantPercentage}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {analyticsData.installationSchedulingMetrics.merchantPercentage}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Merchant Activity Timeline - Only show when a specific merchant is selected */}

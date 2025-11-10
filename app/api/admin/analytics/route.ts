@@ -7,6 +7,9 @@ import {
   getTopMerchants,
   getPageBreakdown,
   getRecentActivity,
+  getMenuSubmissionMetrics,
+  getTrainingSchedulingMetrics,
+  getInstallationSchedulingMetrics,
   AnalyticsFilters
 } from '@/lib/analytics-queries'
 
@@ -90,13 +93,19 @@ export async function GET(request: NextRequest) {
       timeSeriesData,
       topMerchants,
       pageBreakdown,
-      recentActivity
+      recentActivity,
+      menuSubmissionMetrics,
+      trainingSchedulingMetrics,
+      installationSchedulingMetrics
     ] = await Promise.all([
       getSummaryStats(filters),
       getTimeSeriesData(filters, groupBy),
       getTopMerchants(filters, limit),
       getPageBreakdown(filters),
-      getRecentActivity(filters, limit)
+      getRecentActivity(filters, limit),
+      getMenuSubmissionMetrics(filters),
+      getTrainingSchedulingMetrics(filters),
+      getInstallationSchedulingMetrics(filters)
     ]).catch((error) => {
       // Check if it's a "table does not exist" error
       if (error.message?.includes('does not exist')) {
@@ -124,7 +133,10 @@ export async function GET(request: NextRequest) {
       timeSeriesData,
       topMerchants,
       pageBreakdown,
-      recentActivity
+      recentActivity,
+      menuSubmissionMetrics,
+      trainingSchedulingMetrics,
+      installationSchedulingMetrics
     })
 
   } catch (error) {

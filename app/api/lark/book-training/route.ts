@@ -3,6 +3,9 @@ import { larkService } from '@/lib/lark'
 import { getSlotAvailability, assignTrainer, getTrainerDetails } from '@/lib/trainer-availability'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { sendBookingNotification } from '@/lib/lark-notifications'
+import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
+import { verifyToken } from '@/lib/auth-utils'
+import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -705,6 +708,56 @@ export async function POST(request: NextRequest) {
     } catch (notificationError) {
       console.error('Notification failed but booking succeeded:', notificationError)
       // Don't fail the booking if notification fails
+    }
+
+    // Track the booking event
+    try {
+      const cookieStore = await cookies()
+      const sessionId = cookieStore.get('analytics-session-id')?.value || generateSessionId(request)
+      const { userAgent, ipAddress, deviceType } = getClientInfo(request)
+      
+      // Get user info from auth token
+      let isInternalUser = false
+      let userType = 'merchant'
+      const authToken = cookieStore.get('auth-token')?.value
+      if (authToken) {
+        const decoded = verifyToken(authToken)
+        if (decoded) {
+          isInternalUser = decoded.isInternalUser || false
+          userType = decoded.userType || 'internal_team'
+        }
+      }
+      
+      const eventAction = bookingType === 'training' ? 'training_scheduled' : 
+                          bookingType === 'installation' ? 'installation_scheduled' : 
+                          `${bookingType}_scheduled`
+      
+      await trackEvent({
+        merchantId: merchantId,
+        merchantName: onboardingTrainerName || merchantName,
+        page: `booking-${bookingType}`,
+        action: eventAction,
+        sessionId,
+        userAgent,
+        deviceType,
+        ipAddress,
+        isInternalUser,
+        userType,
+        metadata: {
+          bookedBy: isInternalUser ? 'internal' : 'merchant',
+          bookingType: bookingType,
+          date: date,
+          startTime: startTime,
+          endTime: endTime,
+          assignedTrainer: assignment.assigned,
+          isRescheduling: !!existingEventId,
+          serviceType: onboardingServicesBought
+        }
+      })
+      console.log(`📊 Analytics: ${bookingType} scheduling tracked`)
+    } catch (analyticsError) {
+      console.error(`Failed to track ${bookingType} scheduling:`, analyticsError)
+      // Don't fail the request if analytics fails
     }
 
     return NextResponse.json({

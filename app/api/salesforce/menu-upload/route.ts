@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
+import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
+import { verifyToken } from '@/lib/auth-utils'
+import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -87,6 +90,47 @@ export async function POST(request: NextRequest) {
       
       if (updateResult.success) {
         console.log(`Successfully updated trainer ${trainer.Id} status to "Ticket Created - Pending Completion"`)
+        
+        // Track the menu submission event
+        try {
+          const cookieStore = await cookies()
+          const sessionId = cookieStore.get('analytics-session-id')?.value || generateSessionId(request)
+          const { userAgent, ipAddress, deviceType } = getClientInfo(request)
+          
+          // Get user info from auth token
+          let isInternalUser = false
+          let userType = 'merchant'
+          const authToken = cookieStore.get('auth-token')?.value
+          if (authToken) {
+            const decoded = verifyToken(authToken)
+            if (decoded) {
+              isInternalUser = decoded.isInternalUser || false
+              userType = decoded.userType || 'internal_team'
+            }
+          }
+          
+          await trackEvent({
+            merchantId: trainer.Account_Name__c || trainerId,
+            merchantName: trainer.Name,
+            page: 'menu-submission',
+            action: 'menu_submitted',
+            sessionId,
+            userAgent,
+            deviceType,
+            ipAddress,
+            isInternalUser,
+            userType,
+            metadata: {
+              submittedBy: isInternalUser ? 'internal' : 'merchant',
+              previousStatus: currentStatus || 'Not Started',
+              newStatus: 'Ticket Created - Pending Completion'
+            }
+          })
+          console.log('📊 Analytics: Menu submission tracked')
+        } catch (analyticsError) {
+          console.error('Failed to track menu submission:', analyticsError)
+          // Don't fail the request if analytics fails
+        }
         
         return NextResponse.json({
           success: true,

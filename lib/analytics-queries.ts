@@ -327,13 +327,13 @@ export async function getRecentActivity(
   limit: number = 20
 ): Promise<RecentActivity[]> {
   const whereClause: any = {}
-  
+
   if (filters.startDate || filters.endDate) {
     whereClause.timestamp = {}
     if (filters.startDate) whereClause.timestamp.gte = filters.startDate
     if (filters.endDate) whereClause.timestamp.lte = filters.endDate
   }
-  
+
   if (filters.merchantId) whereClause.merchantId = filters.merchantId
   if (filters.page) whereClause.page = filters.page
   if (filters.action) whereClause.action = filters.action
@@ -341,7 +341,7 @@ export async function getRecentActivity(
   if (filters.userType) whereClause.userType = filters.userType
 
   let activities: any[] = []
-  
+
   try {
     // Try with deviceType first
     activities = await prisma.pageView.findMany({
@@ -379,7 +379,7 @@ export async function getRecentActivity(
         orderBy: { timestamp: 'desc' },
         take: limit
       })
-      
+
       // Add null deviceType to match interface
       activities = activitiesWithoutDevice.map(a => ({ ...a, deviceType: null }))
     } else {
@@ -388,5 +388,119 @@ export async function getRecentActivity(
   }
 
   return activities
+}
+
+/**
+ * Get menu submission metrics with actor breakdown
+ */
+export async function getMenuSubmissionMetrics(filters: AnalyticsFilters) {
+  const whereClause: any = {
+    action: 'menu_submitted'
+  }
+
+  if (filters.startDate || filters.endDate) {
+    whereClause.timestamp = {}
+    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
+    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+  }
+
+  if (filters.merchantId) whereClause.merchantId = filters.merchantId
+
+  // Total menu submissions
+  const totalSubmissions = await prisma.pageView.count({ where: whereClause })
+
+  // Submissions by actor type
+  const byActor = await prisma.pageView.groupBy({
+    by: ['isInternalUser'],
+    where: whereClause,
+    _count: { id: true }
+  })
+
+  const internalCount = byActor.find(a => a.isInternalUser === true)?._count.id || 0
+  const merchantCount = byActor.find(a => a.isInternalUser === false)?._count.id || 0
+
+  return {
+    totalSubmissions,
+    internalSubmissions: internalCount,
+    merchantSubmissions: merchantCount,
+    internalPercentage: totalSubmissions > 0 ? Math.round((internalCount / totalSubmissions) * 100) : 0,
+    merchantPercentage: totalSubmissions > 0 ? Math.round((merchantCount / totalSubmissions) * 100) : 0
+  }
+}
+
+/**
+ * Get training scheduling metrics with actor breakdown
+ */
+export async function getTrainingSchedulingMetrics(filters: AnalyticsFilters) {
+  const whereClause: any = {
+    action: 'training_scheduled'
+  }
+
+  if (filters.startDate || filters.endDate) {
+    whereClause.timestamp = {}
+    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
+    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+  }
+
+  if (filters.merchantId) whereClause.merchantId = filters.merchantId
+
+  // Total training bookings
+  const totalBookings = await prisma.pageView.count({ where: whereClause })
+
+  // Bookings by actor type
+  const byActor = await prisma.pageView.groupBy({
+    by: ['isInternalUser'],
+    where: whereClause,
+    _count: { id: true }
+  })
+
+  const internalCount = byActor.find(a => a.isInternalUser === true)?._count.id || 0
+  const merchantCount = byActor.find(a => a.isInternalUser === false)?._count.id || 0
+
+  return {
+    totalBookings,
+    internalBookings: internalCount,
+    merchantBookings: merchantCount,
+    internalPercentage: totalBookings > 0 ? Math.round((internalCount / totalBookings) * 100) : 0,
+    merchantPercentage: totalBookings > 0 ? Math.round((merchantCount / totalBookings) * 100) : 0
+  }
+}
+
+/**
+ * Get installation scheduling metrics with actor breakdown
+ */
+export async function getInstallationSchedulingMetrics(filters: AnalyticsFilters) {
+  const whereClause: any = {
+    action: 'installation_scheduled'
+  }
+
+  if (filters.startDate || filters.endDate) {
+    whereClause.timestamp = {}
+    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
+    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+  }
+
+  if (filters.merchantId) whereClause.merchantId = filters.merchantId
+
+  // Total installation bookings
+  const totalBookings = await prisma.pageView.count({ where: whereClause })
+
+  // Bookings by actor type
+  const byActor = await prisma.pageView.groupBy({
+    by: ['isInternalUser'],
+    where: whereClause,
+    _count: { id: true }
+  })
+
+  const internalCount = byActor.find(a => a.isInternalUser === true)?._count.id || 0
+  const merchantCount = byActor.find(a => a.isInternalUser === false)?._count.id || 0
+
+  return {
+    totalBookings,
+    internalBookings: internalCount,
+    merchantBookings: merchantCount,
+    internalPercentage: totalBookings > 0 ? Math.round((internalCount / totalBookings) * 100) : 0,
+    merchantPercentage: totalBookings > 0 ? Math.round((merchantCount / totalBookings) * 100) : 0
+  }
 }
 
