@@ -43,8 +43,20 @@ export async function POST(request: NextRequest) {
       bookingType,
       existingEventId: existingEventId || 'NONE (new booking)',
       existingEventIdLength: existingEventId ? existingEventId.length : 0,
+      currentTrainerEmail: currentTrainerEmail || 'NOT PROVIDED',
       isRescheduling: !!existingEventId
     })
+
+    // DEBUG: Log the full body to see what's being sent
+    console.log('📋 Full request body keys:', Object.keys(body))
+    if (existingEventId) {
+      console.log('🔍 RESCHEDULING DETECTED - Event ID details:', {
+        eventId: existingEventId,
+        length: existingEventId.length,
+        currentTrainerEmail: currentTrainerEmail,
+        type: typeof existingEventId
+      })
+    }
 
     // Warn if event ID is too long for Salesforce
     if (existingEventId && existingEventId.length > 20) {
@@ -503,6 +515,8 @@ export async function POST(request: NextRequest) {
         }
 
         const eventIdField = eventIdFieldMapping[bookingType]
+        let portalIdForUpdate: string | null = null
+
         if (eventIdField) {
           console.log(`📝 Storing event ID in Onboarding_Portal__c.${eventIdField}: ${eventId}`)
           console.log(`📏 Event ID length: ${eventId.length} characters`)
@@ -518,10 +532,9 @@ export async function POST(request: NextRequest) {
             const portalResult = await conn.query(portalQuery)
 
             if (portalResult.totalSize > 0) {
-              const portalId = portalResult.records[0].Id
-              console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
+              portalIdForUpdate = portalResult.records[0].Id
+              console.log(`📝 Found Onboarding_Portal__c ID: ${portalIdForUpdate}`)
 
-              // Update the Onboarding_Portal__c record with the event ID and datetime
               // Check if eventId exceeds Salesforce field limit
               // DO NOT truncate - this would break rescheduling!
               if (eventId.length > 255) {
@@ -531,25 +544,11 @@ export async function POST(request: NextRequest) {
                 // Don't store a truncated ID - it's better to not store it at all
                 throw new Error('Event ID too long for Salesforce storage')
               }
-              
-              const portalUpdateData: any = {
-                Id: portalId,
-                [eventIdField]: eventId
-              }
-
-              // For training bookings, also save the datetime to Training_Date__c
-              if (bookingType === 'training' && trainingDateTime) {
-                portalUpdateData.Training_Date__c = trainingDateTime
-                console.log(`📝 Also storing Training_Date__c in Portal: ${trainingDateTime}`)
-              }
-
-              await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
-              console.log(`✅ Successfully stored event ID in Onboarding_Portal__c.${eventIdField}`)
             } else {
               console.log(`⚠️ No Onboarding_Portal__c record found for Onboarding_Trainer_Record__c = ${merchantId}`)
             }
           } catch (portalError: any) {
-            console.log(`❌ Error storing event ID in Onboarding_Portal__c:`, portalError.message)
+            console.log(`❌ Error querying Onboarding_Portal__c:`, portalError.message)
             console.log(`   Event ID will not be saved, but booking will continue`)
           }
         }
@@ -586,6 +585,8 @@ export async function POST(request: NextRequest) {
           // Strategy 3: If still not found, try case-insensitive LIKE search on name
           if (searchResult.totalSize === 0) {
             const nameParts = trainer.name.split(' ')
+            // Store userId for later use in Portal update
+            let foundUserId = null
             if (nameParts.length >= 2) {
               const firstName = nameParts[0]
               const lastName = nameParts[nameParts.length - 1]
@@ -609,6 +610,13 @@ export async function POST(request: NextRequest) {
               configName: trainer.name,
               configEmail: trainer.email
             })
+
+            // CRITICAL: Store the trainer User ID in Portal for rescheduling
+            // This allows us to know which trainer's calendar to delete from
+            if (bookingType === 'training') {
+              console.log(`📝 Will store Trainer_Name__c (User ID) in Portal: ${userId}`)
+              console.log(`   This allows us to delete from the correct trainer's calendar during rescheduling`)
+            }
           } else {
             console.log('❌ No User found for trainer after trying all strategies')
             console.log('   Trainer config:', {
@@ -627,6 +635,36 @@ export async function POST(request: NextRequest) {
               updateData.CSM_Name__c = userId
               console.log('📝 Setting CSM_Name__c (Training) to User ID:', userId)
               console.log('   This will link the trainer to the merchant record')
+
+              // CRITICAL: Also update the Portal record with the trainer assignment
+              // This allows us to know which trainer's calendar to delete from during rescheduling
+              if (portalIdForUpdate) {
+                try {
+                  const portalUpdateData: any = {
+                    Id: portalIdForUpdate,
+                    Trainer_Name__c: userId  // Store the trainer's User ID
+                  }
+
+                  // Also add the event ID if we have it
+                  if (eventIdField && eventId) {
+                    portalUpdateData[eventIdField] = eventId
+                  }
+
+                  // Add training datetime if available
+                  if (trainingDateTime) {
+                    portalUpdateData.Training_Date__c = trainingDateTime
+                  }
+
+                  await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
+                  console.log(`✅ Successfully updated Portal with:`)
+                  console.log(`   - Trainer_Name__c (User ID): ${userId}`)
+                  if (eventIdField) console.log(`   - ${eventIdField}: ${eventId}`)
+                  if (trainingDateTime) console.log(`   - Training_Date__c: ${trainingDateTime}`)
+                } catch (portalUpdateError: any) {
+                  console.log(`⚠️ Failed to update Portal with trainer assignment:`, portalUpdateError.message)
+                  console.log(`   Trainer assignment will not be saved, but booking will continue`)
+                }
+              }
             } else {
               console.log('ℹ️ Booking type is not training, skipping CSM_Name__c update')
             }

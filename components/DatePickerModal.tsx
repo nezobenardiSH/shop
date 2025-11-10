@@ -15,6 +15,7 @@ interface DatePickerModalProps {
   merchantContactPerson?: string
   trainerName: string
   trainerEmail?: string  // CSM email for rescheduling (to delete from correct calendar)
+  assignedTrainerEmail?: string  // CRITICAL: Email of trainer assigned to current event (for deletion during rescheduling)
   onboardingTrainerName?: string  // The Salesforce Onboarding_Trainer__c.Name field (e.g., "Nasi Lemak")
   bookingType?: string
   onboardingServicesBought?: string | null
@@ -60,6 +61,7 @@ export default function DatePickerModal({
   merchantContactPerson,
   trainerName,
   trainerEmail,
+  assignedTrainerEmail,
   onboardingTrainerName,
   bookingType = 'training',
   onboardingServicesBought,
@@ -360,9 +362,15 @@ export default function DatePickerModal({
         // Add optional fields
         if (currentBooking?.eventId) {
           trainingRequestBody.existingEventId = currentBooking.eventId
-          // CRITICAL: Also pass the current trainer's email so we can delete from their calendar
-          // This is needed for rescheduling - the old event is on the current trainer's calendar
-          trainingRequestBody.currentTrainerEmail = trainerEmail
+          // CRITICAL: Pass the assigned trainer's email so we can delete from their calendar
+          // This is the trainer who is currently assigned to the event
+          // Use assignedTrainerEmail if available (from Portal), otherwise fall back to trainerEmail
+          trainingRequestBody.currentTrainerEmail = assignedTrainerEmail || trainerEmail
+          console.log('🔍 Rescheduling - Using trainer email for deletion:', {
+            assignedTrainerEmail: assignedTrainerEmail,
+            trainerEmail: trainerEmail,
+            usingEmail: assignedTrainerEmail || trainerEmail
+          })
         }
 
         if (bookingType === 'training') {
