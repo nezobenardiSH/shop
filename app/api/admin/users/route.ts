@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth-utils'
 import { prisma } from '@/lib/prisma'
-import fs from 'fs/promises'
-import path from 'path'
+import { loadTrainersConfig, loadInstallersConfig } from '@/lib/config-loader'
 
 // Helper function to verify admin token
 function verifyAdminToken(request: NextRequest) {
@@ -32,13 +31,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Read configs dynamically to pick up changes without restart
-    const trainersConfigPath = path.join(process.cwd(), 'config', 'trainers.json')
-    const trainersConfigContent = await fs.readFile(trainersConfigPath, 'utf-8')
-    const trainersConfig = JSON.parse(trainersConfigContent)
-
-    const installersConfigPath = path.join(process.cwd(), 'config', 'installers.json')
-    const installersConfigContent = await fs.readFile(installersConfigPath, 'utf-8')
-    const installersConfig = JSON.parse(installersConfigContent)
+    const trainersConfig = await loadTrainersConfig()
+    const installersConfig = await loadInstallersConfig()
 
     // Get all authorized users from database
     const allAuthorizedUsers = await prisma.larkAuthToken.findMany({

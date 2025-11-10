@@ -1,8 +1,7 @@
 import { getSalesforceConnection } from './salesforce'
 import { larkService } from './lark'
 import { sendBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
-import fs from 'fs/promises'
-import path from 'path'
+import { loadInstallersConfig } from './config-loader'
 
 interface TimeSlot {
   start: string
@@ -182,11 +181,9 @@ export async function getInternalInstallersAvailability(
   merchantId?: string
 ): Promise<InstallerAvailability[]> {
   console.log('Getting installer availability...')
-  
+
   // Read installers config dynamically to pick up changes without restart
-  const configPath = path.join(process.cwd(), 'config', 'installers.json')
-  const configContent = await fs.readFile(configPath, 'utf-8')
-  const installersConfig = JSON.parse(configContent)
+  const installersConfig = await loadInstallersConfig()
 
   // Determine which location's installers to use
   let locationKey = 'klangValley' // default
@@ -341,9 +338,7 @@ export async function bookInternalInstallation(
   })
 
   // Read installers config dynamically to pick up changes without restart
-  const configPath = path.join(process.cwd(), 'config', 'installers.json')
-  const configContent = await fs.readFile(configPath, 'utf-8')
-  const installersConfig = JSON.parse(configContent)
+  const installersConfig = await loadInstallersConfig()
 
   // Get location category for the merchant
   const locationCategory = await getLocationCategory(merchantId)
@@ -935,9 +930,7 @@ export async function submitExternalInstallationRequest(
   contactPhone: string
 ) {
   // Read installers config dynamically to pick up changes without restart
-  const configPath = path.join(process.cwd(), 'config', 'installers.json')
-  const configContent = await fs.readFile(configPath, 'utf-8')
-  const installersConfig = JSON.parse(configContent)
+  const installersConfig = await loadInstallersConfig()
 
   const vendor = installersConfig.external.vendors.find((v: any) => v.isActive)
   

@@ -9,6 +9,7 @@ interface AuthorizedInstaller {
   name: string
   calendarId: string
   authorized: boolean
+  location?: string
 }
 
 function InstallerAuthorizeContent() {
@@ -183,9 +184,9 @@ function InstallerAuthorizeContent() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {installers.map(installer => (
+                  {installers.map((installer, index) => (
                     <div
-                      key={installer.email}
+                      key={`${installer.email}-${installer.location || index}`}
                       className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
                     >
                       <div className="flex items-center gap-3">

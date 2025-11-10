@@ -94,7 +94,7 @@ export async function GET(
                Installation_ST_Ticket_No__c,
                Assigned_Installer__c,
                Training_Date__c,
-               CSM_Name__c, CSM_Name__r.Name,
+               CSM_Name__c, CSM_Name__r.Name, CSM_Name__r.Email,
                Subscription_Activation_Date__c,
                BO_Account_Name__c,
                Onboarding_Services_Bought__c, Service_Type__c,
@@ -475,6 +475,7 @@ export async function GET(
         completedTraining: trainer.Completed_Training__c,
         trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
         csmName: csmName, // Use the CSM name we resolved earlier
+        csmEmail: trainer.CSM_Name__r?.Email || null, // CSM email for rescheduling
         assignedInstaller: trainer.Assigned_Installer__c, // For checking if external vendor (e.g., "Surfstek")
         installerName: portalData.installerName || null, // Only use Portal installer name
 

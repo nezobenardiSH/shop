@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { larkOAuthService } from '@/lib/lark-oauth-service'
-import fs from 'fs/promises'
-import path from 'path'
+import { loadInstallersConfig } from '@/lib/config-loader'
 
 export async function GET(request: NextRequest) {
   try {
     // Read installers config dynamically to pick up changes without restart
-    const configPath = path.join(process.cwd(), 'config', 'installers.json')
-    const configContent = await fs.readFile(configPath, 'utf-8')
-    const installersConfig = JSON.parse(configContent)
+    const installersConfig = await loadInstallersConfig()
 
     // Get all configured internal installers from all locations
     const configuredInstallers: any[] = []
@@ -25,8 +22,16 @@ export async function GET(request: NextRequest) {
     const authorizedInstallers = await larkOAuthService.getAuthorizedInstallers()
     const authorizedEmails = new Set(authorizedInstallers.map(i => i.email))
 
+    // Deduplicate installers by email (same installer may appear in multiple locations)
+    const uniqueInstallersByEmail = new Map<string, any>()
+    for (const installer of configuredInstallers) {
+      if (!uniqueInstallersByEmail.has(installer.email)) {
+        uniqueInstallersByEmail.set(installer.email, installer)
+      }
+    }
+
     // Combine information - ONLY show installers that are in config file
-    const installers = configuredInstallers.map(installer => {
+    const installers = Array.from(uniqueInstallersByEmail.values()).map(installer => {
       const authorized = authorizedEmails.has(installer.email)
       const authInfo = authorizedInstallers.find(i => i.email === installer.email)
 

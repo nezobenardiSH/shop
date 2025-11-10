@@ -9,10 +9,12 @@ interface BookingModalProps {
   merchantId: string
   merchantName: string
   merchantAddress?: string
+  merchantState?: string
   merchantPhone?: string
   merchantContactPerson?: string
   trainerName: string
   bookingType?: string
+  onboardingServicesBought?: string | null
   currentBooking?: {
     eventId: string
     date: string
@@ -40,10 +42,12 @@ export default function BookingModal({
   merchantId,
   merchantName,
   merchantAddress,
+  merchantState,
   merchantPhone,
   merchantContactPerson,
   trainerName,
   bookingType = 'training',
+  onboardingServicesBought,
   currentBooking,
   onBookingComplete
 }: BookingModalProps) {
@@ -101,6 +105,7 @@ export default function BookingModal({
           merchantId,
           merchantName,
           merchantAddress,
+          merchantState,
           merchantPhone,
           merchantContactPerson,
           trainerName,
@@ -108,7 +113,8 @@ export default function BookingModal({
           startTime: selectedSlot.start,
           endTime: selectedSlot.end,
           bookingType: bookingType,
-          languages: bookingType === 'training' ? selectedLanguages : undefined,
+          onboardingServicesBought,
+          trainerLanguages: bookingType === 'training' ? selectedLanguages : undefined,
           existingEventId: currentBooking?.eventId // Pass existing event ID for rescheduling
         })
       })

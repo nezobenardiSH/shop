@@ -1,18 +1,12 @@
-import fs from 'fs/promises'
-import path from 'path'
+import { loadTrainersConfig, loadInstallersConfig } from './config-loader'
 
 /**
  * Get Lark user ID from config files or database
  */
 export async function getLarkUserId(email: string): Promise<{ userId: string; openId: string } | null> {
   // Read configs dynamically to pick up changes without restart
-  const trainersConfigPath = path.join(process.cwd(), 'config', 'trainers.json')
-  const trainersConfigContent = await fs.readFile(trainersConfigPath, 'utf-8')
-  const trainersConfig = JSON.parse(trainersConfigContent)
-
-  const installersConfigPath = path.join(process.cwd(), 'config', 'installers.json')
-  const installersConfigContent = await fs.readFile(installersConfigPath, 'utf-8')
-  const installersConfig = JSON.parse(installersConfigContent)
+  const trainersConfig = await loadTrainersConfig()
+  const installersConfig = await loadInstallersConfig()
 
   // Check trainers config
   const trainer = trainersConfig.trainers.find((t: any) => t.email === email) as any

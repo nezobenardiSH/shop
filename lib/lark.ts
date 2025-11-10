@@ -1175,25 +1175,39 @@ class LarkService {
   async getPrimaryCalendarId(userEmail: string): Promise<string> {
     try {
       const calendars = await this.getCalendarList(userEmail)
-      
-      // Look for primary calendar
-      const primaryCalendar = calendars.find(cal => 
-        cal.type === 'primary' || 
-        cal.role === 'owner' ||
-        cal.summary?.toLowerCase().includes('primary')
+
+      // PRIORITY 1: Find calendar with type === 'primary' AND role === 'owner'
+      const nativePrimaryCalendar = calendars.find(cal =>
+        cal.type === 'primary' && cal.role === 'owner'
       )
-      
-      if (primaryCalendar) {
-        console.log(`Found primary calendar for ${userEmail}:`, primaryCalendar.calendar_id)
-        return primaryCalendar.calendar_id
+
+      if (nativePrimaryCalendar) {
+        console.log(`Found native primary calendar for ${userEmail}:`, nativePrimaryCalendar.calendar_id)
+        return nativePrimaryCalendar.calendar_id
       }
-      
+
+      // PRIORITY 2: Find any calendar with type === 'primary'
+      const primaryTypeCalendar = calendars.find(cal => cal.type === 'primary')
+
+      if (primaryTypeCalendar) {
+        console.log(`Found primary type calendar for ${userEmail}:`, primaryTypeCalendar.calendar_id)
+        return primaryTypeCalendar.calendar_id
+      }
+
+      // PRIORITY 3: Find any calendar with role === 'owner'
+      const ownerCalendar = calendars.find(cal => cal.role === 'owner')
+
+      if (ownerCalendar) {
+        console.log(`Using owner calendar for ${userEmail}:`, ownerCalendar.calendar_id)
+        return ownerCalendar.calendar_id
+      }
+
       // If no primary found, use the first calendar
       if (calendars.length > 0) {
         console.log(`Using first calendar for ${userEmail}:`, calendars[0].calendar_id)
         return calendars[0].calendar_id
       }
-      
+
       // Fallback to 'primary' string
       console.log(`No calendars found for ${userEmail}, using 'primary' as fallback`)
       return 'primary'

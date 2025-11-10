@@ -1,6 +1,5 @@
 import { larkService } from './lark'
-import fs from 'fs/promises'
-import path from 'path'
+import { loadTrainersConfig } from './config-loader'
 
 /**
  * Create a date in Singapore timezone
@@ -50,9 +49,7 @@ export async function getCombinedAvailability(
   }
 
   // Read trainers config dynamically to pick up changes without restart
-  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
-  const configContent = await fs.readFile(configPath, 'utf-8')
-  const trainersConfig = JSON.parse(configContent)
+  const trainersConfig = await loadTrainersConfig()
 
   // Get all configured trainers
   let trainers = trainersConfig.trainers.filter((t: any) =>
@@ -291,9 +288,7 @@ export async function getSlotAvailability(
   }
 
   // Read trainers config dynamically to pick up changes without restart
-  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
-  const configContent = await fs.readFile(configPath, 'utf-8')
-  const trainersConfig = JSON.parse(configContent)
+  const trainersConfig = await loadTrainersConfig()
 
   // Get all configured trainers
   let trainers = trainersConfig.trainers.filter((t: any) =>
@@ -651,9 +646,7 @@ export async function getSingleTrainerAvailability(
  */
 export async function getTrainerDetails(trainerName: string) {
   // Read trainers config dynamically to pick up changes without restart
-  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
-  const configContent = await fs.readFile(configPath, 'utf-8')
-  const trainersConfig = JSON.parse(configContent)
+  const trainersConfig = await loadTrainersConfig()
 
   // First try exact match
   let trainer = trainersConfig.trainers.find((t: any) =>

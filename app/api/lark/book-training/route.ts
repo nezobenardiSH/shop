@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
       onboardingSummary,  // Onboarding summary
       workaroundElaboration,  // Workaround elaboration
       onboardingServicesBought,  // To determine if onsite or remote training
-      existingEventId  // Event ID of existing booking to be cancelled (for rescheduling)
+      existingEventId,  // Event ID of existing booking to be cancelled (for rescheduling)
+      currentTrainerEmail  // Email of the trainer who created the existing event (for rescheduling)
     } = body
 
     console.log('📥 Booking request received:', {
@@ -238,22 +239,29 @@ export async function POST(request: NextRequest) {
       try {
         // Use the full event ID as returned by Lark - don't remove any suffixes
         // Lark may add suffixes like _0 for event instances, and these are part of the valid ID
+
+        // CRITICAL FIX: Use the CURRENT trainer's email (who created the event) for deletion
+        // NOT the new trainer's email. The event was created on the current trainer's calendar.
+        const trainerEmailForDeletion = currentTrainerEmail || trainer.email
+
         console.log('🗑️ Rescheduling detected - attempting to cancel existing event:', {
           eventId: existingEventId,
           eventIdLength: existingEventId.length,
-          calendarId: calendarId,
-          trainerEmail: trainer.email
+          currentTrainerEmail: currentTrainerEmail,
+          newTrainerEmail: trainer.email,
+          trainerEmailForDeletion: trainerEmailForDeletion,
+          calendarId: calendarId
         })
 
         // CRITICAL: The calendar ID used for deletion MUST match the calendar where the event was created
-        // The trainer's calendar ID might have changed, so we need to find the correct calendar
+        // We need to find the correct calendar for the trainer who created the event
         console.log('🔍 Finding correct calendar for event deletion...')
         let deleteCalendarId = calendarId
 
         try {
-          // Get the trainer's current calendar list to find the right one
-          const calendars = await larkService.getCalendarList(trainer.email)
-          console.log(`📅 Trainer has ${calendars.length} calendars`)
+          // Get the CURRENT trainer's calendar list (the one who created the event)
+          const calendars = await larkService.getCalendarList(trainerEmailForDeletion)
+          console.log(`📅 Trainer (${trainerEmailForDeletion}) has ${calendars.length} calendars`)
 
           // Try to find the primary calendar (most likely where the event was created)
           const primaryCalendar = calendars.find((cal: any) =>
@@ -272,7 +280,7 @@ export async function POST(request: NextRequest) {
         }
 
         await larkService.cancelTraining(
-          trainer.email,
+          trainerEmailForDeletion,  // Use the current trainer's email
           deleteCalendarId,
           existingEventId, // Use the full event ID as-is
           merchantName

@@ -23,6 +23,25 @@ interface InstallerConfig {
 }
 
 /**
+ * Get the appropriate config file path based on environment
+ * Uses config/local.json if it exists, otherwise falls back to production config
+ */
+function getConfigPath(configName: 'trainers' | 'installers'): string {
+  const localConfigPath = path.join(process.cwd(), 'config', 'local.json')
+  const prodConfigPath = path.join(process.cwd(), 'config', `${configName}.json`)
+
+  // Check if local.json exists
+  try {
+    fs.accessSync(localConfigPath)
+    // Local config exists, use it
+    return localConfigPath
+  } catch {
+    // Local config doesn't exist, use production config
+    return prodConfigPath
+  }
+}
+
+/**
  * Update trainer config with Lark IDs after OAuth authorization
  */
 export async function updateTrainerLarkIds(
@@ -30,7 +49,7 @@ export async function updateTrainerLarkIds(
   larkUserId: string,
   larkOpenId: string
 ): Promise<void> {
-  const configPath = path.join(process.cwd(), 'config', 'trainers.json')
+  const configPath = getConfigPath('trainers')
   
   try {
     // Read current config
@@ -83,7 +102,7 @@ export async function updateInstallerLarkIds(
   larkUserId: string,
   larkOpenId: string
 ): Promise<void> {
-  const configPath = path.join(process.cwd(), 'config', 'installers.json')
+  const configPath = getConfigPath('installers')
   
   try {
     // Read current config
