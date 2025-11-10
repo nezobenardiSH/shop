@@ -655,6 +655,14 @@ export async function POST(request: NextRequest) {
                     portalUpdateData.Training_Date__c = trainingDateTime
                   }
 
+                  console.log(`📝 Updating Portal record with trainer assignment:`, {
+                    portalId: portalIdForUpdate,
+                    userId: userId,
+                    trainerName: trainer.name,
+                    trainerEmail: trainer.email,
+                    updateData: portalUpdateData
+                  })
+
                   await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
                   console.log(`✅ Successfully updated Portal with:`)
                   console.log(`   - Trainer_Name__c (User ID): ${userId}`)
@@ -664,6 +672,9 @@ export async function POST(request: NextRequest) {
                   console.log(`⚠️ Failed to update Portal with trainer assignment:`, portalUpdateError.message)
                   console.log(`   Trainer assignment will not be saved, but booking will continue`)
                 }
+              } else {
+                console.log(`⚠️ portalIdForUpdate is null, cannot update Portal with trainer assignment`)
+                console.log(`   This means the Portal record was not found earlier`)
               }
             } else {
               console.log('ℹ️ Booking type is not training, skipping CSM_Name__c update')
