@@ -552,35 +552,96 @@ export async function bookInternalInstallation(
 
   console.log(`Creating installation event for ${installer.name} in calendar ${calendarId}`)
   
-  // If this is a rescheduling, cancel the existing event first
+  // Step 1: Query Salesforce for current installer and event ID (for rescheduling)
+  let currentInstallerEmailForDeletion: string | null = null
+  let currentEventIdForDeletion: string | null = null
+
   if (existingEventId) {
     try {
-      console.log('🗑️ Rescheduling detected - need to cancel existing event')
-      console.log('   Event ID:', existingEventId)
-      console.log('   Event ID length:', existingEventId.length)
-      
-      // For rescheduling, we need to try to delete from all installer calendars
-      // since we don't know which installer originally created it
-      let deleted = false
-      
-      // Try to delete from all active installers in the same location
-      for (const inst of locationConfig.installers) {
-        if (!inst.isActive) continue
-        
-        try {
-          const instCalendarId = await CalendarIdManager.getResolvedCalendarId(inst.email)
-          console.log(`   Attempting to delete from ${inst.name}'s calendar (${instCalendarId})`)
-          
-          await larkService.deleteCalendarEvent(instCalendarId, existingEventId, inst.email)
-          console.log(`   ✅ Successfully deleted from ${inst.name}'s calendar`)
-          deleted = true
-          break // Event deleted successfully, no need to try other calendars
-        } catch (err) {
-          // This installer doesn't have the event, try next one
-          console.log(`   ⚠️ Not found in ${inst.name}'s calendar, trying next...`)
+      const conn = await getSalesforceConnection()
+      if (conn) {
+        // Query Onboarding_Portal__c for current installer name and event ID
+        const portalQuery = `
+          SELECT Installer_Name__c, Installation_Event_ID__c
+          FROM Onboarding_Portal__c
+          WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+          LIMIT 1
+        `
+
+        console.log('🔍 Querying Onboarding_Portal__c for current installer and event ID')
+        const portalResult = await conn.query(portalQuery)
+
+        if (portalResult.totalSize > 0) {
+          const portalRecord = portalResult.records[0] as any
+          const currentInstallerName = portalRecord.Installer_Name__c
+          currentEventIdForDeletion = portalRecord.Installation_Event_ID__c
+
+          console.log(`✅ Found current installer: ${currentInstallerName}`)
+          console.log(`✅ Found current event ID: ${currentEventIdForDeletion}`)
+
+          // Find the installer object to get their email
+          if (currentInstallerName && locationConfig.installers) {
+            const installerObj = locationConfig.installers.find(
+              (inst: any) => inst.name === currentInstallerName
+            )
+            if (installerObj) {
+              currentInstallerEmailForDeletion = installerObj.email
+              console.log(`✅ Resolved installer email: ${currentInstallerEmailForDeletion}`)
+            }
+          }
         }
       }
-      
+    } catch (queryError) {
+      console.log('⚠️ Failed to query current installer from Salesforce:', queryError)
+      // Continue - will fall back to trying all installers
+    }
+  }
+
+  // Step 2: If this is a rescheduling, cancel the existing event first
+  if (existingEventId) {
+    try {
+      console.log('🗑️ Rescheduling detected - attempting to cancel existing event')
+      console.log('   Event ID:', currentEventIdForDeletion || existingEventId)
+      console.log('   Installer email:', currentInstallerEmailForDeletion || 'UNKNOWN (will try all)')
+
+      const eventIdForDeletion = currentEventIdForDeletion || existingEventId
+      let deleted = false
+
+      // If we know the installer, try to delete from their calendar first
+      if (currentInstallerEmailForDeletion) {
+        try {
+          const instCalendarId = await CalendarIdManager.getResolvedCalendarId(currentInstallerEmailForDeletion)
+          console.log(`   Attempting to delete from ${currentInstallerEmailForDeletion}'s calendar (${instCalendarId})`)
+
+          await larkService.deleteCalendarEvent(instCalendarId, eventIdForDeletion, currentInstallerEmailForDeletion)
+          console.log(`   ✅ Successfully deleted from current installer's calendar`)
+          deleted = true
+        } catch (err) {
+          console.log(`   ⚠️ Failed to delete from current installer's calendar:`, err)
+          // Fall through to try other installers
+        }
+      }
+
+      // If we couldn't delete from the known installer, try all installers as fallback
+      if (!deleted && locationConfig.installers) {
+        console.log('   📋 Falling back to trying all installers...')
+        for (const inst of locationConfig.installers) {
+          if (!inst.isActive) continue
+
+          try {
+            const instCalendarId = await CalendarIdManager.getResolvedCalendarId(inst.email)
+            console.log(`   Attempting to delete from ${inst.name}'s calendar (${instCalendarId})`)
+
+            await larkService.deleteCalendarEvent(instCalendarId, eventIdForDeletion, inst.email)
+            console.log(`   ✅ Successfully deleted from ${inst.name}'s calendar`)
+            deleted = true
+            break
+          } catch (err) {
+            console.log(`   ⚠️ Not found in ${inst.name}'s calendar, trying next...`)
+          }
+        }
+      }
+
       if (deleted) {
         console.log('✅ Successfully cancelled existing installation event')
       } else {
