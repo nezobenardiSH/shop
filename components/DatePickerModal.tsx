@@ -362,14 +362,16 @@ export default function DatePickerModal({
         // Add optional fields
         if (currentBooking?.eventId) {
           trainingRequestBody.existingEventId = currentBooking.eventId
-          // CRITICAL: Pass the assigned trainer's email so we can delete from their calendar
-          // This is the trainer who is currently assigned to the event
-          // Use assignedTrainerEmail if available (from Portal), otherwise fall back to trainerEmail
+          // CRITICAL: Pass the trainer's email for deletion
+          // Priority:
+          // 1. assignedTrainerEmail (from Onboarding_Portal__c.Trainer_Name__c) - trainer who has the event
+          // 2. trainerEmail (from Onboarding_Trainer__c.CSM_Name__c) - current CSM
           trainingRequestBody.currentTrainerEmail = assignedTrainerEmail || trainerEmail
           console.log('🔍 Rescheduling - Using trainer email for deletion:', {
             assignedTrainerEmail: assignedTrainerEmail,
             trainerEmail: trainerEmail,
-            usingEmail: assignedTrainerEmail || trainerEmail
+            usingEmail: assignedTrainerEmail || trainerEmail,
+            source: assignedTrainerEmail ? 'Portal.Trainer_Name__c' : 'Onboarding_Trainer__c.CSM_Name__c'
           })
         }
 

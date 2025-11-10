@@ -557,8 +557,8 @@ function TrainerPortalContent() {
     const bookingInfo = {
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
-      trainerEmail: trainer.csmEmail, // CSM email for rescheduling (to delete from correct calendar)
-      assignedTrainerEmail: trainer.assignedTrainerEmail, // CRITICAL: Email of trainer assigned to current event (for deletion during rescheduling)
+      trainerEmail: trainer.csmEmail, // Current CSM assigned to merchant (Onboarding_Trainer__c.CSM_Name__c)
+      assignedTrainerEmail: trainer.assignedTrainerEmail, // CRITICAL: Trainer assigned to the event (Onboarding_Portal__c.Trainer_Name__c) - use for deletion during rescheduling
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
       merchantAddress: merchantAddress,
       merchantState: merchantState,

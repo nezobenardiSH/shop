@@ -201,7 +201,7 @@ export async function GET(
       const portalQuery = `
         SELECT Id, Training_Event_ID__c, Installation_Event_ID__c,
                Installation_Date__c, Installer_Name__c,
-               Training_Date__c, Trainer_Name__c, Trainer_Name__r.Email
+               Training_Date__c
         FROM Onboarding_Portal__c
         WHERE Onboarding_Trainer_Record__c = '${trainerId}'
         LIMIT 1
@@ -217,17 +217,6 @@ export async function GET(
         // Installer_Name__c is now a text field, not a lookup
         portalData.installerName = portal.Installer_Name__c || null
         console.log('🔍 Installer_Name__c value:', portal.Installer_Name__c)
-
-        // CRITICAL: Get the trainer's email from the Trainer_Name__c lookup
-        // This is needed to delete from the correct trainer's calendar during rescheduling
-        if (portal.Trainer_Name__r && portal.Trainer_Name__r.Email) {
-          portalData.assignedTrainerEmail = portal.Trainer_Name__r.Email
-          console.log('🔍 Assigned Trainer Email:', portal.Trainer_Name__r.Email)
-        } else {
-          console.log('⚠️ No Trainer_Name__r or Email found in Portal record')
-          console.log('   Portal.Trainer_Name__c:', portal.Trainer_Name__c)
-          console.log('   Portal.Trainer_Name__r:', portal.Trainer_Name__r)
-        }
 
         console.log('✅ Found Onboarding_Portal__c record with data:', portalData)
       } else {

@@ -213,17 +213,33 @@ export async function POST(request: NextRequest) {
     // Fetch merchant email from Salesforce
     let merchantEmail: string | null = null
 
+    // For rescheduling: store current trainer and event ID
+    let currentTrainerEmailForDeletion: string | null = null
+    let currentEventIdForDeletion: string | null = null
+
     try {
       const conn = await getSalesforceConnection()
       if (conn) {
         const trainerQuery = `
           SELECT Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c,
                  Onboarding_Summary__c, Workaround_Elaboration__c,
-                 Email__c
+                 Email__c, CSM_Name__c, CSM_Name__r.Email
           FROM Onboarding_Trainer__c
           WHERE Id = '${merchantId}'
           LIMIT 1
         `
+
+        // Query Portal for current event ID if rescheduling
+        let portalQuery = ''
+        if (existingEventId) {
+          portalQuery = `
+            SELECT Training_Event_ID__c
+            FROM Onboarding_Portal__c
+            WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+            LIMIT 1
+          `
+        }
+
         const trainerResult = await conn.query(trainerQuery)
         if (trainerResult.totalSize > 0) {
           const trainerRecord = trainerResult.records[0] as any
@@ -232,6 +248,13 @@ export async function POST(request: NextRequest) {
           fetchedOnboardingSummary = trainerRecord.Onboarding_Summary__c
           fetchedWorkaroundElaboration = trainerRecord.Workaround_Elaboration__c
           merchantEmail = trainerRecord.Email__c
+
+          // CRITICAL: Get current trainer for deletion (Onboarding_Trainer__c.CSM_Name__c)
+          if (existingEventId && trainerRecord.CSM_Name__r?.Email) {
+            currentTrainerEmailForDeletion = trainerRecord.CSM_Name__r.Email
+            console.log(`✅ Found current trainer from Onboarding_Trainer__c.CSM_Name__c: ${currentTrainerEmailForDeletion}`)
+          }
+
           console.log('📞 Fetched Merchant PIC contact and additional fields:', {
             merchantPICName,
             merchantPICPhone,
@@ -239,6 +262,16 @@ export async function POST(request: NextRequest) {
             fetchedOnboardingSummary: fetchedOnboardingSummary ? 'Yes' : 'No',
             fetchedWorkaroundElaboration: fetchedWorkaroundElaboration ? 'Yes' : 'No'
           })
+        }
+
+        // Get current event ID if rescheduling
+        if (existingEventId && portalQuery) {
+          const portalResult = await conn.query(portalQuery)
+          if (portalResult.totalSize > 0) {
+            const portalRecord = portalResult.records[0] as any
+            currentEventIdForDeletion = portalRecord.Training_Event_ID__c
+            console.log(`✅ Found current event ID from Onboarding_Portal__c.Training_Event_ID__c: ${currentEventIdForDeletion}`)
+          }
         }
       }
     } catch (error) {
@@ -252,17 +285,23 @@ export async function POST(request: NextRequest) {
         // Use the full event ID as returned by Lark - don't remove any suffixes
         // Lark may add suffixes like _0 for event instances, and these are part of the valid ID
 
-        // CRITICAL FIX: Use the CURRENT trainer's email (who created the event) for deletion
-        // NOT the new trainer's email. The event was created on the current trainer's calendar.
-        const trainerEmailForDeletion = currentTrainerEmail || trainer.email
+        // CRITICAL: Use current trainer and event ID from Salesforce
+        // Current trainer: Onboarding_Trainer__c.CSM_Name__c (who has the event)
+        // Current event ID: Onboarding_Portal__c.Training_Event_ID__c (the event to delete)
+        const trainerEmailForDeletion = currentTrainerEmailForDeletion || currentTrainerEmail
+        const eventIdForDeletion = currentEventIdForDeletion || existingEventId
 
         console.log('🗑️ Rescheduling detected - attempting to cancel existing event:', {
-          eventId: existingEventId,
-          eventIdLength: existingEventId.length,
+          eventId: eventIdForDeletion,
+          eventIdLength: eventIdForDeletion?.length,
           currentTrainerEmail: currentTrainerEmail,
           newTrainerEmail: trainer.email,
           trainerEmailForDeletion: trainerEmailForDeletion,
-          calendarId: calendarId
+          calendarId: calendarId,
+          source: {
+            trainer: currentTrainerEmailForDeletion ? 'Onboarding_Trainer__c.CSM_Name__c' : 'frontend',
+            eventId: currentEventIdForDeletion ? 'Onboarding_Portal__c.Training_Event_ID__c' : 'frontend'
+          }
         })
 
         // CRITICAL: The calendar ID used for deletion MUST match the calendar where the event was created
@@ -292,9 +331,9 @@ export async function POST(request: NextRequest) {
         }
 
         await larkService.cancelTraining(
-          trainerEmailForDeletion,  // Use the current trainer's email
+          trainerEmailForDeletion,  // Use the current trainer's email (from Onboarding_Trainer__c.CSM_Name__c)
           deleteCalendarId,
-          existingEventId, // Use the full event ID as-is
+          eventIdForDeletion, // Use the event ID from Onboarding_Portal__c.Training_Event_ID__c
           merchantName
         )
         console.log('✅ Successfully cancelled existing event')
@@ -408,9 +447,10 @@ export async function POST(request: NextRequest) {
 
     // Update Salesforce with the booking
     let salesforceUpdated = false
+
     try {
       const conn = await getSalesforceConnection()
-      
+
       console.log(`Updating Salesforce ${bookingType} date:`, {
         trainerId: merchantId,
         date: date,
@@ -418,12 +458,15 @@ export async function POST(request: NextRequest) {
         assignedTrainer: assignment.assigned,
         bookingType: bookingType
       })
-      
+
       // First check if we have a valid connection
       if (!conn) {
         console.error('No Salesforce connection available')
         throw new Error('No Salesforce connection available')
       }
+
+      // Note: Current trainer and event ID were already queried earlier in Step 5.5
+      // currentTrainerEmailForDeletion and currentEventIdForDeletion are already set
       
       // Map booking types to Salesforce field names
       const fieldMapping: { [key: string]: { field: string, object: string } } = {
@@ -498,9 +541,6 @@ export async function POST(request: NextRequest) {
           Id: merchantId,
           [mapping.field]: fieldValue
         }
-
-        // For training bookings, also store the datetime value for later use in Portal update
-        const trainingDateTime = bookingType === 'training' ? dateTimeValue : null
 
         // For installation bookings, also update the Assigned_Installer__c field
         if (bookingType === 'installation' && trainer && trainer.name) {
@@ -636,46 +676,8 @@ export async function POST(request: NextRequest) {
               console.log('📝 Setting CSM_Name__c (Training) to User ID:', userId)
               console.log('   This will link the trainer to the merchant record')
 
-              // CRITICAL: Also update the Portal record with the trainer assignment
-              // This allows us to know which trainer's calendar to delete from during rescheduling
-              if (portalIdForUpdate) {
-                try {
-                  const portalUpdateData: any = {
-                    Id: portalIdForUpdate,
-                    Trainer_Name__c: userId  // Store the trainer's User ID
-                  }
-
-                  // Also add the event ID if we have it
-                  if (eventIdField && eventId) {
-                    portalUpdateData[eventIdField] = eventId
-                  }
-
-                  // Add training datetime if available
-                  if (trainingDateTime) {
-                    portalUpdateData.Training_Date__c = trainingDateTime
-                  }
-
-                  console.log(`📝 Updating Portal record with trainer assignment:`, {
-                    portalId: portalIdForUpdate,
-                    userId: userId,
-                    trainerName: trainer.name,
-                    trainerEmail: trainer.email,
-                    updateData: portalUpdateData
-                  })
-
-                  await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
-                  console.log(`✅ Successfully updated Portal with:`)
-                  console.log(`   - Trainer_Name__c (User ID): ${userId}`)
-                  if (eventIdField) console.log(`   - ${eventIdField}: ${eventId}`)
-                  if (trainingDateTime) console.log(`   - Training_Date__c: ${trainingDateTime}`)
-                } catch (portalUpdateError: any) {
-                  console.log(`⚠️ Failed to update Portal with trainer assignment:`, portalUpdateError.message)
-                  console.log(`   Trainer assignment will not be saved, but booking will continue`)
-                }
-              } else {
-                console.log(`⚠️ portalIdForUpdate is null, cannot update Portal with trainer assignment`)
-                console.log(`   This means the Portal record was not found earlier`)
-              }
+              // Note: Trainer assignment is stored in Onboarding_Trainer__c.CSM_Name__c
+              // We don't need to store it in Portal since we query from Onboarding_Trainer__c during rescheduling
             } else {
               console.log('ℹ️ Booking type is not training, skipping CSM_Name__c update')
             }
@@ -720,10 +722,28 @@ export async function POST(request: NextRequest) {
             throw updateError
           }
         }
+
+        // CRITICAL: Also update Onboarding_Portal__c with the new event ID
+        // This is needed for rescheduling to know which event to delete
+        if (portalIdForUpdate && eventIdField && eventId) {
+          try {
+            const portalUpdateData: any = {
+              Id: portalIdForUpdate,
+              [eventIdField]: eventId
+            }
+
+            console.log(`📝 Updating Onboarding_Portal__c.${eventIdField} with new event ID: ${eventId}`)
+            await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
+            console.log(`✅ Successfully updated Onboarding_Portal__c.${eventIdField}`)
+          } catch (portalUpdateError: any) {
+            console.log(`⚠️ Failed to update Portal event ID:`, portalUpdateError.message)
+            console.log(`   Event ID will not be saved for rescheduling, but booking succeeded`)
+          }
+        }
       }
-      
+
       console.log('Salesforce update result:', updateResult)
-      
+
       // Check if update was successful
       if (updateResult.success || updateResult.id) {
         salesforceUpdated = true
