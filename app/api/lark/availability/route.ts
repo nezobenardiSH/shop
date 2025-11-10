@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCombinedAvailability, getSingleTrainerAvailability } from '@/lib/trainer-availability'
-import fs from 'fs/promises'
-import path from 'path'
+import { loadTrainersConfig } from '@/lib/config-loader'
 
 export async function GET(request: NextRequest) {
   try {
     // Read trainers config dynamically to pick up changes without restart
-    const configPath = path.join(process.cwd(), 'config', 'trainers.json')
-    const configContent = await fs.readFile(configPath, 'utf-8')
-    const trainersConfig = JSON.parse(configContent)
+    // Uses config/local.json if available, otherwise falls back to config/trainers.json
+    const trainersConfig = await loadTrainersConfig()
 
     const searchParams = request.nextUrl.searchParams
     const trainerName = searchParams.get('trainerName')
