@@ -22,13 +22,326 @@
 ---
 
 ## Table of Contents
-1. [Calendar ID Management](#calendar-id-management)
-2. [Core Functions Reference](#core-functions-reference)
-3. [Training Schedule Configuration](#training-schedule-configuration)
-4. [Solutions Implemented](#solutions-implemented)
-5. [Technical Architecture](#technical-architecture)
-6. [API Integration Details](#api-integration-details)
-7. [Troubleshooting Guide](#troubleshooting-guide)
+1. [Training Rescheduling Flow](#training-rescheduling-flow)
+2. [Calendar ID Management](#calendar-id-management)
+3. [Core Functions Reference](#core-functions-reference)
+4. [Training Schedule Configuration](#training-schedule-configuration)
+5. [Solutions Implemented](#solutions-implemented)
+6. [Technical Architecture](#technical-architecture)
+7. [API Integration Details](#api-integration-details)
+8. [Troubleshooting Guide](#troubleshooting-guide)
+
+## Training Rescheduling Flow
+
+### Overview
+When a merchant reschedules a training session from one trainer to another, the system must:
+1. Delete the old event from the original trainer's calendar
+2. Create a new event with the new trainer
+3. Update Salesforce records to reflect the change
+
+**Critical Issue Solved**: The system was creating new events but NOT deleting old ones, leaving orphaned events on the original trainer's calendar.
+
+### The Complete Rescheduling Flow
+
+#### Step 1: Query Current Trainer and Event ID (Early in Request)
+**File**: `app/api/lark/book-training/route.ts` (lines 207-280)
+
+When a rescheduling request comes in, the system immediately queries Salesforce to find:
+1. **Current Trainer**: `Onboarding_Trainer__c.CSM_Name__c` (User ID lookup to get email)
+2. **Current Event ID**: `Onboarding_Portal__c.Training_Event_ID__c` (the Lark event to delete)
+
+```typescript
+// Query Onboarding_Trainer__c for current trainer
+const trainerQuery = `
+  SELECT CSM_Name__c, CSM_Name__r.Email
+  FROM Onboarding_Trainer__c
+  WHERE Id = '${merchantId}'
+  LIMIT 1
+`
+
+// Query Onboarding_Portal__c for current event ID
+const portalQuery = `
+  SELECT Training_Event_ID__c
+  FROM Onboarding_Portal__c
+  WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+  LIMIT 1
+`
+
+// Store for later use
+let currentTrainerEmailForDeletion: string | null = null
+let currentEventIdForDeletion: string | null = null
+
+if (trainerResult.totalSize > 0) {
+  currentTrainerEmailForDeletion = trainerResult.records[0].CSM_Name__r?.Email
+}
+
+if (portalResult.totalSize > 0) {
+  currentEventIdForDeletion = portalResult.records[0].Training_Event_ID__c
+}
+```
+
+**Why This Matters**:
+- `CSM_Name__c` is the source of truth for which trainer is currently assigned
+- `Training_Event_ID__c` is the source of truth for which event to delete
+- These must be queried BEFORE deletion so we know what to delete
+
+#### Step 2: Delete Old Event from Original Trainer's Calendar
+**File**: `app/api/lark/book-training/route.ts` (lines 282-340)
+
+Using the values from Step 1, delete the old event:
+
+```typescript
+// Use values from Salesforce, not from frontend
+const trainerEmailForDeletion = currentTrainerEmailForDeletion || currentTrainerEmail
+const eventIdForDeletion = currentEventIdForDeletion || existingEventId
+
+console.log('🗑️ Rescheduling detected - attempting to cancel existing event:', {
+  eventId: eventIdForDeletion,
+  trainerEmailForDeletion: trainerEmailForDeletion,
+  source: {
+    trainer: currentTrainerEmailForDeletion ? 'Onboarding_Trainer__c.CSM_Name__c' : 'frontend',
+    eventId: currentEventIdForDeletion ? 'Onboarding_Portal__c.Training_Event_ID__c' : 'frontend'
+  }
+})
+
+// Delete from the correct trainer's calendar
+await larkService.cancelTraining(
+  trainerEmailForDeletion,  // Original trainer's email
+  deleteCalendarId,
+  eventIdForDeletion,       // The event ID to delete
+  merchantName
+)
+```
+
+**Critical Points**:
+- ✅ Uses trainer email from `Onboarding_Trainer__c.CSM_Name__c` (current trainer)
+- ✅ Uses event ID from `Onboarding_Portal__c.Training_Event_ID__c` (current event)
+- ✅ Deletes from the ORIGINAL trainer's calendar (not the new trainer's)
+- ✅ Falls back to frontend values if Salesforce query fails
+
+#### Step 3: Create New Event with New Trainer
+**File**: `app/api/lark/book-training/route.ts` (lines 340-450)
+
+After successful deletion, create the new event:
+
+```typescript
+// Create new event with new trainer
+const eventId = await larkService.bookTraining({
+  trainerEmail: trainer.email,  // NEW trainer
+  merchantName,
+  date,
+  startTime,
+  endTime,
+  // ... other details
+})
+```
+
+#### Step 4: Update Onboarding_Trainer__c with New Trainer
+**File**: `app/api/lark/book-training/route.ts` (lines 600-700)
+
+Update the merchant's trainer assignment:
+
+```typescript
+// Update CSM_Name__c with new trainer's User ID
+const updateData: any = {
+  Id: merchantId,
+  CSM_Name__c: newTrainerUserId,  // New trainer's User ID
+  Training_Date__c: date
+}
+
+await conn.sobject('Onboarding_Trainer__c').update(updateData)
+console.log('✅ Updated Onboarding_Trainer__c.CSM_Name__c with new trainer')
+```
+
+**Why User ID?**:
+- `CSM_Name__c` is a lookup field to the User object
+- Must store the User ID, not the email
+- System resolves email → User ID via Salesforce query
+
+#### Step 5: Update Onboarding_Portal__c with New Event ID
+**File**: `app/api/lark/book-training/route.ts` (lines 724-738)
+
+Store the new event ID for future rescheduling:
+
+```typescript
+// Update Portal with new event ID
+const portalUpdateData: any = {
+  Id: portalIdForUpdate,
+  Training_Event_ID__c: eventId  // New event ID
+}
+
+await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
+console.log('✅ Updated Onboarding_Portal__c.Training_Event_ID__c with new event ID')
+```
+
+**Why This Matters**:
+- Next time the merchant reschedules, system will know which event to delete
+- Prevents orphaned events from accumulating
+
+### Data Flow Diagram
+
+```
+Rescheduling Request
+    ↓
+[Step 1] Query Salesforce
+├── Get current trainer: Onboarding_Trainer__c.CSM_Name__c
+└── Get current event ID: Onboarding_Portal__c.Training_Event_ID__c
+    ↓
+[Step 2] Delete Old Event
+├── Use current trainer's email
+├── Use current event ID
+└── Delete from original trainer's calendar
+    ↓
+[Step 3] Create New Event
+├── Create with new trainer
+└── Get new event ID from Lark
+    ↓
+[Step 4] Update Trainer Assignment
+├── Update Onboarding_Trainer__c.CSM_Name__c
+└── Store new trainer's User ID
+    ↓
+[Step 5] Update Event ID
+├── Update Onboarding_Portal__c.Training_Event_ID__c
+└── Store new event ID
+    ↓
+✅ Rescheduling Complete
+```
+
+### Key Salesforce Fields
+
+#### Onboarding_Trainer__c (Merchant Record)
+- **CSM_Name__c** (Lookup to User)
+  - **Purpose**: Stores which trainer is assigned to this merchant
+  - **Type**: Lookup field to User object
+  - **Value**: User ID (e.g., "0051a000001SZQaAAO")
+  - **Used For**: Finding current trainer during rescheduling
+  - **Related Field**: CSM_Name__r.Email (to get trainer's email)
+
+#### Onboarding_Portal__c (Portal Record)
+- **Training_Event_ID__c** (Text, 100 chars)
+  - **Purpose**: Stores the Lark calendar event ID
+  - **Type**: Text field
+  - **Value**: Lark event ID (e.g., "dc1ed50d-b2e9-4fac-809c-6c45ee3c742a_0")
+  - **Used For**: Knowing which event to delete during rescheduling
+  - **Relationship**: Links to Onboarding_Trainer_Record__c (the merchant)
+
+### Common Issues and Solutions
+
+#### Issue: "Event not found" Error During Rescheduling
+**Symptoms**:
+```
+❌ Failed to delete calendar event:
+  Event ID: dc1ed50d-b2e9-4fac-809c-6c45ee3c742a_0
+  Error: Lark API error: event not found
+```
+
+**Root Causes**:
+1. **Event ID is wrong** - Stored event ID doesn't match actual event
+2. **Event already deleted** - Someone deleted it manually from calendar
+3. **Wrong trainer's calendar** - Trying to delete from new trainer instead of original
+4. **Event ID format issue** - Event ID has changed or is corrupted
+
+**Solutions**:
+1. ✅ **Verify Salesforce data**:
+   ```bash
+   # Check what event ID is stored
+   SELECT Training_Event_ID__c FROM Onboarding_Portal__c WHERE Id = 'portal_id'
+
+   # Check which trainer is assigned
+   SELECT CSM_Name__r.Email FROM Onboarding_Trainer__c WHERE Id = 'merchant_id'
+   ```
+
+2. ✅ **Check Lark calendar manually**:
+   - Open trainer's Lark calendar
+   - Search for the event
+   - Verify it exists and has the correct ID
+
+3. ✅ **Graceful fallback**:
+   - If deletion fails, system continues with new booking
+   - Old event remains on calendar (not ideal but doesn't break rescheduling)
+   - Log the error for manual cleanup
+
+#### Issue: Rescheduling to Same Trainer
+**Symptoms**:
+- Merchant reschedules but picks the same trainer
+- System tries to delete event from trainer's calendar
+- Event gets deleted, then recreated immediately
+
+**Solution**:
+- This is actually correct behavior
+- Old event is deleted, new event is created
+- Ensures event details (time, description) are updated
+- No data loss occurs
+
+#### Issue: Trainer Not Found in Salesforce
+**Symptoms**:
+```
+⚠️ Could not get User ID for trainer, CSM_Name__c will not be updated
+```
+
+**Root Cause**:
+- Trainer email in `config/trainers.json` doesn't match Salesforce User email
+- Trainer is not active in Salesforce
+- Trainer doesn't exist in Salesforce
+
+**Solution**:
+1. Verify trainer email in `config/trainers.json` matches Salesforce exactly
+2. Check trainer is Active in Salesforce (IsActive = true)
+3. Add trainer to Salesforce if missing
+
+### Testing Rescheduling
+
+#### Manual Test Steps
+1. **Book initial training**:
+   - Select merchant
+   - Choose trainer (e.g., Nezo)
+   - Select date/time
+   - Confirm booking
+
+2. **Verify in Salesforce**:
+   - Check `Onboarding_Trainer__c.CSM_Name__c` = Nezo's User ID
+   - Check `Onboarding_Portal__c.Training_Event_ID__c` = event ID
+
+3. **Verify in Lark Calendar**:
+   - Open Nezo's calendar
+   - Confirm event appears
+
+4. **Reschedule to different trainer**:
+   - Click "Reschedule"
+   - Select new trainer (e.g., Jia En)
+   - Select new date/time
+   - Confirm rescheduling
+
+5. **Verify deletion**:
+   - Check Nezo's calendar
+   - Old event should be GONE
+   - New event should appear on Jia En's calendar
+
+6. **Verify Salesforce update**:
+   - Check `Onboarding_Trainer__c.CSM_Name__c` = Jia En's User ID
+   - Check `Onboarding_Portal__c.Training_Event_ID__c` = new event ID
+
+#### Debug Logging
+The system logs detailed information during rescheduling:
+
+```
+🗑️ Rescheduling detected - attempting to cancel existing event: {
+  eventId: 'dc1ed50d-b2e9-4fac-809c-6c45ee3c742a_0',
+  currentTrainerEmail: 'nezo.benardi@storehub.com',
+  newTrainerEmail: 'jiaen.chai@storehub.com',
+  trainerEmailForDeletion: 'nezo.benardi@storehub.com',
+  source: {
+    trainer: 'Onboarding_Trainer__c.CSM_Name__c',
+    eventId: 'Onboarding_Portal__c.Training_Event_ID__c'
+  }
+}
+✅ Successfully cancelled existing event
+✅ Successfully created new event
+✅ Updated Onboarding_Trainer__c.CSM_Name__c with new trainer
+✅ Updated Onboarding_Portal__c.Training_Event_ID__c with new event ID
+```
+
+---
 
 ## Calendar ID Management
 
