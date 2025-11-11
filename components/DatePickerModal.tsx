@@ -234,7 +234,15 @@ export default function DatePickerModal({
         
         response = await fetch(url)
         const data = await response.json()
-        
+
+        console.log('🔧 Installation availability API response:', {
+          status: response.status,
+          ok: response.ok,
+          type: data.type,
+          availabilityCount: data.availability?.length,
+          rawData: data
+        })
+
         if (response.ok) {
           if (data.type === 'internal') {
             setIsExternalVendor(false)
@@ -248,6 +256,8 @@ export default function DatePickerModal({
                 availableTrainers: slot.availableInstallers || []
               }))
             }))
+            console.log('🔧 Transformed availability:', transformedAvailability.length, 'days')
+            console.log('🔧 First 3 days:', transformedAvailability.slice(0, 3))
             setAvailability(transformedAvailability)
           } else {
             // External vendor - set flag and generate availability
@@ -281,9 +291,12 @@ export default function DatePickerModal({
               })
             }
 
+            console.log('🔧 External vendor availability generated:', externalAvailability.length, 'days')
+            console.log('🔧 First 3 days:', externalAvailability.slice(0, 3))
             setAvailability(externalAvailability)
           }
         } else {
+          console.error('❌ Installation availability API error:', data)
           setMessage(data.error || 'Failed to fetch installer availability')
         }
       } else {
@@ -529,9 +542,14 @@ export default function DatePickerModal({
 
   const isDateAvailable = (date: Date | null) => {
     if (!date) return false
-    
+
+    console.log(`\n🔍 Checking date availability for: ${date.toDateString()}`)
+    console.log('  -> Booking type:', bookingType)
+    console.log('  -> Availability array length:', availability?.length || 0)
+
     // If onsite training without state, no dates are available
     if (bookingType === 'training' && serviceType === 'onsite' && !merchantState) {
+      console.log('  -> ❌ BLOCKED: Onsite training requires merchant state')
       return false
     }
 
@@ -556,16 +574,23 @@ export default function DatePickerModal({
     const day = singaporeNow.getDate()
     let minDate = createSingaporeDate(year, month, day)
 
-    // For training bookings, the soonest they can book is tomorrow (not today)
+    // For training bookings, the soonest they can book is day after tomorrow (D+2)
+    // ALSO: Training cannot be booked if installation is not scheduled yet
     if (bookingType === 'training') {
-      const tomorrow = new Date(minDate)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      minDate = tomorrow
-      console.log('  -> Training cannot be booked today. Earliest date:', minDate.toDateString())
+      // Check if installation is booked (required for training)
+      if (!installationDate) {
+        console.log('  -> ❌ BLOCKED: Training cannot be booked without installation date')
+        return false // Block all dates if installation not booked
+      }
+
+      const dayAfterTomorrow = new Date(minDate)
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
+      minDate = dayAfterTomorrow
+      console.log('  -> Training initial booking requires 2 days advance. Earliest date:', minDate.toDateString())
     }
 
     // For installation bookings with external vendor, require 2 days advance booking
-    // For internal installers, earliest is tomorrow
+    // For internal installers, initial booking requires 2 days advance
     // For rescheduling, require 1 business day buffer (weekdays only)
     if (bookingType === 'installation') {
       if (currentBooking?.eventId) {
@@ -598,10 +623,10 @@ export default function DatePickerModal({
         minDate = dayAfterTomorrow
         console.log('  -> External vendor installation requires 2 days advance. Earliest date:', minDate.toDateString())
       } else {
-        const tomorrow = new Date(minDate)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        minDate = tomorrow
-        console.log('  -> Internal installation cannot be booked today. Earliest date:', minDate.toDateString())
+        const dayAfterTomorrow = new Date(minDate)
+        dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
+        minDate = dayAfterTomorrow
+        console.log('  -> Internal installation initial booking requires 2 days advance. Earliest date:', minDate.toDateString())
       }
     }
 
@@ -651,22 +676,40 @@ export default function DatePickerModal({
     maxDate.setDate(maxDate.getDate() + 14)
 
     // For installation bookings, training date is the upper bound
-    if (bookingType === 'installation' && trainingDate) {
-      // Parse training date in Singapore timezone
-      const trainDateParts = trainingDate.split('-')
-      const trainDate = createSingaporeDate(
-        parseInt(trainDateParts[0]),
-        parseInt(trainDateParts[1]) - 1,
-        parseInt(trainDateParts[2])
-      )
-      // Installation must be before training (at least 1 day before)
-      const dayBeforeTraining = new Date(trainDate)
-      dayBeforeTraining.setDate(dayBeforeTraining.getDate() - 1)
+    if (bookingType === 'installation') {
+      console.log('  -> Checking training date constraint for installation:', {
+        trainingDate: trainingDate,
+        hasTrainingDate: !!trainingDate
+      })
 
-      // Use the earlier of 14-day window or training date - 1
-      if (dayBeforeTraining < maxDate) {
-        maxDate = dayBeforeTraining
-        console.log('  -> Installation limited by training date:', trainingDate, 'Max date:', maxDate.toDateString())
+      if (trainingDate) {
+        // Parse training date in Singapore timezone
+        const trainDateParts = trainingDate.split('-')
+        const trainDate = createSingaporeDate(
+          parseInt(trainDateParts[0]),
+          parseInt(trainDateParts[1]) - 1,
+          parseInt(trainDateParts[2])
+        )
+        // Installation must be before training (at least 1 day before)
+        const dayBeforeTraining = new Date(trainDate)
+        dayBeforeTraining.setDate(dayBeforeTraining.getDate() - 1)
+
+        console.log('  -> Training date constraint:', {
+          trainingDate: trainDate.toDateString(),
+          dayBeforeTraining: dayBeforeTraining.toDateString(),
+          currentMaxDate: maxDate.toDateString(),
+          willApplyConstraint: dayBeforeTraining < maxDate
+        })
+
+        // Use the earlier of 14-day window or training date - 1
+        if (dayBeforeTraining < maxDate) {
+          maxDate = dayBeforeTraining
+          console.log('  -> ✅ Installation LIMITED by training date. Max date:', maxDate.toDateString())
+        } else {
+          console.log('  -> Training date is far enough, not limiting installation window')
+        }
+      } else {
+        console.log('  -> ⚠️ WARNING: No training date set for installation booking. Installation can be scheduled without upper bound constraint.')
       }
     }
 
@@ -720,7 +763,11 @@ export default function DatePickerModal({
     console.log('  -> Date string:', dateStr, 'Found in availability:', !!dayAvailability, 'Has available slots:', hasAvailableSlots)
     if (dayAvailability) {
       console.log('     Slots:', dayAvailability.slots.map(s => `${s.start}-${s.end}:${s.available}`).join(', '))
+    } else {
+      console.log('     ❌ No availability data for this date')
     }
+
+    console.log('  -> Final result:', hasAvailableSlots ? '✅ AVAILABLE' : '❌ NOT AVAILABLE')
 
     return hasAvailableSlots
   }
@@ -906,6 +953,18 @@ export default function DatePickerModal({
             </div>
           ) : null}
           
+          {/* Show error when training is attempted without installation */}
+          {bookingType === 'training' && !installationDate && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="text-base font-medium text-red-800">
+                ⚠️ Installation must be scheduled first
+              </div>
+              <div className="text-sm text-red-700 mt-1">
+                Training cannot be booked until installation has been scheduled. Please schedule the installation date first.
+              </div>
+            </div>
+          )}
+
           {/* Show warning for missing service type configuration */}
           {bookingType === 'training' && serviceType === 'none' && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -936,7 +995,7 @@ export default function DatePickerModal({
                 <Globe className="inline h-4 w-4 mr-1" />
                 Training Language
               </label>
-              <div className={`flex gap-3 ${(serviceType === 'onsite' && !merchantState) || serviceType === 'none' ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className={`flex gap-3 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !installationDate)) ? 'opacity-50 pointer-events-none' : ''}`}>
                 {['Chinese', 'Bahasa Malaysia', 'English'].map((lang) => {
                   const isAvailable = availableLanguages.includes(lang)
                   const isDisabled = (serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !isAvailable
@@ -1029,7 +1088,7 @@ export default function DatePickerModal({
           {/* Calendar and Time Slots Section */}
           <div className="flex flex-col md:flex-row">
             {/* Calendar Section - Full width on mobile - Disabled when state is missing or service type not configured */}
-            <div className={`md:flex-1 p-4 md:p-6 md:border-r border-gray-200 ${(bookingType === 'training' && serviceType === 'onsite' && !merchantState) || serviceType === 'none' ? 'opacity-30 pointer-events-none' : ''}`}>
+            <div className={`md:flex-1 p-4 md:p-6 md:border-r border-gray-200 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !installationDate)) ? 'opacity-30 pointer-events-none' : ''}`}>
             {/* Desktop: Traditional calendar grid */}
             <div className="hidden md:block">
               <div className="flex items-center justify-between mb-4">
@@ -1180,7 +1239,7 @@ export default function DatePickerModal({
           </div>
 
             {/* Time Slots Section - Full width on mobile, sidebar on desktop - Disabled when state is missing or service type not configured */}
-            <div className={`w-full md:w-96 bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 ${(bookingType === 'training' && serviceType === 'onsite' && !merchantState) || serviceType === 'none' ? 'opacity-30 pointer-events-none' : ''}`}>
+            <div className={`w-full md:w-96 bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !installationDate)) ? 'opacity-30 pointer-events-none' : ''}`}>
               <div className="p-4 md:p-6">
             {loading || isFilteringSlots ? (
               <div className="flex justify-center items-center h-full">
@@ -1246,13 +1305,14 @@ export default function DatePickerModal({
         <div className="p-4 md:p-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3 bg-white flex-shrink-0">
           <button
             onClick={onClose}
-            className="w-full sm:w-auto px-6 py-2.5 text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors order-2 sm:order-1"
+            disabled={bookingStatus === 'loading' || bookingStatus === 'success'}
+            className="w-full sm:w-auto px-6 py-2.5 text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-2 sm:order-1"
           >
             Cancel
           </button>
           <button
             onClick={handleBooking}
-            disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading' || (bookingType === 'training' && serviceType === 'onsite' && !merchantState) || serviceType === 'none'}
+            disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading' || bookingStatus === 'success' || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !installationDate))}
             className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed order-1 sm:order-2"
           >
             {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}

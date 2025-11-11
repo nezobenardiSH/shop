@@ -78,9 +78,10 @@ const isWithinNextDay = (dateString: string | null | undefined): boolean => {
     }
   }
 
-  // Return true if there is less than 1 business day remaining
+  // Return true if there is 1 or less business days remaining
   // This means rescheduling is NOT allowed (need at least 1 business day buffer)
-  return businessDaysRemaining < 1
+  // D-1 or same day bookings cannot be rescheduled
+  return businessDaysRemaining <= 1
 }
 
 export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange }: OnboardingTimelineProps) {
@@ -1030,18 +1031,25 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 {(() => {
                   const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
                   return (
-                    <button
-                      onClick={() => !cannotReschedule && handleBookingClick('installation', trainerData?.installationDate)}
-                      disabled={cannotReschedule}
-                      className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                        cannotReschedule
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
-                      }`}
-                      title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
-                    >
-                      {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
-                    </button>
+                    <div>
+                      <button
+                        onClick={() => !cannotReschedule && handleBookingClick('installation', trainerData?.installationDate)}
+                        disabled={cannotReschedule}
+                        className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+                          cannotReschedule
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
+                        }`}
+                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
+                      >
+                        {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
+                      </button>
+                      {cannotReschedule && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          To reschedule, please contact your onboarding manager
+                        </div>
+                      )}
+                    </div>
                   )
                 })()}
               </div>
@@ -1128,18 +1136,25 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 {(() => {
                   const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
                   return (
-                    <button
-                      onClick={() => !cannotReschedule && handleBookingClick('training', trainerData?.trainingDate)}
-                      disabled={cannotReschedule}
-                      className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                        cannotReschedule
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
-                      }`}
-                      title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
-                    >
-                      {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
-                    </button>
+                    <div>
+                      <button
+                        onClick={() => !cannotReschedule && handleBookingClick('training', trainerData?.trainingDate)}
+                        disabled={cannotReschedule}
+                        className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+                          cannotReschedule
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
+                        }`}
+                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
+                      >
+                        {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
+                      </button>
+                      {cannotReschedule && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          To reschedule, please contact your onboarding manager
+                        </div>
+                      )}
+                    </div>
                   )
                 })()}
               </div>
@@ -1199,7 +1214,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.onboardingServicesBought || 'Standard Package'}
+                {trainerData?.onboardingServicesBought || 'None'}
               </div>
             </div>
 
@@ -2215,31 +2230,41 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   </>
                 )
               })()}
-              <div className="flex items-center gap-2">
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.installationDate
-                    ? formatDateTime(trainerData.installationDate)
-                    : 'Not Scheduled'}
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-gray-900">
+                    {trainerData?.installationDate
+                      ? formatDateTime(trainerData.installationDate)
+                      : 'Not Scheduled'}
+                  </div>
+                  {(() => {
+                    const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
+                    return (
+                      <button
+                        onClick={() => !cannotReschedule && handleBookingClick('installation', trainerData?.installationDate)}
+                        disabled={cannotReschedule}
+                        className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+                          cannotReschedule
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
+                        }`}
+                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
+                      >
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
+                      </button>
+                    )
+                  })()}
                 </div>
                 {(() => {
                   const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
-                  return (
-                    <button
-                      onClick={() => !cannotReschedule && handleBookingClick('installation', trainerData?.installationDate)}
-                      disabled={cannotReschedule}
-                      className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                        cannotReschedule
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
-                      }`}
-                      title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
-                    >
-                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
-                    </button>
-                  )
+                  return cannotReschedule ? (
+                    <div className="mt-2 text-sm text-gray-600">
+                      To reschedule, please contact your onboarding manager
+                    </div>
+                  ) : null
                 })()}
               </div>
             </div>
@@ -2325,31 +2350,41 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {/* Training Date - Editable */}
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Date</div>
-              <div className="flex items-center gap-2">
-                <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.trainingDate
-                    ? formatDateTime(trainerData.trainingDate)
-                    : 'Not Scheduled'}
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-gray-900">
+                    {trainerData?.trainingDate
+                      ? formatDateTime(trainerData.trainingDate)
+                      : 'Not Scheduled'}
+                  </div>
+                  {(() => {
+                    const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
+                    return (
+                      <button
+                        onClick={() => !cannotReschedule && handleBookingClick('training', trainerData?.trainingDate)}
+                        disabled={cannotReschedule}
+                        className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+                          cannotReschedule
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
+                        }`}
+                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
+                      >
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
+                      </button>
+                    )
+                  })()}
                 </div>
                 {(() => {
                   const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
-                  return (
-                    <button
-                      onClick={() => !cannotReschedule && handleBookingClick('training', trainerData?.trainingDate)}
-                      disabled={cannotReschedule}
-                      className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                        cannotReschedule
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
-                      }`}
-                      title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
-                    >
-                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
-                    </button>
-                  )
+                  return cannotReschedule ? (
+                    <div className="mt-2 text-sm text-gray-600">
+                      To reschedule, please contact your onboarding manager
+                    </div>
+                  ) : null
                 })()}
               </div>
             </div>
@@ -2430,7 +2465,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.onboardingServicesBought || 'Standard Package'}
+                {trainerData?.onboardingServicesBought || 'None'}
               </div>
             </div>
           </div>
