@@ -57,10 +57,18 @@ export async function getCombinedAvailability(
   )
 
   // Filter by location if merchant state is provided
+  // Note: merchantState is only passed for ONSITE training
+  // For REMOTE training, merchantState will be undefined and no location filtering occurs
   if (merchantState) {
     const { getLocationCategoryFromState } = await import('./location-matcher')
     const locationCategory = getLocationCategoryFromState(merchantState)
-    console.log(`📍 Merchant state "${merchantState}" → Location category: "${locationCategory}"`)
+    console.log(`📍 Onsite training - Merchant state "${merchantState}" → Location category: "${locationCategory}"`)
+
+    // If location category cannot be determined, no trainers can be assigned
+    if (!locationCategory) {
+      console.log('❌ Location category could not be determined from state - no trainers available for onsite training')
+      return [] // Return empty availability - no trainers can serve unknown locations
+    }
 
     const filteredTrainers = trainers.filter((trainer: any) => {
       if (!trainer.location || trainer.location.length === 0) {
@@ -70,16 +78,26 @@ export async function getCombinedAvailability(
       return trainer.location.includes(locationCategory)
     })
     console.log(`Location filtering: ${trainers.length} trainers → ${filteredTrainers.length} trainers`)
+    
+    if (filteredTrainers.length === 0 && locationCategory === 'Outside of Klang Valley') {
+      console.warn('⚠️ No trainers assigned to "Outside of Klang Valley" category')
+      console.warn('   Affected areas include: Melaka, Perak, Terengganu, Pahang, Negeri Sembilan, etc.')
+      console.warn('   Merchants in these areas cannot book onsite training')
+    }
+    
     console.log('Trainers after location filter:', filteredTrainers.map((t: any) => t.name))
     trainers = filteredTrainers
+  } else {
+    console.log('📍 Remote training or no location provided - showing all trainers')
   }
   
   console.log(`Checking availability for ${trainers.length} trainers:`, trainers.map((t: any) => t.name))
   
-  // Fetch availability for each trainer
+  // Fetch availability for all trainers in parallel
   const trainerAvailabilities: Map<string, TrainerAvailability> = new Map()
   
-  for (const trainer of trainers) {
+  // Process all trainers in parallel for better performance
+  const availabilityPromises = trainers.map(async (trainer) => {
     try {
       // First check if trainer has OAuth token
       const { larkOAuthService } = await import('./lark-oauth-service')
@@ -88,7 +106,7 @@ export async function getCombinedAvailability(
       if (!hasToken) {
         console.log(`⚠️ ${trainer.name} has no OAuth token - SKIPPING (not available for booking)`)
         // If trainer hasn't authorized, they cannot be booked, so skip them
-        continue
+        return null
       }
       
       // Extract busy times for this trainer from actual calendar events only
@@ -121,21 +139,34 @@ export async function getCombinedAvailability(
         // Fallback to empty busy slots (assume available)
       }
       
-      trainerAvailabilities.set(trainer.name, {
+      return {
         trainerName: trainer.name,
         trainerEmail: trainer.email,
         busySlots
-      })
+      }
     } catch (error) {
       console.error(`Failed to get availability for ${trainer.name}:`, error)
       // If we can't get availability, assume trainer is available
-      trainerAvailabilities.set(trainer.name, {
+      return {
         trainerName: trainer.name,
         trainerEmail: trainer.email,
         busySlots: []
-      })
+      }
     }
-  }
+  })
+
+  // Wait for all trainer availability checks to complete
+  console.log(`⏳ Checking availability for ${trainers.length} trainers in parallel...`)
+  const results = await Promise.all(availabilityPromises)
+  
+  // Add results to the map (filtering out null results from unauthorized trainers)
+  results.forEach(result => {
+    if (result) {
+      trainerAvailabilities.set(result.trainerName, result)
+    }
+  })
+  
+  console.log(`✅ Completed availability check for ${trainerAvailabilities.size} authorized trainers`)
   
   // Now combine the availabilities
   const combinedAvailability: DayAvailability[] = []
@@ -173,41 +204,6 @@ export async function getCombinedAvailability(
         const availableLocationsSet = new Set<string>()
         
         trainerAvailabilities.forEach((trainerInfo, trainerName) => {
-          // Special detailed logging for Nezo's slots on Oct 14
-          if (dateStr === '2025-10-14' && (slot.start === '09:00' || slot.start === '13:00' || slot.start === '16:00') && (trainerName === 'Nezo' || trainerInfo.trainerEmail === 'nezo.benardi@storehub.com')) {
-            console.log(`\n🔍 DETAILED CHECK: ${trainerName} for ${slot.start}-${slot.end} on ${dateStr}`)
-            console.log(`  Number of busy slots to check: ${trainerInfo.busySlots.length}`)
-            console.log(`  Slot time (local): ${slotStart.toISOString()} to ${slotEnd.toISOString()}`)
-            
-            trainerInfo.busySlots.forEach((busy, idx) => {
-              const busyStart = new Date(busy.start)
-              const busyEnd = new Date(busy.end)
-              const overlaps = (slotStart < busyEnd && slotEnd > busyStart)
-              
-              // Convert to Singapore time for readability
-              const busyStartLocal = busyStart.toLocaleString('en-US', { 
-                timeZone: 'Asia/Singapore', 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true,
-                day: '2-digit',
-                month: 'short'
-              })
-              const busyEndLocal = busyEnd.toLocaleString('en-US', { 
-                timeZone: 'Asia/Singapore', 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true
-              })
-              
-              console.log(`  Busy period ${idx + 1}: ${busyStartLocal} - ${busyEndLocal}`)
-              console.log(`    UTC: ${busy.start} to ${busy.end}`)
-              if (overlaps) {
-                console.log(`    ⚠️ OVERLAPS WITH 4-6PM! This is blocking the slot.`)
-              }
-            })
-          }
-          
           const isBusy = trainerInfo.busySlots.some(busy => {
             const busyStart = new Date(busy.start)
             const busyEnd = new Date(busy.end)
@@ -295,11 +291,19 @@ export async function getSlotAvailability(
     t.email && t.name !== 'Nasi Lemak'
   )
 
-  // Filter by location if merchant state is provided (for onsite training)
+  // Filter by location if merchant state is provided
+  // Note: merchantState is only passed for ONSITE training
+  // For REMOTE training, merchantState will be undefined and no location filtering occurs
   if (merchantState) {
     const { getLocationCategoryFromState } = await import('./location-matcher')
     const locationCategory = getLocationCategoryFromState(merchantState)
-    console.log(`📍 Merchant state "${merchantState}" → Location category: "${locationCategory}"`)
+    console.log(`📍 Onsite training - Merchant state "${merchantState}" → Location category: "${locationCategory}"`)
+
+    // If location category cannot be determined, no trainers available for onsite training
+    if (!locationCategory) {
+      console.log('❌ Location category could not be determined - no trainers available for onsite training')
+      return { available: false, availableTrainers: [] }
+    }
 
     // Filter trainers by location category
     const filteredTrainers = trainers.filter((trainer: any) => {
@@ -311,8 +315,16 @@ export async function getSlotAvailability(
     })
 
     console.log(`Location filtering: ${trainers.length} trainers → ${filteredTrainers.length} trainers`)
+    
+    if (filteredTrainers.length === 0 && locationCategory === 'Outside of Klang Valley') {
+      console.warn('⚠️ No trainers assigned to "Outside of Klang Valley" category')
+      console.warn('   Merchant cannot book onsite training in this location')
+    }
+    
     console.log('Trainers after location filter:', filteredTrainers.map((t: any) => t.name))
     trainers = filteredTrainers
+  } else {
+    console.log('📍 Remote training or no location provided - showing all trainers')
   }
 
   const availableTrainers: string[] = []
@@ -434,21 +446,16 @@ export async function assignTrainer(
     console.log(`Qualified trainers: ${qualifiedTrainers.map(t => t.name).join(', ')}`)
 
     if (qualifiedTrainers.length === 0) {
-      // Fallback: No trainers match all required languages
-      // Use trainers who match at least one language
-      qualifiedTrainers = trainerDetails.filter(({ details }) => {
-        return requiredLanguages.some((reqLang: any) =>
-          details.languages?.some((trainerLang: any) =>
-            trainerLang.toLowerCase() === reqLang.toLowerCase()
-          )
-        )
+      // No trainers match ALL required languages
+      // This is a critical issue - we should not assign trainers who don't speak the language
+      console.error('❌ No trainers available who speak all required languages:', requiredLanguages.join(', '))
+      console.log('Available trainers and their languages:')
+      trainerDetails.forEach(({ name, details }) => {
+        console.log(`  - ${name}: ${details.languages?.join(', ') || 'No languages specified'}`)
       })
-
-      if (qualifiedTrainers.length === 0) {
-        // Still no match, use all available trainers
-        console.log('⚠️ No trainers match required languages, using all available trainers')
-        qualifiedTrainers = trainerDetails
-      }
+      
+      // Return error instead of assigning incompatible trainer
+      throw new Error(`No trainers available who speak the required language(s): ${requiredLanguages.join(', ')}`)
     }
   }
 

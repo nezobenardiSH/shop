@@ -6,6 +6,7 @@ import { sendBookingNotification } from '@/lib/lark-notifications'
 import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
 import { verifyToken } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
+import trainersConfig from '@/config/trainers.json'
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,6 +91,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    // Determine if location filtering is needed
+    // - Onsite training: YES - filter trainers by merchant location
+    // - Remote training: NO - show all trainers regardless of location
     const filterByLocation = shouldFilterByLocation(serviceType, bookingType)
 
     console.log('🔍 Service Type Detection:', {
@@ -169,8 +173,23 @@ export async function POST(request: NextRequest) {
     // Step 4: Intelligently assign a trainer based on language requirements
     console.log('Available trainers for slot:', trainersWithAuth)
     console.log('Required languages:', trainerLanguages)
-    const assignment = await assignTrainer(trainersWithAuth, trainerLanguages)
-    console.log('Assigned trainer:', assignment)
+    
+    let assignment
+    try {
+      assignment = await assignTrainer(trainersWithAuth, trainerLanguages)
+      console.log('Assigned trainer:', assignment)
+    } catch (error: any) {
+      // Language requirements couldn't be met
+      console.error('Language assignment failed:', error.message)
+      return NextResponse.json(
+        { 
+          error: 'No trainers available with required language skills',
+          details: error.message,
+          availableTrainers: trainersWithAuth
+        },
+        { status: 400 }
+      )
+    }
 
     // Step 5: Get the assigned trainer's details
     const trainer = await getTrainerDetails(assignment.assigned)
@@ -281,106 +300,60 @@ export async function POST(request: NextRequest) {
 
     // Step 5.6: If this is a reschedule (existingEventId provided), delete the old event first
     if (existingEventId && !mockMode) {
-      try {
-        // Use the full event ID as returned by Lark - don't remove any suffixes
-        // Lark may add suffixes like _0 for event instances, and these are part of the valid ID
+      let deleted = false
+      const trainerEmailForDeletion = currentTrainerEmailForDeletion || currentTrainerEmail
+      const eventIdForDeletion = currentEventIdForDeletion || existingEventId
 
-        // CRITICAL: Use current trainer and event ID from Salesforce
-        // Current trainer: Onboarding_Trainer__c.CSM_Name__c (who has the event)
-        // Current event ID: Onboarding_Portal__c.Training_Event_ID__c (the event to delete)
-        const trainerEmailForDeletion = currentTrainerEmailForDeletion || currentTrainerEmail
-        const eventIdForDeletion = currentEventIdForDeletion || existingEventId
+      console.log('🗑️ Rescheduling detected - attempting to delete existing event:', {
+        eventId: eventIdForDeletion,
+        expectedTrainer: trainerEmailForDeletion
+      })
 
-        console.log('🗑️ Rescheduling detected - attempting to cancel existing event:', {
-          eventId: eventIdForDeletion,
-          eventIdLength: eventIdForDeletion?.length,
-          currentTrainerEmail: currentTrainerEmail,
-          newTrainerEmail: trainer.email,
-          trainerEmailForDeletion: trainerEmailForDeletion,
-          calendarId: calendarId,
-          source: {
-            trainer: currentTrainerEmailForDeletion ? 'Onboarding_Trainer__c.CSM_Name__c' : 'frontend',
-            eventId: currentEventIdForDeletion ? 'Onboarding_Portal__c.Training_Event_ID__c' : 'frontend'
-          }
-        })
-
-        // CRITICAL: The calendar ID used for deletion MUST match the calendar where the event was created
-        // We need to find the correct calendar for the trainer who created the event
-        console.log('🔍 Finding correct calendar for event deletion...')
-        let deleteCalendarId = calendarId
-
+      // Attempt 1: Try expected trainer first (fast path)
+      if (trainerEmailForDeletion) {
         try {
-          // Get the CURRENT trainer's calendar list (the one who created the event)
-          const calendars = await larkService.getCalendarList(trainerEmailForDeletion)
-          console.log(`📅 Trainer (${trainerEmailForDeletion}) has ${calendars.length} calendars`)
+          const { CalendarIdManager } = await import('@/lib/calendar-id-manager')
+          const deleteCalendarId = await CalendarIdManager.getResolvedCalendarId(trainerEmailForDeletion)
+          await larkService.deleteCalendarEvent(deleteCalendarId, eventIdForDeletion, trainerEmailForDeletion)
+          console.log(`✅ Successfully deleted event from ${trainerEmailForDeletion}'s calendar`)
+          deleted = true
+        } catch (err: any) {
+          console.log(`⚠️ Event not in expected trainer's calendar (${trainerEmailForDeletion}): ${err.message}`)
+          console.log('🔍 Searching across all authorized trainers...')
+        }
+      }
 
-          // Try to find the primary calendar (most likely where the event was created)
-          const primaryCalendar = calendars.find((cal: any) =>
-            cal.type === 'primary' &&
-            cal.role === 'owner'
-          )
+      // Attempt 2: Search all authorized trainers' calendars
+      if (!deleted) {
+        for (const trainerConfig of trainersConfig.trainers) {
+          // Skip if already tried this trainer
+          if (trainerConfig.email === trainerEmailForDeletion) continue
 
-          if (primaryCalendar) {
-            deleteCalendarId = primaryCalendar.calendar_id
-            console.log(`✅ Using primary calendar for deletion: ${deleteCalendarId}`)
-          } else {
-            console.log(`⚠️ No primary calendar found, using provided calendar ID: ${calendarId}`)
+          // Skip trainers without OAuth authorization
+          const { larkOAuthService } = await import('@/lib/lark-oauth-service')
+          const hasAuth = await larkOAuthService.isUserAuthorized(trainerConfig.email)
+          if (!hasAuth) {
+            console.log(`   Skipping ${trainerConfig.name} (not authorized)`)
+            continue
           }
-        } catch (calError) {
-          console.log(`⚠️ Could not get calendar list, using provided calendar ID: ${calendarId}`)
-        }
 
-        await larkService.cancelTraining(
-          trainerEmailForDeletion,  // Use the current trainer's email (from Onboarding_Trainer__c.CSM_Name__c)
-          deleteCalendarId,
-          eventIdForDeletion, // Use the event ID from Onboarding_Portal__c.Training_Event_ID__c
-          merchantName
-        )
-        console.log('✅ Successfully cancelled existing event')
-      } catch (cancelError: any) {
-        console.error('❌ Failed to cancel existing event:', cancelError)
-        console.error('   Full error details:', {
-          message: cancelError.message,
-          eventId: existingEventId,
-          calendarId: calendarId,
-          errorStack: cancelError.stack
-        })
-
-        // Check if it's a "not found" error - if so, we can continue
-        // as the event may have been already deleted
-        if (cancelError.message?.includes('not found') ||
-            cancelError.message?.includes('404') ||
-            cancelError.message?.includes('does not exist') ||
-            cancelError.message?.includes('event_not_found')) {
-          console.log('⚠️ Event not found, continuing with new booking (may have been already deleted)')
-          console.log('   This may indicate the event was manually deleted')
-        } else if (cancelError.message?.includes('invalid request parameters')) {
-          // This error usually means the event ID format is wrong or the calendar ID is wrong
-          console.error('❌ CRITICAL: Invalid request parameters - this usually means:')
-          console.error('   1. Event ID format is incorrect')
-          console.error('   2. Calendar ID is incorrect')
-          console.error('   3. Event does not exist in this calendar')
-          console.error('   NOT proceeding with new booking to prevent double booking')
-          return NextResponse.json(
-            {
-              error: 'Failed to reschedule training',
-              details: `Unable to cancel existing training session. The event may be in a different calendar or the event ID may be corrupted. Please contact support.`,
-              originalError: cancelError.message
-            },
-            { status: 500 }
-          )
-        } else {
-          // For other errors, don't proceed to avoid duplicates
-          console.error('⚠️ Cancellation failed - NOT proceeding with new booking to avoid double booking')
-          return NextResponse.json(
-            {
-              error: 'Failed to reschedule training',
-              details: `Unable to cancel existing training session. ${cancelError.message || 'Please try again or contact support.'}`,
-              originalError: cancelError.message
-            },
-            { status: 500 }
-          )
+          try {
+            const { CalendarIdManager } = await import('@/lib/calendar-id-manager')
+            const calId = await CalendarIdManager.getResolvedCalendarId(trainerConfig.email)
+            await larkService.deleteCalendarEvent(calId, eventIdForDeletion, trainerConfig.email)
+            console.log(`✅ Found and deleted event from ${trainerConfig.name}'s calendar`)
+            deleted = true
+            break
+          } catch (err: any) {
+            console.log(`   Not in ${trainerConfig.name}'s calendar, trying next...`)
+          }
         }
+      }
+
+      // Log final outcome
+      if (!deleted) {
+        console.log('⚠️ Event not found in any trainer calendar')
+        console.log('   This may indicate the event was manually deleted - proceeding with new booking')
       }
     }
 
@@ -598,9 +571,11 @@ export async function POST(request: NextRequest) {
         console.log('📝 Attempting to set CSM_Name__c for trainer:', trainer.name, '(', trainer.email, ')')
         console.log('📝 Booking type:', bookingType)
 
+        // Declare userId outside try block so it's available for Portal update later
+        let userId: string | null = null
+
         // Search for User (internal Salesforce user) using trainer info from trainers.json
         try {
-          let userId: string | null = null
 
           // Try multiple search strategies to find the User
           console.log('🔍 Attempting to find Salesforce User for trainer:', {
@@ -723,21 +698,53 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // CRITICAL: Also update Onboarding_Portal__c with the new event ID
+        // CRITICAL: Also update Onboarding_Portal__c with the new event ID and date/time
         // This is needed for rescheduling to know which event to delete
+        console.log(`\n🔍 PORTAL UPDATE CHECK:`)
+        console.log(`   portalIdForUpdate: ${portalIdForUpdate}`)
+        console.log(`   eventIdField: ${eventIdField}`)
+        console.log(`   eventId: ${eventId}`)
+        console.log(`   Will update Portal? ${!!(portalIdForUpdate && eventIdField && eventId)}`)
+
         if (portalIdForUpdate && eventIdField && eventId) {
+          console.log(`\n✅ PROCEEDING WITH PORTAL UPDATE`)
           try {
+            // Build Portal update with BOTH event ID and date/time
+            const dateTimeValue = `${date}T${startTime}:00+08:00` // Singapore timezone
+
             const portalUpdateData: any = {
               Id: portalIdForUpdate,
               [eventIdField]: eventId
             }
 
-            console.log(`📝 Updating Onboarding_Portal__c.${eventIdField} with new event ID: ${eventId}`)
+            // Add date/time fields based on booking type
+            if (bookingType === 'training') {
+              // ALWAYS update date/time (critical for reporting)
+              portalUpdateData.Training_Date__c = dateTimeValue
+              console.log(`📝 Updating Onboarding_Portal__c with Training_Date__c: ${dateTimeValue}`)
+
+              // Update trainer name if we found the User ID
+              if (userId) {
+                portalUpdateData.Trainer_Name__c = userId
+                console.log(`📝 Updating Onboarding_Portal__c with Trainer_Name__c (User ID): ${userId}`)
+              } else {
+                console.log(`⚠️ Skipping Trainer_Name__c update - User ID not found`)
+              }
+            } else if (bookingType === 'installation') {
+              // ALWAYS update date/time and event ID (critical for rescheduling)
+              portalUpdateData.Installation_Date__c = dateTimeValue
+              // Installer_Name__c is a text field - use installer name
+              portalUpdateData.Installer_Name__c = trainer.name
+              console.log(`📝 Updating Onboarding_Portal__c with Installation_Date__c: ${dateTimeValue}`)
+              console.log(`📝 Updating Onboarding_Portal__c with Installer_Name__c: ${trainer.name}`)
+            }
+
+            console.log(`📝 Updating Onboarding_Portal__c.${eventIdField} with event ID: ${eventId}`)
             await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
-            console.log(`✅ Successfully updated Onboarding_Portal__c.${eventIdField}`)
+            console.log(`✅ Successfully updated Onboarding_Portal__c (event ID + date/time + person name)`)
           } catch (portalUpdateError: any) {
-            console.log(`⚠️ Failed to update Portal event ID:`, portalUpdateError.message)
-            console.log(`   Event ID will not be saved for rescheduling, but booking succeeded`)
+            console.log(`⚠️ Failed to update Portal:`, portalUpdateError.message)
+            console.log(`   Portal will not be updated, but booking succeeded`)
           }
         }
       }

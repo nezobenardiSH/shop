@@ -124,8 +124,12 @@ export async function GET(
       console.log('✅ Query completed, found:', trainerResult.totalSize, 'record(s)')
       if (trainerResult.totalSize > 0) {
         console.log('   Merchant name:', trainerResult.records[0].Name)
-        // Debug shipping fields
+        // Debug shipping fields - check both uppercase and lowercase
         const record = trainerResult.records[0] as any
+        console.log('📍 Raw Salesforce record shipping fields:', {
+          Shipping_State__c: record.Shipping_State__c,
+          allFieldsWithShipping: Object.keys(record).filter(k => k.toLowerCase().includes('shipping'))
+        })
         console.log('📍 Shipping fields from Salesforce:', {
           street: record.Shipping_Street__c,
           city: record.Shipping_City__c,
@@ -195,13 +199,14 @@ export async function GET(
       installationEventId: null,
       installationDate: null,
       installerName: null,
+      trainerName: null,
       trainingDate: null
     }
     try {
       const portalQuery = `
         SELECT Id, Training_Event_ID__c, Installation_Event_ID__c,
                Installation_Date__c, Installer_Name__c,
-               Training_Date__c
+               Training_Date__c, Trainer_Name__c
         FROM Onboarding_Portal__c
         WHERE Onboarding_Trainer_Record__c = '${trainerId}'
         LIMIT 1
@@ -214,9 +219,11 @@ export async function GET(
         portalData.installationDate = portal.Installation_Date__c
         portalData.trainingDate = portal.Training_Date__c
 
-        // Installer_Name__c is now a text field, not a lookup
+        // Installer_Name__c and Trainer_Name__c are text fields, not lookups
         portalData.installerName = portal.Installer_Name__c || null
+        portalData.trainerName = portal.Trainer_Name__c || null
         console.log('🔍 Installer_Name__c value:', portal.Installer_Name__c)
+        console.log('🔍 Trainer_Name__c value:', portal.Trainer_Name__c)
 
         console.log('✅ Found Onboarding_Portal__c record with data:', portalData)
       } else {
@@ -445,11 +452,10 @@ export async function GET(
         subIndustry: trainer.Sub_Industry__c,
         preferredLanguage: trainer.Preferred_Language__c,
         plannedGoLiveDate: (() => {
-          const goLiveDate = accountData?.plannedGoLiveDate || trainer.Planned_Go_Live_Date__c || trainer.First_Revised_EGLD__c;
+          // Only use Planned_Go_Live_Date__c from Onboarding_Trainer__c
+          const goLiveDate = trainer.Planned_Go_Live_Date__c;
           console.log('🔍 GO-LIVE DATE DEBUG:', {
-            fromAccount: accountData?.plannedGoLiveDate,
             fromTrainer: trainer.Planned_Go_Live_Date__c,
-            fromEGLD: trainer.First_Revised_EGLD__c,
             final: goLiveDate
           });
           return goLiveDate;
@@ -476,8 +482,9 @@ export async function GET(
         trainingDate: portalData.trainingDate || trainer.Training_Date__c, // Use Portal date if available
         csmName: csmName, // Use the CSM name we resolved earlier
         csmEmail: trainer.CSM_Name__r?.Email || null, // CSM email for rescheduling
+        trainerName: portalData.trainerName || null, // Trainer assigned to training event (from Portal)
         assignedInstaller: trainer.Assigned_Installer__c, // For checking if external vendor (e.g., "Surfstek")
-        installerName: portalData.installerName || null, // Only use Portal installer name
+        installerName: portalData.installerName || null, // Installer assigned to installation event (from Portal)
 
         // Event IDs for rescheduling (from Onboarding_Portal__c object)
         installationEventId: portalData.installationEventId,

@@ -152,6 +152,12 @@ export default function DatePickerModal({
   const availableLanguages = useMemo(() => {
     const languagesSet = new Set<string>()
 
+    // Ensure availability is an array before processing
+    if (!Array.isArray(availability)) {
+      console.warn('Availability is not an array:', availability)
+      return []
+    }
+
     // Collect all languages from all available slots
     availability.forEach(day => {
       day.slots.forEach(slot => {
@@ -165,6 +171,16 @@ export default function DatePickerModal({
     console.log('Available languages from trainers:', languages)
     return languages
   }, [availability])
+
+  // Auto-select first available language when languages become available
+  useEffect(() => {
+    if (availableLanguages.length > 0 && selectedLanguages.length === 0 && bookingType === 'training') {
+      // Auto-select English if available, otherwise first available language
+      const defaultLang = availableLanguages.includes('English') ? 'English' : availableLanguages[0]
+      console.log('Auto-selecting language:', defaultLang)
+      setSelectedLanguages([defaultLang])
+    }
+  }, [availableLanguages, bookingType])
 
   useEffect(() => {
     if (isOpen) {
@@ -185,6 +201,16 @@ export default function DatePickerModal({
   }, [isOpen, trainerName, filterByLocation, merchantAddress])
 
   const fetchAvailability = async () => {
+    // Check if we should block fetching for onsite training without state
+    if (bookingType === 'training' && serviceType === 'onsite' && !merchantState) {
+      console.warn('⚠️ Cannot fetch availability for onsite training without merchant state')
+      setLoading(false)
+      setAvailability([]) // Set to empty array, not empty object
+      // availableLanguages is computed from availability, so it will automatically be empty
+      // Don't set a message here since we already show the warning at the top
+      return // Exit early but modal remains open
+    }
+    
     setLoading(true)
     setMessage('')
     try {
@@ -320,7 +346,7 @@ export default function DatePickerModal({
       }
 
       let response: Response
-      
+
       if (bookingType === 'installation') {
         // For installations, use the installation booking endpoint
         response = await fetch('/api/installation/book', {
@@ -503,6 +529,11 @@ export default function DatePickerModal({
 
   const isDateAvailable = (date: Date | null) => {
     if (!date) return false
+    
+    // If onsite training without state, no dates are available
+    if (bookingType === 'training' && serviceType === 'onsite' && !merchantState) {
+      return false
+    }
 
     // Get day of week in Singapore timezone
     // We need to check the day in Singapore time, not browser's local time
@@ -766,8 +797,20 @@ export default function DatePickerModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[calc(100vh-2rem)] flex flex-col">
-        <div className="p-4 md:p-6 border-b border-gray-200">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[calc(100vh-2rem)] flex flex-col relative">
+        {/* Loading Overlay - covers entire modal, blocks all interaction */}
+        {bookingStatus === 'loading' && (
+          <div className="absolute inset-0 bg-white bg-opacity-95 rounded-2xl flex items-center justify-center z-50">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+              <div className="text-lg font-semibold text-gray-700">Booking in progress...</div>
+              <div className="text-sm text-gray-500">Please wait while we confirm your booking</div>
+            </div>
+          </div>
+        )}
+
+        {/* Fixed header */}
+        <div className="p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex justify-between items-center">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">{getBookingTypeTitle()}</h2>
             <button
@@ -777,6 +820,22 @@ export default function DatePickerModal({
               <X className="h-6 w-6" />
             </button>
           </div>
+        </div>
+
+        {/* Success/Error Message - Fixed at top for visibility */}
+        {message && (
+          <div className={`mx-4 md:mx-6 mt-4 p-4 rounded-lg font-medium ${
+            bookingStatus === 'success' ? 'bg-green-100 text-green-800 border border-green-300' :
+            bookingStatus === 'error' ? 'bg-red-100 text-red-800 border border-red-300' :
+            'bg-blue-100 text-blue-800 border border-blue-300'
+          }`}>
+            {message}
+          </div>
+        )}
+
+        {/* Scrollable content container */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-6">
 
           {/* Combined Info Box */}
           {(isExternalVendor && bookingType === 'installation') || currentBooking?.eventId || dependentDate || goLiveDate || installationDate || trainingDate ? (
@@ -846,55 +905,74 @@ export default function DatePickerModal({
               </ul>
             </div>
           ) : null}
-          {bookingType === 'training' && (
-            <div className="mt-4">
+          
+          {/* Show warning for missing service type configuration */}
+          {bookingType === 'training' && serviceType === 'none' && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="text-base font-medium text-red-800">
+                ⚠️ Training configuration incomplete
+              </div>
+              <div className="text-sm text-red-700 mt-1">
+                Onboarding Services Bought is not configured in Salesforce. Please set it to either "Onsite Training" or "Remote Training" before scheduling.
+              </div>
+            </div>
+          )}
+          
+          {/* Show warning for missing state (only for onsite training) */}
+          {bookingType === 'training' && serviceType === 'onsite' && !merchantState && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="text-base font-medium text-amber-800">
+                ⚠️ No store state detected
+              </div>
+              <div className="text-sm text-amber-700 mt-1">
+                  Cannot schedule training without location information. Please contact your onboarding manager.
+                </div>
+              </div>
+            )}
+          
+            {bookingType === 'training' && (
+              <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Globe className="inline h-4 w-4 mr-1" />
-                Training Language (Select all that apply)
+                Training Language
               </label>
-              <div className="flex gap-3">
+              <div className={`flex gap-3 ${(serviceType === 'onsite' && !merchantState) || serviceType === 'none' ? 'opacity-50 pointer-events-none' : ''}`}>
                 {['Chinese', 'Bahasa Malaysia', 'English'].map((lang) => {
                   const isAvailable = availableLanguages.includes(lang)
+                  const isDisabled = (serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !isAvailable
+                  const isSelected = selectedLanguages.length === 1 && selectedLanguages[0] === lang
+                  
                   return (
                     <label
                       key={lang}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                        !isAvailable
+                        isDisabled
                           ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-300 text-gray-400'
-                          : selectedLanguages.includes(lang)
+                          : isSelected
                             ? 'border-blue-500 bg-blue-50 cursor-pointer'
                             : 'border-gray-200 hover:border-gray-300 cursor-pointer'
                       }`}
-                      title={!isAvailable ? `No trainers available for ${lang} at this location` : ''}
+                      title={isDisabled ? (serviceType === 'none' ? 'Service type must be configured in Salesforce' : serviceType === 'onsite' && !merchantState ? 'Location required for language selection' : `No trainers available for ${lang} at this location`) : ''}
                     >
                       <input
-                        type="checkbox"
-                        checked={selectedLanguages.includes(lang)}
-                        disabled={!isAvailable}
-                        onChange={(e) => {
+                        type="radio"
+                        name="trainingLanguage"
+                        checked={isSelected}
+                        disabled={isDisabled}
+                        onChange={() => {
                           setIsFilteringSlots(true)
                           setTimeout(() => setIsFilteringSlots(false), 300) // Brief loading state
 
-                          if (e.target.checked) {
-                            const newLanguages = [...selectedLanguages, lang]
-                            console.log('Adding language:', lang, 'New languages:', newLanguages)
-                            setSelectedLanguages(newLanguages)
-                          } else {
-                            const newLanguages = selectedLanguages.filter(l => l !== lang)
-                            console.log('Removing language:', lang, 'New languages:', newLanguages)
-                            setSelectedLanguages(newLanguages)
-                            // Deselect slot if it doesn't match the new language selection
-                            if (selectedSlot && selectedSlot.availableLanguages) {
-                              const hasMatchingLanguage = newLanguages.some(l =>
-                                selectedSlot.availableLanguages?.includes(l)
-                              )
-                              if (!hasMatchingLanguage) {
-                                setSelectedSlot(null)
-                              }
-                            }
+                          console.log('Selecting language:', lang)
+                          setSelectedLanguages([lang]) // Set single language
+                          
+                          // Deselect slot if it doesn't match the new language selection
+                          if (selectedSlot && selectedSlot.availableLanguages && !selectedSlot.availableLanguages.includes(lang)) {
+                            console.log('Deselecting slot - language mismatch')
+                            setSelectedSlot(null)
                           }
                         }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <span className={`text-sm ${isAvailable ? 'text-gray-700' : 'text-gray-400'}`}>
                         {lang}
@@ -909,7 +987,12 @@ export default function DatePickerModal({
                 {serviceType !== 'none' && (
                   <label className="block text-sm font-medium text-gray-700">
                     {(() => {
-                      const message = getServiceTypeMessage(serviceType, merchantState)
+                      // Only use merchantState from Onboarding_Trainer__c.Shipping_State__c - no fallback
+                      const message = serviceType === 'onsite' && merchantState
+                        ? `Training: Onsite, ${merchantState}`
+                        : serviceType === 'onsite' 
+                        ? 'Training: Onsite'
+                        : getServiceTypeMessage(serviceType, merchantState)
                       console.log('🏷️ Service Type Display:', {
                         serviceType,
                         merchantState,
@@ -926,33 +1009,27 @@ export default function DatePickerModal({
                 )}
               </div>
 
-              {/* Shipping State Display */}
-              {merchantState && (
-                <div className="mt-3">
-                  <label className="block text-sm font-medium text-gray-700">Shipping State</label>
-                  <div className="text-sm text-gray-900">{merchantState}</div>
-                </div>
-              )}
-
-              {/* Show warning if no trainers available */}
-              {availableLanguages.length === 0 && !loading && (
+              {/* Show warning if no trainers available - but NOT when state is missing */}
+              {availableLanguages.length === 0 && !loading && !(bookingType === 'training' && serviceType === 'onsite' && !merchantState) && (
                 <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="text-sm text-amber-800 font-medium">
                     ⚠️ No trainers available for this location
                   </div>
                   <div className="text-xs text-amber-700 mt-1">
-                    Please contact support for assistance with scheduling training.
+                    {serviceType === 'onsite' && merchantState && !['Selangor', 'Kuala Lumpur', 'Putrajaya', 'Penang', 'Johor'].some(s => merchantState.toLowerCase().includes(s.toLowerCase())) 
+                      ? `Onsite training is currently not available in ${merchantState}. Please contact support for alternative arrangements.`
+                      : 'Please contact support for assistance with scheduling training.'}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+                )}
+              </div>
+            )}
+          </div>
 
-        {/* Mobile: Vertical layout, Desktop: Horizontal layout */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Calendar Section - Full width on mobile */}
-          <div className="flex-1 p-4 md:p-6 md:border-r border-gray-200 overflow-y-auto">
+          {/* Calendar and Time Slots Section */}
+          <div className="flex flex-col md:flex-row">
+            {/* Calendar Section - Full width on mobile - Disabled when state is missing or service type not configured */}
+            <div className={`md:flex-1 p-4 md:p-6 md:border-r border-gray-200 ${(bookingType === 'training' && serviceType === 'onsite' && !merchantState) || serviceType === 'none' ? 'opacity-30 pointer-events-none' : ''}`}>
             {/* Desktop: Traditional calendar grid */}
             <div className="hidden md:block">
               <div className="flex items-center justify-between mb-4">
@@ -1102,16 +1179,16 @@ export default function DatePickerModal({
             </div>
           </div>
 
-          {/* Time Slots Section - Full width on mobile, sidebar on desktop */}
-          <div className="w-full md:w-96 bg-gray-50 flex flex-col border-t md:border-t-0 md:border-l border-gray-200">
-            <div className="p-4 md:p-6 flex-1 overflow-y-auto">
+            {/* Time Slots Section - Full width on mobile, sidebar on desktop - Disabled when state is missing or service type not configured */}
+            <div className={`w-full md:w-96 bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 ${(bookingType === 'training' && serviceType === 'onsite' && !merchantState) || serviceType === 'none' ? 'opacity-30 pointer-events-none' : ''}`}>
+              <div className="p-4 md:p-6">
             {loading || isFilteringSlots ? (
               <div className="flex justify-center items-center h-full">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
             ) : selectedDate ? (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 sticky top-0 bg-gray-50 pb-2">Available Time Slots</h3>
+                <h3 className="text-lg font-semibold text-gray-900 md:sticky md:top-0 bg-gray-50 pb-2">Available Time Slots</h3>
                 {filteredSlots.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-3">
                     {filteredSlots.map((slot, index) => (
@@ -1132,25 +1209,6 @@ export default function DatePickerModal({
                                 {formatTime(slot.start)} - {formatTime(slot.end)}
                               </span>
                             </div>
-                            {bookingType === 'training' && slot.availableLanguages && slot.availableLanguages.length > 0 && (
-                              <div className="flex items-center gap-2 mt-2">
-                                <Globe className="h-3 w-3 text-gray-400" />
-                                <div className="flex flex-wrap gap-1">
-                                  {slot.availableLanguages.map((lang) => (
-                                    <span 
-                                      key={lang} 
-                                      className={`px-2 py-0.5 text-xs rounded font-medium ${
-                                        selectedLanguages.includes(lang)
-                                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                          : 'bg-gray-100 text-gray-600'
-                                      }`}
-                                    >
-                                      {lang}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
                           </div>
                           {selectedSlot === slot && (
                             <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
@@ -1179,35 +1237,26 @@ export default function DatePickerModal({
                 </div>
               </div>
             )}
-
-            {message && (
-              <div className={`mt-4 p-3 rounded-lg text-sm ${
-                bookingStatus === 'success' ? 'bg-green-100 text-green-700' : 
-                bookingStatus === 'error' ? 'bg-red-100 text-red-700' : 
-                'bg-blue-100 text-blue-700'
-              }`}>
-                {message}
               </div>
-            )}
-            </div>
-            
-            {/* Fixed bottom buttons */}
-            <div className="p-4 md:p-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3 bg-white">
-              <button
-                onClick={onClose}
-                className="w-full sm:w-auto px-6 py-2.5 text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors order-2 sm:order-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBooking}
-                disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading'}
-                className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed order-1 sm:order-2"
-              >
-                {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}
-              </button>
             </div>
           </div>
+        </div>
+
+        {/* Fixed bottom buttons */}
+        <div className="p-4 md:p-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3 bg-white flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="w-full sm:w-auto px-6 py-2.5 text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors order-2 sm:order-1"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleBooking}
+            disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading' || (bookingType === 'training' && serviceType === 'onsite' && !merchantState) || serviceType === 'none'}
+            className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed order-1 sm:order-2"
+          >
+            {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}
+          </button>
         </div>
       </div>
 
