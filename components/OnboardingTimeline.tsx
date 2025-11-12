@@ -664,7 +664,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         </svg>
                         {/* Tooltip */}
                         <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                          Fulfillment date can only be set by StoreHub Onboarding Manager
+                          Shipment date can only be set by StoreHub Onboarding Manager
                           <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                         </div>
                       </div>
@@ -1718,7 +1718,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       </div>
                       <div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                          <span>Hardware Fulfillment Date</span>
+                          <span>Hardware Shipment Date</span>
                           <div className="relative group">
                             <svg
                               className="w-3.5 h-3.5 text-gray-400 cursor-help"
@@ -1729,7 +1729,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                             </svg>
                             {/* Tooltip */}
                             <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                              Fulfillment date can only be set by StoreHub Onboarding Manager
+                              Shipment date can only be set by StoreHub Onboarding Manager
                               <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                             </div>
                           </div>

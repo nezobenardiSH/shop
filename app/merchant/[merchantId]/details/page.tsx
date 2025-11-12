@@ -101,6 +101,8 @@ export default function MerchantDetailsPage() {
       const data = await response.json()
       console.log('📦 Merchant data received:', data)
       console.log('📦 Order NS Number:', data.orderNSOrderNumber)
+      console.log('📦 orderShippingAddress:', data.orderShippingAddress)
+      console.log('📦 Full data keys:', Object.keys(data))
       setTrainerData(data)
 
       // Update page title with merchant name
@@ -251,52 +253,60 @@ export default function MerchantDetailsPage() {
                     };
 
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
-                        {/* Column 1 */}
-                        <div className="space-y-2">
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Merchant: </span>
-                            <span className="text-sm text-gray-900">{trainer.name || 'N/A'}</span>
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
+                          {/* Column 1 */}
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">Merchant: </span>
+                              <span className="text-sm text-gray-900">{trainer.name || 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">Account: </span>
+                              <span className="text-sm text-gray-900">{trainer.accountName || 'N/A'}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Account: </span>
-                            <span className="text-sm text-gray-900">{trainer.accountName || 'N/A'}</span>
-                          </div>
-                        </div>
 
-                        {/* Column 2 */}
-                        <div className="space-y-2">
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Industry: </span>
-                            <span className="text-sm text-gray-900">{trainer.subIndustry || 'N/A'}</span>
+                          {/* Column 2 */}
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">Industry: </span>
+                              <span className="text-sm text-gray-900">{trainer.subIndustry || 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">Language: </span>
+                              <span className="text-sm text-gray-900">{trainer.preferredLanguage || 'N/A'}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Language: </span>
-                            <span className="text-sm text-gray-900">{trainer.preferredLanguage || 'N/A'}</span>
-                          </div>
-                        </div>
 
-                        {/* Column 3 */}
-                        <div className="space-y-2">
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Store Location: </span>
-                            <span className="text-sm text-gray-900">
-                              {(() => {
-                                const city = trainer.shippingCity || '';
-                                const state = trainer.shippingState || '';
-                                if (city && state) return `${city}, ${state}`;
-                                if (city) return city;
-                                if (state) return state;
-                                return 'N/A';
-                              })()}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-gray-500 uppercase">Address: </span>
-                            <span className="text-sm text-gray-900">{formatAddress()}</span>
+                          {/* Column 3 */}
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">Store Address: </span>
+                              <span className="text-sm text-gray-900">{formatAddress()}</span>
+                            </div>
+                            {trainer.orderShippingAddress && (
+                              <div>
+                                <span className="text-xs font-semibold text-gray-500 uppercase">Hardware Shipment: </span>
+                                <span className="text-sm text-gray-900">
+                                  {(() => {
+                                    const addr = trainer.orderShippingAddress;
+                                    const parts = [
+                                      addr.street,
+                                      addr.city,
+                                      addr.state && addr.postalCode
+                                        ? `${addr.state} ${addr.postalCode}`
+                                        : addr.state || addr.postalCode,
+                                      addr.country
+                                    ].filter(Boolean);
+                                    return parts.length > 0 ? parts.join(', ') : 'N/A';
+                                  })()}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
+                      </>
                     );
                   })()}
                 </div>
@@ -419,16 +429,6 @@ export default function MerchantDetailsPage() {
                   {/* Payment Summary at the top */}
                   {trainer && (
                     <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
-                      {/* Sales Order Number */}
-                      <div className="mb-4 pb-4 border-b border-gray-200">
-                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
-                          Sales Order Number
-                        </div>
-                        <div className="text-lg font-bold text-gray-900">
-                          {trainerData?.orderNSOrderNumber || 'N/A'}
-                        </div>
-                      </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Quote Total Amount */}
                         <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">

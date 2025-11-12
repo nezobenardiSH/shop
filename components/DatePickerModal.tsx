@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { X, ChevronLeft, ChevronRight, Calendar, Clock, Globe } from 'lucide-react'
 import { detectServiceType, getServiceTypeMessage, shouldFilterByLocation, type ServiceType } from '@/lib/service-type-detector'
+import { calculateInstallationDateLowerBound, getRegionType, getDaysToAddForRegion } from '@/lib/location-matcher'
 
 interface DatePickerModalProps {
   isOpen: boolean
@@ -83,7 +84,11 @@ export default function DatePickerModal({
     merchantStateEmpty: !merchantState || merchantState.trim() === '',
     merchantAddress,
     onboardingServicesBought,
-    bookingType
+    bookingType,
+    dependentDate,
+    trainingDate,
+    installationDate,
+    goLiveDate
   })
   
   const [availability, setAvailability] = useState<DayAvailability[]>([])
@@ -652,23 +657,49 @@ export default function DatePickerModal({
     }
     // For installation bookings, use dependent date (hardware fulfillment) if provided
     else if (bookingType === 'installation' && dependentDate) {
-      // Parse dependent date in Singapore timezone
-      const depDateParts = dependentDate.split('-')
-      const depDate = createSingaporeDate(
-        parseInt(depDateParts[0]),
-        parseInt(depDateParts[1]) - 1,
-        parseInt(depDateParts[2])
+      // Use location-based calculation for installation date lower bound
+      const calculatedLowerBound = calculateInstallationDateLowerBound(
+        dependentDate,
+        merchantAddress
       )
-      // Add one day to dependent date (must be at least 1 day after)
-      const dayAfterDep = new Date(depDate)
-      dayAfterDep.setDate(dayAfterDep.getDate() + 1)
 
-      // Use the later of tomorrow or dependent date + 1
-      if (dayAfterDep > minDate) {
-        minDate = dayAfterDep
+      if (calculatedLowerBound) {
+        // Get region info for logging
+        const regionType = getRegionType(merchantAddress)
+        const daysToAdd = getDaysToAddForRegion(regionType)
+
+        console.log('  -> Location-based installation scheduling:', {
+          merchantAddress,
+          regionType,
+          daysToAdd,
+          hardwareFulfillmentDate: dependentDate,
+          calculatedLowerBound: calculatedLowerBound.toDateString()
+        })
+
+        // Use the later of initial minDate or calculated lower bound
+        if (calculatedLowerBound > minDate) {
+          minDate = calculatedLowerBound
+        }
+
+        console.log('  -> Installation must be after hardware fulfillment:', dependentDate, 'Min date:', minDate.toDateString())
+      } else {
+        // Fallback to old logic if calculation fails
+        console.warn('  -> Failed to calculate location-based lower bound, using fallback (D+1)')
+        const depDateParts = dependentDate.split('-')
+        const depDate = createSingaporeDate(
+          parseInt(depDateParts[0]),
+          parseInt(depDateParts[1]) - 1,
+          parseInt(depDateParts[2])
+        )
+        const dayAfterDep = new Date(depDate)
+        dayAfterDep.setDate(dayAfterDep.getDate() + 1)
+
+        if (dayAfterDep > minDate) {
+          minDate = dayAfterDep
+        }
+
+        console.log('  -> Installation must be after hardware fulfillment (fallback):', dependentDate, 'Min date:', minDate.toDateString())
       }
-
-      console.log('  -> Installation must be after hardware fulfillment:', dependentDate, 'Min date:', minDate.toDateString())
     }
 
     // Maximum date is 14 days from the minimum eligible date
@@ -885,7 +916,7 @@ export default function DatePickerModal({
           <div className="p-4 md:p-6">
 
           {/* Combined Info Box */}
-          {(isExternalVendor && bookingType === 'installation') || currentBooking?.eventId || dependentDate || goLiveDate || installationDate || trainingDate ? (
+          {((bookingType === 'installation' && !isExternalVendor) || (isExternalVendor && bookingType === 'installation') || currentBooking?.eventId || (bookingType === 'training' && (installationDate || goLiveDate))) ? (
             <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <ul className="space-y-1.5 text-sm text-blue-800">
                 {/* External Vendor Message */}
@@ -902,33 +933,37 @@ export default function DatePickerModal({
 
                 {/* Rescheduling Info */}
                 {currentBooking?.eventId && currentBooking?.date && (
-                  <>
-                    <li className="font-semibold text-blue-900">
-                      • Rescheduling Existing Booking
-                    </li>
-                    <li className="ml-4">
-                      Current Date: <span className="font-medium">{formatDate(currentBooking.date)}</span>
-                    </li>
-                    <li className="ml-4 text-xs text-blue-700">
-                      Select a new date below. The old booking will be automatically cancelled.
-                    </li>
-                  </>
+                  <li className="font-medium text-blue-900">
+                    📅 Current booking: <span className="font-semibold">{formatDate(currentBooking.date)}</span> (will be cancelled when you reschedule)
+                  </li>
                 )}
 
-                {/* Dependency Message */}
-                {bookingType === 'installation' && (
-                  <>
-                    {dependentDate && trainingDate && (
-                      <li>• Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)}) and before Training date ({formatDate(trainingDate)})</li>
-                    )}
-                    {dependentDate && !trainingDate && (
-                      <li>• Installation must be scheduled after Hardware Fulfillment date ({formatDate(dependentDate)})</li>
-                    )}
-                    {!dependentDate && trainingDate && (
-                      <li>• Installation must be scheduled before Training date ({formatDate(trainingDate)})</li>
-                    )}
-                  </>
-                )}
+                {/* Installation Scheduling Info */}
+                {bookingType === 'installation' && !isExternalVendor && (() => {
+                  const regionType = getRegionType(merchantAddress)
+                  const daysToAdd = getDaysToAddForRegion(regionType)
+
+                  return (
+                    <>
+                      {dependentDate ? (
+                        <li className="font-medium text-blue-900">
+                          📍 Available from: <span className="font-semibold">
+                            {(() => {
+                              const calculated = calculateInstallationDateLowerBound(dependentDate, merchantAddress)
+                              return calculated ? formatDate(calculated.toISOString().split('T')[0]) : 'Calculating...'
+                            })()}
+                          </span> (+{daysToAdd} day{daysToAdd > 1 ? 's' : ''} after hardware shipment)
+                          {trainingDate && <span> to <span className="font-semibold">{formatDate(trainingDate)}</span></span>}
+                        </li>
+                      ) : (
+                        <li className="text-amber-700">
+                          ⚠️ Set Hardware Shipment Date first
+                        </li>
+                      )}
+                    </>
+                  )
+                })()}
+
                 {bookingType === 'training' && (
                   <>
                     {installationDate && goLiveDate && (

@@ -341,6 +341,20 @@ function TrainerPortalContent() {
           console.log(`📝 URL PARAM - NEW BOOKING MODE for ${bookingType}`)
         }
 
+        // Determine dependent date based on booking type
+        let dependentDate = null
+        if (bookingType === 'installation') {
+          // Installation depends on Hardware Fulfillment date
+          dependentDate = trainer.hardwareFulfillmentDate || null
+          console.log('🔍 URL PARAM - Hardware Fulfillment Date for Installation:', {
+            hardwareFulfillmentDate: trainer.hardwareFulfillmentDate,
+            dependentDate: dependentDate
+          })
+        } else if (bookingType === 'training') {
+          // Training depends on Installation date
+          dependentDate = trainer.installationDate || null
+        }
+
         // Get installation date for training bookings (lower bound)
         const installationDate = trainer.installationDate || null
 
@@ -358,7 +372,7 @@ function TrainerPortalContent() {
             trainingDate = trainer.backOfficeTrainingDate || trainer.trainingDate
           }
         }
-        
+
         // Get go-live date for training bookings
         const goLiveDate = trainer.plannedGoLiveDate ||
                           trainerData?.account?.plannedGoLiveDate ||
@@ -382,6 +396,8 @@ function TrainerPortalContent() {
         const bookingInfo = {
           trainerId: trainer.id,
           trainerName: actualTrainerName,
+          trainerEmail: trainer.csmEmail,
+          assignedTrainerEmail: trainer.assignedTrainerEmail,
           merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
           merchantAddress: merchantAddress,
           merchantState: merchantState,
@@ -390,6 +406,7 @@ function TrainerPortalContent() {
           displayName: trainer.name,
           bookingType: bookingType,
           onboardingServicesBought: trainer.onboardingServicesBought,
+          dependentDate: dependentDate,
           goLiveDate: goLiveDate,
           installationDate: installationDate,
           trainingDate: trainingDate,
@@ -399,6 +416,7 @@ function TrainerPortalContent() {
         console.log('📋 Setting booking info from URL param:', {
           merchantState: bookingInfo.merchantState,
           bookingType: bookingInfo.bookingType,
+          dependentDate: bookingInfo.dependentDate,
           goLiveDate: bookingInfo.goLiveDate
         })
 
@@ -483,6 +501,11 @@ function TrainerPortalContent() {
     if (bookingType === 'installation') {
       // Installation depends on Hardware Fulfillment date
       dependentDate = trainer.hardwareFulfillmentDate || null
+      console.log('🔍 DEBUG - Hardware Fulfillment Date for Installation:', {
+        hardwareFulfillmentDate: trainer.hardwareFulfillmentDate,
+        dependentDate: dependentDate,
+        trainerKeys: Object.keys(trainer).filter(k => k.toLowerCase().includes('hardware') || k.toLowerCase().includes('fulfillment'))
+      })
     } else if (bookingType === 'training') {
       // Training depends on Installation date
       dependentDate = trainer.installationDate || null
@@ -1098,7 +1121,9 @@ function TrainerPortalContent() {
             {console.log('🎯 About to render DatePickerModal with:', {
               merchantState: currentBookingInfo.merchantState,
               merchantAddress: currentBookingInfo.merchantAddress,
-              merchantName: currentBookingInfo.merchantName
+              merchantName: currentBookingInfo.merchantName,
+              dependentDate: currentBookingInfo.dependentDate,
+              bookingType: currentBookingInfo.bookingType
             })}
             <DatePickerModal
               isOpen={bookingModalOpen}

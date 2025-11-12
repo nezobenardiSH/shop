@@ -100,6 +100,7 @@ export async function GET(
                Onboarding_Services_Bought__c, Service_Type__c,
                Shipping_Street__c, Shipping_City__c, Shipping_State__c,
                Shipping_Zip_Postal_Code__c, Shipping_Country__c,
+               Hardware_Order__c,
                Sub_Industry__c, Preferred_Language__c,
                Required_Features_by_Merchant__c,
                Onboarding_Summary__c,
@@ -286,6 +287,62 @@ export async function GET(
     let orderNSStatus: string | null = null
     let orderNSOrderNumber: string | null = null
     let orderShippingAddress: any = null
+
+    // First, check if Hardware_Order__c is specified
+    if (trainer.Hardware_Order__c) {
+      try {
+        console.log('📦 Using Hardware_Order__c:', trainer.Hardware_Order__c)
+        // Query the specific hardware order
+        const hardwareOrderQuery = `
+          SELECT Id, Type, Hardware_Fulfillment_Date__c, NSStatus__c, NSOrderNumber__c,
+                 ShippingStreet, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry
+          FROM Order
+          WHERE Id = '${trainer.Hardware_Order__c}'
+          LIMIT 1
+        `
+
+        const hardwareOrderResult = await conn.query(hardwareOrderQuery)
+        if (hardwareOrderResult.totalSize > 0) {
+          const order = hardwareOrderResult.records[0] as any
+          console.log('📦 Hardware Order found:', {
+            Id: order.Id,
+            Type: order.Type,
+            NSOrderNumber: order.NSOrderNumber__c,
+            ShippingStreet: order.ShippingStreet,
+            ShippingCity: order.ShippingCity,
+            ShippingState: order.ShippingState,
+            ShippingPostalCode: order.ShippingPostalCode,
+            ShippingCountry: order.ShippingCountry
+          })
+
+          // Get NS Order Number from this order
+          orderNSOrderNumber = order.NSOrderNumber__c
+
+          // Get shipping address from this order
+          if (order.ShippingStreet || order.ShippingCity || order.ShippingState || order.ShippingCountry) {
+            orderShippingAddress = {
+              street: order.ShippingStreet || '',
+              city: order.ShippingCity || '',
+              state: order.ShippingState || '',
+              stateCode: order.ShippingState || '',
+              postalCode: order.ShippingPostalCode || '',
+              country: order.ShippingCountry || '',
+              countryCode: order.ShippingCountry || ''
+            }
+            console.log('📍 Using ShippingAddress from Hardware Order:', order.Id)
+            console.log('📍 ShippingAddress:', orderShippingAddress)
+          }
+
+          // Get other order details
+          hardwareFulfillmentDate = order.Hardware_Fulfillment_Date__c
+          orderNSStatus = order.NSStatus__c
+        }
+      } catch (error) {
+        console.log('Failed to fetch Hardware Order:', error)
+      }
+    }
+
+    // Now get all orders for order items (if account exists)
     if (account) {
       try {
         // First get Orders for this Account with Type field and Hardware Fulfillment Date

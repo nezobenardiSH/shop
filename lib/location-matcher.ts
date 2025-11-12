@@ -26,6 +26,9 @@ const MALAYSIAN_STATES = {
 // States that are considered within Klang Valley
 const KLANG_VALLEY_STATES = ['Kuala Lumpur', 'Selangor', 'Putrajaya']
 
+// States that are considered East Malaysia
+const EAST_MALAYSIA_STATES = ['Sabah', 'Sarawak', 'Labuan']
+
 /**
  * Extract state/location from address string
  * @param address - Full address string
@@ -204,13 +207,101 @@ export function getAllTrainerLocations<T extends { location?: string[] }>(
   trainers: T[]
 ): string[] {
   const locations = new Set<string>()
-  
+
   trainers.forEach(trainer => {
     if (trainer.location) {
       trainer.location.forEach(loc => locations.add(loc))
     }
   })
-  
+
   return Array.from(locations).sort()
+}
+
+/**
+ * Region type for installation scheduling
+ */
+export type RegionType = 'Klang Valley' | 'West Malaysia' | 'East Malaysia'
+
+/**
+ * Determine the region type for installation scheduling
+ * @param address - Full address string from hardware delivery step
+ * @returns Region type: "Klang Valley", "West Malaysia", or "East Malaysia"
+ */
+export function getRegionType(address: string | null | undefined): RegionType {
+  if (!address) {
+    return 'Klang Valley' // Default to Klang Valley if no address
+  }
+
+  const matchedStates = extractLocationFromAddress(address)
+
+  if (matchedStates.length === 0) {
+    return 'Klang Valley' // Default if no state detected
+  }
+
+  // Check if within East Malaysia
+  if (matchedStates.some(state => EAST_MALAYSIA_STATES.includes(state))) {
+    return 'East Malaysia'
+  }
+
+  // Check if within Klang Valley
+  if (matchedStates.some(state => KLANG_VALLEY_STATES.includes(state))) {
+    return 'Klang Valley'
+  }
+
+  // All other states are West Malaysia (outside Klang Valley)
+  return 'West Malaysia'
+}
+
+/**
+ * Get the number of days to add based on region type
+ * @param regionType - The region type
+ * @returns Number of days to add to hardware fulfillment date
+ */
+export function getDaysToAddForRegion(regionType: RegionType): number {
+  switch (regionType) {
+    case 'Klang Valley':
+      return 1 // D+1
+    case 'West Malaysia':
+      return 3 // D+3
+    case 'East Malaysia':
+      return 7 // D+7
+  }
+}
+
+/**
+ * Calculate the installation date lower bound based on hardware fulfillment date and merchant address
+ * @param hardwareFulfillmentDate - The hardware fulfillment date (Date object or ISO string)
+ * @param merchantAddress - Merchant's address from hardware delivery step
+ * @returns The earliest date that installation can be scheduled
+ */
+export function calculateInstallationDateLowerBound(
+  hardwareFulfillmentDate: Date | string | null | undefined,
+  merchantAddress: string | null | undefined
+): Date | null {
+  if (!hardwareFulfillmentDate) {
+    return null
+  }
+
+  // Convert to Date object if it's a string
+  const fulfillmentDate = typeof hardwareFulfillmentDate === 'string'
+    ? new Date(hardwareFulfillmentDate)
+    : hardwareFulfillmentDate
+
+  // Check if date is valid
+  if (isNaN(fulfillmentDate.getTime())) {
+    return null
+  }
+
+  // Determine region type based on address
+  const regionType = getRegionType(merchantAddress)
+
+  // Get the number of days to add
+  const daysToAdd = getDaysToAddForRegion(regionType)
+
+  // Calculate the lower bound date
+  const lowerBoundDate = new Date(fulfillmentDate)
+  lowerBoundDate.setDate(lowerBoundDate.getDate() + daysToAdd)
+
+  return lowerBoundDate
 }
 
