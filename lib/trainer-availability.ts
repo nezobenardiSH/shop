@@ -97,7 +97,7 @@ export async function getCombinedAvailability(
   const trainerAvailabilities: Map<string, TrainerAvailability> = new Map()
   
   // Process all trainers in parallel for better performance
-  const availabilityPromises = trainers.map(async (trainer) => {
+  const availabilityPromises = trainers.map(async (trainer: any) => {
     try {
       // First check if trainer has OAuth token
       const { larkOAuthService } = await import('./lark-oauth-service')
