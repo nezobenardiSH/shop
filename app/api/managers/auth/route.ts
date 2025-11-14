@@ -5,8 +5,8 @@ export async function GET() {
   const state = crypto.randomBytes(16).toString('hex')
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/managers/authorize`
 
-  // Manager-specific scope: only bitable and contact permissions (no calendar needed)
-  const scope = 'bitable:app contact:contact.base:readonly'
+  // Manager-specific scope: only bitable permission (for creating Lark Base records)
+  const scope = 'bitable:app'
 
   // Store state in a cookie for verification
   const response = NextResponse.redirect(

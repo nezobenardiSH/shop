@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
           refreshToken: tokenData.data.refresh_token,
           expiresAt: expiresAt,
           userName: userInfo.name,
-          scopes: 'bitable:app contact:contact.base:readonly'
+          scopes: 'bitable:app'
         },
         create: {
           userEmail: userInfo.email,
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
           refreshToken: tokenData.data.refresh_token,
           expiresAt: expiresAt,
           userName: userInfo.name,
-          scopes: 'bitable:app contact:contact.base:readonly'
+          scopes: 'bitable:app'
         }
       })
       
