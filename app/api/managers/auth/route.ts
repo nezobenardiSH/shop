@@ -4,7 +4,10 @@ import crypto from 'crypto'
 export async function GET() {
   const state = crypto.randomBytes(16).toString('hex')
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/managers/authorize`
-  
+
+  // Manager-specific scope: only bitable and contact permissions (no calendar needed)
+  const scope = 'bitable:app contact:contact.base:readonly'
+
   // Store state in a cookie for verification
   const response = NextResponse.redirect(
     `https://open.larksuite.com/open-apis/authen/v1/authorize?` +
@@ -12,7 +15,7 @@ export async function GET() {
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&response_type=code` +
     `&state=${state}` +
-    `&scope=contact:user.email:readonly`
+    `&scope=${encodeURIComponent(scope)}`
   )
   
   response.cookies.set('manager_oauth_state', state, {

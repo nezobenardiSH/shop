@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       userId: userData.data.user_id,
       openId: userData.data.open_id
     }
-    
+
     // Store in database
     const { PrismaClient } = await import('@prisma/client')
     const prisma = new PrismaClient()
@@ -111,7 +111,8 @@ export async function POST(request: NextRequest) {
           accessToken: tokenData.data.access_token,
           refreshToken: tokenData.data.refresh_token,
           expiresAt: expiresAt,
-          userName: userInfo.name
+          userName: userInfo.name,
+          scopes: 'bitable:app contact:contact.base:readonly'
         },
         create: {
           userEmail: userInfo.email,
@@ -120,7 +121,8 @@ export async function POST(request: NextRequest) {
           accessToken: tokenData.data.access_token,
           refreshToken: tokenData.data.refresh_token,
           expiresAt: expiresAt,
-          userName: userInfo.name
+          userName: userInfo.name,
+          scopes: 'bitable:app contact:contact.base:readonly'
         }
       })
       

@@ -104,10 +104,10 @@ function ManagerAuthorizeContent() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <Bell className="h-8 w-8 text-orange-500" />
-              Onboarding Manager Notifications
+              Onboarding Manager Authorization
             </h1>
             <p className="mt-2 text-gray-600">
-              Authorize managers to receive Lark notifications for external vendor installations
+              Authorize managers to receive notifications and track external vendor installations in Lark Base
             </p>
           </div>
 
@@ -130,7 +130,7 @@ function ManagerAuthorizeContent() {
               <div>
                 <p className="font-semibold text-green-800">Authorization Successful!</p>
                 <p className="text-sm text-green-700">
-                  You will now receive notifications for external vendor assignments
+                  You're all set! You'll receive notifications and external vendor tasks will be tracked in Lark Base
                 </p>
               </div>
             </div>
@@ -160,11 +160,11 @@ function ManagerAuthorizeContent() {
               </li>
               <li className="flex gap-2">
                 <span className="font-semibold text-orange-600">3.</span>
-                Approve notification permissions
+                Approve permissions for base management and notifications
               </li>
               <li className="flex gap-2">
                 <span className="font-semibold text-orange-600">4.</span>
-                Receive notifications when external vendors are assigned to your merchants
+                Get automatic notifications and task tracking for your merchants
               </li>
             </ol>
           </div>
@@ -243,13 +243,14 @@ function ManagerAuthorizeContent() {
             </div>
           )}
 
-          {/* What Notifications You'll Receive */}
+          {/* What You'll Get Access To */}
           <div className="mt-8 p-4 bg-blue-50 rounded-xl">
-            <h3 className="font-semibold text-blue-900 mb-2">What notifications you'll receive:</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">What you'll get access to:</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• When a merchant is assigned to an external vendor for installation</li>
-              <li>• Merchant details including name, contact, and preferred date/time</li>
-              <li>• External vendor information and response time</li>
+              <li>• Lark notifications when a merchant is assigned to an external vendor</li>
+              <li>• Automatic task tracking in Lark Base for external vendor installations</li>
+              <li>• Task records with merchant details, Salesforce links, and status tracking</li>
+              <li>• Easy management of external vendor installation requests</li>
             </ul>
           </div>
 
@@ -257,7 +258,8 @@ function ManagerAuthorizeContent() {
           <div className="mt-4 p-4 bg-gray-100 rounded-xl">
             <p className="text-sm text-gray-700">
               <strong>Note:</strong> Each onboarding manager must authorize individually using their own Lark account.
-              Share this page URL with other managers who need to receive notifications.
+              This grants access to create and manage task records in Lark Base for external vendor installations.
+              Share this page URL with other managers who need access.
             </p>
           </div>
         </div>
