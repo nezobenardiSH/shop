@@ -1729,7 +1729,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                             </svg>
                             {/* Tooltip */}
                             <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                              Shipment date can only be set by StoreHub Onboarding Manager
+                              Shipment date can only be set by StoreHub Onboarding Manager. Contact your Onboarding Manager to set the date.
                               <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                             </div>
                           </div>
