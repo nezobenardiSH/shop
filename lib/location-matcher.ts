@@ -7,8 +7,37 @@
 const MALAYSIAN_STATES = {
   'Kuala Lumpur': ['kuala lumpur', 'kl', 'k.l', 'wilayah persekutuan kuala lumpur', 'wp kuala lumpur'],
   'Selangor': ['selangor', 'sel', 'selangor darul ehsan', 'petaling jaya', 'pj', 'subang', 'shah alam', 'klang', 'puchong', 'ampang', 'cheras'],
-  'Penang': ['penang', 'pulau pinang', 'p. pinang', 'pg', 'pn', 'georgetown', 'butterworth', 'balik pulau'],
-  'Johor': ['johor', 'johor bahru', 'jb', 'j.b', 'johor darul takzim'],
+  // Penang state and its districts/suburbs (covers entire Penang island and mainland)
+  'Penang': [
+    'penang', 'pulau pinang', 'p. pinang', 'pg', 'pn',
+    // Penang Island (North East District)
+    'georgetown', 'george town', 'jelutong', 'air itam', 'tanjung tokong',
+    'tanjung bungah', 'batu ferringhi', 'teluk bahang', 'pulau tikus',
+    'gurney drive', 'komtar', 'weld quay',
+    // Penang Island (South West District)
+    'bayan lepas', 'bayan baru', 'balik pulau', 'relau', 'sungai ara',
+    'teluk kumbar', 'batu maung', 'permatang damar laut', 'gertak sanggul',
+    // Seberang Perai (Mainland)
+    'butterworth', 'perai', 'seberang jaya', 'seberang perai', 'bukit mertajam',
+    'nibong tebal', 'kepala batas', 'tasek gelugor', 'alma', 'bagan ajam',
+    'bukit tengah', 'juru', 'simpang ampat', 'permatang pauh', 'seberang prai',
+    'penaga', 'bertam', 'valdor', 'bagan lalang', 'mak mandin'
+  ],
+  // Johor Bahru city and its suburbs/districts (covers Greater JB area)
+  'Johor Bahru': [
+    'johor bahru', 'jb', 'j.b',
+    // JB districts and suburbs
+    'skudai', 'iskandar puteri', 'nusajaya', 'gelang patah', 'kulai',
+    'pasir gudang', 'masai', 'senai', 'ulu tiram', 'permas jaya',
+    'tampoi', 'larkin', 'bukit indah', 'tebrau', 'desa tebrau',
+    'mount austin', 'taman molek', 'taman johor jaya', 'kempas',
+    'plentong', 'taman universiti', 'kangkar pulai', 'taman daya',
+    'taman pelangi', 'taman sutera', 'medini', 'puteri harbour',
+    'bandar dato onn', 'setia tropika', 'kota masai', 'taman perling',
+    'taman bukit dahlia', 'taman sentosa', 'stulang', 'pontian'
+  ],
+  // Johor state (other cities not covered by JB installer)
+  'Johor': ['johor', 'johor darul takzim', 'muar', 'batu pahat', 'kluang', 'segamat', 'mersing', 'kota tinggi', 'tangkak'],
   'Perak': ['perak', 'perak darul ridzuan', 'ipoh'],
   'Kedah': ['kedah', 'kedah darul aman', 'alor setar'],
   'Kelantan': ['kelantan', 'kelantan darul naim', 'kota bharu'],
@@ -36,20 +65,27 @@ const EAST_MALAYSIA_STATES = ['Sabah', 'Sarawak', 'Labuan']
  */
 export function extractLocationFromAddress(address: string | null | undefined): string[] {
   if (!address) return []
-  
+
   const normalizedAddress = address.toLowerCase().trim()
   const matchedStates: string[] = []
-  
+
   // Check each state and its variations
+  // Sort by variation length (longest first) to prioritize more specific matches
   for (const [state, variations] of Object.entries(MALAYSIAN_STATES)) {
-    for (const variation of variations) {
-      if (normalizedAddress.includes(variation)) {
+    const sortedVariations = [...variations].sort((a, b) => b.length - a.length)
+
+    for (const variation of sortedVariations) {
+      // Use word boundary matching to avoid false positives
+      // e.g., "klang" should not match "kluang"
+      const regex = new RegExp(`\\b${variation}\\b`, 'i')
+
+      if (regex.test(normalizedAddress)) {
         matchedStates.push(state)
         break // Found this state, move to next state
       }
     }
   }
-  
+
   return matchedStates
 }
 
@@ -74,28 +110,29 @@ export function isWithinKlangValley(address: string | null | undefined): boolean
  */
 export function getLocationCategory(address: string | null | undefined): string {
   if (!address) return 'Within Klang Valley' // Default to Klang Valley if no address
-  
+
   const matchedStates = extractLocationFromAddress(address)
-  
+
   if (matchedStates.length === 0) {
     return 'Within Klang Valley' // Default if no state detected
   }
-  
+
   // Check if within Klang Valley
   if (matchedStates.some(state => KLANG_VALLEY_STATES.includes(state))) {
     return 'Within Klang Valley'
   }
-  
+
   // Check specific states outside Klang Valley
   if (matchedStates.includes('Penang')) {
     return 'Penang'
   }
-  
-  if (matchedStates.includes('Johor')) {
+
+  // Check for Johor Bahru specifically (must check before general Johor)
+  if (matchedStates.includes('Johor Bahru')) {
     return 'Johor Bahru'
   }
-  
-  // All other states are considered "Outside of Klang Valley"
+
+  // All other states (including Johor state but not JB) are considered "Outside of Klang Valley"
   return 'Outside of Klang Valley'
 }
 
@@ -168,13 +205,18 @@ export function getLocationCategoryFromState(merchantState: string | null | unde
     return 'Penang'
   }
 
-  // Check for Johor
-  const johorStates = ['johor', 'johor bahru', 'jb']
-  if (johorStates.some(state => normalizedState.includes(state))) {
+  // Check for Johor Bahru specifically (including suburbs)
+  const johorBahruAreas = [
+    'johor bahru', 'jb', 'j.b',
+    'skudai', 'iskandar puteri', 'nusajaya', 'gelang patah', 'kulai',
+    'pasir gudang', 'masai', 'senai', 'ulu tiram', 'permas jaya',
+    'tampoi', 'larkin', 'bukit indah', 'tebrau', 'mount austin'
+  ]
+  if (johorBahruAreas.some(area => normalizedState.includes(area))) {
     return 'Johor Bahru'
   }
 
-  // All other states are considered "Outside of Klang Valley"
+  // All other states (including Johor state but not JB areas) are considered "Outside of Klang Valley"
   return 'Outside of Klang Valley'
 }
 
