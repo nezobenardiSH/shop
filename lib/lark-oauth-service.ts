@@ -71,15 +71,22 @@ export class LarkOAuthService {
    * Get authorization URL for OAuth flow
    */
   getAuthorizationUrl(state?: string): string {
+    const scope = 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read bitable:app contact:contact.base:readonly'
+
+    console.log('🔐 OAuth scope being requested:', scope)
+
     const params = new URLSearchParams({
       app_id: this.appId,
       redirect_uri: this.redirectUri,
       response_type: 'code',
-      scope: 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read',
+      scope: scope,
       state: state || ''
     })
 
-    return `${this.baseUrl}/open-apis/authen/v1/authorize?${params.toString()}`
+    const authUrl = `${this.baseUrl}/open-apis/authen/v1/authorize?${params.toString()}`
+    console.log('🔗 Full authorization URL:', authUrl)
+
+    return authUrl
   }
 
   /**

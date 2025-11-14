@@ -1556,6 +1556,148 @@ class LarkService {
 
     // Note: Cancellation notification should be sent by the calling route using sendCancellationNotification()
   }
+
+  /**
+   * Gets Lark user ID from email address
+   * @param email - User's email address
+   * @returns Lark user ID or null if not found
+   */
+  async getUserIdFromEmail(email: string, userEmail?: string): Promise<string | null> {
+    try {
+      // Use user token if provided, otherwise use tenant token
+      const token = userEmail ? await this.getUserToken(userEmail) : this.accessToken
+
+      const response = await fetch(
+        `https://open.larksuite.com/open-apis/contact/v3/users/batch_get_id?emails=${encodeURIComponent(email)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        console.error('Failed to get user ID from email:', await response.text())
+        return null
+      }
+
+      const data = await response.json()
+      const userId = data.data?.user_list?.[0]?.user_id
+
+      return userId || null
+    } catch (error) {
+      console.error('Error getting user ID from email:', error)
+      return null
+    }
+  }
+
+  /**
+   * Creates a Lark Video Conference meeting reservation
+   * @param title - Meeting title
+   * @param startTime - Meeting start time (Unix timestamp in seconds)
+   * @param endTime - Meeting end time (Unix timestamp in seconds)
+   * @param hostUserId - Lark user ID of the meeting host (trainer)
+   * @param description - Optional meeting description
+   * @returns Object with meeting link and reservation ID
+   */
+  async createVideoConferenceMeeting(
+    title: string,
+    startTime: number,
+    endTime: number,
+    hostUserId: string,
+    description?: string
+  ): Promise<{ meetingLink: string; reservationId: string }> {
+    try {
+      console.log('🎥 Creating Lark VC meeting:', { title, startTime, endTime, hostUserId })
+
+      const response = await fetch(
+        'https://open.larksuite.com/open-apis/vc/v1/reserves',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            end_time: endTime.toString(),
+            meeting_settings: {
+              topic: title,
+              description: description || '',
+              host_user_id: hostUserId,
+              auto_record: true,  // Auto-record training sessions
+            },
+            reserve_user_id: hostUserId,
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('❌ Lark VC API error response:', JSON.stringify(data, null, 2))
+        throw new Error(`Lark VC API error: ${data.msg || data.message || 'Unknown error'}`)
+      }
+
+      console.log('🎥 Lark VC API response:', JSON.stringify(data, null, 2))
+
+      // Lark VC API response structure
+      const reservationId = data.data?.reserve?.id
+      const meetingLink = data.data?.reserve?.meeting_no
+        ? `https://vc.larksuite.com/j/${data.data.reserve.meeting_no}`
+        : data.data?.reserve?.url
+
+      if (!meetingLink || !reservationId) {
+        console.error('❌ Incomplete VC response data:', data)
+        throw new Error('Failed to get meeting link from Lark VC API')
+      }
+
+      console.log('✅ Lark VC meeting created successfully:', { meetingLink, reservationId })
+
+      return {
+        meetingLink,
+        reservationId,
+      }
+    } catch (error) {
+      console.error('❌ Error creating Lark VC meeting:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Create a record in Lark Bitable (Base)
+   * @param appToken - The base app token (e.g., 'My9pbR9BEaHm9Csy2tWlBTOUgRh')
+   * @param tableId - The table ID (e.g., 'tblYzV0wAwTigWWh')
+   * @param fields - Record fields as key-value pairs
+   * @param userEmail - User email for authentication (bitable:app is user-level permission)
+   * @returns Created record data with record_id
+   */
+  async createBitableRecord(
+    appToken: string,
+    tableId: string,
+    fields: Record<string, any>,
+    userEmail: string
+  ): Promise<any> {
+    try {
+      console.log(`📝 Creating Lark base record in table ${tableId} as user: ${userEmail}`)
+
+      const response = await this.makeRequest(
+        `/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ fields }),
+          userEmail  // Use user token (bitable:app requires user-level permission)
+        }
+      )
+
+      console.log('✅ Lark base record created:', response.data?.record?.record_id)
+      return response.data?.record || {}
+    } catch (error) {
+      console.error('❌ Failed to create Lark base record:', error)
+      throw error
+    }
+  }
 }
 
 export const larkService = new LarkService()

@@ -22,6 +22,48 @@ interface InstallerAvailability {
 // Alias for compatibility
 type InstallationAvailability = InstallerAvailability
 
+/**
+ * Map external vendor installation data to Lark base fields
+ * @param data Portal data from external vendor request
+ * @param larkService LarkService instance for getting user IDs
+ * @returns Mapped fields for Lark base record
+ */
+async function mapToExternalVendorLarkBase(
+  data: {
+    merchantName: string
+    merchantId: string
+    msmEmail: string
+    msmName: string
+    preferredDate: string
+    preferredTime: string
+  },
+  larkServiceInstance: any
+): Promise<Record<string, any>> {
+
+  // Parse and combine date/time for Requested Date field
+  const requestedDateTime = new Date(`${data.preferredDate} ${data.preferredTime}`)
+  const requestedTimestamp = requestedDateTime.getTime()
+
+  // Current timestamp for Input Date
+  const inputTimestamp = Date.now()
+
+  // Build Salesforce URL
+  const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${data.merchantId}/view`
+
+  return {
+    'Merchant Name': data.merchantName,
+    'Salesforce': {
+      type: 'url',
+      link: salesforceUrl
+    },
+    'Status': 'New',
+    'Input date': inputTimestamp,
+    'Onboarding Manager': data.msmName, // Now a Text field, not Person field
+    'Progress notes': '',
+    'Requested date': requestedTimestamp
+  }
+}
+
 // Get the installer type based on shipping address from Salesforce
 export async function getInstallerType(merchantId: string): Promise<'internal' | 'external'> {
   try {
@@ -1142,8 +1184,42 @@ export async function submitExternalInstallationRequest(
           msmName || 'Not available',
           msmPhone || 'Not available'
         )
+
+        // Create record in Lark base for task management (only if we have MSM email)
+        try {
+          const baseAppToken = process.env.LARK_EXTERNAL_VENDOR_BASE_TOKEN
+          const baseTableId = process.env.LARK_EXTERNAL_VENDOR_TABLE_ID
+
+          if (!baseAppToken || !baseTableId) {
+            console.log('⚠️ Lark base configuration not found, skipping base record creation')
+          } else {
+            const baseFields = await mapToExternalVendorLarkBase(
+              {
+                merchantName,
+                merchantId,
+                msmEmail,
+                msmName: msmName || 'Not available',
+                preferredDate,
+                preferredTime
+              },
+              larkService
+            )
+
+            const record = await larkService.createBitableRecord(
+              baseAppToken,
+              baseTableId,
+              baseFields,
+              msmEmail
+            )
+
+            console.log('✅ External vendor request added to Lark base:', record.record_id)
+          }
+        } catch (baseError) {
+          console.error('❌ Failed to create Lark base record:', baseError)
+          // Don't fail the entire booking if base creation fails
+        }
       } else {
-        console.log('⚠️ No MSM email found for notification')
+        console.log('⚠️ No MSM email found for notification and Lark base creation')
       }
     } else {
       console.log('⚠️ No merchant record found for notification')
@@ -1152,7 +1228,7 @@ export async function submitExternalInstallationRequest(
     console.error('Failed to notify onboarding manager:', notifyError)
     // Don't fail the request if notification fails
   }
-  
+
   // TODO: Send email notification to vendor
   // For now, just log the request
   console.log('External installation request:', {
