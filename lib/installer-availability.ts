@@ -2,6 +2,7 @@ import { getSalesforceConnection } from './salesforce'
 import { larkService } from './lark'
 import { sendBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
 import { loadInstallersConfig } from './config-loader'
+import { getLocationCategory as getSmartLocationCategory } from './location-matcher'
 
 interface TimeSlot {
   start: string
@@ -31,71 +32,48 @@ export async function getInstallerType(merchantId: string): Promise<'internal' |
     }
 
     const query = `
-      SELECT Name, Id, 
-             Shipping_City__c, Shipping_State__c
-      FROM Onboarding_Trainer__c 
+      SELECT Name, Id,
+             Shipping_Street__c, Shipping_City__c, Shipping_State__c
+      FROM Onboarding_Trainer__c
       WHERE Id = '${merchantId}'
       LIMIT 1
     `
-    
+
     console.log('🔍 Querying installer type with:', { merchantId, query })
-    
+
     const result = await conn.query(query)
     const record = result.records[0]
+    const shippingStreet = record?.Shipping_Street__c
     const shippingCity = record?.Shipping_City__c
     const shippingState = record?.Shipping_State__c
-    
+
     console.log('🔍 Installer type query result:', {
       merchantId,
       foundRecord: !!record,
       recordName: record?.Name,
       recordId: record?.Id,
+      shippingStreet,
       shippingCity,
       shippingState
     })
-    
-    // Determine location based on shipping address
-    const normalizedCity = shippingCity?.toLowerCase().trim() || ''
-    const normalizedState = shippingState?.toLowerCase().trim() || ''
 
-    // Check if it's in Klang Valley
-    const klangValleyCities = [
-      'kuala lumpur', 'kl', 'petaling jaya', 'pj', 'subang jaya', 
-      'shah alam', 'klang', 'puchong', 'selayang', 'ampang jaya',
-      'kajang', 'seri kembangan', 'bangi', 'banting', 'cyberjaya',
-      'putrajaya', 'sepang', 'kuala selangor', 'rawang', 'gombak'
-    ]
-    
-    const isKlangValley = klangValleyCities.some(city => 
-      normalizedCity.includes(city) || normalizedState.includes(city)
-    ) || normalizedState === 'selangor' || normalizedState === 'wilayah persekutuan'
+    // Build full address for intelligent location detection
+    const fullAddress = [shippingStreet, shippingCity, shippingState]
+      .filter(Boolean)
+      .join(', ')
 
-    if (isKlangValley) {
-      console.log('✅ Detected Klang Valley - using internal installers')
-      return 'internal'
-    }
+    console.log('📍 Full address for location detection:', fullAddress)
 
-    // Check if it's Johor Bahru specifically (not just any city in Johor state)
-    const isJohorBahru = normalizedCity.includes('johor bahru') ||
-                        normalizedCity.includes('johor bharu') ||
-                        normalizedCity === 'jb' ||
-                        normalizedCity === 'j.b'
+    // Use the intelligent location matcher
+    const locationCategory = getSmartLocationCategory(fullAddress)
 
-    if (isJohorBahru) {
-      console.log('✅ Detected Johor Bahru - using internal installers')
-      return 'internal'
-    }
+    console.log('📍 Smart location detection result:', locationCategory)
 
-    // Check if it's Penang (we cover all of Penang)
-    const isPenang = normalizedCity.includes('penang') ||
-                    normalizedCity.includes('pulau pinang') ||
-                    normalizedState.includes('penang') ||
-                    normalizedState.includes('pulau pinang') ||
-                    normalizedCity.includes('georgetown') ||
-                    normalizedCity.includes('george town')
-
-    if (isPenang) {
-      console.log('✅ Detected Penang - using internal installers')
+    // Map location category to installer type
+    if (locationCategory === 'Within Klang Valley' ||
+        locationCategory === 'Penang' ||
+        locationCategory === 'Johor Bahru') {
+      console.log('✅ Detected covered area - using internal installers')
       return 'internal'
     }
 
@@ -117,57 +95,39 @@ export async function getLocationCategory(merchantId: string): Promise<'klangVal
       return 'external'
     }
     const query = `
-      SELECT Shipping_City__c, Shipping_State__c
-      FROM Onboarding_Trainer__c 
+      SELECT Shipping_Street__c, Shipping_City__c, Shipping_State__c
+      FROM Onboarding_Trainer__c
       WHERE Id = '${merchantId}'
       LIMIT 1
     `
     const result = await conn.query(query)
+    const shippingStreet = result.records[0]?.Shipping_Street__c
     const shippingCity = result.records[0]?.Shipping_City__c
     const shippingState = result.records[0]?.Shipping_State__c
-    
-    const normalizedCity = shippingCity?.toLowerCase().trim() || ''
-    const normalizedState = shippingState?.toLowerCase().trim() || ''
-    
-    // Check for Klang Valley
-    const klangValleyCities = [
-      'kuala lumpur', 'kl', 'petaling jaya', 'pj', 'subang jaya', 
-      'shah alam', 'klang', 'puchong', 'selayang', 'ampang jaya',
-      'kajang', 'seri kembangan', 'bangi', 'banting', 'cyberjaya',
-      'putrajaya', 'sepang', 'kuala selangor', 'rawang', 'gombak'
-    ]
-    
-    const isKlangValley = klangValleyCities.some(city => 
-      normalizedCity.includes(city) || normalizedState.includes(city)
-    ) || normalizedState === 'selangor' || normalizedState === 'wilayah persekutuan'
-    
-    if (isKlangValley) {
-      return 'klangValley'
+
+    // Build full address for intelligent location detection
+    const fullAddress = [shippingStreet, shippingCity, shippingState]
+      .filter(Boolean)
+      .join(', ')
+
+    console.log('📍 Full address for installer location category:', fullAddress)
+
+    // Use the intelligent location matcher
+    const locationCategory = getSmartLocationCategory(fullAddress)
+
+    console.log('📍 Smart location detection result:', locationCategory)
+
+    // Map location category to installer config key
+    switch (locationCategory) {
+      case 'Within Klang Valley':
+        return 'klangValley'
+      case 'Penang':
+        return 'penang'
+      case 'Johor Bahru':
+        return 'johorBahru'
+      default:
+        return 'external'
     }
-    
-    // Check for Johor Bahru specifically
-    const isJohorBahru = normalizedCity.includes('johor bahru') ||
-                        normalizedCity.includes('johor bharu') ||
-                        normalizedCity === 'jb' ||
-                        normalizedCity === 'j.b'
-    
-    if (isJohorBahru) {
-      return 'johorBahru'
-    }
-    
-    // Check for Penang
-    const isPenang = normalizedCity.includes('penang') ||
-                    normalizedCity.includes('pulau pinang') ||
-                    normalizedState.includes('penang') ||
-                    normalizedState.includes('pulau pinang') ||
-                    normalizedCity.includes('georgetown') ||
-                    normalizedCity.includes('george town')
-    
-    if (isPenang) {
-      return 'penang'
-    }
-    
-    return 'external'
   } catch (error) {
     console.error('Error getting location category:', error)
     return 'external'
