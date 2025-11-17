@@ -949,37 +949,31 @@ export async function getStageProgression(
   if (hasInstallation) {
     const activityEvents = activityMap.get('Installation') || []
 
-    // Build events array with change type labels
-    const events: StageEvent[] = activityEvents.map((event, index) => ({
-      timestamp: event.timestamp,
-      actor: event.actor,
-      changeType: generateChangeType('Installation', index, activityEvents.length, event.actor, event.metadata),
-      metadata: event.metadata
-    }))
+    // Only show Installation if there are actual booking events
+    // Don't use Installation_Date__c as fallback since it's a future appointment date, not a booking timestamp
+    if (activityEvents.length > 0) {
+      // Build events array with change type labels
+      const events: StageEvent[] = activityEvents.map((event, index) => ({
+        timestamp: event.timestamp,
+        actor: event.actor,
+        changeType: generateChangeType('Installation', index, activityEvents.length, event.actor, event.metadata),
+        metadata: event.metadata
+      }))
 
-    // No Salesforce fallback for Installation - dates are future appointments, not completion times
-    if (events.length === 0) {
-      events.push({
-        timestamp: installationDate ? new Date(installationDate) : new Date(),
-        actor: 'unknown',
-        changeType: 'Status from Salesforce',
-        metadata: {}
+      progression.push({
+        stage: 'Installation',
+        status: installationStatus || 'Scheduled',
+        events: events,
+        latestTimestamp: events[0]?.timestamp || null,
+        latestActor: events[0]?.actor || 'merchant',
+        // Deprecated fields for backward compatibility
+        timestamp: events[0]?.timestamp || null,
+        actor: events[0]?.actor || 'merchant'
+      })
+      console.log('[Stage Progression] Added Installation to progression:', {
+        eventCount: events.length
       })
     }
-
-    progression.push({
-      stage: 'Installation',
-      status: installationStatus || 'Scheduled',
-      events: events,
-      latestTimestamp: events[0]?.timestamp || null,
-      latestActor: events[0]?.actor || 'unknown',
-      // Deprecated fields for backward compatibility
-      timestamp: events[0]?.timestamp || null,
-      actor: events[0]?.actor || 'unknown'
-    })
-    console.log('[Stage Progression] Added Installation to progression:', {
-      eventCount: events.length
-    })
   }
 
   // Training - check status and date
@@ -996,37 +990,31 @@ export async function getStageProgression(
   if (hasTraining) {
     const activityEvents = activityMap.get('Training') || []
 
-    // Build events array with change type labels
-    const events: StageEvent[] = activityEvents.map((event, index) => ({
-      timestamp: event.timestamp,
-      actor: event.actor,
-      changeType: generateChangeType('Training', index, activityEvents.length, event.actor, event.metadata),
-      metadata: event.metadata
-    }))
+    // Only show Training if there are actual booking events
+    // Don't use Training_Date__c as fallback since it's a future appointment date, not a booking timestamp
+    if (activityEvents.length > 0) {
+      // Build events array with change type labels
+      const events: StageEvent[] = activityEvents.map((event, index) => ({
+        timestamp: event.timestamp,
+        actor: event.actor,
+        changeType: generateChangeType('Training', index, activityEvents.length, event.actor, event.metadata),
+        metadata: event.metadata
+      }))
 
-    // No Salesforce fallback for Training - dates are future appointments, not completion times
-    if (events.length === 0) {
-      events.push({
-        timestamp: trainingDate ? new Date(trainingDate) : new Date(),
-        actor: 'unknown',
-        changeType: 'Status from Salesforce',
-        metadata: {}
+      progression.push({
+        stage: 'Training',
+        status: trainingStatus || 'Scheduled',
+        events: events,
+        latestTimestamp: events[0]?.timestamp || null,
+        latestActor: events[0]?.actor || 'merchant',
+        // Deprecated fields for backward compatibility
+        timestamp: events[0]?.timestamp || null,
+        actor: events[0]?.actor || 'merchant'
+      })
+      console.log('[Stage Progression] Added Training to progression:', {
+        eventCount: events.length
       })
     }
-
-    progression.push({
-      stage: 'Training',
-      status: trainingStatus || 'Scheduled',
-      events: events,
-      latestTimestamp: events[0]?.timestamp || null,
-      latestActor: events[0]?.actor || 'unknown',
-      // Deprecated fields for backward compatibility
-      timestamp: events[0]?.timestamp || null,
-      actor: events[0]?.actor || 'unknown'
-    })
-    console.log('[Stage Progression] Added Training to progression:', {
-      eventCount: events.length
-    })
   }
 
   console.log('[Stage Progression] Returning events:', progression)
