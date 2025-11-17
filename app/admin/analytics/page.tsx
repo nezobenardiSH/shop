@@ -157,6 +157,10 @@ export default function AnalyticsPage() {
     try {
       const response = await fetch('/api/admin/merchants')
       if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/admin')
+          return
+        }
         throw new Error('Failed to fetch merchants')
       }
       const data = await response.json()
@@ -820,7 +824,15 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               {/* Top Merchants */}
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Merchants</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Top Merchants</h2>
+                  <a
+                    href="#all-merchants"
+                    className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                  >
+                    See all →
+                  </a>
+                </div>
                 {analyticsData.topMerchants.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -1332,7 +1344,7 @@ export default function AnalyticsPage() {
             )}
 
             {/* Recent Activity */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
               {analyticsData.recentActivity.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -1392,8 +1404,8 @@ export default function AnalyticsPage() {
                                 activity.deviceType === 'tablet' ? 'bg-indigo-100 text-indigo-800' :
                                 'bg-gray-100 text-gray-800'
                               }`}>
-                                {activity.deviceType === 'mobile' ? '📱 ' : 
-                                 activity.deviceType === 'tablet' ? '📋 ' : 
+                                {activity.deviceType === 'mobile' ? '📱 ' :
+                                 activity.deviceType === 'tablet' ? '📋 ' :
                                  '💻 '}{activity.deviceType}
                               </span>
                             ) : (
@@ -1418,6 +1430,54 @@ export default function AnalyticsPage() {
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-8">No recent activity</p>
+              )}
+            </div>
+
+            {/* All Merchants List */}
+            <div id="all-merchants" className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                All Merchants ({merchants.length})
+              </h2>
+              {loadingMerchants ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                </div>
+              ) : merchants.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {merchants
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((merchant) => (
+                      <button
+                        key={merchant.id}
+                        onClick={() => router.push(`/admin/analytics/${merchant.id}`)}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all text-left group"
+                      >
+                        <div className="flex-1 min-w-0 mr-3">
+                          <div className="text-sm font-medium text-gray-900 group-hover:text-orange-700 truncate">
+                            {merchant.name}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate mt-1">
+                            {merchant.id}
+                          </div>
+                        </div>
+                        <svg
+                          className="w-5 h-5 text-gray-400 group-hover:text-orange-500 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">No merchants found</p>
               )}
             </div>
           </>

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { 
-  getInstallerType, 
+import { cookies } from 'next/headers'
+import { verifyToken } from '@/lib/auth-utils'
+import { trackEvent } from '@/lib/analytics'
+import {
+  getInstallerType,
   bookInternalInstallation,
-  submitExternalInstallationRequest 
+  submitExternalInstallationRequest
 } from '@/lib/installer-availability'
 
 export async function POST(request: NextRequest) {
@@ -28,14 +31,27 @@ export async function POST(request: NextRequest) {
       isRescheduling: !!existingEventId,
       existingEventId: existingEventId || 'NONE (new booking)'
     })
-    
+
     if (!merchantId || !merchantName || !date) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
-    
+
+    // Get user info from auth token to track who booked the installation
+    let isInternalUser = false
+    let userType = 'merchant'
+    const cookieStore = await cookies()
+    const authToken = cookieStore.get('auth-token')?.value
+    if (authToken) {
+      const decoded = verifyToken(authToken)
+      if (decoded) {
+        isInternalUser = decoded.isInternalUser || false
+        userType = decoded.userType || 'merchant'
+      }
+    }
+
     // Check installer type
     const installerType = await getInstallerType(merchantId)
     
@@ -56,7 +72,42 @@ export async function POST(request: NextRequest) {
         availableInstallers,
         existingEventId
       )
-      
+
+      // Track analytics event for installation scheduling
+      try {
+        const sessionId = request.headers.get('x-session-id') || `session_${Date.now()}`
+        const userAgent = request.headers.get('user-agent') || ''
+        const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || ''
+        const deviceType = userAgent.includes('Mobile') ? 'mobile' : 'desktop'
+
+        await trackEvent({
+          merchantId: merchantId,
+          merchantName: onboardingTrainerName || merchantName,
+          page: 'booking-installation',
+          action: 'installation_scheduled',
+          sessionId,
+          userAgent,
+          deviceType,
+          ipAddress,
+          isInternalUser,
+          userType,
+          metadata: {
+            bookedBy: isInternalUser ? 'internal' : 'merchant',
+            bookingType: 'installation',
+            date: date,
+            startTime: timeSlot.start,
+            endTime: timeSlot.end,
+            assignedInstaller: availableInstallers[0],
+            isRescheduling: !!existingEventId,
+            installerType: 'internal'
+          }
+        })
+        console.log(`📊 Analytics: installation scheduling tracked`)
+      } catch (analyticsError) {
+        console.error('Failed to track installation analytics:', analyticsError)
+        // Don't fail the request if analytics tracking fails
+      }
+
       return NextResponse.json({
         type: 'internal',
         ...result
@@ -74,6 +125,39 @@ export async function POST(request: NextRequest) {
         preferredTime,
         contactPhone || ''
       )
+
+      // Track analytics event for external installation request
+      try {
+        const sessionId = request.headers.get('x-session-id') || `session_${Date.now()}`
+        const userAgent = request.headers.get('user-agent') || ''
+        const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || ''
+        const deviceType = userAgent.includes('Mobile') ? 'mobile' : 'desktop'
+
+        await trackEvent({
+          merchantId: merchantId,
+          merchantName: onboardingTrainerName || merchantName,
+          page: 'booking-installation',
+          action: 'installation_scheduled',
+          sessionId,
+          userAgent,
+          deviceType,
+          ipAddress,
+          isInternalUser,
+          userType,
+          metadata: {
+            bookedBy: isInternalUser ? 'internal' : 'merchant',
+            bookingType: 'installation',
+            date: date,
+            preferredTime: preferredTime,
+            isRescheduling: false,
+            installerType: 'external'
+          }
+        })
+        console.log(`📊 Analytics: external installation request tracked`)
+      } catch (analyticsError) {
+        console.error('Failed to track installation analytics:', analyticsError)
+        // Don't fail the request if analytics tracking fails
+      }
 
       return NextResponse.json({
         type: 'external',

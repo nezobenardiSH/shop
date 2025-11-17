@@ -45,11 +45,29 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Format the response
-    const merchantList = merchants.map(m => ({
-      id: m.merchantId,
-      name: m.merchantName || 'Unknown'
-    }))
+    // Normalize Salesforce IDs to 18-character format and deduplicate
+    const merchantMap = new Map<string, { id: string; name: string }>()
+
+    merchants.forEach(m => {
+      if (!m.merchantId) return
+
+      // Use the longer ID (18-char) as the canonical ID
+      // If we have both 15 and 18 char versions, keep the 18-char one
+      const baseId = m.merchantId.substring(0, 15)
+      const existingMerchant = merchantMap.get(baseId)
+
+      if (!existingMerchant || m.merchantId.length > existingMerchant.id.length) {
+        merchantMap.set(baseId, {
+          id: m.merchantId,
+          name: m.merchantName || 'Unknown'
+        })
+      }
+    })
+
+    // Convert to array and sort by name
+    const merchantList = Array.from(merchantMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )
 
     return NextResponse.json({
       success: true,

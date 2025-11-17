@@ -48,6 +48,13 @@ interface RecentActivity {
   userType: string | null
 }
 
+interface StageProgressionEvent {
+  stage: string
+  status: string
+  timestamp: string | null
+  actor: 'merchant' | 'internal_team' | 'unknown'
+}
+
 interface AnalyticsData {
   success: boolean
   filters: {
@@ -76,6 +83,9 @@ export default function MerchantAnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [merchantName, setMerchantName] = useState<string>('')
+  const [stageProgression, setStageProgression] = useState<StageProgressionEvent[]>([])
+  const [loadingProgression, setLoadingProgression] = useState(true)
+  const [progressionError, setProgressionError] = useState<string | null>(null)
 
   // Filters
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'custom'>('30d')
@@ -88,6 +98,45 @@ export default function MerchantAnalyticsPage() {
   useEffect(() => {
     fetchAnalytics()
   }, [merchantId, dateRange, startDate, endDate, userTypeFilter, pageFilter, groupBy])
+
+  useEffect(() => {
+    fetchStageProgression()
+  }, [merchantId])
+
+  const fetchStageProgression = async () => {
+    setLoadingProgression(true)
+    setProgressionError(null)
+    try {
+      const response = await fetch(`/api/admin/analytics/stage-progression?merchantId=${merchantId}`)
+
+      // Get response text first to debug
+      const responseText = await response.text()
+      console.log('[Stage Progression] Response status:', response.status)
+      console.log('[Stage Progression] Response text:', responseText)
+
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = JSON.parse(responseText)
+        } catch (e) {
+          console.error('[Stage Progression] Failed to parse error response:', responseText)
+          throw new Error(`API error (${response.status}): ${responseText || 'Unknown error'}`)
+        }
+        console.error('[Stage Progression] API error:', errorData)
+        throw new Error(errorData.details || errorData.error || `Failed to fetch stage progression (${response.status})`)
+      }
+
+      const data = JSON.parse(responseText)
+      if (data.success) {
+        setStageProgression(data.progression || [])
+      }
+    } catch (err) {
+      console.error('[Stage Progression] Error:', err)
+      setProgressionError(err instanceof Error ? err.message : 'Failed to fetch stage progression')
+    } finally {
+      setLoadingProgression(false)
+    }
+  }
 
   const fetchAnalytics = async () => {
     setIsLoading(true)
@@ -453,6 +502,94 @@ export default function MerchantAnalyticsPage() {
           )}
         </div>
 
+        {/* Stage Progression Timeline */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Stage Progression Timeline</h2>
+          {loadingProgression ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+            </div>
+          ) : progressionError ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800 text-sm font-medium">Error loading stage progression</p>
+              <p className="text-red-700 text-xs mt-1">{progressionError}</p>
+            </div>
+          ) : stageProgression.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Stage
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date & Time
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actor
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {stageProgression.map((event, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {event.stage}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {event.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {event.timestamp ? (
+                            <>
+                              {new Date(event.timestamp).toLocaleDateString('en-US', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              })}{' '}
+                              {new Date(event.timestamp).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {event.actor === 'internal_team' ? (
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                            Internal Team
+                          </span>
+                        ) : event.actor === 'merchant' ? (
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Merchant
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                            Unknown
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No stage progression data available</p>
+          )}
+        </div>
+
         {/* Stage Breakdown */}
         {stageBreakdown.length > 0 && (
           <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -508,89 +645,80 @@ export default function MerchantAnalyticsPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">All Activities</h2>
           {analyticsData.recentActivity.length > 0 ? (
-            <div className="space-y-4">
-              {(() => {
-                // Group activities by date
-                const groupedActivities = analyticsData.recentActivity.reduce((acc, activity) => {
-                  const date = new Date(activity.timestamp)
-                  const dateKey = groupBy === 'day'
-                    ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                    : groupBy === 'week'
-                    ? `Week of ${new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-                    : date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-
-                  if (!acc[dateKey]) {
-                    acc[dateKey] = []
-                  }
-                  acc[dateKey].push(activity)
-                  return acc
-                }, {} as Record<string, typeof analyticsData.recentActivity>)
-
-                return Object.entries(groupedActivities)
-                  .sort(([, activitiesA], [, activitiesB]) => {
-                    return new Date(activitiesB[0].timestamp).getTime() - new Date(activitiesA[0].timestamp).getTime()
-                  })
-                  .map(([dateKey, activities]) => (
-                    <div key={dateKey} className="border-l-4 border-orange-500 pl-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-md font-semibold text-gray-900">{dateKey}</h3>
-                        <span className="text-sm text-gray-500">{activities.length} activities</span>
-                      </div>
-                      <div className="space-y-2">
-                        {activities
-                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                          .map((activity) => (
-                            <div key={activity.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                              <div className="flex-shrink-0 w-16 text-xs text-gray-500">
-                                {new Date(activity.timestamp).toLocaleTimeString('en-US', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-mono text-gray-700 break-all">
-                                      {activity.page}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    {activity.action && (
-                                      <span className="text-xs text-gray-600 capitalize">
-                                        {activity.action}
-                                      </span>
-                                    )}
-                                    {activity.deviceType && (
-                                      <>
-                                        {activity.action && <span className="text-gray-400">•</span>}
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${
-                                          activity.deviceType === 'mobile' ? 'bg-purple-100 text-purple-800' :
-                                          activity.deviceType === 'tablet' ? 'bg-indigo-100 text-indigo-800' :
-                                          'bg-gray-100 text-gray-800'
-                                        }`}>
-                                          {activity.deviceType === 'mobile' ? '📱' : 
-                                           activity.deviceType === 'tablet' ? '📋' : 
-                                           '💻'} {activity.deviceType}
-                                        </span>
-                                      </>
-                                    )}
-                                    {activity.isInternalUser && (
-                                      <>
-                                        <span className="text-gray-400">•</span>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                                          Internal Team
-                                        </span>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  ))
-              })()}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Time
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Page URL
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Action
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Device
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User Type
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {analyticsData.recentActivity.map((activity) => (
+                    <tr key={activity.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {new Date(activity.timestamp).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="text-xs font-mono text-gray-700 break-all">
+                          {activity.page}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-500 capitalize">
+                          {activity.action || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {activity.deviceType ? (
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${
+                            activity.deviceType === 'mobile' ? 'bg-purple-100 text-purple-800' :
+                            activity.deviceType === 'tablet' ? 'bg-indigo-100 text-indigo-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {activity.deviceType === 'mobile' ? '📱 ' :
+                             activity.deviceType === 'tablet' ? '📋 ' :
+                             '💻 '}{activity.deviceType}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {activity.isInternalUser ? (
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                            Internal Team
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Merchant
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <p className="text-gray-500 text-center py-8">No activity data available</p>

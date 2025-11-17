@@ -61,33 +61,60 @@ export interface RecentActivity {
  * Get summary statistics
  */
 export async function getSummaryStats(filters: AnalyticsFilters): Promise<SummaryStats> {
-  const whereClause: any = {}
-
-  if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+  const whereClause: any = {
+    AND: []
   }
 
-  if (filters.merchantId) whereClause.merchantId = filters.merchantId
-  if (filters.page) whereClause.page = filters.page
-  if (filters.action) whereClause.action = filters.action
-  if (filters.isInternalUser !== undefined) whereClause.isInternalUser = filters.isInternalUser
-  if (filters.userType) whereClause.userType = filters.userType
+  if (filters.startDate || filters.endDate) {
+    const timestamp: any = {}
+    if (filters.startDate) timestamp.gte = filters.startDate
+    if (filters.endDate) timestamp.lte = filters.endDate
+    whereClause.AND.push({ timestamp })
+  }
+
+  // Handle merchant ID - match both 15-char and 18-char versions
+  if (filters.merchantId) {
+    const baseId = filters.merchantId.substring(0, 15)
+    whereClause.AND.push({
+      OR: [
+        { merchantId: baseId },
+        { merchantId: { startsWith: baseId } }
+      ]
+    })
+  }
+
+  if (filters.page) whereClause.AND.push({ page: filters.page })
+  if (filters.action) whereClause.AND.push({ action: filters.action })
+  if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
+  if (filters.userType) whereClause.AND.push({ userType: filters.userType })
+
+  // If no AND conditions, use empty object
+  const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
   // Total page views
-  const totalPageViews = await prisma.pageView.count({ where: whereClause })
+  const totalPageViews = await prisma.pageView.count({ where: finalWhereClause })
 
-  // Unique merchants
-  const uniqueMerchants = await prisma.pageView.findMany({
-    where: whereClause,
+  // Unique merchants - get all distinct merchant IDs
+  const merchantIds = await prisma.pageView.findMany({
+    where: finalWhereClause,
     select: { merchantId: true },
     distinct: ['merchantId']
   })
 
+  // Deduplicate Salesforce IDs (15-char vs 18-char versions)
+  const uniqueMerchantBaseIds = new Set<string>()
+  merchantIds.forEach(m => {
+    if (m.merchantId) {
+      // Use first 15 characters as the base ID
+      uniqueMerchantBaseIds.add(m.merchantId.substring(0, 15))
+    }
+  })
+
+  const uniqueMerchants = { length: uniqueMerchantBaseIds.size }
+
   // Unique sessions
   const uniqueSessions = await prisma.pageView.findMany({
-    where: whereClause,
+    where: finalWhereClause,
     select: { sessionId: true },
     distinct: ['sessionId']
   })
@@ -98,16 +125,29 @@ export async function getSummaryStats(filters: AnalyticsFilters): Promise<Summar
     : 0
 
   // Login stats
-  const loginWhereClause = { ...whereClause, page: 'login' }
+  const loginWhereClause = { ...finalWhereClause }
+  if (loginWhereClause.AND) {
+    loginWhereClause.AND.push({ page: 'login' })
+  } else {
+    loginWhereClause.page = 'login'
+  }
   const totalLogins = await prisma.pageView.count({ where: loginWhereClause })
 
-  const successfulLogins = await prisma.pageView.count({
-    where: { ...loginWhereClause, action: 'login_success' }
-  })
+  const successLoginWhereClause = { ...loginWhereClause }
+  if (successLoginWhereClause.AND) {
+    successLoginWhereClause.AND.push({ action: 'login_success' })
+  } else {
+    successLoginWhereClause.action = 'login_success'
+  }
+  const successfulLogins = await prisma.pageView.count({ where: successLoginWhereClause })
 
-  const failedLogins = await prisma.pageView.count({
-    where: { ...loginWhereClause, action: 'login_failed' }
-  })
+  const failedLoginWhereClause = { ...loginWhereClause }
+  if (failedLoginWhereClause.AND) {
+    failedLoginWhereClause.AND.push({ action: 'login_failed' })
+  } else {
+    failedLoginWhereClause.action = 'login_failed'
+  }
+  const failedLogins = await prisma.pageView.count({ where: failedLoginWhereClause })
 
   return {
     totalPageViews,
@@ -127,23 +167,38 @@ export async function getTimeSeriesData(
   filters: AnalyticsFilters,
   groupBy: 'day' | 'week' | 'month' = 'day'
 ): Promise<TimeSeriesDataPoint[]> {
-  const whereClause: any = {}
-  
-  if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+  const whereClause: any = {
+    AND: []
   }
-  
-  if (filters.merchantId) whereClause.merchantId = filters.merchantId
-  if (filters.page) whereClause.page = filters.page
-  if (filters.action) whereClause.action = filters.action
-  if (filters.isInternalUser !== undefined) whereClause.isInternalUser = filters.isInternalUser
-  if (filters.userType) whereClause.userType = filters.userType
+
+  if (filters.startDate || filters.endDate) {
+    const timestamp: any = {}
+    if (filters.startDate) timestamp.gte = filters.startDate
+    if (filters.endDate) timestamp.lte = filters.endDate
+    whereClause.AND.push({ timestamp })
+  }
+
+  // Handle merchant ID - match both 15-char and 18-char versions
+  if (filters.merchantId) {
+    const baseId = filters.merchantId.substring(0, 15)
+    whereClause.AND.push({
+      OR: [
+        { merchantId: baseId },
+        { merchantId: { startsWith: baseId } }
+      ]
+    })
+  }
+
+  if (filters.page) whereClause.AND.push({ page: filters.page })
+  if (filters.action) whereClause.AND.push({ action: filters.action })
+  if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
+  if (filters.userType) whereClause.AND.push({ userType: filters.userType })
+
+  const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
   // Get all page views
   const pageViews = await prisma.pageView.findMany({
-    where: whereClause,
+    where: finalWhereClause,
     select: {
       timestamp: true,
       sessionId: true,
@@ -189,7 +244,11 @@ export async function getTimeSeriesData(
     const group = grouped.get(key)!
     group.pageViews++
     group.sessions.add(pv.sessionId)
-    if (pv.merchantId) group.merchants.add(pv.merchantId)
+
+    // Normalize merchant ID to 15-char base to avoid duplicates
+    if (pv.merchantId) {
+      group.merchants.add(pv.merchantId.substring(0, 15))
+    }
 
     // Track merchant vs internal page views
     if (pv.isInternalUser) {
@@ -244,8 +303,9 @@ export async function getTopMerchants(
     }
   })
 
-  // Group by merchant
+  // Group by merchant, normalizing Salesforce IDs
   const merchantMap = new Map<string, {
+    merchantId: string
     merchantName: string
     totalViews: number
     lastVisit: Date
@@ -255,8 +315,12 @@ export async function getTopMerchants(
   pageViews.forEach(pv => {
     if (!pv.merchantId) return
 
-    if (!merchantMap.has(pv.merchantId)) {
-      merchantMap.set(pv.merchantId, {
+    // Normalize to 15-character base ID to group duplicates
+    const baseId = pv.merchantId.substring(0, 15)
+
+    if (!merchantMap.has(baseId)) {
+      merchantMap.set(baseId, {
+        merchantId: pv.merchantId.length >= 18 ? pv.merchantId : baseId,
         merchantName: pv.merchantName || 'Unknown',
         totalViews: 0,
         lastVisit: pv.timestamp,
@@ -264,7 +328,13 @@ export async function getTopMerchants(
       })
     }
 
-    const merchant = merchantMap.get(pv.merchantId)!
+    const merchant = merchantMap.get(baseId)!
+
+    // Prefer the 18-character ID if available
+    if (pv.merchantId.length > merchant.merchantId.length) {
+      merchant.merchantId = pv.merchantId
+    }
+
     merchant.totalViews++
     merchant.sessions.add(pv.sessionId)
     if (pv.timestamp > merchant.lastVisit) {
@@ -273,9 +343,9 @@ export async function getTopMerchants(
   })
 
   // Convert to array and sort
-  return Array.from(merchantMap.entries())
-    .map(([merchantId, data]) => ({
-      merchantId,
+  return Array.from(merchantMap.values())
+    .map(data => ({
+      merchantId: data.merchantId,
       merchantName: data.merchantName,
       totalViews: data.totalViews,
       lastVisit: data.lastVisit,
@@ -289,26 +359,41 @@ export async function getTopMerchants(
  * Get page breakdown
  */
 export async function getPageBreakdown(filters: AnalyticsFilters): Promise<PageBreakdown[]> {
-  const whereClause: any = {}
-  
-  if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+  const whereClause: any = {
+    AND: []
   }
-  
-  if (filters.merchantId) whereClause.merchantId = filters.merchantId
-  if (filters.action) whereClause.action = filters.action
-  if (filters.isInternalUser !== undefined) whereClause.isInternalUser = filters.isInternalUser
-  if (filters.userType) whereClause.userType = filters.userType
+
+  if (filters.startDate || filters.endDate) {
+    const timestamp: any = {}
+    if (filters.startDate) timestamp.gte = filters.startDate
+    if (filters.endDate) timestamp.lte = filters.endDate
+    whereClause.AND.push({ timestamp })
+  }
+
+  // Handle merchant ID - match both 15-char and 18-char versions
+  if (filters.merchantId) {
+    const baseId = filters.merchantId.substring(0, 15)
+    whereClause.AND.push({
+      OR: [
+        { merchantId: baseId },
+        { merchantId: { startsWith: baseId } }
+      ]
+    })
+  }
+
+  if (filters.action) whereClause.AND.push({ action: filters.action })
+  if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
+  if (filters.userType) whereClause.AND.push({ userType: filters.userType })
+
+  const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
   // Get total count
-  const total = await prisma.pageView.count({ where: whereClause })
+  const total = await prisma.pageView.count({ where: finalWhereClause })
 
   // Group by page
   const pageViews = await prisma.pageView.groupBy({
     by: ['page'],
-    where: whereClause,
+    where: finalWhereClause,
     _count: { page: true }
   })
 
@@ -326,26 +411,41 @@ export async function getRecentActivity(
   filters: AnalyticsFilters,
   limit: number = 20
 ): Promise<RecentActivity[]> {
-  const whereClause: any = {}
-
-  if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+  const whereClause: any = {
+    AND: []
   }
 
-  if (filters.merchantId) whereClause.merchantId = filters.merchantId
-  if (filters.page) whereClause.page = filters.page
-  if (filters.action) whereClause.action = filters.action
-  if (filters.isInternalUser !== undefined) whereClause.isInternalUser = filters.isInternalUser
-  if (filters.userType) whereClause.userType = filters.userType
+  if (filters.startDate || filters.endDate) {
+    const timestamp: any = {}
+    if (filters.startDate) timestamp.gte = filters.startDate
+    if (filters.endDate) timestamp.lte = filters.endDate
+    whereClause.AND.push({ timestamp })
+  }
+
+  // Handle merchant ID - match both 15-char and 18-char versions
+  if (filters.merchantId) {
+    const baseId = filters.merchantId.substring(0, 15)
+    whereClause.AND.push({
+      OR: [
+        { merchantId: baseId },
+        { merchantId: { startsWith: baseId } }
+      ]
+    })
+  }
+
+  if (filters.page) whereClause.AND.push({ page: filters.page })
+  if (filters.action) whereClause.AND.push({ action: filters.action })
+  if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
+  if (filters.userType) whereClause.AND.push({ userType: filters.userType })
+
+  const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
   let activities: any[] = []
 
   try {
     // Try with deviceType first
     activities = await prisma.pageView.findMany({
-      where: whereClause,
+      where: finalWhereClause,
       select: {
         id: true,
         merchantId: true,
@@ -365,7 +465,7 @@ export async function getRecentActivity(
     if (error.message?.includes('deviceType') || error.message?.includes('column')) {
       console.warn('[Analytics] deviceType column not found, querying without it')
       const activitiesWithoutDevice = await prisma.pageView.findMany({
-        where: whereClause,
+        where: finalWhereClause,
         select: {
           id: true,
           merchantId: true,
@@ -395,24 +495,36 @@ export async function getRecentActivity(
  */
 export async function getMenuSubmissionMetrics(filters: AnalyticsFilters) {
   const whereClause: any = {
-    action: 'menu_submitted'
+    AND: [{ action: 'menu_submitted' }]
   }
 
   if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+    const timestamp: any = {}
+    if (filters.startDate) timestamp.gte = filters.startDate
+    if (filters.endDate) timestamp.lte = filters.endDate
+    whereClause.AND.push({ timestamp })
   }
 
-  if (filters.merchantId) whereClause.merchantId = filters.merchantId
+  // Handle merchant ID - match both 15-char and 18-char versions
+  if (filters.merchantId) {
+    const baseId = filters.merchantId.substring(0, 15)
+    whereClause.AND.push({
+      OR: [
+        { merchantId: baseId },
+        { merchantId: { startsWith: baseId } }
+      ]
+    })
+  }
+
+  const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'menu_submitted' }
 
   // Total menu submissions
-  const totalSubmissions = await prisma.pageView.count({ where: whereClause })
+  const totalSubmissions = await prisma.pageView.count({ where: finalWhereClause })
 
   // Submissions by actor type
   const byActor = await prisma.pageView.groupBy({
     by: ['isInternalUser'],
-    where: whereClause,
+    where: finalWhereClause,
     _count: { id: true }
   })
 
@@ -433,24 +545,36 @@ export async function getMenuSubmissionMetrics(filters: AnalyticsFilters) {
  */
 export async function getTrainingSchedulingMetrics(filters: AnalyticsFilters) {
   const whereClause: any = {
-    action: 'training_scheduled'
+    AND: [{ action: 'training_scheduled' }]
   }
 
   if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+    const timestamp: any = {}
+    if (filters.startDate) timestamp.gte = filters.startDate
+    if (filters.endDate) timestamp.lte = filters.endDate
+    whereClause.AND.push({ timestamp })
   }
 
-  if (filters.merchantId) whereClause.merchantId = filters.merchantId
+  // Handle merchant ID - match both 15-char and 18-char versions
+  if (filters.merchantId) {
+    const baseId = filters.merchantId.substring(0, 15)
+    whereClause.AND.push({
+      OR: [
+        { merchantId: baseId },
+        { merchantId: { startsWith: baseId } }
+      ]
+    })
+  }
+
+  const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'training_scheduled' }
 
   // Total training bookings
-  const totalBookings = await prisma.pageView.count({ where: whereClause })
+  const totalBookings = await prisma.pageView.count({ where: finalWhereClause })
 
   // Bookings by actor type
   const byActor = await prisma.pageView.groupBy({
     by: ['isInternalUser'],
-    where: whereClause,
+    where: finalWhereClause,
     _count: { id: true }
   })
 
@@ -471,24 +595,36 @@ export async function getTrainingSchedulingMetrics(filters: AnalyticsFilters) {
  */
 export async function getInstallationSchedulingMetrics(filters: AnalyticsFilters) {
   const whereClause: any = {
-    action: 'installation_scheduled'
+    AND: [{ action: 'installation_scheduled' }]
   }
 
   if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+    const timestamp: any = {}
+    if (filters.startDate) timestamp.gte = filters.startDate
+    if (filters.endDate) timestamp.lte = filters.endDate
+    whereClause.AND.push({ timestamp })
   }
 
-  if (filters.merchantId) whereClause.merchantId = filters.merchantId
+  // Handle merchant ID - match both 15-char and 18-char versions
+  if (filters.merchantId) {
+    const baseId = filters.merchantId.substring(0, 15)
+    whereClause.AND.push({
+      OR: [
+        { merchantId: baseId },
+        { merchantId: { startsWith: baseId } }
+      ]
+    })
+  }
+
+  const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'installation_scheduled' }
 
   // Total installation bookings
-  const totalBookings = await prisma.pageView.count({ where: whereClause })
+  const totalBookings = await prisma.pageView.count({ where: finalWhereClause })
 
   // Bookings by actor type
   const byActor = await prisma.pageView.groupBy({
     by: ['isInternalUser'],
-    where: whereClause,
+    where: finalWhereClause,
     _count: { id: true }
   })
 
@@ -502,5 +638,219 @@ export async function getInstallationSchedulingMetrics(filters: AnalyticsFilters
     internalPercentage: totalBookings > 0 ? Math.round((internalCount / totalBookings) * 100) : 0,
     merchantPercentage: totalBookings > 0 ? Math.round((merchantCount / totalBookings) * 100) : 0
   }
+}
+
+/**
+ * Get stage progression timeline for a merchant
+ * Combines Salesforce status with analytics tracking
+ */
+export interface StageProgressionEvent {
+  stage: string
+  status: string
+  timestamp: Date | null
+  actor: 'merchant' | 'internal_team' | 'unknown'
+}
+
+export async function getStageProgression(
+  merchantId: string,
+  salesforceData: any
+): Promise<StageProgressionEvent[]> {
+  const baseId = merchantId.substring(0, 15)
+
+  // Get ALL actions for this merchant to find who did what and when
+  const activities = await prisma.pageView.findMany({
+    where: {
+      OR: [
+        { merchantId: baseId },
+        { merchantId: { startsWith: baseId } }
+      ]
+    },
+    select: {
+      page: true,
+      action: true,
+      timestamp: true,
+      isInternalUser: true,
+      userType: true,
+      metadata: true
+    },
+    orderBy: { timestamp: 'asc' }
+  })
+
+  console.log(`[Stage Progression] Found ${activities.length} activities for merchant ${merchantId}`)
+
+  // Log installation and training scheduling events specifically
+  const installationEvents = activities.filter(a => a.action === 'installation_scheduled')
+  const trainingEvents = activities.filter(a => a.action === 'training_scheduled')
+  const menuEvents = activities.filter(a => a.action === 'menu_submitted')
+
+  console.log('[Stage Progression] Installation scheduling events:', installationEvents.map(e => ({
+    timestamp: e.timestamp,
+    isInternalUser: e.isInternalUser,
+    userType: e.userType,
+    page: e.page
+  })))
+
+  console.log('[Stage Progression] Training scheduling events:', trainingEvents.map(e => ({
+    timestamp: e.timestamp,
+    isInternalUser: e.isInternalUser,
+    userType: e.userType,
+    page: e.page
+  })))
+
+  console.log('[Stage Progression] Menu submission events:', menuEvents.map(e => ({
+    timestamp: e.timestamp,
+    isInternalUser: e.isInternalUser,
+    userType: e.userType,
+    page: e.page
+  })))
+
+  // Build a map of when stages were completed based on analytics
+  const activityMap = new Map<string, { timestamp: Date, actor: 'merchant' | 'internal_team' }>()
+
+  activities.forEach(activity => {
+    let stage = ''
+
+    // Map analytics actions to onboarding stages
+    if (activity.action === 'menu_submitted') {
+      stage = 'Product Setup'
+    } else if (activity.action === 'video_uploaded' || activity.action === 'form_submitted') {
+      // Note: video_uploaded and form_submitted are not currently tracked
+      // but we include them for future compatibility
+      stage = 'Store Setup'
+    } else if (activity.action === 'installation_scheduled') {
+      stage = 'Installation'
+    } else if (activity.action === 'training_scheduled') {
+      stage = 'Training'
+    }
+
+    if (stage) {
+      const existing = activityMap.get(stage)
+      // Keep the latest timestamp for each stage
+      if (!existing || activity.timestamp > existing.timestamp) {
+        const actor = activity.isInternalUser ? 'internal_team' : 'merchant'
+        activityMap.set(stage, {
+          timestamp: activity.timestamp,
+          actor: actor
+        })
+        console.log(`[Stage Progression] Mapped ${stage}: isInternalUser=${activity.isInternalUser}, actor=${actor}, timestamp=${activity.timestamp}`)
+      }
+    }
+  })
+
+  // Log Salesforce data for debugging
+  console.log('[Stage Progression] Salesforce data:', {
+    productSetupStatus: salesforceData.Product_Setup_Status__c,
+    menuSubmissionTimestamp: salesforceData.Menu_Collection_Submission_Timestamp__c,
+    videoProofLink: salesforceData.Video_Proof_Link__c,
+    installationStatus: salesforceData.Hardware_Installation_Status__c,
+    trainingStatus: salesforceData.Training_Status__c,
+    installationDate: salesforceData.Installation_Date__c,
+    trainingDate: salesforceData.Training_Date__c
+  })
+
+  // Now build the progression based on Salesforce data + analytics
+  const progression: StageProgressionEvent[] = []
+
+  // Product Setup - check if menu has been submitted
+  const menuSubmissionTimestamp = salesforceData.Menu_Collection_Submission_Timestamp__c
+  const productSetupStatus = salesforceData.Product_Setup_Status__c
+  const hasMenuSubmitted = menuSubmissionTimestamp != null && menuSubmissionTimestamp !== ''
+
+  console.log('[Stage Progression] Product Setup check:', {
+    menuSubmissionTimestamp,
+    productSetupStatus,
+    hasMenuSubmitted
+  })
+
+  if (hasMenuSubmitted) {
+    const activity = activityMap.get('Product Setup')
+    // Determine status from Product_Setup_Status__c field
+    let status = 'Done'
+    if (productSetupStatus) {
+      const isDone = productSetupStatus.toLowerCase().includes('complete') ||
+                     productSetupStatus.toLowerCase().includes('done') ||
+                     productSetupStatus === 'Yes'
+      status = isDone ? 'Done' : productSetupStatus
+    }
+
+    progression.push({
+      stage: 'Product Setup',
+      status: status,
+      timestamp: activity?.timestamp || (menuSubmissionTimestamp ? new Date(menuSubmissionTimestamp) : null),
+      actor: activity?.actor || 'unknown'
+    })
+    console.log('[Stage Progression] Added Product Setup to progression')
+  }
+
+  // Store Setup - check if video has been uploaded
+  const hasVideoProof = salesforceData.Video_Proof_Link__c != null &&
+                        salesforceData.Video_Proof_Link__c !== '' &&
+                        salesforceData.Video_Proof_Link__c.trim() !== ''
+
+  console.log('[Stage Progression] Store Setup check:', {
+    videoProofLink: salesforceData.Video_Proof_Link__c,
+    hasVideoProof
+  })
+
+  if (hasVideoProof) {
+    const activity = activityMap.get('Store Setup')
+    progression.push({
+      stage: 'Store Setup',
+      status: 'Done',
+      timestamp: activity?.timestamp || null,
+      actor: activity?.actor || 'unknown'
+    })
+    console.log('[Stage Progression] Added Store Setup to progression')
+  }
+
+  // Installation - check status and date
+  const installationStatus = salesforceData.Hardware_Installation_Status__c
+  const installationDate = salesforceData.Installation_Date__c
+  const hasInstallation = (installationStatus && installationStatus !== 'Not Started') || installationDate
+
+  console.log('[Stage Progression] Installation check:', {
+    installationStatus,
+    installationDate,
+    hasInstallation
+  })
+
+  if (hasInstallation) {
+    const activity = activityMap.get('Installation')
+    progression.push({
+      stage: 'Installation',
+      status: installationStatus || 'Scheduled',
+      // Only use analytics timestamp - Installation_Date__c is the future appointment date
+      timestamp: activity?.timestamp || null,
+      actor: activity?.actor || 'unknown'
+    })
+    console.log('[Stage Progression] Added Installation to progression')
+  }
+
+  // Training - check status and date
+  const trainingStatus = salesforceData.Training_Status__c
+  const trainingDate = salesforceData.Training_Date__c
+  const hasTraining = (trainingStatus && trainingStatus !== 'Not Started') || trainingDate
+
+  console.log('[Stage Progression] Training check:', {
+    trainingStatus,
+    trainingDate,
+    hasTraining
+  })
+
+  if (hasTraining) {
+    const activity = activityMap.get('Training')
+    progression.push({
+      stage: 'Training',
+      status: trainingStatus || 'Scheduled',
+      // Only use analytics timestamp - Training_Date__c is the future appointment date
+      timestamp: activity?.timestamp || null,
+      actor: activity?.actor || 'unknown'
+    })
+    console.log('[Stage Progression] Added Training to progression')
+  }
+
+  console.log('[Stage Progression] Returning events:', progression)
+
+  return progression
 }
 
