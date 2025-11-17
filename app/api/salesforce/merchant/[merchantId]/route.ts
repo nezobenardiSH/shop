@@ -89,6 +89,7 @@ export async function GET(
                Delivery_Tracking_Number__c,
                Delivery_Tracking_Number_Timestamp__c,
                Video_Proof_Link__c,
+               Timestamp_Pre_Installation_Proof_Link__c,
                Installation_Date__c,
                Actual_Installation_Date__c,
                Installation_ST_Ticket_No__c,
@@ -201,13 +202,15 @@ export async function GET(
       installationDate: null,
       installerName: null,
       trainerName: null,
-      trainingDate: null
+      trainingDate: null,
+      remoteTrainingMeetingLink: null
     }
     try {
       const portalQuery = `
         SELECT Id, Training_Event_ID__c, Installation_Event_ID__c,
                Installation_Date__c, Installer_Name__c,
-               Training_Date__c, Trainer_Name__c
+               Training_Date__c, Trainer_Name__c,
+               Remote_Training_Meeting_Link__c
         FROM Onboarding_Portal__c
         WHERE Onboarding_Trainer_Record__c = '${trainerId}'
         LIMIT 1
@@ -219,12 +222,14 @@ export async function GET(
         portalData.installationEventId = portal.Installation_Event_ID__c
         portalData.installationDate = portal.Installation_Date__c
         portalData.trainingDate = portal.Training_Date__c
+        portalData.remoteTrainingMeetingLink = portal.Remote_Training_Meeting_Link__c || null
 
         // Installer_Name__c and Trainer_Name__c are text fields, not lookups
         portalData.installerName = portal.Installer_Name__c || null
         portalData.trainerName = portal.Trainer_Name__c || null
         console.log('🔍 Installer_Name__c value:', portal.Installer_Name__c)
         console.log('🔍 Trainer_Name__c value:', portal.Trainer_Name__c)
+        console.log('🔍 Remote_Training_Meeting_Link__c value:', portal.Remote_Training_Meeting_Link__c)
 
         console.log('✅ Found Onboarding_Portal__c record with data:', portalData)
       } else {
@@ -547,6 +552,9 @@ export async function GET(
         installationEventId: portalData.installationEventId,
         trainingEventId: portalData.trainingEventId,
 
+        // Remote training meeting link (from Onboarding_Portal__c object)
+        remoteTrainingMeetingLink: portalData.remoteTrainingMeetingLink,
+
         // CRITICAL: Assigned trainer email for rescheduling
         // This is the email of the trainer who is assigned to the current event
         // Used to delete from the correct trainer's calendar during rescheduling
@@ -563,6 +571,7 @@ export async function GET(
         subscriptionActivationDate: trainer.Subscription_Activation_Date__c,
         posQrDeliveryTnxCount: trainer.Account_Name__r?.POS_QR_Delivery_Tnx_Count_Past_30_Days__c || 0,
         videoProofLink: trainer.Video_Proof_Link__c,
+        videoProofTimestamp: trainer.Timestamp_Pre_Installation_Proof_Link__c,
         createdDate: trainer.CreatedDate,
         lastModifiedDate: trainer.LastModifiedDate
       }]

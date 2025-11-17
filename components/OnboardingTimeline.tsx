@@ -943,10 +943,17 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     </div>
                   </div>
                   {(trainerData?.videoProofLink || uploadedVideoUrl) && (
-                    <a href={uploadedVideoUrl || trainerData?.videoProofLink} target="_blank" rel="noopener noreferrer"
-                       className="text-xs text-blue-600 hover:text-blue-700">
-                      View Video
-                    </a>
+                    <>
+                      <a href={uploadedVideoUrl || trainerData?.videoProofLink} target="_blank" rel="noopener noreferrer"
+                         className="text-xs text-blue-600 hover:text-blue-700">
+                        View Video
+                      </a>
+                      {(trainerData as any)?.videoProofTimestamp && (
+                        <div className="text-xs text-gray-500">
+                          Uploaded: {formatDateTime((trainerData as any).videoProofTimestamp)}
+                        </div>
+                      )}
+                    </>
                   )}
                   <div>
                     <input

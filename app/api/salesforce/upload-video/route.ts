@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { getSalesforceConnection } from '@/lib/salesforce'
+import { verifyToken } from '@/lib/auth-utils'
+import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
 
 export async function POST(request: Request) {
   try {
@@ -113,6 +116,53 @@ export async function POST(request: Request) {
     }
 
     console.log(`✅ Successfully ${isReplacement ? 'replaced' : 'uploaded'} video for trainer: ${trainerId}`)
+
+    // Track analytics event for video upload
+    try {
+      const cookieStore = await cookies()
+      const sessionId = cookieStore.get('analytics-session-id')?.value || generateSessionId(request)
+      const { userAgent, ipAddress, deviceType } = getClientInfo(request)
+
+      // Get user info from auth token to track who uploaded
+      let isInternalUser = false
+      let userType = 'merchant'
+      const authToken = cookieStore.get('auth-token')?.value
+      if (authToken) {
+        const decoded = verifyToken(authToken)
+        if (decoded) {
+          isInternalUser = decoded.isInternalUser || false
+          userType = decoded.userType || 'merchant'
+        }
+      }
+
+      // Get merchant name from Salesforce
+      const trainer = await conn.sobject('Onboarding_Trainer__c').findOne({
+        Id: trainerId
+      }, ['Name', 'Account_Name__c'])
+
+      await trackEvent({
+        merchantId: trainer?.Account_Name__c || trainerId,
+        merchantName: trainer?.Name || 'Unknown',
+        page: 'store-setup',
+        action: 'video_uploaded',
+        sessionId,
+        userAgent,
+        deviceType,
+        ipAddress,
+        isInternalUser,
+        userType,
+        metadata: {
+          uploadedBy: isInternalUser ? 'internal' : 'merchant',
+          isReplacement: isReplacement,
+          fileName: file.name,
+          fileSize: file.size
+        }
+      })
+      console.log('📊 Analytics: Video upload tracked')
+    } catch (analyticsError) {
+      console.error('Failed to track video upload:', analyticsError)
+      // Don't fail the request if analytics fails
+    }
 
     return NextResponse.json({
       success: true,

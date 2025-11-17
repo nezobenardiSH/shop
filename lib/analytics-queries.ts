@@ -714,8 +714,6 @@ export async function getStageProgression(
     if (activity.action === 'menu_submitted') {
       stage = 'Product Setup'
     } else if (activity.action === 'video_uploaded' || activity.action === 'form_submitted') {
-      // Note: video_uploaded and form_submitted are not currently tracked
-      // but we include them for future compatibility
       stage = 'Store Setup'
     } else if (activity.action === 'installation_scheduled') {
       stage = 'Installation'
@@ -773,34 +771,48 @@ export async function getStageProgression(
       status = isDone ? 'Done' : productSetupStatus
     }
 
+    // For Product Setup: Use Salesforce timestamp (primary source), analytics for actor
+    const timestamp = menuSubmissionTimestamp ? new Date(menuSubmissionTimestamp) : (activity?.timestamp || null)
+
     progression.push({
       stage: 'Product Setup',
       status: status,
-      timestamp: activity?.timestamp || (menuSubmissionTimestamp ? new Date(menuSubmissionTimestamp) : null),
-      actor: activity?.actor || 'unknown'
+      timestamp: timestamp,
+      actor: activity?.actor || 'merchant' // Default to merchant if no analytics data
     })
-    console.log('[Stage Progression] Added Product Setup to progression')
+    console.log('[Stage Progression] Added Product Setup to progression:', {
+      timestamp,
+      actor: activity?.actor || 'merchant (default)'
+    })
   }
 
   // Store Setup - check if video has been uploaded
   const hasVideoProof = salesforceData.Video_Proof_Link__c != null &&
                         salesforceData.Video_Proof_Link__c !== '' &&
                         salesforceData.Video_Proof_Link__c.trim() !== ''
+  const videoUploadTimestamp = salesforceData.Timestamp_Pre_Installation_Proof_Link__c
 
   console.log('[Stage Progression] Store Setup check:', {
     videoProofLink: salesforceData.Video_Proof_Link__c,
+    videoUploadTimestamp,
     hasVideoProof
   })
 
   if (hasVideoProof) {
     const activity = activityMap.get('Store Setup')
+    // For Store Setup: Use Salesforce timestamp (primary source), analytics for actor
+    const timestamp = videoUploadTimestamp ? new Date(videoUploadTimestamp) : (activity?.timestamp || null)
+
     progression.push({
       stage: 'Store Setup',
       status: 'Done',
-      timestamp: activity?.timestamp || null,
-      actor: activity?.actor || 'unknown'
+      timestamp: timestamp,
+      actor: activity?.actor || 'merchant' // Default to merchant if no analytics data
     })
-    console.log('[Stage Progression] Added Store Setup to progression')
+    console.log('[Stage Progression] Added Store Setup to progression:', {
+      timestamp,
+      actor: activity?.actor || 'merchant (default)'
+    })
   }
 
   // Installation - check status and date
