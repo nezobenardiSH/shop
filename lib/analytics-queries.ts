@@ -949,31 +949,38 @@ export async function getStageProgression(
   if (hasInstallation) {
     const activityEvents = activityMap.get('Installation') || []
 
-    // Only show Installation if there are actual booking events
-    // Don't use Installation_Date__c as fallback since it's a future appointment date, not a booking timestamp
-    if (activityEvents.length > 0) {
-      // Build events array with change type labels
-      const events: StageEvent[] = activityEvents.map((event, index) => ({
-        timestamp: event.timestamp,
-        actor: event.actor,
-        changeType: generateChangeType('Installation', index, activityEvents.length, event.actor, event.metadata),
-        metadata: event.metadata
-      }))
+    // Build events array with change type labels
+    const events: StageEvent[] = activityEvents.map((event, index) => ({
+      timestamp: event.timestamp,
+      actor: event.actor,
+      changeType: generateChangeType('Installation', index, activityEvents.length, event.actor, event.metadata),
+      metadata: event.metadata
+    }))
 
-      progression.push({
-        stage: 'Installation',
-        status: installationStatus || 'Scheduled',
-        events: events,
-        latestTimestamp: events[0]?.timestamp || null,
-        latestActor: events[0]?.actor || 'merchant',
-        // Deprecated fields for backward compatibility
-        timestamp: events[0]?.timestamp || null,
-        actor: events[0]?.actor || 'merchant'
-      })
-      console.log('[Stage Progression] Added Installation to progression:', {
-        eventCount: events.length
+    // If no analytics events, show stage but indicate data is not available
+    if (events.length === 0) {
+      events.push({
+        timestamp: new Date(), // Use current time as placeholder
+        actor: 'unknown',
+        changeType: 'Booking data not tracked',
+        metadata: { noTrackingData: true }
       })
     }
+
+    progression.push({
+      stage: 'Installation',
+      status: installationStatus || 'Scheduled',
+      events: events,
+      latestTimestamp: events.length > 0 && !events[0].metadata?.noTrackingData ? events[0].timestamp : null,
+      latestActor: events[0]?.actor || 'unknown',
+      // Deprecated fields for backward compatibility
+      timestamp: events.length > 0 && !events[0].metadata?.noTrackingData ? events[0].timestamp : null,
+      actor: events[0]?.actor || 'unknown'
+    })
+    console.log('[Stage Progression] Added Installation to progression:', {
+      eventCount: events.length,
+      hasTrackingData: !events[0]?.metadata?.noTrackingData
+    })
   }
 
   // Training - check status and date
@@ -990,31 +997,38 @@ export async function getStageProgression(
   if (hasTraining) {
     const activityEvents = activityMap.get('Training') || []
 
-    // Only show Training if there are actual booking events
-    // Don't use Training_Date__c as fallback since it's a future appointment date, not a booking timestamp
-    if (activityEvents.length > 0) {
-      // Build events array with change type labels
-      const events: StageEvent[] = activityEvents.map((event, index) => ({
-        timestamp: event.timestamp,
-        actor: event.actor,
-        changeType: generateChangeType('Training', index, activityEvents.length, event.actor, event.metadata),
-        metadata: event.metadata
-      }))
+    // Build events array with change type labels
+    const events: StageEvent[] = activityEvents.map((event, index) => ({
+      timestamp: event.timestamp,
+      actor: event.actor,
+      changeType: generateChangeType('Training', index, activityEvents.length, event.actor, event.metadata),
+      metadata: event.metadata
+    }))
 
-      progression.push({
-        stage: 'Training',
-        status: trainingStatus || 'Scheduled',
-        events: events,
-        latestTimestamp: events[0]?.timestamp || null,
-        latestActor: events[0]?.actor || 'merchant',
-        // Deprecated fields for backward compatibility
-        timestamp: events[0]?.timestamp || null,
-        actor: events[0]?.actor || 'merchant'
-      })
-      console.log('[Stage Progression] Added Training to progression:', {
-        eventCount: events.length
+    // If no analytics events, show stage but indicate data is not available
+    if (events.length === 0) {
+      events.push({
+        timestamp: new Date(), // Use current time as placeholder
+        actor: 'unknown',
+        changeType: 'Booking data not tracked',
+        metadata: { noTrackingData: true }
       })
     }
+
+    progression.push({
+      stage: 'Training',
+      status: trainingStatus || 'Scheduled',
+      events: events,
+      latestTimestamp: events.length > 0 && !events[0].metadata?.noTrackingData ? events[0].timestamp : null,
+      latestActor: events[0]?.actor || 'unknown',
+      // Deprecated fields for backward compatibility
+      timestamp: events.length > 0 && !events[0].metadata?.noTrackingData ? events[0].timestamp : null,
+      actor: events[0]?.actor || 'unknown'
+    })
+    console.log('[Stage Progression] Added Training to progression:', {
+      eventCount: events.length,
+      hasTrackingData: !events[0].metadata?.noTrackingData
+    })
   }
 
   console.log('[Stage Progression] Returning events:', progression)
