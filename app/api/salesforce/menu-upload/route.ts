@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
           }
           
           await trackEvent({
-            merchantId: trainer.Account_Name__c || trainerId,
+            merchantId: trainer.Id,  // Use trainer ID, not Account ID
             merchantName: trainer.Name,
             page: 'menu-submission',
             action: 'menu_submitted',
@@ -123,7 +123,8 @@ export async function POST(request: NextRequest) {
             metadata: {
               submittedBy: isInternalUser ? 'internal' : 'merchant',
               previousStatus: currentStatus || 'Not Started',
-              newStatus: 'Ticket Created - Pending Completion'
+              newStatus: 'Ticket Created - Pending Completion',
+              accountId: trainer.Account_Name__c  // Keep account ID in metadata for reference
             }
           })
           console.log('📊 Analytics: Menu submission tracked')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 
 // Helper function to extract stage from page field
@@ -48,11 +48,22 @@ interface RecentActivity {
   userType: string | null
 }
 
+interface StageEvent {
+  timestamp: string
+  actor: 'merchant' | 'internal_team' | 'unknown'
+  changeType: string
+  metadata: any
+}
+
 interface StageProgressionEvent {
   stage: string
   status: string
-  timestamp: string | null
-  actor: 'merchant' | 'internal_team' | 'unknown'
+  events: StageEvent[]
+  latestTimestamp: string | null
+  latestActor: 'merchant' | 'internal_team' | 'unknown'
+  // Deprecated fields for backward compatibility
+  timestamp?: string | null
+  actor?: 'merchant' | 'internal_team' | 'unknown'
 }
 
 interface AnalyticsData {
@@ -86,6 +97,7 @@ export default function MerchantAnalyticsPage() {
   const [stageProgression, setStageProgression] = useState<StageProgressionEvent[]>([])
   const [loadingProgression, setLoadingProgression] = useState(true)
   const [progressionError, setProgressionError] = useState<string | null>(null)
+  const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set())
 
   // Filters
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'custom'>('30d')
@@ -534,54 +546,141 @@ export default function MerchantAnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {stageProgression.map((event, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {event.stage}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {event.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {event.timestamp ? (
-                            <>
-                              {new Date(event.timestamp).toLocaleDateString('en-US', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              })}{' '}
-                              {new Date(event.timestamp).toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        {event.actor === 'internal_team' ? (
-                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
-                            Internal Team
-                          </span>
-                        ) : event.actor === 'merchant' ? (
-                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Merchant
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                            Unknown
-                          </span>
+                  {stageProgression.map((stage, index) => {
+                    const isExpanded = expandedStages.has(stage.stage)
+                    const eventCount = stage.events?.length || 0
+                    const hasHistory = eventCount > 1
+
+                    return (
+                      <React.Fragment key={index}>
+                        {/* Main Row */}
+                        <tr
+                          className={`hover:bg-gray-50 ${hasHistory ? 'cursor-pointer' : ''}`}
+                          onClick={() => {
+                            if (hasHistory) {
+                              setExpandedStages(prev => {
+                                const newSet = new Set(prev)
+                                if (newSet.has(stage.stage)) {
+                                  newSet.delete(stage.stage)
+                                } else {
+                                  newSet.add(stage.stage)
+                                }
+                                return newSet
+                              })
+                            }
+                          }}
+                        >
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              {hasHistory && (
+                                <svg
+                                  className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              )}
+                              <div className="text-sm font-medium text-gray-900">
+                                {stage.stage}
+                              </div>
+                              {hasHistory && (
+                                <span className="text-xs text-gray-500 ml-1">
+                                  ({eventCount} changes)
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                              {stage.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {stage.latestTimestamp ? (
+                                <>
+                                  {new Date(stage.latestTimestamp).toLocaleDateString('en-US', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}{' '}
+                                  {new Date(stage.latestTimestamp).toLocaleTimeString('en-US', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {stage.latestActor === 'internal_team' ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">
+                                Internal Team
+                              </span>
+                            ) : stage.latestActor === 'merchant' ? (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Merchant
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                Unknown
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+
+                        {/* Expanded History Rows */}
+                        {isExpanded && stage.events && stage.events.length > 0 && (
+                          <tr>
+                            <td colSpan={4} className="px-4 py-2 bg-gray-50">
+                              <div className="pl-8">
+                                <div className="text-xs font-semibold text-gray-700 mb-2">Change History</div>
+                                <div className="space-y-2">
+                                  {stage.events.map((event, eventIndex) => (
+                                    <div key={eventIndex} className="flex items-center gap-4 text-sm py-1">
+                                      <div className="text-gray-900 w-40">
+                                        {new Date(event.timestamp).toLocaleDateString('en-US', {
+                                          day: 'numeric',
+                                          month: 'short',
+                                          year: 'numeric'
+                                        })}{' '}
+                                        {new Date(event.timestamp).toLocaleTimeString('en-US', {
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </div>
+                                      <div className="flex-shrink-0">
+                                        {event.actor === 'internal_team' ? (
+                                          <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                            Internal Team
+                                          </span>
+                                        ) : event.actor === 'merchant' ? (
+                                          <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            Merchant
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                            Unknown
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-gray-600 flex-1">
+                                        {event.changeType}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
                         )}
-                      </td>
-                    </tr>
-                  ))}
+                      </React.Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

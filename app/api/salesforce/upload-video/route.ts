@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { verifyToken } from '@/lib/auth-utils'
 import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File

@@ -644,11 +644,25 @@ export async function getInstallationSchedulingMetrics(filters: AnalyticsFilters
  * Get stage progression timeline for a merchant
  * Combines Salesforce status with analytics tracking
  */
+// Individual event within a stage's history
+export interface StageEvent {
+  timestamp: Date
+  actor: 'merchant' | 'internal_team' | 'unknown'
+  changeType: string  // Human-readable label like "Initial upload by merchant"
+  metadata: any       // Original event metadata for additional context
+}
+
+// Stage progression with full history
 export interface StageProgressionEvent {
   stage: string
   status: string
-  timestamp: Date | null
-  actor: 'merchant' | 'internal_team' | 'unknown'
+  events: StageEvent[]  // Array of all changes for this stage
+  latestTimestamp: Date | null
+  latestActor: 'merchant' | 'internal_team' | 'unknown'
+
+  // Deprecated fields (kept for backward compatibility)
+  timestamp?: Date | null
+  actor?: 'merchant' | 'internal_team' | 'unknown'
 }
 
 export async function getStageProgression(
@@ -704,8 +718,13 @@ export async function getStageProgression(
     page: e.page
   })))
 
-  // Build a map of when stages were completed based on analytics
-  const activityMap = new Map<string, { timestamp: Date, actor: 'merchant' | 'internal_team' }>()
+  // Build a map of ALL events for each stage (not just latest)
+  const activityMap = new Map<string, Array<{
+    timestamp: Date,
+    actor: 'merchant' | 'internal_team',
+    action: string,
+    metadata: any
+  }>>()
 
   activities.forEach(activity => {
     let stage = ''
@@ -721,25 +740,85 @@ export async function getStageProgression(
       stage = 'Training'
     }
 
-    if (stage) {
-      const existing = activityMap.get(stage)
-      // Keep the latest timestamp for each stage
-      if (!existing || activity.timestamp > existing.timestamp) {
-        const actor = activity.isInternalUser ? 'internal_team' : 'merchant'
-        activityMap.set(stage, {
-          timestamp: activity.timestamp,
-          actor: actor
-        })
-        console.log(`[Stage Progression] Mapped ${stage}: isInternalUser=${activity.isInternalUser}, actor=${actor}, timestamp=${activity.timestamp}`)
-      }
+    if (stage && activity.action) {
+      const actor = activity.isInternalUser ? 'internal_team' : 'merchant'
+      const existing = activityMap.get(stage) || []
+
+      existing.push({
+        timestamp: activity.timestamp,
+        actor: actor,
+        action: activity.action,
+        metadata: activity.metadata
+      })
+
+      activityMap.set(stage, existing)
+      console.log(`[Stage Progression] Added event to ${stage}: isInternalUser=${activity.isInternalUser}, actor=${actor}, timestamp=${activity.timestamp}`)
     }
   })
+
+  // Sort events within each stage by timestamp (newest first)
+  activityMap.forEach((events, stage) => {
+    events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+  })
+
+  // Helper function to generate human-readable change type labels
+  const generateChangeType = (
+    stage: string,
+    index: number,
+    totalEvents: number,
+    actor: 'merchant' | 'internal_team',
+    metadata: any
+  ): string => {
+    const isFirst = index === totalEvents - 1  // Last in array (oldest) = first chronologically
+    const actorLabel = actor === 'internal_team' ? 'internal team' : 'merchant'
+
+    // Product Setup (menu submissions)
+    if (stage === 'Product Setup') {
+      return isFirst
+        ? `Initial submission by ${actorLabel}`
+        : `Re-submitted by ${actorLabel}`
+    }
+
+    // Store Setup (video uploads)
+    if (stage === 'Store Setup') {
+      if (metadata?.isReplacement) {
+        return `Replaced by ${actorLabel}`
+      }
+      return isFirst
+        ? `Initial upload by ${actorLabel}`
+        : `Replaced by ${actorLabel}`
+    }
+
+    // Installation scheduling
+    if (stage === 'Installation') {
+      if (metadata?.isRescheduling) {
+        return `Rescheduled by ${actorLabel}`
+      }
+      return isFirst
+        ? `Initially scheduled by ${actorLabel}`
+        : `Rescheduled by ${actorLabel}`
+    }
+
+    // Training scheduling
+    if (stage === 'Training') {
+      if (metadata?.isRescheduling) {
+        return `Rescheduled by ${actorLabel}`
+      }
+      return isFirst
+        ? `Initially scheduled by ${actorLabel}`
+        : `Rescheduled by ${actorLabel}`
+    }
+
+    // Fallback
+    return `Updated by ${actorLabel}`
+  }
 
   // Log Salesforce data for debugging
   console.log('[Stage Progression] Salesforce data:', {
     productSetupStatus: salesforceData.Product_Setup_Status__c,
     menuSubmissionTimestamp: salesforceData.Menu_Collection_Submission_Timestamp__c,
     videoProofLink: salesforceData.Video_Proof_Link__c,
+    videoProofTimestamp: salesforceData.Timestamp_Pre_Installation_Proof_Link__c,
     installationStatus: salesforceData.Hardware_Installation_Status__c,
     trainingStatus: salesforceData.Training_Status__c,
     installationDate: salesforceData.Installation_Date__c,
@@ -761,7 +840,7 @@ export async function getStageProgression(
   })
 
   if (hasMenuSubmitted) {
-    const activity = activityMap.get('Product Setup')
+    const activityEvents = activityMap.get('Product Setup') || []
     // Determine status from Product_Setup_Status__c field
     let status = 'Done'
     if (productSetupStatus) {
@@ -771,18 +850,38 @@ export async function getStageProgression(
       status = isDone ? 'Done' : productSetupStatus
     }
 
-    // For Product Setup: Use Salesforce timestamp (primary source), analytics for actor
-    const timestamp = menuSubmissionTimestamp ? new Date(menuSubmissionTimestamp) : (activity?.timestamp || null)
+    // Build events array with change type labels
+    const events: StageEvent[] = activityEvents.map((event, index) => ({
+      timestamp: event.timestamp,
+      actor: event.actor,
+      changeType: generateChangeType('Product Setup', index, activityEvents.length, event.actor, event.metadata),
+      metadata: event.metadata
+    }))
+
+    // If no analytics events, create fallback from Salesforce timestamp
+    if (events.length === 0 && menuSubmissionTimestamp) {
+      events.push({
+        timestamp: new Date(menuSubmissionTimestamp),
+        actor: 'merchant',  // Menu submissions are always done by merchants via external form
+        changeType: 'Submitted by merchant',
+        metadata: {}
+      })
+    }
 
     progression.push({
       stage: 'Product Setup',
       status: status,
-      timestamp: timestamp,
-      actor: activity?.actor || 'merchant' // Default to merchant if no analytics data
+      events: events,
+      latestTimestamp: events[0]?.timestamp || null,
+      latestActor: events[0]?.actor || 'merchant',
+      // Deprecated fields for backward compatibility
+      timestamp: events[0]?.timestamp || null,
+      actor: events[0]?.actor || 'merchant'
     })
     console.log('[Stage Progression] Added Product Setup to progression:', {
-      timestamp,
-      actor: activity?.actor || 'merchant (default)'
+      eventCount: events.length,
+      latestTimestamp: events[0]?.timestamp,
+      latestActor: events[0]?.actor || 'merchant (default)'
     })
   }
 
@@ -799,19 +898,40 @@ export async function getStageProgression(
   })
 
   if (hasVideoProof) {
-    const activity = activityMap.get('Store Setup')
-    // For Store Setup: Use Salesforce timestamp (primary source), analytics for actor
-    const timestamp = videoUploadTimestamp ? new Date(videoUploadTimestamp) : (activity?.timestamp || null)
+    const activityEvents = activityMap.get('Store Setup') || []
+
+    // Build events array with change type labels
+    const events: StageEvent[] = activityEvents.map((event, index) => ({
+      timestamp: event.timestamp,
+      actor: event.actor,
+      changeType: generateChangeType('Store Setup', index, activityEvents.length, event.actor, event.metadata),
+      metadata: event.metadata
+    }))
+
+    // If no analytics events, create fallback from Salesforce timestamp
+    if (events.length === 0 && videoUploadTimestamp) {
+      events.push({
+        timestamp: new Date(videoUploadTimestamp),
+        actor: 'unknown',
+        changeType: 'Completed via Salesforce',
+        metadata: {}
+      })
+    }
 
     progression.push({
       stage: 'Store Setup',
       status: 'Done',
-      timestamp: timestamp,
-      actor: activity?.actor || 'merchant' // Default to merchant if no analytics data
+      events: events,
+      latestTimestamp: events[0]?.timestamp || null,
+      latestActor: events[0]?.actor || 'merchant',
+      // Deprecated fields for backward compatibility
+      timestamp: events[0]?.timestamp || null,
+      actor: events[0]?.actor || 'merchant'
     })
     console.log('[Stage Progression] Added Store Setup to progression:', {
-      timestamp,
-      actor: activity?.actor || 'merchant (default)'
+      eventCount: events.length,
+      latestTimestamp: events[0]?.timestamp,
+      latestActor: events[0]?.actor || 'merchant (default)'
     })
   }
 
@@ -827,15 +947,39 @@ export async function getStageProgression(
   })
 
   if (hasInstallation) {
-    const activity = activityMap.get('Installation')
+    const activityEvents = activityMap.get('Installation') || []
+
+    // Build events array with change type labels
+    const events: StageEvent[] = activityEvents.map((event, index) => ({
+      timestamp: event.timestamp,
+      actor: event.actor,
+      changeType: generateChangeType('Installation', index, activityEvents.length, event.actor, event.metadata),
+      metadata: event.metadata
+    }))
+
+    // No Salesforce fallback for Installation - dates are future appointments, not completion times
+    if (events.length === 0) {
+      events.push({
+        timestamp: installationDate ? new Date(installationDate) : new Date(),
+        actor: 'unknown',
+        changeType: 'Status from Salesforce',
+        metadata: {}
+      })
+    }
+
     progression.push({
       stage: 'Installation',
       status: installationStatus || 'Scheduled',
-      // Only use analytics timestamp - Installation_Date__c is the future appointment date
-      timestamp: activity?.timestamp || null,
-      actor: activity?.actor || 'unknown'
+      events: events,
+      latestTimestamp: events[0]?.timestamp || null,
+      latestActor: events[0]?.actor || 'unknown',
+      // Deprecated fields for backward compatibility
+      timestamp: events[0]?.timestamp || null,
+      actor: events[0]?.actor || 'unknown'
     })
-    console.log('[Stage Progression] Added Installation to progression')
+    console.log('[Stage Progression] Added Installation to progression:', {
+      eventCount: events.length
+    })
   }
 
   // Training - check status and date
@@ -850,15 +994,39 @@ export async function getStageProgression(
   })
 
   if (hasTraining) {
-    const activity = activityMap.get('Training')
+    const activityEvents = activityMap.get('Training') || []
+
+    // Build events array with change type labels
+    const events: StageEvent[] = activityEvents.map((event, index) => ({
+      timestamp: event.timestamp,
+      actor: event.actor,
+      changeType: generateChangeType('Training', index, activityEvents.length, event.actor, event.metadata),
+      metadata: event.metadata
+    }))
+
+    // No Salesforce fallback for Training - dates are future appointments, not completion times
+    if (events.length === 0) {
+      events.push({
+        timestamp: trainingDate ? new Date(trainingDate) : new Date(),
+        actor: 'unknown',
+        changeType: 'Status from Salesforce',
+        metadata: {}
+      })
+    }
+
     progression.push({
       stage: 'Training',
       status: trainingStatus || 'Scheduled',
-      // Only use analytics timestamp - Training_Date__c is the future appointment date
-      timestamp: activity?.timestamp || null,
-      actor: activity?.actor || 'unknown'
+      events: events,
+      latestTimestamp: events[0]?.timestamp || null,
+      latestActor: events[0]?.actor || 'unknown',
+      // Deprecated fields for backward compatibility
+      timestamp: events[0]?.timestamp || null,
+      actor: events[0]?.actor || 'unknown'
     })
-    console.log('[Stage Progression] Added Training to progression')
+    console.log('[Stage Progression] Added Training to progression:', {
+      eventCount: events.length
+    })
   }
 
   console.log('[Stage Progression] Returning events:', progression)
