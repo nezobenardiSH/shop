@@ -357,8 +357,70 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Step 6: Create VC meeting FIRST for remote training (before calendar event)
+    let meetingLink: string | null = null
+    let vcReservationId: string | null = null
+    const isRemoteTraining = serviceType === 'remote'
+
+    if (isRemoteTraining && !mockMode && bookingType === 'training') {
+      try {
+        console.log('🎥 Creating Lark VC meeting for remote training...')
+        console.log(`   Trainer: ${trainer.email}`)
+
+        // Create meeting title
+        const meetingTitle = `Remote Training: ${merchantName}`
+
+        // Create description
+        const meetingDescription = `
+Remote Training Session
+
+Merchant: ${merchantName}
+Contact: ${merchantPICName || 'N/A'}
+Email: ${merchantEmail || 'N/A'}
+Phone: ${merchantPICPhone || 'N/A'}
+
+Training Language: ${trainerLanguages?.join(', ') || 'N/A'}
+
+Required Features:
+${requiredFeatures || 'N/A'}
+
+Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view
+        `.trim()
+
+        // Convert date/time to Unix timestamps
+        const startDateTime = new Date(`${date}T${startTime}`)
+        const endDateTime = new Date(`${date}T${endTime}`)
+        const startTimestamp = Math.floor(startDateTime.getTime() / 1000)
+        const endTimestamp = Math.floor(endDateTime.getTime() / 1000)
+
+        // Use new method that leverages existing OAuth infrastructure
+        const vcMeeting = await larkService.createVCMeetingWithTrainerAuth(
+          trainer.email,
+          meetingTitle,
+          startTimestamp,
+          endTimestamp,
+          meetingDescription
+        )
+
+        if (vcMeeting) {
+          meetingLink = vcMeeting.meetingLink
+          vcReservationId = vcMeeting.reservationId
+          console.log('✅ Lark VC meeting created:', meetingLink)
+        } else {
+          console.warn('⚠️ Could not create VC meeting - trainer may not have authorized Lark')
+          console.warn('⚠️ Booking will continue without meeting link')
+        }
+
+      } catch (vcError: any) {
+        console.error('❌ Failed to create Lark VC meeting:', vcError.message)
+        // Don't fail entire booking if VC creation fails
+        // Booking succeeds, admin can manually add link later
+      }
+    }
+
+    // Step 7: Create calendar event (with VC link if available)
     let eventId: string
-    
+
     if (mockMode) {
       // Mock mode for testing without Lark permissions
       console.log('MOCK MODE: Simulating calendar event creation')
@@ -372,11 +434,15 @@ export async function POST(request: NextRequest) {
           email: trainer.email,
           calendarId: calendarId
         })
-        
+
+        if (meetingLink) {
+          console.log('📎 Including VC meeting link in calendar event:', meetingLink)
+        }
+
         eventId = await larkService.bookTraining(
           {
             name: merchantName,
-            address: merchantAddress,
+            address: serviceType === 'onsite' ? merchantAddress : undefined,  // Only include address for onsite training
             phone: merchantPhone,
             contactPerson: merchantContactPerson,
             businessType: merchantBusinessType,
@@ -388,7 +454,8 @@ export async function POST(request: NextRequest) {
             merchantPICName: merchantPICName,  // Merchant PIC Name from Salesforce
             merchantPICPhone: merchantPICPhone,  // Merchant PIC Contact Number from Salesforce
             merchantEmail: merchantEmail,  // Merchant Email from Salesforce
-            onboardingServicesBought: onboardingServicesBought  // Onboarding Services Bought (to show onsite/remote)
+            onboardingServicesBought: onboardingServicesBought,  // Onboarding Services Bought (to show onsite/remote)
+            meetingLink: meetingLink || undefined  // Pass VC meeting link to include in calendar event
           },
           trainer.email,
           calendarId,
@@ -398,7 +465,7 @@ export async function POST(request: NextRequest) {
           bookingType,
           onboardingTrainerName || merchantName  // Use Onboarding Trainer Name (e.g., "Nasi Lemak") for event title
         )
-        
+
         console.log('✅ Real calendar event created successfully:', eventId)
       } catch (bookingError: any) {
         console.error('❌ Lark calendar booking failed:', {
@@ -406,10 +473,10 @@ export async function POST(request: NextRequest) {
           stack: bookingError.stack,
           name: bookingError.name
         })
-        
+
         // Return error response instead of using mock fallback
         return NextResponse.json(
-          { 
+          {
             error: 'Failed to create calendar event',
             details: bookingError.message || 'Unable to create calendar event. Please check Lark calendar permissions.'
           },
@@ -729,6 +796,12 @@ export async function POST(request: NextRequest) {
                 console.log(`📝 Updating Onboarding_Portal__c with Trainer_Name__c (User ID): ${userId}`)
               } else {
                 console.log(`⚠️ Skipping Trainer_Name__c update - User ID not found`)
+              }
+
+              // Add remote training meeting link if available
+              if (meetingLink) {
+                portalUpdateData.Remote_Training_Meeting_Link__c = meetingLink
+                console.log(`📝 Updating Onboarding_Portal__c with Remote_Training_Meeting_Link__c: ${meetingLink}`)
               }
             } else if (bookingType === 'installation') {
               // ALWAYS update date/time and event ID (critical for rescheduling)

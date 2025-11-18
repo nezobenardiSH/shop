@@ -1330,6 +1330,7 @@ class LarkService {
       merchantPICPhone?: string  // Merchant PIC Contact Number from Salesforce
       merchantEmail?: string | null  // Merchant Email from Salesforce
       onboardingServicesBought?: string  // Onboarding Services Bought (to show onsite/remote)
+      meetingLink?: string  // VC meeting link for remote training
     },
     trainerEmail: string,
     trainerCalendarId: string,
@@ -1488,9 +1489,13 @@ class LarkService {
         if (merchantInfo.workaroundElaboration) {
           description += `\nWorkaround Elaboration:\n${merchantInfo.workaroundElaboration}\n`
         }
+        // Add VC meeting link for remote training
+        if (merchantInfo.meetingLink) {
+          description += `\n\n🎥 Video Conference Link:\n${merchantInfo.meetingLink}\n`
+        }
         break
     }
-    
+
     // Add Salesforce link if ID is available
     if (merchantInfo.salesforceId) {
       const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantInfo.salesforceId}/view`
@@ -1662,6 +1667,131 @@ class LarkService {
     } catch (error) {
       console.error('❌ Error creating Lark VC meeting:', error)
       throw error
+    }
+  }
+
+  /**
+   * Create Lark VC meeting using trainer's user access token from OAuth
+   * This method leverages the existing OAuth infrastructure and automatic token refresh
+   *
+   * @param trainerEmail - Trainer's email to get their OAuth token
+   * @param title - Meeting title
+   * @param startTime - Meeting start time (Unix timestamp in seconds)
+   * @param endTime - Meeting end time (Unix timestamp in seconds)
+   * @param description - Optional meeting description
+   * @returns Meeting link and reservation ID, or null if trainer not authorized
+   */
+  async createVCMeetingWithTrainerAuth(
+    trainerEmail: string,
+    title: string,
+    startTime: number,
+    endTime: number,
+    description?: string
+  ): Promise<{ meetingLink: string; reservationId: string } | null> {
+    try {
+      // Import existing OAuth service
+      const { larkOAuthService } = await import('./lark-oauth-service');
+
+      console.log(`🔐 Getting OAuth token for trainer: ${trainerEmail}`);
+      console.log(`📧 Trainer email (exact): "${trainerEmail}"`);
+      console.log(`📏 Email length: ${trainerEmail.length}`);
+
+      // Get valid access token (auto-refreshes if needed!)
+      const userAccessToken = await larkOAuthService.getValidAccessToken(trainerEmail);
+
+      console.log(`🔍 Token lookup result: ${userAccessToken ? 'FOUND' : 'NULL'}`);
+
+      if (!userAccessToken) {
+        console.warn(`⚠️ Trainer ${trainerEmail} has not authorized Lark`);
+        console.warn(`⚠️ Remote training booking will succeed without VC meeting link`);
+
+        // Try to check if user exists in database
+        const isAuthorized = await larkOAuthService.isUserAuthorized(trainerEmail);
+        console.log(`🔍 Database check - isUserAuthorized: ${isAuthorized}`);
+
+        return null;
+      }
+
+      console.log(`✅ Got valid OAuth token for ${trainerEmail}`);
+      console.log(`🎥 Creating VC meeting with trainer's OAuth token...`);
+
+      // Use the CORRECT endpoint path (reserves, not reserve!)
+      const vcApiUrl = `${this.baseUrl}/open-apis/vc/v1/reserves/apply`;
+      console.log(`📍 VC API endpoint: ${vcApiUrl}`);
+      console.log(`🌐 Base URL: ${this.baseUrl}`);
+
+      // Create VC meeting using user access token (not tenant token!)
+      // Note: According to Lark API docs, only end_time is required (start_time is optional)
+      const requestBody = {
+        end_time: endTime.toString(),
+        meeting_settings: {
+          topic: title,
+        },
+      };
+
+      console.log(`📋 VC API request body:`, JSON.stringify(requestBody, null, 2));
+      console.log(`🔑 Token (first 20 chars): ${userAccessToken.substring(0, 20)}...`);
+
+      const response = await fetch(
+        vcApiUrl,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${userAccessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      console.log(`📡 Response headers:`, Object.fromEntries(response.headers.entries()));
+
+      const responseText = await response.text();
+      console.log(`📡 VC API response status: ${response.status}`);
+
+      // Try to parse JSON response
+      let vcData;
+      try {
+        vcData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse VC API response:', responseText);
+        throw new Error('VC API returned invalid JSON response');
+      }
+
+      console.log('📊 VC API response:', JSON.stringify(vcData, null, 2));
+
+      if (!response.ok || vcData.code !== 0) {
+        console.error('❌ VC API error:', vcData);
+        throw new Error(vcData.msg || `VC API failed with status ${response.status}`);
+      }
+
+      // Extract meeting link and reservation ID
+      const meetingLink = vcData.data?.reserve?.meeting_no
+        ? `https://vc.larksuite.com/j/${vcData.data.reserve.meeting_no}`
+        : vcData.data?.reserve?.url;
+
+      const reservationId = vcData.data?.reserve?.id;
+
+      if (!meetingLink) {
+        console.error('❌ No meeting link in VC API response');
+        throw new Error('No meeting link in VC API response');
+      }
+
+      console.log('✅ VC meeting created successfully!');
+      console.log(`   Meeting Link: ${meetingLink}`);
+      console.log(`   Reservation ID: ${reservationId || 'N/A'}`);
+
+      return {
+        meetingLink,
+        reservationId: reservationId || '',
+      };
+
+    } catch (error: any) {
+      console.error('❌ Failed to create VC meeting:', error.message);
+      console.error('   Error details:', error);
+
+      // Return null instead of throwing - booking should succeed even if VC fails
+      return null;
     }
   }
 

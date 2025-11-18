@@ -92,6 +92,7 @@ interface AnalyticsData {
 interface Merchant {
   id: string
   name: string
+  hasPortalAccess: boolean
 }
 
 interface MerchantStage {
@@ -128,6 +129,7 @@ export default function AnalyticsPage() {
   const [merchantFilter, setMerchantFilter] = useState<string>('all')
   const [stageFilter, setStageFilter] = useState<string>('all')
   const [groupBy, setGroupBy] = useState<'day' | 'week' | 'month'>('day')
+  const [portalAccessFilter, setPortalAccessFilter] = useState<'all' | 'yes' | 'no'>('all')
 
   // Merchant list
   const [merchants, setMerchants] = useState<Merchant[]>([])
@@ -343,7 +345,7 @@ export default function AnalyticsPage() {
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
             {/* Date Range */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -448,6 +450,22 @@ export default function AnalyticsPage() {
                 <option value="day">Day</option>
                 <option value="week">Week</option>
                 <option value="month">Month</option>
+              </select>
+            </div>
+
+            {/* Portal Access */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Portal Access
+              </label>
+              <select
+                value={portalAccessFilter}
+                onChange={(e) => setPortalAccessFilter(e.target.value as any)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">All</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
               </select>
             </div>
           </div>
@@ -1435,50 +1453,127 @@ export default function AnalyticsPage() {
 
             {/* All Merchants List */}
             <div id="all-merchants" className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                All Merchants ({merchants.length})
-              </h2>
-              {loadingMerchants ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-                </div>
-              ) : merchants.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {merchants
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((merchant) => (
-                      <button
-                        key={merchant.id}
-                        onClick={() => router.push(`/admin/analytics/${merchant.id}`)}
-                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all text-left group"
-                      >
-                        <div className="flex-1 min-w-0 mr-3">
-                          <div className="text-sm font-medium text-gray-900 group-hover:text-orange-700 truncate">
-                            {merchant.name}
+              {(() => {
+                // Filter merchants based on portal access
+                const filteredMerchants = merchants.filter(m => {
+                  if (portalAccessFilter === 'yes') return m.hasPortalAccess
+                  if (portalAccessFilter === 'no') return !m.hasPortalAccess
+                  return true
+                })
+
+                // Separate pilot merchants (those with portal access)
+                const pilotMerchants = filteredMerchants.filter(m => m.hasPortalAccess)
+                const regularMerchants = filteredMerchants.filter(m => !m.hasPortalAccess)
+
+                return (
+                  <>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                      All Merchants ({filteredMerchants.length})
+                    </h2>
+
+                    {loadingMerchants ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                      </div>
+                    ) : filteredMerchants.length > 0 ? (
+                      <div className="space-y-6">
+                        {/* Pilot Merchants Section */}
+                        {pilotMerchants.length > 0 && portalAccessFilter !== 'no' && (
+                          <div>
+                            <h3 className="text-md font-semibold text-orange-600 mb-3 flex items-center gap-2">
+                              <span className="px-3 py-1 bg-orange-100 rounded-full text-sm">
+                                Pilot Merchants ({pilotMerchants.length})
+                              </span>
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                              {pilotMerchants
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((merchant) => (
+                                  <button
+                                    key={merchant.id}
+                                    onClick={() => router.push(`/admin/analytics/${merchant.id}`)}
+                                    className="flex items-center justify-between p-4 border-2 border-orange-300 bg-orange-50 rounded-lg hover:border-orange-500 hover:bg-orange-100 transition-all text-left group"
+                                  >
+                                    <div className="flex-1 min-w-0 mr-3">
+                                      <div className="text-sm font-medium text-gray-900 group-hover:text-orange-700 truncate">
+                                        {merchant.name}
+                                      </div>
+                                      <div className="text-xs text-gray-500 truncate mt-1">
+                                        {merchant.id}
+                                      </div>
+                                      <div className="text-xs text-orange-600 font-semibold mt-1">
+                                        Pilot Access
+                                      </div>
+                                    </div>
+                                    <svg
+                                      className="w-5 h-5 text-orange-500 group-hover:text-orange-600 flex-shrink-0"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 5l7 7-7 7"
+                                      />
+                                    </svg>
+                                  </button>
+                                ))}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500 truncate mt-1">
-                            {merchant.id}
+                        )}
+
+                        {/* Regular Merchants Section */}
+                        {regularMerchants.length > 0 && portalAccessFilter !== 'yes' && (
+                          <div>
+                            {pilotMerchants.length > 0 && portalAccessFilter === 'all' && (
+                              <h3 className="text-md font-semibold text-gray-700 mb-3">
+                                Other Merchants ({regularMerchants.length})
+                              </h3>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                              {regularMerchants
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((merchant) => (
+                                  <button
+                                    key={merchant.id}
+                                    onClick={() => router.push(`/admin/analytics/${merchant.id}`)}
+                                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all text-left group"
+                                  >
+                                    <div className="flex-1 min-w-0 mr-3">
+                                      <div className="text-sm font-medium text-gray-900 group-hover:text-orange-700 truncate">
+                                        {merchant.name}
+                                      </div>
+                                      <div className="text-xs text-gray-500 truncate mt-1">
+                                        {merchant.id}
+                                      </div>
+                                    </div>
+                                    <svg
+                                      className="w-5 h-5 text-gray-400 group-hover:text-orange-500 flex-shrink-0"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 5l7 7-7 7"
+                                      />
+                                    </svg>
+                                  </button>
+                                ))}
+                            </div>
                           </div>
-                        </div>
-                        <svg
-                          className="w-5 h-5 text-gray-400 group-hover:text-orange-500 flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </button>
-                    ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">No merchants found</p>
-              )}
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-8">No merchants found</p>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           </>
         )}

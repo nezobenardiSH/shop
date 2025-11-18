@@ -87,6 +87,20 @@
       "location": [
         "Johor Bahru"
       ]
+    },
+    {
+      "name": "Nezo",
+      "email": "nezo.benardi@storehub.com",
+      "calendarId": "primary",
+      "salesforceId": "",
+      "languages": [
+        "English"
+      ],
+      "location": [
+        "Within Klang Valley"
+      ],
+      "larkUserId": "",
+      "larkOpenId": ""
     }
   ],
   "defaultCalendarId": "primary",

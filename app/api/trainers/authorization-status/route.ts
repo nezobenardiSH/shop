@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
         email: trainer.email,
         name: trainer.name,
         calendarId: authInfo?.calendarId || trainer.calendarId || 'primary',
-        authorized
+        authorized,
+        scopes: authInfo?.scopes
       }
     })
 

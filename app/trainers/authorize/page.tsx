@@ -9,6 +9,7 @@ interface AuthorizedTrainer {
   name: string
   calendarId: string
   authorized: boolean
+  scopes?: string
 }
 
 function TrainerAuthorizeContent() {
@@ -83,7 +84,18 @@ function TrainerAuthorizeContent() {
               Trainer Calendar Authorization
             </h1>
             <p className="mt-2 text-[#6b6a6a]">
-              Authorize trainers to connect their Lark calendars for automatic scheduling
+              Authorize trainers to connect their Lark calendars and enable VC meeting creation for remote training
+            </p>
+          </div>
+
+          {/* Re-authorization Notice */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <p className="text-sm text-blue-800 font-semibold mb-2">
+              🔄 New Feature: Remote Training VC Meeting Links
+            </p>
+            <p className="text-sm text-blue-700">
+              If you previously authorized, please re-authorize to enable automatic
+              Lark VC meeting link creation for remote training sessions.
             </p>
           </div>
 
@@ -141,6 +153,10 @@ function TrainerAuthorizeContent() {
               <li className="flex gap-2">
                 <span className="font-semibold text-[#ff630f]">4.</span>
                 System can now check your availability and create events
+              </li>
+              <li className="flex gap-2">
+                <span className="font-semibold text-[#ff630f]">5.</span>
+                For remote training, system will automatically create Lark VC meeting links
               </li>
             </ol>
           </div>
@@ -206,9 +222,18 @@ function TrainerAuthorizeContent() {
                               Calendar: {trainer.calendarId}
                             </p>
                           )}
+                          {trainer.authorized && (
+                            <p className="text-xs mt-1">
+                              {trainer.scopes?.includes('vc:reserve') ? (
+                                <span className="text-green-600">✓ VC permissions enabled</span>
+                              ) : (
+                                <span className="text-yellow-600">⚠️ Needs re-authorization for VC</span>
+                              )}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      
+
                       {trainer.authorized && (
                         <button
                           onClick={() => handleRevoke(trainer.email)}

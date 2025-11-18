@@ -71,9 +71,9 @@ export class LarkOAuthService {
    * Get authorization URL for OAuth flow
    */
   getAuthorizationUrl(state?: string): string {
-    const scope = 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read bitable:app contact:contact.base:readonly'
+    const scope = 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read bitable:app vc:reserve vc:reserve:readonly'
 
-    console.log('🔐 OAuth scope being requested:', scope)
+    console.log('🔐 OAuth scope being requested (includes VC permissions):', scope)
 
     const params = new URLSearchParams({
       app_id: this.appId,
@@ -166,7 +166,7 @@ export class LarkOAuthService {
         refreshToken: tokenData.data.refresh_token,
         expiresAt,
         calendarId,
-        scopes: 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read'
+        scopes: 'calendar:calendar calendar:calendar.event:create calendar:calendar.event:read calendar:calendar.event:update calendar:calendar.event:delete calendar:calendar.free_busy:read bitable:app vc:reserve vc:reserve:readonly'
       },
       update: {
         userType,
@@ -388,6 +388,7 @@ export class LarkOAuthService {
     name: string
     calendarId: string
     authorized: boolean
+    scopes?: string
   }>> {
     const tokens = await prisma.larkAuthToken.findMany({
       where: {
@@ -399,7 +400,8 @@ export class LarkOAuthService {
       select: {
         userEmail: true,
         userName: true,
-        calendarId: true
+        calendarId: true,
+        scopes: true
       }
     })
 
@@ -407,7 +409,8 @@ export class LarkOAuthService {
       email: t.userEmail,
       name: t.userName || t.userEmail,
       calendarId: t.calendarId || 'primary',
-      authorized: true
+      authorized: true,
+      scopes: t.scopes || undefined
     }))
   }
 

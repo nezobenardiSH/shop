@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminToken } from '@/lib/auth-utils'
 import { PrismaClient } from '@prisma/client'
+import { getSalesforceConnection } from '@/lib/salesforce'
 
 const prisma = new PrismaClient()
 
 /**
  * GET /api/admin/merchants
- * Get list of all unique merchants from analytics data
+ * Get list of all unique merchants from analytics data with Salesforce portal access flag
  */
 export async function GET(request: NextRequest) {
   try {
@@ -64,10 +65,54 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Convert to array and sort by name
-    const merchantList = Array.from(merchantMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    )
+    // Get merchant IDs to query Salesforce
+    const merchantIds = Array.from(merchantMap.values()).map(m => m.id)
+
+    // Query Salesforce for Onboarding_Portal_Access__c
+    const conn = await getSalesforceConnection()
+    if (!conn) {
+      console.error('[Admin Merchants API] Failed to connect to Salesforce')
+      // Return merchants without portal access flag
+      const merchantList = Array.from(merchantMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      )
+      return NextResponse.json({
+        success: true,
+        merchants: merchantList.map(m => ({ ...m, hasPortalAccess: false })),
+        count: merchantList.length
+      })
+    }
+
+    // Query Salesforce in batches of 50 (to avoid query length limits)
+    const batchSize = 50
+    const portalAccessMap = new Map<string, boolean>()
+
+    for (let i = 0; i < merchantIds.length; i += batchSize) {
+      const batch = merchantIds.slice(i, i + batchSize)
+      const idList = batch.map(id => `'${id}'`).join(',')
+
+      try {
+        const result = await conn.query(`
+          SELECT Id, Onboarding_Portal_Access__c
+          FROM Onboarding_Trainer__c
+          WHERE Id IN (${idList})
+        `)
+
+        if (result.records) {
+          result.records.forEach((record: any) => {
+            portalAccessMap.set(record.Id, record.Onboarding_Portal_Access__c === true)
+          })
+        }
+      } catch (error) {
+        console.error('[Admin Merchants API] Error querying Salesforce batch:', error)
+      }
+    }
+
+    // Convert to array with portal access flag and sort by name
+    const merchantList = Array.from(merchantMap.values()).map(m => ({
+      ...m,
+      hasPortalAccess: portalAccessMap.get(m.id) || false
+    })).sort((a, b) => a.name.localeCompare(b.name))
 
     return NextResponse.json({
       success: true,
@@ -78,7 +123,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[Admin Merchants API] Error:', error)
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Failed to fetch merchants',
         details: error instanceof Error ? error.message : 'Unknown error'
