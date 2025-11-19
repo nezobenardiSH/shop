@@ -1193,22 +1193,24 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </div>
             </div>
 
-            {/* Store Address */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
-              <div className="text-sm font-medium text-gray-900">
-                {(() => {
-                  const parts = [
-                    trainerData?.shippingStreet,
-                    trainerData?.shippingCity,
-                    trainerData?.shippingState,
-                    trainerData?.shippingZipPostalCode,
-                    trainerData?.shippingCountry
-                  ].filter(Boolean);
-                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
-                })()}
+            {/* Store Address - Only for Onsite Training */}
+            {!trainerData?.onboardingServicesBought?.toLowerCase().includes('remote') && (
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
+                <div className="text-sm font-medium text-gray-900">
+                  {(() => {
+                    const parts = [
+                      trainerData?.shippingStreet,
+                      trainerData?.shippingCity,
+                      trainerData?.shippingState,
+                      trainerData?.shippingZipPostalCode,
+                      trainerData?.shippingCountry
+                    ].filter(Boolean);
+                    return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                  })()}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Required Features by Merchant */}
             <div>
@@ -1231,9 +1233,56 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 {trainerData?.completedTraining ? 'Yes' : 'No'}
               </div>
             </div>
+
+            {/* Remote Training Meeting Link - Only for Remote Training */}
+            {(() => {
+              const isRemoteTraining = trainerData?.onboardingServicesBought?.toLowerCase().includes('remote')
+              if (!isRemoteTraining) return null
+
+              return (
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Remote Training Meeting Link</div>
+                  {trainerData?.remoteTrainingMeetingLink ? (
+                    <div className="space-y-3">
+                      <a
+                        href={trainerData.remoteTrainingMeetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors w-full justify-center"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Join Training
+                      </a>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(trainerData?.remoteTrainingMeetingLink || '');
+                          alert('Meeting link copied to clipboard!');
+                        }}
+                        className="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors w-full justify-center"
+                        title="Copy meeting link"
+                      >
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy Link
+                      </button>
+                      <div className="text-xs text-gray-500 font-mono break-all">
+                        {trainerData.remoteTrainingMeetingLink}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      Meeting link will be generated automatically when training is booked
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         )
-      
+
       case 'ready-go-live':
         return (
           <div className="space-y-2">
@@ -2433,24 +2482,26 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </div>
             </div>
 
-            {/* Store Address from Onboarding_Trainer__c */}
-            <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
-              <div className="text-sm font-medium text-gray-900">
-                {(() => {
-                  // Build full address from Onboarding_Trainer__c shipping fields
-                  const parts = [
-                    trainerData?.shippingStreet,
-                    trainerData?.shippingCity,
-                    trainerData?.shippingState,
-                    trainerData?.shippingZipPostalCode,
-                    trainerData?.shippingCountry
-                  ].filter(Boolean);
-                  
-                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
-                })()}
+            {/* Store Address from Onboarding_Trainer__c - Only for Onsite Training */}
+            {!trainerData?.onboardingServicesBought?.toLowerCase().includes('remote') && (
+              <div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
+                <div className="text-sm font-medium text-gray-900">
+                  {(() => {
+                    // Build full address from Onboarding_Trainer__c shipping fields
+                    const parts = [
+                      trainerData?.shippingStreet,
+                      trainerData?.shippingCity,
+                      trainerData?.shippingState,
+                      trainerData?.shippingZipPostalCode,
+                      trainerData?.shippingCountry
+                    ].filter(Boolean);
+
+                    return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                  })()}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Training Completed Status */}
             <div>
@@ -2475,6 +2526,53 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 {trainerData?.onboardingServicesBought || 'None'}
               </div>
             </div>
+
+            {/* Remote Training Meeting Link - Only for Remote Training */}
+            {(() => {
+              const isRemoteTraining = trainerData?.onboardingServicesBought?.toLowerCase().includes('remote')
+              if (!isRemoteTraining) return null
+
+              return (
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Remote Training Meeting Link</div>
+                  {trainerData?.remoteTrainingMeetingLink ? (
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={trainerData.remoteTrainingMeetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Join Training
+                      </a>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(trainerData?.remoteTrainingMeetingLink || '');
+                          alert('Meeting link copied to clipboard!');
+                        }}
+                        className="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                        title="Copy meeting link"
+                      >
+                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy Link
+                      </button>
+                      <div className="text-xs text-gray-500 font-mono truncate max-w-md">
+                        {trainerData.remoteTrainingMeetingLink}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      Meeting link will be generated automatically when training is booked
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
