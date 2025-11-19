@@ -1445,7 +1445,17 @@ class LarkService {
 
       case 'training':
       default:
-        eventTitle = trainerName ? `Training: ${trainerName}` : `Training: ${merchantInfo.name}`
+        // Set title based on service type (Remote or Onsite)
+        const servicePrefix = merchantInfo.onboardingServicesBought === 'Remote Full Service'
+          ? 'Remote Training'
+          : merchantInfo.onboardingServicesBought === 'Onsite Training'
+          ? 'Onsite Training'
+          : 'Training'
+
+        eventTitle = trainerName
+          ? `${servicePrefix}: ${trainerName}`
+          : `${servicePrefix}: ${merchantInfo.name}`
+
         description = `Training Details\n`
         description += `==================\n\n`
         description += `Merchant: ${trainerName || merchantInfo.name}\n`
