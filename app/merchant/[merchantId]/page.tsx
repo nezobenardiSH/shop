@@ -465,29 +465,27 @@ function TrainerPortalContent() {
     
     const bookingType = trainer.bookingType || 'training'
 
-    // Use training location (orderShippingAddress) for location-based trainer filtering
-    let merchantAddress = ''
-    if (trainer.orderShippingAddress) {
-      if (typeof trainer.orderShippingAddress === 'string') {
-        merchantAddress = trainer.orderShippingAddress
-      } else {
-        // Build full address from orderShippingAddress object for proper location matching
-        const addressParts = [
-          trainer.orderShippingAddress.street,
-          trainer.orderShippingAddress.city,
-          trainer.orderShippingAddress.state || trainer.orderShippingAddress.stateCode,
-          trainer.orderShippingAddress.postalCode,
-          trainer.orderShippingAddress.country
-        ].filter(Boolean)
-        merchantAddress = addressParts.join(', ')
-      }
-    }
+    // Prioritize Salesforce shipping fields (most accurate) over order address
+    // Construct full address from Salesforce shipping fields
+    const merchantAddress = [
+      trainer.shippingStreet,
+      trainer.shippingCity,
+      trainer.shippingState,
+      trainer.shippingZipPostalCode,
+      trainer.shippingCountry
+    ].filter(Boolean).join(', ')
 
-    // Simply use shippingState from Onboarding_Trainer__c for display
-    const merchantState = trainer.shippingState || ''
+    // Use Salesforce shipping state for location filtering
+    const merchantState = trainer.shippingCity && trainer.shippingState
+      ? `${trainer.shippingCity}, ${trainer.shippingState}`
+      : trainer.shippingState || trainer.shippingCity || ''
+
     console.log('🔍 DEBUG - Setting merchantState:', {
+      shippingStreet: trainer.shippingStreet,
+      shippingCity: trainer.shippingCity,
       shippingState: trainer.shippingState,
-      merchantState: merchantState,
+      merchantAddress,
+      merchantState,
       trainerKeys: Object.keys(trainer).filter(k => k.includes('shipping') || k.includes('Shipping'))
     })
 
