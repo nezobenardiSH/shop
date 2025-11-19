@@ -2,6 +2,33 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+/**
+ * Helper function to apply test account filter to where clause
+ */
+function applyTestAccountFilter(whereClause: any, filters: AnalyticsFilters) {
+  if (filters.testAccountFilter && filters.testAccountMerchantIds && filters.testAccountMerchantIds.length > 0) {
+    const baseIds = filters.testAccountMerchantIds.map(id => id.substring(0, 15))
+
+    if (filters.testAccountFilter === 'only') {
+      // Only include test accounts
+      whereClause.AND.push({
+        OR: baseIds.map(baseId => ({
+          merchantId: { startsWith: baseId }
+        }))
+      })
+    } else if (filters.testAccountFilter === 'exclude') {
+      // Exclude test accounts
+      whereClause.AND.push({
+        NOT: {
+          OR: baseIds.map(baseId => ({
+            merchantId: { startsWith: baseId }
+          }))
+        }
+      })
+    }
+  }
+}
+
 export interface AnalyticsFilters {
   startDate?: Date
   endDate?: Date
@@ -10,6 +37,8 @@ export interface AnalyticsFilters {
   action?: string
   isInternalUser?: boolean
   userType?: string
+  testAccountFilter?: string
+  testAccountMerchantIds?: string[]
 }
 
 export interface SummaryStats {
@@ -87,6 +116,9 @@ export async function getSummaryStats(filters: AnalyticsFilters): Promise<Summar
   if (filters.action) whereClause.AND.push({ action: filters.action })
   if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
   if (filters.userType) whereClause.AND.push({ userType: filters.userType })
+
+  // Apply test account filter
+  applyTestAccountFilter(whereClause, filters)
 
   // If no AND conditions, use empty object
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
@@ -194,6 +226,9 @@ export async function getTimeSeriesData(
   if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
   if (filters.userType) whereClause.AND.push({ userType: filters.userType })
 
+  // Apply test account filter
+  applyTestAccountFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
   // Get all page views
@@ -276,25 +311,30 @@ export async function getTopMerchants(
   filters: AnalyticsFilters,
   limit: number = 10
 ): Promise<TopMerchant[]> {
-  const whereClause: any = {}
-  
-  if (filters.startDate || filters.endDate) {
-    whereClause.timestamp = {}
-    if (filters.startDate) whereClause.timestamp.gte = filters.startDate
-    if (filters.endDate) whereClause.timestamp.lte = filters.endDate
+  const whereClause: any = {
+    AND: [{ merchantId: { not: null } }]
   }
-  
-  if (filters.page) whereClause.page = filters.page
-  if (filters.action) whereClause.action = filters.action
-  if (filters.isInternalUser !== undefined) whereClause.isInternalUser = filters.isInternalUser
-  if (filters.userType) whereClause.userType = filters.userType
+
+  if (filters.startDate || filters.endDate) {
+    const timestamp: any = {}
+    if (filters.startDate) timestamp.gte = filters.startDate
+    if (filters.endDate) timestamp.lte = filters.endDate
+    whereClause.AND.push({ timestamp })
+  }
+
+  if (filters.page) whereClause.AND.push({ page: filters.page })
+  if (filters.action) whereClause.AND.push({ action: filters.action })
+  if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
+  if (filters.userType) whereClause.AND.push({ userType: filters.userType })
+
+  // Apply test account filter
+  applyTestAccountFilter(whereClause, filters)
+
+  const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { merchantId: { not: null } }
 
   // Get all page views grouped by merchant
   const pageViews = await prisma.pageView.findMany({
-    where: {
-      ...whereClause,
-      merchantId: { not: null }
-    },
+    where: finalWhereClause,
     select: {
       merchantId: true,
       merchantName: true,
@@ -385,6 +425,9 @@ export async function getPageBreakdown(filters: AnalyticsFilters): Promise<PageB
   if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
   if (filters.userType) whereClause.AND.push({ userType: filters.userType })
 
+  // Apply test account filter
+  applyTestAccountFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
   // Get total count
@@ -437,6 +480,9 @@ export async function getRecentActivity(
   if (filters.action) whereClause.AND.push({ action: filters.action })
   if (filters.isInternalUser !== undefined) whereClause.AND.push({ isInternalUser: filters.isInternalUser })
   if (filters.userType) whereClause.AND.push({ userType: filters.userType })
+
+  // Apply test account filter
+  applyTestAccountFilter(whereClause, filters)
 
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
@@ -516,6 +562,9 @@ export async function getMenuSubmissionMetrics(filters: AnalyticsFilters) {
     })
   }
 
+  // Apply test account filter
+  applyTestAccountFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'menu_submitted' }
 
   // Total menu submissions
@@ -566,6 +615,9 @@ export async function getTrainingSchedulingMetrics(filters: AnalyticsFilters) {
     })
   }
 
+  // Apply test account filter
+  applyTestAccountFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'training_scheduled' }
 
   // Total training bookings
@@ -615,6 +667,9 @@ export async function getInstallationSchedulingMetrics(filters: AnalyticsFilters
       ]
     })
   }
+
+  // Apply test account filter
+  applyTestAccountFilter(whereClause, filters)
 
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'installation_scheduled' }
 

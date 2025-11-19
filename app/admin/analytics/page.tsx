@@ -129,7 +129,7 @@ export default function AnalyticsPage() {
   const [merchantFilter, setMerchantFilter] = useState<string>('all')
   const [stageFilter, setStageFilter] = useState<string>('all')
   const [groupBy, setGroupBy] = useState<'day' | 'week' | 'month'>('day')
-  const [portalAccessFilter, setPortalAccessFilter] = useState<'all' | 'yes' | 'no'>('all')
+  const [testAccountFilter, setTestAccountFilter] = useState<'all' | 'exclude' | 'only'>('all')
 
   // Merchant list
   const [merchants, setMerchants] = useState<Merchant[]>([])
@@ -145,7 +145,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchAnalytics()
-  }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, merchantFilter, stageFilter, groupBy])
+  }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, merchantFilter, stageFilter, groupBy, testAccountFilter])
 
   // Fetch merchant stages when analytics data changes
   useEffect(() => {
@@ -249,6 +249,11 @@ export default function AnalyticsPage() {
       // Group by
       params.append('groupBy', groupBy)
 
+      // Test account filter
+      if (testAccountFilter !== 'all') {
+        params.append('testAccountFilter', testAccountFilter)
+      }
+
       const response = await fetch(`/api/admin/analytics?${params.toString()}`)
 
       if (!response.ok) {
@@ -345,7 +350,7 @@ export default function AnalyticsPage() {
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Date Range */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -453,19 +458,19 @@ export default function AnalyticsPage() {
               </select>
             </div>
 
-            {/* Portal Access */}
+            {/* Test Accounts */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Portal Access
+                Test Accounts
               </label>
               <select
-                value={portalAccessFilter}
-                onChange={(e) => setPortalAccessFilter(e.target.value as any)}
+                value={testAccountFilter}
+                onChange={(e) => setTestAccountFilter(e.target.value as any)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="all">All</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
+                <option value="all">All Accounts</option>
+                <option value="exclude">Exclude Test</option>
+                <option value="only">Only Test</option>
               </select>
             </div>
           </div>
@@ -1454,31 +1459,24 @@ export default function AnalyticsPage() {
             {/* All Merchants List */}
             <div id="all-merchants" className="bg-white rounded-lg shadow p-6">
               {(() => {
-                // Filter merchants based on portal access
-                const filteredMerchants = merchants.filter(m => {
-                  if (portalAccessFilter === 'yes') return m.hasPortalAccess
-                  if (portalAccessFilter === 'no') return !m.hasPortalAccess
-                  return true
-                })
-
                 // Separate pilot merchants (those with portal access)
-                const pilotMerchants = filteredMerchants.filter(m => m.hasPortalAccess)
-                const regularMerchants = filteredMerchants.filter(m => !m.hasPortalAccess)
+                const pilotMerchants = merchants.filter(m => m.hasPortalAccess)
+                const regularMerchants = merchants.filter(m => !m.hasPortalAccess)
 
                 return (
                   <>
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                      All Merchants ({filteredMerchants.length})
+                      All Merchants ({merchants.length})
                     </h2>
 
                     {loadingMerchants ? (
                       <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
                       </div>
-                    ) : filteredMerchants.length > 0 ? (
+                    ) : merchants.length > 0 ? (
                       <div className="space-y-6">
                         {/* Pilot Merchants Section */}
-                        {pilotMerchants.length > 0 && portalAccessFilter !== 'no' && (
+                        {pilotMerchants.length > 0 && (
                           <div>
                             <h3 className="text-md font-semibold text-orange-600 mb-3 flex items-center gap-2">
                               <span className="px-3 py-1 bg-orange-100 rounded-full text-sm">
@@ -1525,9 +1523,9 @@ export default function AnalyticsPage() {
                         )}
 
                         {/* Regular Merchants Section */}
-                        {regularMerchants.length > 0 && portalAccessFilter !== 'yes' && (
+                        {regularMerchants.length > 0 && (
                           <div>
-                            {pilotMerchants.length > 0 && portalAccessFilter === 'all' && (
+                            {pilotMerchants.length > 0 && (
                               <h3 className="text-md font-semibold text-gray-700 mb-3">
                                 Other Merchants ({regularMerchants.length})
                               </h3>

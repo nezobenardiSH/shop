@@ -66,15 +66,41 @@ export async function GET(request: NextRequest) {
     const page = searchParams.get('page') || undefined
     const action = searchParams.get('action') || undefined
     const userType = searchParams.get('userType') || undefined
-    
+    const testAccountFilter = searchParams.get('testAccountFilter') || undefined
+
     const isInternalUserParam = searchParams.get('isInternalUser')
-    const isInternalUser = isInternalUserParam 
-      ? isInternalUserParam === 'true' 
+    const isInternalUser = isInternalUserParam
+      ? isInternalUserParam === 'true'
       : undefined
 
     // Options
     const groupBy = (searchParams.get('groupBy') || 'day') as 'day' | 'week' | 'month'
     const limit = parseInt(searchParams.get('limit') || '10')
+
+    // Get test account merchant IDs from Salesforce if filter is active
+    let testAccountMerchantIds: string[] = []
+    if (testAccountFilter && testAccountFilter !== 'all') {
+      const { getSalesforceConnection } = await import('@/lib/salesforce')
+      const conn = await getSalesforceConnection()
+
+      if (conn) {
+        try {
+          const result = await conn.query(`
+            SELECT Onboarding_Trainer_Record__c
+            FROM Onboarding_Portal__c
+            WHERE Is_test_account__c = true
+          `)
+
+          if (result.records) {
+            testAccountMerchantIds = result.records
+              .map((record: any) => record.Onboarding_Trainer_Record__c)
+              .filter((id: any) => id != null)
+          }
+        } catch (error) {
+          console.error('[Analytics API] Error fetching test accounts:', error)
+        }
+      }
+    }
 
     // Build filters object
     const filters: AnalyticsFilters = {
@@ -84,7 +110,9 @@ export async function GET(request: NextRequest) {
       page,
       action,
       isInternalUser,
-      userType
+      userType,
+      testAccountFilter,
+      testAccountMerchantIds
     }
 
     // Execute all queries in parallel
@@ -127,7 +155,8 @@ export async function GET(request: NextRequest) {
         isInternalUser,
         userType,
         groupBy,
-        limit
+        limit,
+        testAccountFilter
       },
       summary,
       timeSeriesData,
