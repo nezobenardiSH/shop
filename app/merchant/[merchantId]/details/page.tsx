@@ -130,10 +130,12 @@ export default function MerchantDetailsPage() {
       actualTrainerName = trainer.operationManagerContact.name;
     }
 
-    // Use shipping state and country for location detection
-    // This is enough to determine if within Klang Valley, Penang, Johor, or outside
+    // Construct full address from shipping fields for calendar event
     const merchantAddress = [
+      trainer.shippingStreet,
+      trainer.shippingCity,
       trainer.shippingState,
+      trainer.shippingZipPostalCode,
       trainer.shippingCountry
     ].filter(Boolean).join(', ');
     

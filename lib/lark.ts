@@ -1446,9 +1446,11 @@ class LarkService {
       case 'training':
       default:
         // Set title based on service type (Remote or Onsite)
-        const servicePrefix = merchantInfo.onboardingServicesBought === 'Remote Full Service'
+        // Check if the service includes "onsite" or "remote" keywords
+        const serviceLower = (merchantInfo.onboardingServicesBought || '').toLowerCase()
+        const servicePrefix = serviceLower.includes('remote') || serviceLower.includes('online')
           ? 'Remote Training'
-          : merchantInfo.onboardingServicesBought === 'Onsite Training'
+          : serviceLower.includes('onsite')
           ? 'Onsite Training'
           : 'Training'
 
