@@ -43,7 +43,13 @@ export function detectServiceType(onboardingServicesBought: string | null | unde
 export function getServiceTypeMessage(serviceType: ServiceType, state?: string): string {
   switch (serviceType) {
     case 'onsite':
-      return state ? `Training: Onsite, ${state}` : 'Training: Onsite'
+      if (state) {
+        // Convert state to location category for display
+        const { getLocationCategoryFromState } = require('./location-matcher')
+        const locationCategory = getLocationCategoryFromState(state)
+        return `Training: Onsite, ${locationCategory}`
+      }
+      return 'Training: Onsite'
     case 'remote':
       return 'Training: Remote'
     case 'none':
