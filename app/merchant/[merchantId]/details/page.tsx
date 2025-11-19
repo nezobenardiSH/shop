@@ -140,10 +140,16 @@ export default function MerchantDetailsPage() {
     ].filter(Boolean).join(', ');
     
     console.log('🏢 Setting booking info with:', {
-      shippingState: trainer.shippingState,
+      merchantId: trainer.id,
+      shippingStreet: trainer.shippingStreet,
       shippingCity: trainer.shippingCity,
+      shippingState: trainer.shippingState,
+      shippingZipPostalCode: trainer.shippingZipPostalCode,
       shippingCountry: trainer.shippingCountry,
       merchantAddress,
+      computedMerchantState: (trainer.shippingCity && trainer.shippingState
+        ? `${trainer.shippingCity}, ${trainer.shippingState}`
+        : trainer.shippingState || trainer.shippingCity || ''),
       serviceType: trainer.serviceType,
       onboardingServicesBought: trainer.onboardingServicesBought
     });

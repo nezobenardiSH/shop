@@ -292,25 +292,20 @@ function TrainerPortalContent() {
           selectedTrainerName: actualTrainerName
         })
 
-        // Use training location (orderShippingAddress) for location-based trainer filtering
-        let merchantAddress = ''
-        let merchantState = ''
-        if (trainer.orderShippingAddress) {
-          if (typeof trainer.orderShippingAddress === 'string') {
-            merchantAddress = trainer.orderShippingAddress
-          } else {
-            // Extract state from orderShippingAddress object
-            merchantAddress = trainer.orderShippingAddress.state ||
-                            trainer.orderShippingAddress.stateCode || ''
-            merchantState = trainer.orderShippingAddress.state ||
-                           trainer.orderShippingAddress.stateCode || ''
-          }
-        }
+        // Prioritize Salesforce shipping fields (most accurate) over order address
+        // Construct full address from Salesforce shipping fields
+        const merchantAddress = [
+          trainer.shippingStreet,
+          trainer.shippingCity,
+          trainer.shippingState,
+          trainer.shippingZipPostalCode,
+          trainer.shippingCountry
+        ].filter(Boolean).join(', ')
 
-        // Fallback to shippingState from Salesforce if orderShippingAddress doesn't have state
-        if (!merchantState && trainer.shippingState) {
-          merchantState = trainer.shippingState
-        }
+        // Use Salesforce shipping state for location filtering
+        const merchantState = trainer.shippingCity && trainer.shippingState
+          ? `${trainer.shippingCity}, ${trainer.shippingState}`
+          : trainer.shippingState || trainer.shippingCity || ''
 
         // Get the existing event ID and date based on booking type
         let existingEventId = null
