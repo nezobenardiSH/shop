@@ -23,6 +23,13 @@ interface LarkEvent {
     email?: string
   }>
   location?: string
+  vchat?: {
+    vc_type?: string
+    icon_type?: string
+    description?: string
+    meeting_url?: string
+    meeting_no?: string
+  }
 }
 
 interface FreeBusyQuery {
@@ -1518,6 +1525,24 @@ class LarkService {
       attendees: [
         { email: trainerEmail }
       ]
+    }
+
+    // Add VC meeting integration for remote training
+    if (merchantInfo.meetingLink) {
+      console.log('🎥 Adding VC meeting integration to calendar event:', merchantInfo.meetingLink)
+
+      // Extract meeting number from URL (e.g., "https://vc.larksuite.com/j/876935836" -> "876935836")
+      const meetingNoMatch = merchantInfo.meetingLink.match(/\/j\/(\d+)/)
+      const meetingNo = meetingNoMatch ? meetingNoMatch[1] : undefined
+
+      event.vchat = {
+        vc_type: 'lark_live',  // Lark's native VC meetings use 'lark_live' or 'vc' type
+        description: 'Remote Training Session',
+        meeting_url: merchantInfo.meetingLink,
+        meeting_no: meetingNo
+      }
+
+      console.log('📋 VC chat object:', JSON.stringify(event.vchat, null, 2))
     }
     
     console.log('📝 Event object to create:', JSON.stringify(event, null, 2))
