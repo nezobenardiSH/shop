@@ -23,10 +23,6 @@ interface LarkEvent {
     email?: string
   }>
   location?: string
-  vchat?: {
-    vc_type?: string
-    meeting_no?: string
-  }
 }
 
 interface FreeBusyQuery {
@@ -1524,24 +1520,9 @@ class LarkService {
       ]
     }
 
-    // Add VC meeting integration for remote training
-    if (merchantInfo.meetingLink) {
-      console.log('🎥 Adding VC meeting to calendar event:', merchantInfo.meetingLink)
-
-      // Extract meeting number from URL (e.g., "https://vc.larksuite.com/j/876935836" -> "876935836")
-      const meetingNoMatch = merchantInfo.meetingLink.match(/\/j\/(\d+)/)
-      const meetingNo = meetingNoMatch ? meetingNoMatch[1] : undefined
-
-      if (meetingNo) {
-        event.vchat = {
-          vc_type: 'vc',  // Try 'vc' type for Lark VC meetings
-          meeting_no: meetingNo
-        }
-        console.log('📋 VC chat object:', JSON.stringify(event.vchat, null, 2))
-      } else {
-        console.warn('⚠️ Could not extract meeting number from VC link:', merchantInfo.meetingLink)
-      }
-    }
+    // Note: vchat field cannot be used to attach existing VC meetings
+    // The vchat field creates NEW meetings automatically (Google Meet, etc.)
+    // Our VC meeting link is already in the description where trainers can click it
     
     console.log('📝 Event object to create:', JSON.stringify(event, null, 2))
     
