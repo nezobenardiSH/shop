@@ -25,9 +25,6 @@ interface LarkEvent {
   location?: string
   vchat?: {
     vc_type?: string
-    icon_type?: string
-    description?: string
-    meeting_url?: string
     meeting_no?: string
   }
 }
@@ -1529,20 +1526,21 @@ class LarkService {
 
     // Add VC meeting integration for remote training
     if (merchantInfo.meetingLink) {
-      console.log('🎥 Adding VC meeting integration to calendar event:', merchantInfo.meetingLink)
+      console.log('🎥 Adding VC meeting to calendar event:', merchantInfo.meetingLink)
 
       // Extract meeting number from URL (e.g., "https://vc.larksuite.com/j/876935836" -> "876935836")
       const meetingNoMatch = merchantInfo.meetingLink.match(/\/j\/(\d+)/)
       const meetingNo = meetingNoMatch ? meetingNoMatch[1] : undefined
 
-      event.vchat = {
-        vc_type: 'lark_live',  // Lark's native VC meetings use 'lark_live' or 'vc' type
-        description: 'Remote Training Session',
-        meeting_url: merchantInfo.meetingLink,
-        meeting_no: meetingNo
+      if (meetingNo) {
+        event.vchat = {
+          vc_type: 'vc',  // Try 'vc' type for Lark VC meetings
+          meeting_no: meetingNo
+        }
+        console.log('📋 VC chat object:', JSON.stringify(event.vchat, null, 2))
+      } else {
+        console.warn('⚠️ Could not extract meeting number from VC link:', merchantInfo.meetingLink)
       }
-
-      console.log('📋 VC chat object:', JSON.stringify(event.vchat, null, 2))
     }
     
     console.log('📝 Event object to create:', JSON.stringify(event, null, 2))
