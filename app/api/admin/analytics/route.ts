@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action') || undefined
     const userType = searchParams.get('userType') || undefined
     const testAccountFilter = searchParams.get('testAccountFilter') || undefined
+    const portalAccessFilter = searchParams.get('portalAccessFilter') || undefined
 
     const isInternalUserParam = searchParams.get('isInternalUser')
     const isInternalUser = isInternalUserParam
@@ -102,6 +103,32 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get portal access merchant IDs from Salesforce if filter is active
+    let portalAccessMerchantIds: string[] = []
+    if (portalAccessFilter && portalAccessFilter !== 'all') {
+      const { getSalesforceConnection } = await import('@/lib/salesforce')
+      const conn = await getSalesforceConnection()
+
+      if (conn) {
+        try {
+          const hasAccess = portalAccessFilter === 'yes'
+          const result = await conn.query(`
+            SELECT Onboarding_Trainer_Record__c
+            FROM Onboarding_Portal__c
+            WHERE Onboarding_Portal_Access__c = ${hasAccess}
+          `)
+
+          if (result.records) {
+            portalAccessMerchantIds = result.records
+              .map((record: any) => record.Onboarding_Trainer_Record__c)
+              .filter((id: any) => id != null)
+          }
+        } catch (error) {
+          console.error('[Analytics API] Error fetching portal access merchants:', error)
+        }
+      }
+    }
+
     // Build filters object
     const filters: AnalyticsFilters = {
       startDate,
@@ -112,7 +139,9 @@ export async function GET(request: NextRequest) {
       isInternalUser,
       userType,
       testAccountFilter,
-      testAccountMerchantIds
+      testAccountMerchantIds,
+      portalAccessFilter,
+      portalAccessMerchantIds
     }
 
     // Execute all queries in parallel
@@ -156,7 +185,8 @@ export async function GET(request: NextRequest) {
         userType,
         groupBy,
         limit,
-        testAccountFilter
+        testAccountFilter,
+        portalAccessFilter
       },
       summary,
       timeSeriesData,

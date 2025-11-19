@@ -29,6 +29,22 @@ function applyTestAccountFilter(whereClause: any, filters: AnalyticsFilters) {
   }
 }
 
+/**
+ * Helper function to apply portal access filter to where clause
+ */
+function applyPortalAccessFilter(whereClause: any, filters: AnalyticsFilters) {
+  if (filters.portalAccessFilter && filters.portalAccessMerchantIds && filters.portalAccessMerchantIds.length > 0) {
+    const baseIds = filters.portalAccessMerchantIds.map(id => id.substring(0, 15))
+
+    // Always filter to only include the merchants that match the portal access criteria
+    whereClause.AND.push({
+      OR: baseIds.map(baseId => ({
+        merchantId: { startsWith: baseId }
+      }))
+    })
+  }
+}
+
 export interface AnalyticsFilters {
   startDate?: Date
   endDate?: Date
@@ -39,6 +55,8 @@ export interface AnalyticsFilters {
   userType?: string
   testAccountFilter?: string
   testAccountMerchantIds?: string[]
+  portalAccessFilter?: string
+  portalAccessMerchantIds?: string[]
 }
 
 export interface SummaryStats {
@@ -119,6 +137,12 @@ export async function getSummaryStats(filters: AnalyticsFilters): Promise<Summar
 
   // Apply test account filter
   applyTestAccountFilter(whereClause, filters)
+
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
+
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
 
   // If no AND conditions, use empty object
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
@@ -229,6 +253,9 @@ export async function getTimeSeriesData(
   // Apply test account filter
   applyTestAccountFilter(whereClause, filters)
 
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
   // Get all page views
@@ -330,6 +357,9 @@ export async function getTopMerchants(
   // Apply test account filter
   applyTestAccountFilter(whereClause, filters)
 
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { merchantId: { not: null } }
 
   // Get all page views grouped by merchant
@@ -428,6 +458,9 @@ export async function getPageBreakdown(filters: AnalyticsFilters): Promise<PageB
   // Apply test account filter
   applyTestAccountFilter(whereClause, filters)
 
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
   // Get total count
@@ -483,6 +516,9 @@ export async function getRecentActivity(
 
   // Apply test account filter
   applyTestAccountFilter(whereClause, filters)
+
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
 
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : {}
 
@@ -565,6 +601,9 @@ export async function getMenuSubmissionMetrics(filters: AnalyticsFilters) {
   // Apply test account filter
   applyTestAccountFilter(whereClause, filters)
 
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'menu_submitted' }
 
   // Total menu submissions
@@ -618,6 +657,9 @@ export async function getTrainingSchedulingMetrics(filters: AnalyticsFilters) {
   // Apply test account filter
   applyTestAccountFilter(whereClause, filters)
 
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
+
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'training_scheduled' }
 
   // Total training bookings
@@ -670,6 +712,9 @@ export async function getInstallationSchedulingMetrics(filters: AnalyticsFilters
 
   // Apply test account filter
   applyTestAccountFilter(whereClause, filters)
+
+  // Apply portal access filter
+  applyPortalAccessFilter(whereClause, filters)
 
   const finalWhereClause = whereClause.AND.length > 0 ? whereClause : { action: 'installation_scheduled' }
 

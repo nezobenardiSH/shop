@@ -130,10 +130,17 @@ export default function AnalyticsPage() {
   const [stageFilter, setStageFilter] = useState<string>('all')
   const [groupBy, setGroupBy] = useState<'day' | 'week' | 'month'>('day')
   const [testAccountFilter, setTestAccountFilter] = useState<'all' | 'exclude' | 'only'>('all')
+  const [portalAccessFilter, setPortalAccessFilter] = useState<'all' | 'yes' | 'no'>('all')
 
   // Merchant list
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [loadingMerchants, setLoadingMerchants] = useState(true)
+
+  // Test account merchant IDs
+  const [testAccountMerchantIds, setTestAccountMerchantIds] = useState<string[]>([])
+
+  // Portal access merchant IDs
+  const [portalAccessMerchantIds, setPortalAccessMerchantIds] = useState<string[]>([])
 
   // Merchant stages
   const [merchantStages, setMerchantStages] = useState<MerchantStage[]>([])
@@ -141,11 +148,41 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetchMerchants()
+    fetchTestAccountIds()
+    fetchPortalAccessIds()
   }, [])
 
   useEffect(() => {
     fetchAnalytics()
-  }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, merchantFilter, stageFilter, groupBy, testAccountFilter])
+  }, [dateRange, startDate, endDate, userTypeFilter, pageFilter, merchantFilter, stageFilter, groupBy, testAccountFilter, portalAccessFilter])
+
+  const fetchTestAccountIds = async () => {
+    try {
+      const response = await fetch('/api/admin/test-accounts')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setTestAccountMerchantIds(data.merchantIds || [])
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching test account IDs:', err)
+    }
+  }
+
+  const fetchPortalAccessIds = async () => {
+    try {
+      const response = await fetch('/api/admin/portal-access')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setPortalAccessMerchantIds(data.merchantIds || [])
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching portal access IDs:', err)
+    }
+  }
 
   // Fetch merchant stages when analytics data changes
   useEffect(() => {
@@ -254,6 +291,11 @@ export default function AnalyticsPage() {
         params.append('testAccountFilter', testAccountFilter)
       }
 
+      // Portal access filter
+      if (portalAccessFilter !== 'all') {
+        params.append('portalAccessFilter', portalAccessFilter)
+      }
+
       const response = await fetch(`/api/admin/analytics?${params.toString()}`)
 
       if (!response.ok) {
@@ -350,7 +392,7 @@ export default function AnalyticsPage() {
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
             {/* Date Range */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -471,6 +513,22 @@ export default function AnalyticsPage() {
                 <option value="all">All Accounts</option>
                 <option value="exclude">Exclude Test</option>
                 <option value="only">Only Test</option>
+              </select>
+            </div>
+
+            {/* Portal Access */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Portal Access
+              </label>
+              <select
+                value={portalAccessFilter}
+                onChange={(e) => setPortalAccessFilter(e.target.value as any)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">All</option>
+                <option value="yes">Has Access</option>
+                <option value="no">No Access</option>
               </select>
             </div>
           </div>
@@ -1459,21 +1517,56 @@ export default function AnalyticsPage() {
             {/* All Merchants List */}
             <div id="all-merchants" className="bg-white rounded-lg shadow p-6">
               {(() => {
+                // Filter merchants based on test account and portal access filters
+                const testAccountBaseIds = testAccountMerchantIds.map(id => id.substring(0, 15))
+                const portalAccessBaseIds = portalAccessMerchantIds.map(id => id.substring(0, 15))
+                let filteredMerchants = merchants
+
+                // Apply test account filter
+                if (testAccountFilter === 'exclude') {
+                  // Exclude test accounts
+                  filteredMerchants = filteredMerchants.filter(m => {
+                    const baseId = m.id.substring(0, 15)
+                    return !testAccountBaseIds.includes(baseId)
+                  })
+                } else if (testAccountFilter === 'only') {
+                  // Only show test accounts
+                  filteredMerchants = filteredMerchants.filter(m => {
+                    const baseId = m.id.substring(0, 15)
+                    return testAccountBaseIds.includes(baseId)
+                  })
+                }
+
+                // Apply portal access filter
+                if (portalAccessFilter === 'yes') {
+                  // Only show merchants with portal access
+                  filteredMerchants = filteredMerchants.filter(m => {
+                    const baseId = m.id.substring(0, 15)
+                    return portalAccessBaseIds.includes(baseId)
+                  })
+                } else if (portalAccessFilter === 'no') {
+                  // Only show merchants without portal access
+                  filteredMerchants = filteredMerchants.filter(m => {
+                    const baseId = m.id.substring(0, 15)
+                    return !portalAccessBaseIds.includes(baseId)
+                  })
+                }
+
                 // Separate pilot merchants (those with portal access)
-                const pilotMerchants = merchants.filter(m => m.hasPortalAccess)
-                const regularMerchants = merchants.filter(m => !m.hasPortalAccess)
+                const pilotMerchants = filteredMerchants.filter(m => m.hasPortalAccess)
+                const regularMerchants = filteredMerchants.filter(m => !m.hasPortalAccess)
 
                 return (
                   <>
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                      All Merchants ({merchants.length})
+                      All Merchants ({filteredMerchants.length})
                     </h2>
 
                     {loadingMerchants ? (
                       <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
                       </div>
-                    ) : merchants.length > 0 ? (
+                    ) : filteredMerchants.length > 0 ? (
                       <div className="space-y-6">
                         {/* Pilot Merchants Section */}
                         {pilotMerchants.length > 0 && (
