@@ -1,4 +1,5 @@
 import { getSalesforceConnection } from './salesforce'
+import { createSalesforceEvent, updateSalesforceEvent } from './salesforce-events'
 import { larkService } from './lark'
 import { sendBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
 import { loadInstallersConfig } from './config-loader'
@@ -557,14 +558,15 @@ export async function bookInternalInstallation(
   // Step 1: Query Salesforce for current installer and event ID (for rescheduling)
   let currentInstallerEmailForDeletion: string | null = null
   let currentEventIdForDeletion: string | null = null
+  let currentSalesforceEventId: string | null = null
 
   if (existingEventId) {
     try {
       const conn = await getSalesforceConnection()
       if (conn) {
-        // Query Onboarding_Portal__c for current installer name and event ID
+        // Query Onboarding_Portal__c for current installer name, event ID, and Salesforce Event ID
         const portalQuery = `
-          SELECT Installer_Name__c, Installation_Event_ID__c
+          SELECT Installer_Name__c, Installation_Event_ID__c, Installation_Salesforce_Event_ID__c
           FROM Onboarding_Portal__c
           WHERE Onboarding_Trainer_Record__c = '${merchantId}'
           LIMIT 1
@@ -577,9 +579,11 @@ export async function bookInternalInstallation(
           const portalRecord = portalResult.records[0] as any
           const currentInstallerName = portalRecord.Installer_Name__c
           currentEventIdForDeletion = portalRecord.Installation_Event_ID__c
+          currentSalesforceEventId = portalRecord.Installation_Salesforce_Event_ID__c
 
           console.log(`✅ Found current installer: ${currentInstallerName}`)
           console.log(`✅ Found current event ID: ${currentEventIdForDeletion}`)
+          console.log(`✅ Found current Salesforce Event ID: ${currentSalesforceEventId}`)
 
           // Find the installer object to get their email
           if (currentInstallerName && locationConfig.installers) {
@@ -803,6 +807,7 @@ export async function bookInternalInstallation(
   // Note: Notification will be sent later using sendBookingNotification() after Salesforce update
 
   // Update Salesforce - using the same pattern as training bookings (reuse conn from above)
+  let newSalesforceEventId: string | null = null
   if (conn) {
     try {
       // merchantId is already the Salesforce record ID (just like in training bookings)
@@ -842,6 +847,104 @@ export async function bookInternalInstallation(
         // Don't throw - allow booking to succeed even if Salesforce update fails
       }
 
+      // Create or Update Salesforce Event for installer KPI tracking (BEFORE Portal update so we have the Event ID)
+      try {
+        // Look up installer's Salesforce User ID
+        let installerUserId: string | null = null
+
+        try {
+          console.log('🔍 Looking up Salesforce User for installer:', {
+            name: assignedInstaller,
+            email: installer.email
+          })
+
+          // Strategy 1: Search by email (most reliable)
+          let searchQuery = `SELECT Id, Name, Email, IsActive FROM User WHERE Email = '${installer.email}' AND IsActive = true LIMIT 1`
+          console.log('🔍 Searching by email:', searchQuery)
+          let searchResult = await conn.query(searchQuery)
+          console.log('   Result:', searchResult.totalSize, 'record(s) found')
+
+          // Strategy 2: If email search fails, try by name
+          if (searchResult.totalSize === 0) {
+            searchQuery = `SELECT Id, Name, Email, IsActive FROM User WHERE Name = '${assignedInstaller}' AND IsActive = true LIMIT 1`
+            console.log('🔍 Searching by name:', searchQuery)
+            searchResult = await conn.query(searchQuery)
+            console.log('   Result:', searchResult.totalSize, 'record(s) found')
+          }
+
+          if (searchResult.records && searchResult.records.length > 0) {
+            installerUserId = searchResult.records[0].Id
+            const foundUser = searchResult.records[0] as any
+            console.log('✅ Found User:', {
+              id: installerUserId,
+              name: foundUser.Name,
+              email: foundUser.Email
+            })
+          } else {
+            console.log('❌ No User found for installer')
+          }
+        } catch (userSearchError) {
+          console.error('Error searching for installer User:', userSearchError)
+        }
+
+        // Only create/update Event if we found the installer User ID
+        if (installerUserId) {
+          const dateTimeStart = `${date}T${timeSlot.start}:00+08:00`
+          const dateTimeEnd = `${date}T${timeSlot.end}:00+08:00`
+
+          // Build event description
+          let eventDescription = `Merchant: ${merchantName}\n`
+          eventDescription += `Address: ${merchantDetails.address}\n`
+          eventDescription += `Contact: ${merchantDetails.contactName}\n`
+          eventDescription += `Phone: ${merchantDetails.contactNumber}\n`
+
+          if (merchantDetails.hardwareItems) {
+            eventDescription += `Hardware Items: ${merchantDetails.hardwareItems}\n`
+          }
+
+          eventDescription += `\nSalesforce: https://test.salesforce.com/${merchantId}`
+
+          const eventParams = {
+            subject: `Installation - ${merchantName}`,
+            startDateTime: dateTimeStart,
+            endDateTime: dateTimeEnd,
+            ownerId: installerUserId,
+            whatId: merchantId,
+            type: 'Face to face',
+            description: eventDescription,
+            location: merchantDetails.address
+          }
+
+          // Check if this is a reschedule with existing Salesforce Event
+          if (existingEventId && currentSalesforceEventId) {
+            // RESCHEDULING: Update existing Event
+            console.log('🔄 Rescheduling: Updating existing Salesforce Event:', currentSalesforceEventId)
+            const updated = await updateSalesforceEvent(currentSalesforceEventId, eventParams)
+            if (updated) {
+              console.log('✅ Salesforce Event updated for reschedule:', currentSalesforceEventId)
+              newSalesforceEventId = currentSalesforceEventId // Keep same Event ID
+            } else {
+              console.log('⚠️ Salesforce Event update failed, but booking succeeded')
+            }
+          } else {
+            // NEW BOOKING: Create new Event
+            console.log('📝 New booking: Creating new Salesforce Event')
+            const createdEventId = await createSalesforceEvent(eventParams)
+            if (createdEventId) {
+              console.log('✅ Salesforce Event created for installer KPI tracking:', createdEventId)
+              newSalesforceEventId = createdEventId
+            } else {
+              console.log('⚠️ Salesforce Event creation failed, but booking succeeded')
+            }
+          }
+        } else {
+          console.log('⚠️ Skipping Salesforce Event creation/update - installer User ID not found')
+        }
+      } catch (eventError) {
+        console.error('Salesforce Event creation/update failed but booking succeeded:', eventError)
+        // Don't fail the booking if Event creation/update fails
+      }
+
       // Store the Lark event ID and installer name in Onboarding_Portal__c object
       console.error(`📝 [PORTAL-SAVE] Storing event ID in Onboarding_Portal__c.Installation_Event_ID__c: ${eventId}`)
       console.error(`📏 [PORTAL-SAVE] Event ID length: ${eventId?.length} characters`)
@@ -876,6 +979,12 @@ export async function bookInternalInstallation(
             Installation_Event_ID__c: eventId,
             Installation_Date__c: installationDateTime,  // Send with timezone offset, not UTC
             Installer_Name__c: assignedInstaller  // Save installer name as text
+          }
+
+          // Store Salesforce Event ID for future rescheduling
+          if (newSalesforceEventId) {
+            updateData.Installation_Salesforce_Event_ID__c = newSalesforceEventId
+            console.error(`📝 [PORTAL-SAVE] Adding Installation_Salesforce_Event_ID__c: ${newSalesforceEventId}`)
           }
 
           console.error(`📦 [PORTAL-SAVE] Final update data:`, JSON.stringify(updateData, null, 2))
@@ -927,6 +1036,12 @@ export async function bookInternalInstallation(
             Installer_Name__c: assignedInstaller  // Save installer name as text
           }
 
+          // Store Salesforce Event ID for future rescheduling
+          if (newSalesforceEventId) {
+            createData.Installation_Salesforce_Event_ID__c = newSalesforceEventId
+            console.error(`📝 [PORTAL-SAVE] Adding Installation_Salesforce_Event_ID__c: ${newSalesforceEventId}`)
+          }
+
           console.error(`📦 [PORTAL-SAVE] Final create data:`, JSON.stringify(createData, null, 2))
           const createResult = await conn.sobject('Onboarding_Portal__c').create(createData)
           console.error(`✅ [PORTAL-SAVE] Created new Portal record: ${createResult.id}`)
@@ -974,7 +1089,7 @@ export async function bookInternalInstallation(
     console.error('Notification failed but installation booking succeeded:', notificationError)
     // Don't fail the booking if notification fails
   }
-  
+
   return {
     success: true,
     assignedInstaller: assignedInstaller,

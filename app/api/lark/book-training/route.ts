@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { larkService } from '@/lib/lark'
 import { getSlotAvailability, assignTrainer, getTrainerDetails } from '@/lib/trainer-availability'
 import { getSalesforceConnection } from '@/lib/salesforce'
+import { createSalesforceEvent, updateSalesforceEvent } from '@/lib/salesforce-events'
 import { sendBookingNotification } from '@/lib/lark-notifications'
 import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
 import { verifyToken } from '@/lib/auth-utils'
@@ -235,6 +236,7 @@ export async function POST(request: NextRequest) {
     // For rescheduling: store current trainer and event ID
     let currentTrainerEmailForDeletion: string | null = null
     let currentEventIdForDeletion: string | null = null
+    let currentSalesforceEventId: string | null = null
 
     try {
       const conn = await getSalesforceConnection()
@@ -252,7 +254,7 @@ export async function POST(request: NextRequest) {
         let portalQuery = ''
         if (existingEventId) {
           portalQuery = `
-            SELECT Training_Event_ID__c
+            SELECT Training_Event_ID__c, Training_Salesforce_Event_ID__c
             FROM Onboarding_Portal__c
             WHERE Onboarding_Trainer_Record__c = '${merchantId}'
             LIMIT 1
@@ -283,13 +285,15 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Get current event ID if rescheduling
+        // Get current event ID and Salesforce Event ID if rescheduling
         if (existingEventId && portalQuery) {
           const portalResult = await conn.query(portalQuery)
           if (portalResult.totalSize > 0) {
             const portalRecord = portalResult.records[0] as any
             currentEventIdForDeletion = portalRecord.Training_Event_ID__c
+            currentSalesforceEventId = portalRecord.Training_Salesforce_Event_ID__c
             console.log(`✅ Found current event ID from Onboarding_Portal__c.Training_Event_ID__c: ${currentEventIdForDeletion}`)
+            console.log(`✅ Found current Salesforce Event ID: ${currentSalesforceEventId}`)
           }
         }
       }
@@ -487,6 +491,7 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
 
     // Update Salesforce with the booking
     let salesforceUpdated = false
+    let newSalesforceEventId: string | null = null
 
     try {
       const conn = await getSalesforceConnection()
@@ -765,6 +770,102 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
           }
         }
 
+        // Create or Update Salesforce Event for KPI tracking (BEFORE Portal update so we have the Event ID)
+        // This creates/updates a calendar event in Salesforce linked to the trainer
+        try {
+          // Only create/update Event if we have a valid trainer User ID
+          if (userId) {
+            const dateTimeStart = `${date}T${startTime}:00+08:00`
+            const dateTimeEnd = `${date}T${endTime}:00+08:00`
+
+            // Build event description with meeting details
+            let eventDescription = `Merchant: ${onboardingTrainerName || merchantName}\n`
+            eventDescription += `Contact: ${merchantPICName || merchantContactPerson}\n`
+            eventDescription += `Phone: ${merchantPICPhone || merchantPhone}\n`
+            eventDescription += `Type: ${onboardingServicesBought || 'Training'}\n`
+
+            if (requiredFeatures && requiredFeatures.length > 0) {
+              eventDescription += `Features: ${requiredFeatures.join(', ')}\n`
+            }
+
+            if (onboardingSummary) {
+              eventDescription += `\nOnboarding Summary: ${onboardingSummary}\n`
+            }
+
+            if (workaroundElaboration) {
+              eventDescription += `\nWorkaround: ${workaroundElaboration}\n`
+            }
+
+            if (meetingLink) {
+              eventDescription += `\nMeeting Link: ${meetingLink}\n`
+            }
+
+            eventDescription += `\nSalesforce: https://test.salesforce.com/${merchantId}`
+
+            // Build event subject based on booking type and service
+            let eventSubject: string
+            if (bookingType === 'installation') {
+              eventSubject = `Installation - ${onboardingTrainerName || merchantName}`
+            } else {
+              // Training - use service type in subject
+              if (onboardingServicesBought === 'Onsite Training') {
+                eventSubject = `Onsite Training - ${onboardingTrainerName || merchantName}`
+              } else {
+                eventSubject = `Remote Training - ${onboardingTrainerName || merchantName}`
+              }
+            }
+
+            const eventLocation = onboardingServicesBought === 'Onsite Training'
+              ? merchantAddress
+              : undefined
+
+            // Determine event type based on onboarding service
+            // Salesforce Type picklist values: "Face to face", "Online", "Call"
+            const eventType = onboardingServicesBought === 'Onsite Training'
+              ? 'Face to face'
+              : 'Online'
+
+            const eventParams = {
+              subject: eventSubject,
+              startDateTime: dateTimeStart,
+              endDateTime: dateTimeEnd,
+              ownerId: userId,
+              whatId: merchantId,
+              type: eventType,
+              description: eventDescription,
+              location: eventLocation
+            }
+
+            // Check if this is a reschedule with existing Salesforce Event
+            if (existingEventId && currentSalesforceEventId) {
+              // RESCHEDULING: Update existing Event
+              console.log('🔄 Rescheduling: Updating existing Salesforce Event:', currentSalesforceEventId)
+              const updated = await updateSalesforceEvent(currentSalesforceEventId, eventParams)
+              if (updated) {
+                console.log('✅ Salesforce Event updated for reschedule:', currentSalesforceEventId)
+                newSalesforceEventId = currentSalesforceEventId // Keep same Event ID
+              } else {
+                console.log('⚠️ Salesforce Event update failed, but booking succeeded')
+              }
+            } else {
+              // NEW BOOKING: Create new Event
+              console.log('📝 New booking: Creating new Salesforce Event')
+              const createdEventId = await createSalesforceEvent(eventParams)
+              if (createdEventId) {
+                console.log('✅ Salesforce Event created for KPI tracking:', createdEventId)
+                newSalesforceEventId = createdEventId
+              } else {
+                console.log('⚠️ Salesforce Event creation failed, but booking succeeded')
+              }
+            }
+          } else {
+            console.log('⚠️ Skipping Salesforce Event creation/update - trainer User ID not found')
+          }
+        } catch (eventError) {
+          console.error('Salesforce Event creation/update failed but booking succeeded:', eventError)
+          // Don't fail the booking if Event creation/update fails
+        }
+
         // CRITICAL: Also update Onboarding_Portal__c with the new event ID and date/time
         // This is needed for rescheduling to know which event to delete
         console.log(`\n🔍 PORTAL UPDATE CHECK:`)
@@ -802,6 +903,12 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
               if (meetingLink) {
                 portalUpdateData.Remote_Training_Meeting_Link__c = meetingLink
                 console.log(`📝 Updating Onboarding_Portal__c with Remote_Training_Meeting_Link__c: ${meetingLink}`)
+              }
+
+              // Store Salesforce Event ID for future rescheduling
+              if (newSalesforceEventId) {
+                portalUpdateData.Training_Salesforce_Event_ID__c = newSalesforceEventId
+                console.log(`📝 Updating Onboarding_Portal__c with Training_Salesforce_Event_ID__c: ${newSalesforceEventId}`)
               }
             } else if (bookingType === 'installation') {
               // ALWAYS update date/time and event ID (critical for rescheduling)
