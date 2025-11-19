@@ -1084,7 +1084,7 @@ export default function DatePickerModal({
                       // Only use merchantState from Onboarding_Trainer__c.Shipping_State__c - no fallback
                       const message = serviceType === 'onsite' && merchantState
                         ? `Training: Onsite, ${merchantState}`
-                        : serviceType === 'onsite' 
+                        : serviceType === 'onsite'
                         ? 'Training: Onsite'
                         : getServiceTypeMessage(serviceType, merchantState)
                       console.log('🏷️ Service Type Display:', {
