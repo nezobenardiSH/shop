@@ -229,6 +229,7 @@ export async function POST(request: NextRequest) {
     let merchantPICPhone: string | undefined
     let fetchedOnboardingSummary: string | undefined
     let fetchedWorkaroundElaboration: string | undefined
+    let fetchedRequiredFeatures: string | undefined
 
     // Fetch merchant email from Salesforce
     let merchantEmail: string | null = null
@@ -248,6 +249,7 @@ export async function POST(request: NextRequest) {
         const trainerQuery = `
           SELECT Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c,
                  Onboarding_Summary__c, Workaround_Elaboration__c,
+                 Required_Features_by_Merchant__c,
                  Email__c, CSM_Name__c, CSM_Name__r.Email,
                  MSM_Name__c, MSM_Name__r.Email, MSM_Name__r.Name
           FROM Onboarding_Trainer__c
@@ -273,6 +275,7 @@ export async function POST(request: NextRequest) {
           merchantPICPhone = trainerRecord.Merchant_PIC_Contact_Number__c
           fetchedOnboardingSummary = trainerRecord.Onboarding_Summary__c
           fetchedWorkaroundElaboration = trainerRecord.Workaround_Elaboration__c
+          fetchedRequiredFeatures = trainerRecord.Required_Features_by_Merchant__c
           merchantEmail = trainerRecord.Email__c
 
           // Get MSM (Onboarding Manager) data for manager notifications
@@ -292,7 +295,8 @@ export async function POST(request: NextRequest) {
             msmEmail,
             msmName,
             fetchedOnboardingSummary: fetchedOnboardingSummary ? 'Yes' : 'No',
-            fetchedWorkaroundElaboration: fetchedWorkaroundElaboration ? 'Yes' : 'No'
+            fetchedWorkaroundElaboration: fetchedWorkaroundElaboration ? 'Yes' : 'No',
+            fetchedRequiredFeatures: fetchedRequiredFeatures ? 'Yes' : 'No'
           })
         }
 
@@ -383,7 +387,7 @@ export async function POST(request: NextRequest) {
         console.log(`   Trainer: ${trainer.email}`)
 
         // Create meeting title
-        const meetingTitle = `Remote Training: ${merchantName}`
+        const meetingTitle = `Remote Training - ${merchantName}`
 
         // Create description
         const meetingDescription = `
@@ -397,7 +401,7 @@ Phone: ${merchantPICPhone || 'N/A'}
 Training Language: ${trainerLanguages?.join(', ') || 'N/A'}
 
 Required Features:
-${requiredFeatures || 'N/A'}
+${requiredFeatures || fetchedRequiredFeatures || 'N/A'}
 
 Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view
         `.trim()
@@ -463,7 +467,7 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
             businessType: merchantBusinessType,
             salesforceId: merchantId,
             language: trainerLanguages,  // Pass selected language to calendar event
-            requiredFeatures: requiredFeatures,  // Pass required features to calendar event
+            requiredFeatures: requiredFeatures || fetchedRequiredFeatures,  // Pass required features to calendar event (use fetched value as fallback)
             onboardingSummary: onboardingSummary || fetchedOnboardingSummary,  // Use passed value or fetched from Salesforce
             workaroundElaboration: workaroundElaboration || fetchedWorkaroundElaboration,  // Use passed value or fetched from Salesforce
             merchantPICName: merchantPICName,  // Merchant PIC Name from Salesforce

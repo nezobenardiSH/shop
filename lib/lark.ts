@@ -1369,7 +1369,7 @@ class LarkService {
     
     switch(bookingType) {
       case 'hardware-fulfillment':
-        eventTitle = `Hardware Delivery: ${merchantInfo.name}`
+        eventTitle = `Hardware Delivery - ${merchantInfo.name}`
         description = `Hardware Fulfillment\n\n`
         description += `Merchant: ${merchantInfo.name}\n`
         if (merchantInfo.address) {
@@ -1394,7 +1394,7 @@ class LarkService {
         break
         
       case 'installation':
-        eventTitle = `Installation: ${merchantInfo.name}`
+        eventTitle = `Installation - ${merchantInfo.name}`
         description = `Hardware Installation\n\n`
         description += `Merchant: ${merchantInfo.name}\n`
         if (merchantInfo.address) {
@@ -1419,7 +1419,7 @@ class LarkService {
         break
         
       case 'go-live':
-        eventTitle = `Go-Live: ${merchantInfo.name}`
+        eventTitle = `Go-Live - ${merchantInfo.name}`
         description = `Go-Live Session\n\n`
         description += `Merchant: ${merchantInfo.name}\n`
         if (merchantInfo.address) {
@@ -1455,8 +1455,8 @@ class LarkService {
           : 'Training'
 
         eventTitle = trainerName
-          ? `${servicePrefix}: ${trainerName}`
-          : `${servicePrefix}: ${merchantInfo.name}`
+          ? `${servicePrefix} - ${trainerName}`
+          : `${servicePrefix} - ${merchantInfo.name}`
 
         description = `Training Details\n`
         description += `==================\n\n`
@@ -1731,6 +1731,26 @@ class LarkService {
       console.log(`✅ Got valid OAuth token for ${trainerEmail}`);
       console.log(`🎥 Creating VC meeting with trainer's OAuth token...`);
 
+      // Get trainer's Lark user ID from database (needed to set meeting host)
+      const { PrismaClient } = await import('@prisma/client')
+      const prisma = new PrismaClient()
+
+      const tokenData = await prisma.larkAuthToken.findUnique({
+        where: { userEmail: trainerEmail },
+        select: { larkUserId: true }
+      })
+
+      await prisma.$disconnect()
+
+      const trainerLarkUserId = tokenData?.larkUserId
+
+      if (!trainerLarkUserId) {
+        console.warn(`⚠️ No Lark user ID found for ${trainerEmail}`)
+        console.warn(`⚠️ Meeting will be created without host - trainer may not be able to start it`)
+      } else {
+        console.log(`✅ Found trainer Lark user ID: ${trainerLarkUserId}`)
+      }
+
       // Use the CORRECT endpoint path (reserves, not reserve!)
       const vcApiUrl = `${this.baseUrl}/open-apis/vc/v1/reserves/apply`;
       console.log(`📍 VC API endpoint: ${vcApiUrl}`);
@@ -1738,12 +1758,22 @@ class LarkService {
 
       // Create VC meeting using user access token (not tenant token!)
       // Note: According to Lark API docs, only end_time is required (start_time is optional)
-      const requestBody = {
+      const requestBody: any = {
         end_time: endTime.toString(),
         meeting_settings: {
           topic: title,
+          description: description || '',  // Add description to provide context in meeting
+          auto_record: true,  // Auto-record training sessions
         },
       };
+
+      // Add host settings if we have the trainer's Lark user ID
+      // This allows the trainer to start the meeting immediately
+      if (trainerLarkUserId) {
+        requestBody.meeting_settings.host_user_id = trainerLarkUserId;
+        requestBody.reserve_user_id = trainerLarkUserId;
+        console.log(`🎯 Setting trainer as meeting host: ${trainerLarkUserId}`);
+      }
 
       console.log(`📋 VC API request body:`, JSON.stringify(requestBody, null, 2));
       console.log(`🔑 Token (first 20 chars): ${userAccessToken.substring(0, 20)}...`);
