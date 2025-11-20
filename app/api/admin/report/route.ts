@@ -60,10 +60,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract merchant IDs and remove duplicates
-    const merchantIds = Array.from(new Set(
+    const merchantIds: string[] = Array.from(new Set(
       portalResult.records
-        .map((record: any) => record.Onboarding_Trainer_Record__c)
-        .filter((id: string) => id != null)
+        .map((record: any) => record.Onboarding_Trainer_Record__c as string)
+        .filter((id: string | null | undefined): id is string => id != null)
     ))
 
     console.log('[Report API] Found merchants:', merchantIds.length)
@@ -216,6 +216,7 @@ export async function GET(request: NextRequest) {
 
     // Group by merchant and get the FIRST (oldest) event
     trainingSchedulingData.reverse().forEach(event => {
+      if (!event.merchantId) return
       const baseId = event.merchantId.substring(0, 15)
       // Find the matching full merchant ID from our list
       const fullMerchantId = merchantIds.find(id => id.startsWith(baseId))
@@ -228,6 +229,7 @@ export async function GET(request: NextRequest) {
     })
 
     installationSchedulingData.reverse().forEach(event => {
+      if (!event.merchantId) return
       const baseId = event.merchantId.substring(0, 15)
       // Find the matching full merchant ID from our list
       const fullMerchantId = merchantIds.find(id => id.startsWith(baseId))
@@ -241,8 +243,8 @@ export async function GET(request: NextRequest) {
 
     // Merge the data
     const merchants = merchantIds.map((trainerId: string) => {
-      const trainer = trainerMap.get(trainerId)
-      const portal = portalMap.get(trainerId)
+      const trainer: any = trainerMap.get(trainerId)
+      const portal: any = portalMap.get(trainerId)
       const trainingScheduling = trainingSchedulingMap.get(trainerId)
       const installationScheduling = installationSchedulingMap.get(trainerId)
       const analytics = analyticsMap.get(trainerId)
