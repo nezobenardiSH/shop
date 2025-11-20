@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     // Need to match both 15-char and 18-char merchant IDs
     const trainingSchedulingData = await prisma.pageView.findMany({
       where: {
-        OR: merchantIds.flatMap(id => {
+        OR: merchantIds.flatMap((id: string) => {
           const baseId = id.substring(0, 15)
           return [
             { merchantId: baseId, action: 'training_scheduled' },
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
 
     const installationSchedulingData = await prisma.pageView.findMany({
       where: {
-        OR: merchantIds.flatMap(id => {
+        OR: merchantIds.flatMap((id: string) => {
           const baseId = id.substring(0, 15)
           return [
             { merchantId: baseId, action: 'installation_scheduled' },
