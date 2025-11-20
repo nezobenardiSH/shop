@@ -853,14 +853,22 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
 
             // Check if this is a reschedule with existing Salesforce Event
             if (existingEventId && currentSalesforceEventId) {
-              // RESCHEDULING: Update existing Event
+              // RESCHEDULING: Try to update existing Event
               console.log('🔄 Rescheduling: Updating existing Salesforce Event:', currentSalesforceEventId)
               const updated = await updateSalesforceEvent(currentSalesforceEventId, eventParams)
               if (updated) {
                 console.log('✅ Salesforce Event updated for reschedule:', currentSalesforceEventId)
                 newSalesforceEventId = currentSalesforceEventId // Keep same Event ID
               } else {
-                console.log('⚠️ Salesforce Event update failed, but booking succeeded')
+                // Update failed (possibly Event was deleted) - create new Event instead
+                console.log('⚠️ Salesforce Event update failed (Event may have been deleted), creating new Event instead')
+                const createdEventId = await createSalesforceEvent(eventParams)
+                if (createdEventId) {
+                  console.log('✅ New Salesforce Event created after update failure:', createdEventId)
+                  newSalesforceEventId = createdEventId
+                } else {
+                  console.log('⚠️ Failed to create new Salesforce Event after update failure')
+                }
               }
             } else {
               // NEW BOOKING: Create new Event
