@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { larkService } from '@/lib/lark'
 import { getSalesforceConnection } from '@/lib/salesforce'
+import { sendCancellationNotification, sendManagerCancellationNotification } from '@/lib/lark-notifications'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -59,9 +60,14 @@ export async function DELETE(request: NextRequest) {
       merchantName
     )
 
+    // Variables for notifications
+    let msmEmail: string | null = null
+    let msmName: string | null = null
+    let cancellationDate: string | null = null
+
     try {
       const conn = await getSalesforceConnection()
-      
+
       // Map booking types to Salesforce field names
       const fieldMapping: { [key: string]: { dateField: string, eventIdField: string } } = {
         'installation': {
@@ -75,6 +81,26 @@ export async function DELETE(request: NextRequest) {
       }
 
       const mapping = fieldMapping[bookingType] || fieldMapping['training']
+
+      // Fetch MSM data and current date before clearing
+      try {
+        const trainerQuery = `
+          SELECT ${mapping.dateField}, MSM_Name__r.Email, MSM_Name__r.Name
+          FROM Onboarding_Trainer__c
+          WHERE Id = '${merchantId}'
+          LIMIT 1
+        `
+        const trainerResult = await conn.query(trainerQuery)
+        if (trainerResult.totalSize > 0) {
+          const trainerRecord = trainerResult.records[0] as any
+          msmEmail = trainerRecord.MSM_Name__r?.Email || null
+          msmName = trainerRecord.MSM_Name__r?.Name || null
+          cancellationDate = trainerRecord[mapping.dateField] || null
+          console.log('📞 Fetched MSM data:', { msmEmail, msmName, cancellationDate })
+        }
+      } catch (fetchError) {
+        console.error('Failed to fetch MSM data:', fetchError)
+      }
 
       // Clear the date field on Onboarding_Trainer__c
       const updateData: any = {
@@ -118,6 +144,50 @@ export async function DELETE(request: NextRequest) {
       }
     } catch (sfError) {
       console.error('Failed to update Salesforce:', sfError)
+    }
+
+    // Send cancellation notification to trainer/installer
+    try {
+      const formattedDate = cancellationDate ? new Date(cancellationDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }) : 'N/A'
+
+      await sendCancellationNotification(
+        trainer.email,
+        merchantName,
+        formattedDate,
+        bookingType.charAt(0).toUpperCase() + bookingType.slice(1)
+      )
+      console.log('📧 Cancellation notification sent to:', trainer.email)
+    } catch (notificationError) {
+      console.error('Trainer cancellation notification failed:', notificationError)
+    }
+
+    // Send cancellation notification to manager (MSM)
+    if (msmEmail) {
+      try {
+        const formattedDate = cancellationDate ? new Date(cancellationDate).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }) : 'N/A'
+
+        await sendManagerCancellationNotification(
+          msmEmail,
+          merchantName,
+          merchantId,
+          formattedDate,
+          bookingType.charAt(0).toUpperCase() + bookingType.slice(1),
+          trainerName
+        )
+        console.log('📧 Manager cancellation notification sent to MSM:', msmEmail)
+      } catch (managerNotificationError) {
+        console.error('Manager cancellation notification failed:', managerNotificationError)
+      }
+    } else {
+      console.log('⚠️ No MSM email found - skipping manager cancellation notification')
     }
 
     return NextResponse.json({

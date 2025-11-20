@@ -3,7 +3,7 @@ import { larkService } from '@/lib/lark'
 import { getSlotAvailability, assignTrainer, getTrainerDetails } from '@/lib/trainer-availability'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { createSalesforceEvent, updateSalesforceEvent } from '@/lib/salesforce-events'
-import { sendBookingNotification } from '@/lib/lark-notifications'
+import { sendBookingNotification, sendManagerBookingNotification } from '@/lib/lark-notifications'
 import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
 import { verifyToken } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
@@ -233,6 +233,10 @@ export async function POST(request: NextRequest) {
     // Fetch merchant email from Salesforce
     let merchantEmail: string | null = null
 
+    // MSM (Onboarding Manager) data for manager notifications
+    let msmEmail: string | null = null
+    let msmName: string | null = null
+
     // For rescheduling: store current trainer and event ID
     let currentTrainerEmailForDeletion: string | null = null
     let currentEventIdForDeletion: string | null = null
@@ -244,7 +248,8 @@ export async function POST(request: NextRequest) {
         const trainerQuery = `
           SELECT Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c,
                  Onboarding_Summary__c, Workaround_Elaboration__c,
-                 Email__c, CSM_Name__c, CSM_Name__r.Email
+                 Email__c, CSM_Name__c, CSM_Name__r.Email,
+                 MSM_Name__c, MSM_Name__r.Email, MSM_Name__r.Name
           FROM Onboarding_Trainer__c
           WHERE Id = '${merchantId}'
           LIMIT 1
@@ -270,6 +275,10 @@ export async function POST(request: NextRequest) {
           fetchedWorkaroundElaboration = trainerRecord.Workaround_Elaboration__c
           merchantEmail = trainerRecord.Email__c
 
+          // Get MSM (Onboarding Manager) data for manager notifications
+          msmEmail = trainerRecord.MSM_Name__r?.Email || null
+          msmName = trainerRecord.MSM_Name__r?.Name || null
+
           // CRITICAL: Get current trainer for deletion (Onboarding_Trainer__c.CSM_Name__c)
           if (existingEventId && trainerRecord.CSM_Name__r?.Email) {
             currentTrainerEmailForDeletion = trainerRecord.CSM_Name__r.Email
@@ -280,6 +289,8 @@ export async function POST(request: NextRequest) {
             merchantPICName,
             merchantPICPhone,
             merchantEmail,
+            msmEmail,
+            msmName,
             fetchedOnboardingSummary: fetchedOnboardingSummary ? 'Yes' : 'No',
             fetchedWorkaroundElaboration: fetchedWorkaroundElaboration ? 'Yes' : 'No'
           })
@@ -972,6 +983,33 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
     } catch (notificationError) {
       console.error('Notification failed but booking succeeded:', notificationError)
       // Don't fail the booking if notification fails
+    }
+
+    // Send notification to the Onboarding Manager (MSM)
+    if (msmEmail) {
+      try {
+        await sendManagerBookingNotification({
+          merchantName: onboardingTrainerName || merchantName,
+          merchantId,
+          date,
+          startTime,
+          endTime,
+          bookingType,
+          isRescheduling: !!existingEventId,
+          assignedPersonName: assignment.assigned,
+          assignedPersonEmail: msmEmail, // Manager email instead of trainer
+          location: merchantAddress,
+          contactPerson: merchantPICName || merchantContactPerson,
+          contactPhone: merchantPICPhone || merchantPhone,
+          onboardingServicesBought: onboardingServicesBought
+        })
+        console.log('📧 Manager notification sent to MSM:', msmEmail)
+      } catch (managerNotificationError) {
+        console.error('Manager notification failed but booking succeeded:', managerNotificationError)
+        // Don't fail the booking if notification fails
+      }
+    } else {
+      console.log('⚠️ No MSM email found - skipping manager notification')
     }
 
     // Track the booking event

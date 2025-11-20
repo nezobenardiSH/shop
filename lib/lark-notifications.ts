@@ -106,6 +106,95 @@ function formatBookingMessage(data: BookingNotificationData): string {
 }
 
 /**
+ * Send notification to Onboarding Manager for internal booking
+ */
+export async function sendManagerBookingNotification(data: BookingNotificationData): Promise<void> {
+  try {
+    const message = formatManagerBookingMessage(data)
+    await larkService.sendAppMessage(
+      data.assignedPersonEmail, // This will be the manager's email when called
+      message,
+      'text'
+    )
+  } catch (error) {
+    // Log but don't throw - notifications should not break the booking flow
+    console.error('Failed to send manager booking notification:', error)
+  }
+}
+
+/**
+ * Send cancellation notification to Onboarding Manager
+ */
+export async function sendManagerCancellationNotification(
+  managerEmail: string,
+  merchantName: string,
+  merchantId: string,
+  date: string,
+  bookingType: string,
+  assignedPersonName: string
+): Promise<void> {
+  try {
+    const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
+
+    const message = `🚫 ${bookingType} Cancelled (Manager Copy)\n\n` +
+                   `Merchant: ${merchantName}\n` +
+                   `Assigned ${bookingType === 'Training' ? 'Trainer' : 'Installer'}: ${assignedPersonName}\n` +
+                   `Date: ${date}\n\n` +
+                   `This ${bookingType.toLowerCase()} session has been cancelled.\n\n` +
+                   `🔗 Salesforce: ${salesforceUrl}`
+
+    await larkService.sendAppMessage(managerEmail, message, 'text')
+  } catch (error) {
+    console.error('Failed to send manager cancellation notification:', error)
+  }
+}
+
+/**
+ * Format booking message for managers (includes Salesforce link and assigned person)
+ */
+function formatManagerBookingMessage(data: BookingNotificationData): string {
+  const emoji = data.isRescheduling ? '📅' : '🆕'
+  const action = data.isRescheduling ? 'Rescheduled' : 'New'
+  const typeLabel = data.bookingType.split('-').map(w =>
+    w.charAt(0).toUpperCase() + w.slice(1)
+  ).join(' ')
+
+  // Format date to dd/mm/yyyy
+  const formattedDate = formatDateToDDMMYYYY(data.date)
+
+  // Determine person role (Trainer or Installer)
+  const personRole = data.bookingType.toLowerCase().includes('training') ? 'Trainer' : 'Installer'
+
+  const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${data.merchantId}/view`
+
+  let message = `${emoji} ${action} ${typeLabel} Booking (Manager Copy)\n\n` +
+                `Merchant: ${data.merchantName}\n` +
+                `Assigned ${personRole}: ${data.assignedPersonName}\n` +
+                `Date: ${formattedDate}\n` +
+                `Time: ${data.startTime} - ${data.endTime}\n`
+
+  if (data.onboardingServicesBought) {
+    message += `Service Type: ${data.onboardingServicesBought}\n`
+  }
+
+  if (data.location) {
+    message += `Location: ${data.location}\n`
+  }
+
+  if (data.contactPerson) {
+    message += `Contact: ${data.contactPerson}\n`
+  }
+
+  if (data.contactPhone) {
+    message += `Phone: ${data.contactPhone}\n`
+  }
+
+  message += `\n🔗 Salesforce: ${salesforceUrl}`
+
+  return message
+}
+
+/**
  * Send notification to Onboarding Manager about external vendor assignment
  */
 export async function sendExternalVendorNotificationToManager(

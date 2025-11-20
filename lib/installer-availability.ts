@@ -1,7 +1,7 @@
 import { getSalesforceConnection } from './salesforce'
 import { createSalesforceEvent, updateSalesforceEvent } from './salesforce-events'
 import { larkService } from './lark'
-import { sendBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
+import { sendBookingNotification, sendManagerBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
 import { loadInstallersConfig } from './config-loader'
 import { getLocationCategory as getSmartLocationCategory } from './location-matcher'
 
@@ -1088,6 +1088,32 @@ export async function bookInternalInstallation(
   } catch (notificationError) {
     console.error('Notification failed but installation booking succeeded:', notificationError)
     // Don't fail the booking if notification fails
+  }
+
+  // Send notification to the Onboarding Manager (MSM)
+  if (merchantDetails.msmEmail) {
+    try {
+      await sendManagerBookingNotification({
+        merchantName,
+        merchantId,
+        date: date.split('T')[0], // Date only
+        startTime: timeSlot.start,
+        endTime: timeSlot.end,
+        bookingType: 'installation',
+        isRescheduling: !!existingEventId,
+        assignedPersonName: assignedInstaller,
+        assignedPersonEmail: merchantDetails.msmEmail, // Manager email
+        location: merchantDetails.address,
+        contactPerson: merchantDetails.primaryContactName,
+        contactPhone: merchantDetails.primaryContactPhone
+      })
+      console.log('📧 Manager notification sent to MSM:', merchantDetails.msmEmail)
+    } catch (managerNotificationError) {
+      console.error('Manager notification failed but installation booking succeeded:', managerNotificationError)
+      // Don't fail the booking if notification fails
+    }
+  } else {
+    console.log('⚠️ No MSM email found - skipping manager notification')
   }
 
   return {
