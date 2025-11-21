@@ -901,111 +901,21 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 </svg>
               </button>
               {expandedItems['mobile-video'] && (
-                <div className="pl-12 pr-4 pb-4 space-y-3 pt-3 text-left">
-                  {/* Important Notices - Mobile */}
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
-                    <div className="text-sm font-semibold text-orange-900">
-                      ⚠️ Important Reminders
-                    </div>
-
-                    <div className="space-y-2 text-sm text-gray-700">
-                      <div className="bg-white rounded p-3 border border-orange-100">
-                        <p className="font-medium text-gray-900 mb-2">1. Video Submission Deadline</p>
-                        <p className="mb-2">
-                          Please send us the video <span className="font-semibold text-orange-700">before the installation date</span>. If we don't receive it by then, we will still go ahead with the installation as planned.
-                        </p>
-                        <p className="text-orange-700 font-medium">
-                          However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, there will be an extra charge of RM200.
-                        </p>
-                        <p className="mt-2 text-gray-600">
-                          We want to help you avoid those extra charges, so please send us the video before the installation date.
-                        </p>
-                      </div>
-
-                      <div className="bg-white rounded p-3 border border-orange-100">
-                        <p className="font-medium text-gray-900 mb-2">2. Pre-Installation Requirements</p>
-                        <p>
-                          Make sure the <span className="font-semibold">WiFi, LAN cables & power plugs are already set up</span> before the installation date.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Video Checklist Instructions */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                    <div className="text-sm font-semibold text-blue-900">
-                      📱 Quick Tip: Hold your phone sideways (horizontally) while recording! Landscape mode works best. ↔️
-                    </div>
-
-                    <div className="text-sm font-semibold text-gray-900 mt-3">
-                      Your 1-Minute Video Checklist
-                    </div>
-                    <div className="text-xs text-gray-600 mb-2">
-                      In one continuous video, please walk us through these 3 stops:
-                    </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="bg-white rounded p-3 border border-blue-100">
-                        <div className="font-semibold text-gray-900 mb-1">Stop 1: Your Main Counter</div>
-                        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
-                          <li><span className="font-medium">Show us:</span> Where your new terminal and receipt printer will go.</li>
-                          <li><span className="font-medium">Zoom in on:</span> The nearby power sockets and LAN port.</li>
-                          <li><span className="font-medium">Say:</span> "Counter ready!"</li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-white rounded p-3 border border-blue-100">
-                        <div className="font-semibold text-gray-900 mb-1">Stop 2: Your Kitchen</div>
-                        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
-                          <li><span className="font-medium">Show us:</span> The spot for your kitchen printer.</li>
-                          <li><span className="font-medium">Zoom in on:</span> Its dedicated power socket and LAN port.</li>
-                          <li><span className="font-medium">Say:</span> "Kitchen ready!" <span className="text-gray-500">(If you have more than one kitchen printer, please show each spot.)</span></li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-white rounded p-3 border border-blue-100">
-                        <div className="font-semibold text-gray-900 mb-1">Stop 3: Your Bar (if applicable)</div>
-                        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
-                          <li><span className="font-medium">Show us:</span> The spot for your bar printer.</li>
-                          <li><span className="font-medium">Zoom in on:</span> Its power socket and LAN port.</li>
-                          <li><span className="font-medium">Say:</span> "Bar ready!"</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    {/* Guide link inside Quick Tip box */}
-                    <div className="mt-3 pt-3 border-t border-blue-200">
-                      <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
-                         target="_blank" rel="noopener noreferrer"
-                         className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1">
-                        Guide for your store network setup (cabling and wiring)
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                <div className="pl-12 pr-4 pb-4 space-y-4 pt-3 text-left">
+                  {/* CTA Section - Most Prominent */}
+                  <div className="space-y-3">
+                    {(trainerData?.videoProofLink || uploadedVideoUrl) && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
-                      </a>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Video Proof Status</div>
-                    <div className="text-base text-gray-900">
-                      {trainerData?.videoProofLink || uploadedVideoUrl ? 'Uploaded' : 'Pending Upload'}
-                    </div>
-                  </div>
-                  {(trainerData?.videoProofLink || uploadedVideoUrl) && (
-                    <>
-                      <a href={uploadedVideoUrl || trainerData?.videoProofLink} target="_blank" rel="noopener noreferrer"
-                         className="text-xs text-blue-600 hover:text-blue-700">
-                        View Video
-                      </a>
-                      {(trainerData as any)?.videoProofTimestamp && (
-                        <div className="text-xs text-gray-500">
-                          Uploaded: {formatDateTime((trainerData as any).videoProofTimestamp)}
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <div>
+                        <span className="text-gray-700">Video uploaded - </span>
+                        <a href={uploadedVideoUrl || trainerData?.videoProofLink} target="_blank" rel="noopener noreferrer"
+                           className="text-blue-600 hover:text-blue-700 underline">
+                          View Video
+                        </a>
+                      </div>
+                    )}
                     <input
                       id={`mobile-video-upload-${trainerData?.id}`}
                       type="file"
@@ -1051,6 +961,40 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       </svg>
                       {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
                     </button>
+                  </div>
+
+                  {/* Simplified Info Section */}
+                  <div className="space-y-4 text-sm text-gray-700">
+                    {/* Section 1: How to set up the store */}
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <p className="font-semibold text-gray-900 mb-2">1. How to set up the store:</p>
+                      <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
+                         target="_blank" rel="noopener noreferrer"
+                         className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                        📖 Guide for your store network setup (cabling and wiring)
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </div>
+
+                    {/* Section 2: How to record video */}
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <p className="font-semibold text-gray-900 mb-3">2. How to record video:</p>
+                      <div className="space-y-2 mb-3">
+                        <p className="text-gray-700">Show us 3 things at each location:</p>
+                        <p className="text-gray-700"><span className="font-semibold">Main Counter:</span> Terminal & receipt printer location, Power socket, LAN port</p>
+                        <p className="text-gray-700"><span className="font-semibold">Kitchen/Other Stations:</span> Printer location, Power socket, LAN port</p>
+                      </div>
+                      <p className="text-blue-700 font-medium">📱 Quick Tip: Hold your phone sideways (horizontally) while recording!</p>
+                    </div>
+
+                    {/* Important reminder */}
+                    <div className="bg-orange-50 border-l-4 border-orange-400 p-3">
+                      <p className="font-medium text-orange-900 mb-2">⚠️ Important</p>
+                      <p className="text-xs text-gray-700">Please send us the video before the installation date. If we don't receive it by then, we will still go ahead with the installation as planned.</p>
+                      <p className="text-xs text-gray-700 mt-2">However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, for an extra charge of RM200.</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2033,116 +1977,22 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
                 {/* Expanded Details for Store Setup */}
                 {expandedItems['store-setup'] && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
-                    {/* Important Notices */}
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
-                      <div className="text-sm font-semibold text-orange-900">
-                        ⚠️ Important Reminders
-                      </div>
-
-                      <div className="space-y-2 text-sm text-gray-700">
-                        <div className="bg-white rounded p-3 border border-orange-100">
-                          <p className="font-medium text-gray-900 mb-2">1. Video Submission Deadline</p>
-                          <p className="mb-2">
-                            Please send us the video <span className="font-semibold text-orange-700">before the installation date</span>. If we don't receive it by then, we will still go ahead with the installation as planned.
-                          </p>
-                          <p className="text-orange-700 font-medium">
-                            However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, there will be an extra charge of RM200.
-                          </p>
-                          <p className="mt-2 text-gray-600">
-                            We want to help you avoid those extra charges, so please send us the video before the installation date.
-                          </p>
-                        </div>
-
-                        <div className="bg-white rounded p-3 border border-orange-100">
-                          <p className="font-medium text-gray-900 mb-2">2. Pre-Installation Requirements</p>
-                          <p>
-                            Make sure the <span className="font-semibold">WiFi, LAN cables & power plugs are already set up</span> before the installation date.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Video Checklist Instructions */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                      <div className="text-sm font-semibold text-blue-900">
-                        📱 Quick Tip: Hold your phone sideways (horizontally) while recording! Landscape mode works best. ↔️
-                      </div>
-
-                      <div className="text-sm font-semibold text-gray-900 mt-2">
-                        Your 1-Minute Video Checklist
-                      </div>
-                      <div className="text-xs text-gray-600 mb-2">
-                        In one continuous video, please walk us through these 3 stops:
-                      </div>
-
-                      <div className="space-y-2 text-sm">
-                        <div className="bg-white rounded p-3 border border-blue-100">
-                          <div className="font-semibold text-gray-900 mb-1">Stop 1: Your Main Counter</div>
-                          <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
-                            <li><span className="font-medium">Show us:</span> Where your new terminal and receipt printer will go.</li>
-                            <li><span className="font-medium">Zoom in on:</span> The nearby power sockets and LAN port.</li>
-                            <li><span className="font-medium">Say:</span> "Counter ready!"</li>
-                          </ul>
-                        </div>
-
-                        <div className="bg-white rounded p-3 border border-blue-100">
-                          <div className="font-semibold text-gray-900 mb-1">Stop 2: Your Kitchen</div>
-                          <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
-                            <li><span className="font-medium">Show us:</span> The spot for your kitchen printer.</li>
-                            <li><span className="font-medium">Zoom in on:</span> Its dedicated power socket and LAN port.</li>
-                            <li><span className="font-medium">Say:</span> "Kitchen ready!" <span className="text-gray-500">(If you have more than one kitchen printer, please show each spot.)</span></li>
-                          </ul>
-                        </div>
-
-                        <div className="bg-white rounded p-3 border border-blue-100">
-                          <div className="font-semibold text-gray-900 mb-1">Stop 3: Your Bar (if applicable)</div>
-                          <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
-                            <li><span className="font-medium">Show us:</span> The spot for your bar printer.</li>
-                            <li><span className="font-medium">Zoom in on:</span> Its power socket and LAN port.</li>
-                            <li><span className="font-medium">Say:</span> "Bar ready!"</li>
-                          </ul>
-                        </div>
-                      </div>
-
-                      {/* Guide link inside Quick Tip box */}
-                      <div className="mt-3 pt-3 border-t border-blue-200">
-                        <a
-                          href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 underline inline-flex items-center gap-1"
-                        >
-                          Guide for your store network setup (cabling and wiring)
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-4">
+                    {/* CTA Section - Most Prominent */}
+                    <div className="space-y-3">
+                      {(trainerData?.videoProofLink || uploadedVideoUrl) && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
-                        </a>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Video Proof of Store Readiness</div>
-                      <div className="space-y-2">
-                        {/* Show existing video if available */}
-                        {(trainerData?.videoProofLink || uploadedVideoUrl) && (
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={uploadedVideoUrl || trainerData?.videoProofLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
-                            >
-                              View Current Video
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </a>
-                          </div>
-                        )}
-
-                        {/* Always show upload button for new upload or replacement */}
-                        <div className="flex items-center gap-2">
+                          <span className="text-gray-700">Video uploaded - </span>
+                          <a href={uploadedVideoUrl || trainerData?.videoProofLink} target="_blank" rel="noopener noreferrer"
+                             className="text-blue-600 hover:text-blue-700 underline">
+                            View Video
+                          </a>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
                           <input
                             id={`store-video-upload-${trainerData?.id}`}
                             type="file"
@@ -2183,17 +2033,50 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                               }
                             }}
                           />
-                          <button
-                            onClick={() => document.getElementById(`store-video-upload-${trainerData?.id}`)?.click()}
-                            disabled={uploadingVideo}
-                            className="inline-flex items-center px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:cursor-not-allowed"
-                          >
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-                            </svg>
-                            {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Store Setup Video')}
-                          </button>
+                        <button
+                          onClick={() => document.getElementById(`store-video-upload-${trainerData?.id}`)?.click()}
+                          disabled={uploadingVideo}
+                          className="inline-flex items-center px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:cursor-not-allowed"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                          </svg>
+                          {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Simplified Info Section */}
+                    <div className="space-y-4 text-sm text-gray-700">
+                      {/* Section 1: How to set up the store */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <p className="font-semibold text-gray-900 mb-2">1. How to set up the store:</p>
+                        <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
+                           target="_blank" rel="noopener noreferrer"
+                           className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                          📖 Guide for your store network setup (cabling and wiring)
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </div>
+
+                      {/* Section 2: How to record video */}
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <p className="font-semibold text-gray-900 mb-3">2. How to record video:</p>
+                        <div className="space-y-2 mb-3">
+                          <p className="text-gray-700">Show us 3 things at each location:</p>
+                          <p className="text-gray-700"><span className="font-semibold">Main Counter:</span> Terminal & receipt printer location, Power socket, LAN port</p>
+                          <p className="text-gray-700"><span className="font-semibold">Kitchen/Other Stations:</span> Printer location, Power socket, LAN port</p>
                         </div>
+                        <p className="text-blue-700 font-medium">📱 Quick Tip: Hold your phone sideways (horizontally) while recording!</p>
+                      </div>
+
+                      {/* Important reminder */}
+                      <div className="bg-orange-50 border-l-4 border-orange-400 p-3">
+                        <p className="font-medium text-orange-900 mb-2">⚠️ Important</p>
+                        <p className="text-xs text-gray-700">Please send us the video before the installation date. If we don't receive it by then, we will still go ahead with the installation as planned.</p>
+                        <p className="text-xs text-gray-700 mt-2">However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, for an extra charge of RM200.</p>
                       </div>
                     </div>
                   </div>
