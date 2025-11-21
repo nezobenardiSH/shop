@@ -84,11 +84,61 @@ const isWithinNextDay = (dateString: string | null | undefined): boolean => {
   return businessDaysRemaining <= 1
 }
 
+// Helper function to get industry-specific terminology
+const getIndustryTerminology = (subIndustry: string | null | undefined) => {
+  const industry = (subIndustry || '').toLowerCase()
+
+  if (industry.includes('f&b') || industry.includes('fnb') || industry.includes('food') || industry.includes('beverage') || industry.includes('restaurant') || industry.includes('cafe') || industry.includes('café')) {
+    return {
+      setupLabel: 'Menu Setup',
+      collectionForm: 'menu collection form',
+      collectionFormLabel: 'Menu Collection Form',
+      submissionTimestamp: 'menu collection submission timestamp',
+      submissionTimestampLabel: 'Menu Collection Submission Timestamp',
+      completedSetup: 'completed menu setup',
+      completedSetupLabel: 'Completed Menu Setup',
+      pendingStatus: 'Pending Menu',
+      submitButtonText: 'Submit Menu Collection Form',
+      tooltipText: 'Menu setup will be completed within 3 working days of menu submission'
+    }
+  } else if (industry.includes('retail')) {
+    return {
+      setupLabel: 'Product Setup',
+      collectionForm: 'product collection form',
+      collectionFormLabel: 'Product Collection Form',
+      submissionTimestamp: 'product collection submission timestamp',
+      submissionTimestampLabel: 'Product Collection Submission Timestamp',
+      completedSetup: 'completed product setup',
+      completedSetupLabel: 'Completed Product Setup',
+      pendingStatus: 'Pending Product',
+      submitButtonText: 'Submit Product Collection Form',
+      tooltipText: 'Product setup will be completed within 3 working days of product submission'
+    }
+  } else {
+    // Default to Product Setup for unknown industries
+    return {
+      setupLabel: 'Product Setup',
+      collectionForm: 'product collection form',
+      collectionFormLabel: 'Product Collection Form',
+      submissionTimestamp: 'product collection submission timestamp',
+      submissionTimestampLabel: 'Product Collection Submission Timestamp',
+      completedSetup: 'completed product setup',
+      completedSetupLabel: 'Completed Product Setup',
+      pendingStatus: 'Pending Product',
+      submitButtonText: 'Submit Product Collection Form',
+      tooltipText: 'Product setup will be completed within 3 working days of product submission'
+    }
+  }
+}
+
 export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange }: OnboardingTimelineProps) {
   const router = useRouter()
   const params = useParams()
   const merchantId = params.merchantId as string
   const [stages, setStages] = useState<TimelineStage[]>([])
+
+  // Get industry-specific terminology
+  const terminology = getIndustryTerminology(trainerData?.subIndustry)
 
   // Handle stage click - update URL and scroll to section
   const handleStageClick = (stageId: string) => {
@@ -714,12 +764,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     }
                   })()}
                   <div className="flex-1 text-left">
-                    <div className="text-base font-medium text-gray-900 text-left">Product Setup</div>
+                    <div className="text-base font-medium text-gray-900 text-left">{terminology.setupLabel}</div>
                     <div className="text-sm text-gray-500 text-left">
                       {(() => {
                         if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
                         if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">Pending Setup</span>;
-                        return <span className="text-orange-600">Pending Menu</span>;
+                        return <span className="text-orange-600">{terminology.pendingStatus}</span>;
                       })()}
                     </div>
                   </div>
@@ -770,7 +820,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   </div>
 
                   <div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">Menu Collection Form</div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">{terminology.collectionFormLabel}</div>
                     {trainerData?.menuCollectionFormLink ? (
                       <a href={trainerData.menuCollectionFormLink} target="_blank" rel="noopener noreferrer"
                          className="inline-flex items-center px-3 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
@@ -790,7 +840,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   </div>
                   <div>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <span>Completed Product Setup</span>
+                      <span>{terminology.completedSetupLabel}</span>
                       <div className="relative group">
                         <svg
                           className="w-3.5 h-3.5 text-gray-400 cursor-help"
@@ -801,7 +851,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         </svg>
                         {/* Tooltip */}
                         <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                          Product setup will be completed within 3 working days of menu submission
+                          {terminology.tooltipText}
                           <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                         </div>
                       </div>
@@ -1829,14 +1879,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         );
                       }
                     })()}
-                    <div className="text-sm font-medium text-gray-900">Product Setup</div>
+                    <div className="text-sm font-medium text-gray-900">{terminology.setupLabel}</div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
                       {(() => {
                         if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
                         if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">Pending Setup</span>;
-                        return <span className="text-orange-600">Pending Menu</span>;
+                        return <span className="text-orange-600">{terminology.pendingStatus}</span>;
                       })()}
                     </div>
                     <svg className={`w-4 h-4 transition-transform text-gray-400 ${expandedItems['product-setup'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1886,7 +1936,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     </div>
 
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection Form</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{terminology.collectionFormLabel}</div>
                       {trainerData?.menuCollectionFormLink ? (
                         <a
                           href={trainerData.menuCollectionFormLink}
@@ -1897,14 +1947,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
-                          Submit Menu Collection Form
+                          {terminology.submitButtonText}
                         </a>
                       ) : (
                         <span className="text-sm text-gray-500">Form link not available</span>
                       )}
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Menu Collection Submission Timestamp</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{terminology.submissionTimestampLabel}</div>
                       <div className="text-sm text-gray-900">
                         {trainerData?.menuCollectionSubmissionTimestamp
                           ? formatDateTime(trainerData.menuCollectionSubmissionTimestamp)
@@ -1914,7 +1964,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
                     <div>
                       <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                        <span>Completed Product Setup</span>
+                        <span>{terminology.completedSetupLabel}</span>
                         <div className="relative group">
                           <svg
                             className="w-3.5 h-3.5 text-gray-400 cursor-help"
@@ -1925,7 +1975,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           </svg>
                           {/* Tooltip */}
                           <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                            Product setup will be completed within 3 working days of menu submission
+                            {terminology.tooltipText}
                             <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                           </div>
                         </div>
