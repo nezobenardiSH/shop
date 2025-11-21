@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { verifyToken } from '@/lib/auth-utils'
 import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
+import { sendStoreVideoNotification } from '@/lib/lark-notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -116,6 +117,30 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`✅ Successfully ${isReplacement ? 'replaced' : 'uploaded'} video for trainer: ${trainerId}`)
+
+    // Send notification to Onboarding Manager (MSM)
+    try {
+      // Fetch MSM information for notification
+      const trainerForNotification = await conn.query(
+        `SELECT Id, Name, MSM_Name__r.Email, MSM_Name__r.Name FROM Onboarding_Trainer__c WHERE Id = '${trainerId}' LIMIT 1`
+      )
+
+      if (trainerForNotification.records && trainerForNotification.records.length > 0) {
+        const trainerRecord = trainerForNotification.records[0] as any
+        const msmEmail = trainerRecord.MSM_Name__r?.Email
+        const msmName = trainerRecord.MSM_Name__r?.Name
+
+        if (msmEmail) {
+          await sendStoreVideoNotification(msmEmail, trainerRecord.Name, trainerId)
+          console.log(`📧 Store video notification sent to MSM: ${msmName} (${msmEmail})`)
+        } else {
+          console.log('⚠️ No MSM email found - skipping store video notification')
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to send store video notification:', notificationError)
+      // Don't fail the request if notification fails
+    }
 
     // Track analytics event for video upload
     try {

@@ -253,6 +253,52 @@ export async function sendExternalVendorNotificationToManager(
 }
 
 /**
+ * Send notification when merchant submits menu/product form
+ */
+export async function sendMenuSubmissionNotification(
+  managerEmail: string,
+  merchantName: string,
+  merchantId: string
+): Promise<void> {
+  try {
+    const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
+
+    const message = `📋 Menu/Product Form Submitted\n\n` +
+                   `Merchant: ${merchantName}\n\n` +
+                   `The merchant has submitted their menu/product information.\n\n` +
+                   `🔗 Salesforce: ${salesforceUrl}`
+
+    await larkService.sendAppMessage(managerEmail, message, 'text')
+    console.log(`📧 Menu submission notification sent to onboarding manager: ${managerEmail}`)
+  } catch (error) {
+    console.error('Failed to send menu submission notification:', error)
+  }
+}
+
+/**
+ * Send notification when merchant uploads store setup video
+ */
+export async function sendStoreVideoNotification(
+  managerEmail: string,
+  merchantName: string,
+  merchantId: string
+): Promise<void> {
+  try {
+    const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
+
+    const message = `🎥 Store Setup Video Uploaded\n\n` +
+                   `Merchant: ${merchantName}\n\n` +
+                   `The merchant has uploaded their store setup video proof.\n\n` +
+                   `🔗 Salesforce: ${salesforceUrl}`
+
+    await larkService.sendAppMessage(managerEmail, message, 'text')
+    console.log(`📧 Store video notification sent to onboarding manager: ${managerEmail}`)
+  } catch (error) {
+    console.error('Failed to send store video notification:', error)
+  }
+}
+
+/**
  * Create a rich message card for booking notifications (optional - for future enhancement)
  */
 export function createBookingCard(data: BookingNotificationData): any {

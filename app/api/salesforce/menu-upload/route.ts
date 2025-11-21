@@ -3,6 +3,7 @@ import { getSalesforceConnection } from '@/lib/salesforce'
 import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
 import { verifyToken } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
+import { sendMenuSubmissionNotification } from '@/lib/lark-notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,12 +28,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find the trainer record
+    // Find the trainer record (include MSM for notifications)
     let trainerQuery = ''
     if (trainerId) {
-      trainerQuery = `SELECT Id, Name, Product_Setup_Status__c, Account_Name__c FROM Onboarding_Trainer__c WHERE Id = '${trainerId}' LIMIT 1`
+      trainerQuery = `SELECT Id, Name, Product_Setup_Status__c, Account_Name__c, MSM_Name__r.Email, MSM_Name__r.Name FROM Onboarding_Trainer__c WHERE Id = '${trainerId}' LIMIT 1`
     } else if (accountId) {
-      trainerQuery = `SELECT Id, Name, Product_Setup_Status__c, Account_Name__c FROM Onboarding_Trainer__c WHERE Account_Name__c = '${accountId}' LIMIT 1`
+      trainerQuery = `SELECT Id, Name, Product_Setup_Status__c, Account_Name__c, MSM_Name__r.Email, MSM_Name__r.Name FROM Onboarding_Trainer__c WHERE Account_Name__c = '${accountId}' LIMIT 1`
     } else {
       // If merchantId is provided, we'd need to map it to Account or Trainer
       return NextResponse.json(
@@ -60,6 +61,22 @@ export async function POST(request: NextRequest) {
 
     const trainer = trainerResult.records[0] as any
     const currentStatus = trainer.Product_Setup_Status__c
+
+    // Send notification to Onboarding Manager (MSM) - Always send on every submission
+    const msmEmail = (trainer as any).MSM_Name__r?.Email
+    const msmName = (trainer as any).MSM_Name__r?.Name
+
+    if (msmEmail) {
+      try {
+        await sendMenuSubmissionNotification(msmEmail, trainer.Name, trainer.Id)
+        console.log(`📧 Menu submission notification sent to MSM: ${msmName} (${msmEmail})`)
+      } catch (notificationError) {
+        console.error('Failed to send menu submission notification:', notificationError)
+        // Don't fail the request if notification fails
+      }
+    } else {
+      console.log('⚠️ No MSM email found - skipping menu submission notification')
+    }
 
     // Check if status should be updated
     const statusesToUpdate = [
@@ -90,7 +107,7 @@ export async function POST(request: NextRequest) {
       
       if (updateResult.success) {
         console.log(`Successfully updated trainer ${trainer.Id} status to "Ticket Created - Pending Completion"`)
-        
+
         // Track the menu submission event
         try {
           const cookieStore = await cookies()

@@ -66,3 +66,18 @@ model PageView {
   @@index([userType])
   @@index([deviceType])
 }
+
+model MenuSubmissionNotification {
+  id              String   @id @default(cuid())
+  trainerId       String   // Onboarding_Trainer__c ID
+  submissionLink  String   @db.Text // Menu_Collection_Submission_Link__c value
+  merchantName    String?  // For reference
+  msmEmail        String?  // Manager who was notified
+  notifiedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@unique([trainerId, submissionLink])
+  @@index([trainerId])
+  @@index([notifiedAt])
+  @@map("menu_submission_notifications")
+}
