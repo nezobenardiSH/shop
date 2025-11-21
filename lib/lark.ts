@@ -1,4 +1,5 @@
 
+import { getTimeSlots } from './time-slot-config'
 
 interface LarkTokenResponse {
   code: number
@@ -437,19 +438,16 @@ class LarkService {
   ): Array<{ date: string; slots: Array<{ start: string; end: string; available: boolean }> }> {
     const result: Array<{ date: string; slots: Array<{ start: string; end: string; available: boolean }> }> = []
 
-    const TIME_SLOTS = [
-      { start: '10:00', end: '11:00' },
-      { start: '12:00', end: '13:00' },
-      { start: '14:30', end: '15:30' },
-      { start: '17:00', end: '18:00' }
-    ]
-
     const current = new Date(startDate)
     while (current <= endDate) {
       const dayOfWeek = current.getDay()
 
       if (dayOfWeek >= 1 && dayOfWeek <= 5) {
         const dateStr = current.toISOString().split('T')[0]
+
+        // Get time slots for this specific date (supports date-based slot changes)
+        const TIME_SLOTS = getTimeSlots(current)
+
         const slots = TIME_SLOTS.map(slot => {
           // Create slot times as Singapore timezone dates
           const slotStart = new Date(`${dateStr}T${slot.start}:00+08:00`)

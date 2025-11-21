@@ -1,5 +1,6 @@
 import { larkService } from './lark'
 import { loadTrainersConfig } from './config-loader'
+import { getTimeSlots } from './time-slot-config'
 
 /**
  * Create a date in Singapore timezone
@@ -167,16 +168,10 @@ export async function getCombinedAvailability(
   })
   
   console.log(`✅ Completed availability check for ${trainerAvailabilities.size} authorized trainers`)
-  
+
   // Now combine the availabilities
   const combinedAvailability: DayAvailability[] = []
-  const TIME_SLOTS = [
-    { start: '10:00', end: '11:00' },
-    { start: '12:00', end: '13:00' },
-    { start: '14:30', end: '15:30' },
-    { start: '17:00', end: '18:00' }
-  ]
-  
+
   const current = new Date(startDate)
   while (current <= endDate) {
     const dayOfWeek = current.getDay()
@@ -189,10 +184,13 @@ export async function getCombinedAvailability(
       const month = String(current.getMonth() + 1).padStart(2, '0')
       const day = String(current.getDate()).padStart(2, '0')
       const dateStr = `${year}-${month}-${day}`
-      
+
+      // Get time slots for this specific date (supports date-based slot changes)
+      const TIME_SLOTS = getTimeSlots(current)
+
       // Create slots based on real trainer availability
       const slots: TimeSlot[] = []
-      
+
       TIME_SLOTS.forEach((slot: any) => {
         // Create slot times in configured timezone
         const slotStart = createLocalDate(dateStr, slot.start)
@@ -580,12 +578,6 @@ export async function getSingleTrainerAvailability(
 
   // Build availability for each day
   const singleTrainerAvailability: DayAvailability[] = []
-  const TIME_SLOTS = [
-    { start: '10:00', end: '11:00' },
-    { start: '12:00', end: '13:00' },
-    { start: '14:30', end: '15:30' },
-    { start: '17:00', end: '18:00' }
-  ]
 
   const current = new Date(startDate)
   while (current <= endDate) {
@@ -597,6 +589,9 @@ export async function getSingleTrainerAvailability(
       const month = String(current.getMonth() + 1).padStart(2, '0')
       const day = String(current.getDate()).padStart(2, '0')
       const dateStr = `${year}-${month}-${day}`
+
+      // Get time slots for this specific date (supports date-based slot changes)
+      const TIME_SLOTS = getTimeSlots(current)
 
       const slots: TimeSlot[] = []
 

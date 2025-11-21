@@ -800,7 +800,11 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
             eventDescription += `Type: ${onboardingServicesBought || 'Training'}\n`
 
             if (requiredFeatures && requiredFeatures.length > 0) {
-              eventDescription += `Features: ${requiredFeatures.join(', ')}\n`
+              // Handle both string (semicolon-separated) and array formats
+              const featuresText = Array.isArray(requiredFeatures)
+                ? requiredFeatures.join(', ')
+                : requiredFeatures
+              eventDescription += `Features: ${featuresText}\n`
             }
 
             if (onboardingSummary) {
@@ -823,20 +827,20 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
               eventSubject = `Installation - ${onboardingTrainerName || merchantName}`
             } else {
               // Training - use service type in subject
-              if (onboardingServicesBought === 'Onsite Training') {
+              if (serviceType === 'onsite') {
                 eventSubject = `Onsite Training - ${onboardingTrainerName || merchantName}`
               } else {
                 eventSubject = `Remote Training - ${onboardingTrainerName || merchantName}`
               }
             }
 
-            const eventLocation = onboardingServicesBought === 'Onsite Training'
+            const eventLocation = serviceType === 'onsite'
               ? merchantAddress
               : undefined
 
             // Determine event type based on onboarding service
             // Salesforce Type picklist values: "Face to face", "Online", "Call"
-            const eventType = onboardingServicesBought === 'Onsite Training'
+            const eventType = serviceType === 'onsite'
               ? 'Face to face'
               : 'Online'
 
