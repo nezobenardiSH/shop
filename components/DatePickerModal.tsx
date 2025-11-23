@@ -757,16 +757,16 @@ export default function DatePickerModal({
           parseInt(goLiveParts[2])
         )
 
-        // Training must be BEFORE the go-live date (at least 1 day before)
-        // So if go-live is Nov 19, the last possible training date is Nov 18
+        // Training can be on the same date as go-live date
+        // So if go-live is Nov 19, the last possible training date is Nov 19
         const lastTrainingDate = new Date(goLive)
-        lastTrainingDate.setDate(lastTrainingDate.getDate() - 1)
+        // No longer subtracting 1 day - training can be same day as go-live
 
         console.log('  -> Go-live date parsed:', goLive.toDateString())
-        console.log('  -> Last allowed training date:', lastTrainingDate.toDateString())
+        console.log('  -> Last allowed training date (same as go-live):', lastTrainingDate.toDateString())
         console.log('  -> Current maxDate:', maxDate.toDateString())
 
-        // Use the earlier of 14-day window or day before go-live
+        // Use the earlier of 14-day window or go-live date
         if (lastTrainingDate < maxDate) {
           maxDate = lastTrainingDate
           console.log('  -> Training LIMITED by go-live date. New max:', maxDate.toDateString())
@@ -967,13 +967,13 @@ export default function DatePickerModal({
                 {bookingType === 'training' && (
                   <>
                     {installationDate && goLiveDate && (
-                      <li>• Training must be scheduled after Installation date ({formatDate(installationDate)}) and before Go-Live date ({formatDate(goLiveDate)})</li>
+                      <li>• Training must be scheduled after Installation date ({formatDate(installationDate)}) and on or before Go-Live date ({formatDate(goLiveDate)})</li>
                     )}
                     {installationDate && !goLiveDate && (
                       <li>• Training must be scheduled after Installation date ({formatDate(installationDate)})</li>
                     )}
                     {!installationDate && goLiveDate && (
-                      <li>• Training must be scheduled before Go-Live date ({formatDate(goLiveDate)})</li>
+                      <li>• Training must be scheduled on or before Go-Live date ({formatDate(goLiveDate)})</li>
                     )}
                     {!installationDate && !goLiveDate && (
                       <li>• No go-live date set - please check with your onboarding manager</li>
@@ -1218,10 +1218,10 @@ export default function DatePickerModal({
                         parseInt(goLiveParts[1]) - 1,
                         parseInt(goLiveParts[2])
                       )
-                      // Training must be BEFORE go-live date (at least 1 day before)
+                      // Training can be on the same date as go-live date
                       const lastTrainingDate = new Date(goLive)
-                      lastTrainingDate.setDate(lastTrainingDate.getDate() - 1)
-                      
+                      // No longer subtracting 1 day - training can be same day as go-live
+
                       if (lastTrainingDate < endDate) {
                         endDate = lastTrainingDate
                       }
