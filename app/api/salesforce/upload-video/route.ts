@@ -140,11 +140,11 @@ export async function POST(request: NextRequest) {
         merchantName = trainerRecord.Name
         const msmName = trainerRecord.MSM_Name__r?.Name
 
-        if (msmEmail) {
+        if (msmEmail && merchantName) {
           await sendStoreVideoNotification(msmEmail, merchantName, trainerId)
           console.log(`📧 Store video notification sent to MSM: ${msmName} (${msmEmail})`)
         } else {
-          console.log('⚠️ No MSM email found - skipping store video notification')
+          console.log('⚠️ No MSM email or merchant name found - skipping store video notification')
         }
       }
     } catch (notificationError) {
