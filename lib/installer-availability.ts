@@ -4,6 +4,12 @@ import { larkService } from './lark'
 import { sendBookingNotification, sendManagerBookingNotification, sendExternalVendorNotificationToManager } from './lark-notifications'
 import { loadInstallersConfig } from './config-loader'
 import { getLocationCategory as getSmartLocationCategory } from './location-matcher'
+import { prisma } from './prisma'
+import {
+  createSalesforceTask,
+  getMsmSalesforceUserId,
+  getSalesforceRecordUrl
+} from './salesforce-tasks'
 
 interface TimeSlot {
   start: string
@@ -1358,6 +1364,87 @@ export async function submitExternalInstallationRequest(
         } catch (baseError) {
           console.error('❌ Failed to create Lark base record:', baseError)
           // Don't fail the entire booking if base creation fails
+        }
+
+        // Create Salesforce Task for external vendor booking
+        try {
+          // Check if task already created for this merchant
+          const existingTask = await prisma.salesforceTaskTracking.findUnique({
+            where: {
+              trainerId_taskType: {
+                trainerId: merchantId,
+                taskType: 'EXTERNAL_VENDOR_BOOKING'
+              }
+            }
+          })
+
+          if (!existingTask) {
+            // Get MSM Salesforce User ID
+            const msmUserId = await getMsmSalesforceUserId(msmEmail)
+
+            if (msmUserId) {
+              // Format date and time for display
+              const formattedDate = new Date(preferredDate).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+              })
+              const formattedTime = preferredTime
+
+              // Format hardware list
+              const hardwareList = hardwareItems.length > 0
+                ? hardwareItems.map(item => `  - ${item}`).join('\n')
+                : '  - Not available'
+
+              // Create task in Salesforce
+              const taskResult = await createSalesforceTask({
+                subject: `Book external installation for ${merchantName}`,
+                description: `Merchant: ${merchantName}
+Store Address: ${storeAddress}
+
+ACTION REQUIRED: Book installation on external vendor website
+
+Requested Date: ${formattedDate}
+Requested Time: ${formattedTime}
+
+Hardware:
+${hardwareList}
+
+Merchant Email: ${merchantEmail || 'Not available'}
+Sales Order: ${orderNumber}
+
+🔗 Salesforce: ${getSalesforceRecordUrl(merchantId)}`,
+                status: 'Not Started',
+                priority: 'High',
+                ownerId: msmUserId,
+                whatId: merchantId,
+                activityDate: preferredDate.split('T')[0] // Use requested date as due date
+              })
+
+              if (taskResult.success && taskResult.taskId) {
+                // Track task in database
+                await prisma.salesforceTaskTracking.create({
+                  data: {
+                    taskId: taskResult.taskId,
+                    trainerId: merchantId,
+                    taskType: 'EXTERNAL_VENDOR_BOOKING',
+                    merchantName,
+                    msmEmail
+                  }
+                })
+                console.log(`✅ Salesforce Task created: ${taskResult.taskId}`)
+              } else {
+                console.log(`⚠️ Failed to create Salesforce Task: ${taskResult.error}`)
+              }
+            } else {
+              console.log(`⚠️ No Salesforce User found for ${msmEmail}, skipping task creation`)
+            }
+          } else {
+            console.log(`⏭️ Salesforce Task already exists: ${existingTask.taskId}`)
+          }
+        } catch (taskError) {
+          console.error('❌ Failed to create Salesforce Task:', taskError)
+          // Don't fail the booking if task creation fails
         }
       } else {
         console.log('⚠️ No MSM email found for notification and Lark base creation')

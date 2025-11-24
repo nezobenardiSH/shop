@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { sendMenuSubmissionNotification } from '@/lib/lark-notifications'
 import { prisma } from '@/lib/prisma'
+import {
+  createSalesforceTask,
+  getMsmSalesforceUserId,
+  getSalesforceRecordUrl,
+  getTodayDateString
+} from '@/lib/salesforce-tasks'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // 60 seconds timeout
@@ -99,6 +105,66 @@ export async function GET(request: NextRequest) {
       } catch (notificationError) {
         console.error(`   ❌ Failed to send notification:`, notificationError)
         // Continue with next record even if this one fails
+      }
+
+      // Create Salesforce Task
+      try {
+        // Check if task already created for this merchant
+        const existingTask = await prisma.salesforceTaskTracking.findUnique({
+          where: {
+            trainerId_taskType: {
+              trainerId,
+              taskType: 'MENU_SUBMISSION'
+            }
+          }
+        })
+
+        if (!existingTask && msmEmail) {
+          // Get MSM Salesforce User ID
+          const msmUserId = await getMsmSalesforceUserId(msmEmail)
+
+          if (msmUserId) {
+            // Create task in Salesforce
+            const taskResult = await createSalesforceTask({
+              subject: `Review menu submission for ${merchantName}`,
+              description: `Merchant: ${merchantName}
+
+The merchant has submitted their menu/product information.
+
+Menu Link: ${submissionLink}
+
+🔗 Salesforce: ${getSalesforceRecordUrl(trainerId)}`,
+              status: 'Not Started',
+              priority: 'High',
+              ownerId: msmUserId,
+              whatId: trainerId,
+              activityDate: getTodayDateString()
+            })
+
+            if (taskResult.success && taskResult.taskId) {
+              // Track task in database
+              await prisma.salesforceTaskTracking.create({
+                data: {
+                  taskId: taskResult.taskId,
+                  trainerId,
+                  taskType: 'MENU_SUBMISSION',
+                  merchantName,
+                  msmEmail
+                }
+              })
+              console.log(`   ✅ Salesforce Task created: ${taskResult.taskId}`)
+            } else {
+              console.log(`   ⚠️  Failed to create Salesforce Task: ${taskResult.error}`)
+            }
+          } else {
+            console.log(`   ⚠️  No Salesforce User found for ${msmEmail}, skipping task creation`)
+          }
+        } else if (existingTask) {
+          console.log(`   ⏭️  Salesforce Task already exists: ${existingTask.taskId}`)
+        }
+      } catch (taskError) {
+        console.error(`   ❌ Failed to create Salesforce Task:`, taskError)
+        // Don't fail the entire process if task creation fails
       }
     }
 

@@ -81,3 +81,27 @@ model MenuSubmissionNotification {
   @@index([notifiedAt])
   @@map("menu_submission_notifications")
 }
+
+model SalesforceTaskTracking {
+  id              String   @id @default(cuid())
+  taskId          String   @unique // Salesforce Task.Id (18-char ID)
+  trainerId       String   // Onboarding_Trainer__c ID
+  taskType        TaskType
+  merchantName    String?  // For reference
+  msmEmail        String?  // Manager who was assigned the task
+  createdAt       DateTime @default(now())
+  completedAt     DateTime? // When the task was marked complete (for future automation)
+
+  @@unique([trainerId, taskType])
+  @@index([trainerId])
+  @@index([taskType])
+  @@index([createdAt])
+  @@index([completedAt])
+  @@map("salesforce_task_tracking")
+}
+
+enum TaskType {
+  MENU_SUBMISSION
+  VIDEO_UPLOAD
+  EXTERNAL_VENDOR_BOOKING
+}

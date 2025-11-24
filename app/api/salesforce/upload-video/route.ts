@@ -4,6 +4,13 @@ import { getSalesforceConnection } from '@/lib/salesforce'
 import { verifyToken } from '@/lib/auth-utils'
 import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
 import { sendStoreVideoNotification } from '@/lib/lark-notifications'
+import { prisma } from '@/lib/prisma'
+import {
+  createSalesforceTask,
+  getMsmSalesforceUserId,
+  getSalesforceRecordUrl,
+  getTodayDateString
+} from '@/lib/salesforce-tasks'
 
 export async function POST(request: NextRequest) {
   try {
@@ -119,6 +126,8 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Successfully ${isReplacement ? 'replaced' : 'uploaded'} video for trainer: ${trainerId}`)
 
     // Send notification to Onboarding Manager (MSM)
+    let msmEmail: string | null = null
+    let merchantName: string | null = null
     try {
       // Fetch MSM information for notification
       const trainerForNotification = await conn.query(
@@ -127,11 +136,12 @@ export async function POST(request: NextRequest) {
 
       if (trainerForNotification.records && trainerForNotification.records.length > 0) {
         const trainerRecord = trainerForNotification.records[0] as any
-        const msmEmail = trainerRecord.MSM_Name__r?.Email
+        msmEmail = trainerRecord.MSM_Name__r?.Email
+        merchantName = trainerRecord.Name
         const msmName = trainerRecord.MSM_Name__r?.Name
 
         if (msmEmail) {
-          await sendStoreVideoNotification(msmEmail, trainerRecord.Name, trainerId)
+          await sendStoreVideoNotification(msmEmail, merchantName, trainerId)
           console.log(`📧 Store video notification sent to MSM: ${msmName} (${msmEmail})`)
         } else {
           console.log('⚠️ No MSM email found - skipping store video notification')
@@ -140,6 +150,69 @@ export async function POST(request: NextRequest) {
     } catch (notificationError) {
       console.error('Failed to send store video notification:', notificationError)
       // Don't fail the request if notification fails
+    }
+
+    // Create Salesforce Task
+    try {
+      if (msmEmail && merchantName) {
+        // Check if task already created (within last 24 hours to allow for re-uploads)
+        const existingTask = await prisma.salesforceTaskTracking.findFirst({
+          where: {
+            trainerId,
+            taskType: 'VIDEO_UPLOAD',
+            createdAt: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+            }
+          }
+        })
+
+        if (!existingTask) {
+          // Get MSM Salesforce User ID
+          const msmUserId = await getMsmSalesforceUserId(msmEmail)
+
+          if (msmUserId) {
+            // Create task in Salesforce
+            const taskResult = await createSalesforceTask({
+              subject: `Review setup video for ${merchantName}`,
+              description: `Merchant: ${merchantName}
+
+The merchant has uploaded their store setup video proof.
+
+Video Link: ${downloadUrl}
+
+🔗 Salesforce: ${getSalesforceRecordUrl(trainerId)}`,
+              status: 'Not Started',
+              priority: 'Normal',
+              ownerId: msmUserId,
+              whatId: trainerId,
+              activityDate: getTodayDateString()
+            })
+
+            if (taskResult.success && taskResult.taskId) {
+              // Track task in database
+              await prisma.salesforceTaskTracking.create({
+                data: {
+                  taskId: taskResult.taskId,
+                  trainerId,
+                  taskType: 'VIDEO_UPLOAD',
+                  merchantName,
+                  msmEmail
+                }
+              })
+              console.log(`✅ Salesforce Task created: ${taskResult.taskId}`)
+            } else {
+              console.log(`⚠️ Failed to create Salesforce Task: ${taskResult.error}`)
+            }
+          } else {
+            console.log(`⚠️ No Salesforce User found for ${msmEmail}, skipping task creation`)
+          }
+        } else {
+          console.log(`⏭️ Salesforce Task already exists (created ${existingTask.createdAt.toISOString()})`)
+        }
+      }
+    } catch (taskError) {
+      console.error('❌ Failed to create Salesforce Task:', taskError)
+      // Don't fail the upload if task creation fails
     }
 
     // Track analytics event for video upload
