@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Send notification
+      let notificationSent = false
       try {
         await sendMenuSubmissionNotification(msmEmail, merchantName, trainerId)
         console.log(`   ✅ Notification sent to: ${msmName} (${msmEmail})`)
@@ -102,14 +103,16 @@ export async function GET(request: NextRequest) {
         })
 
         notifiedCount++
+        notificationSent = true
       } catch (notificationError) {
         console.error(`   ❌ Failed to send notification:`, notificationError)
         // Continue with next record even if this one fails
       }
 
-      // Create Salesforce Task (always create new task for every submission/update)
+      // Create Salesforce Task (only create if we also sent notification - ensures we don't create tasks for old submissions)
+      // Note: If we sent a notification, it means this is a new/updated submission
       try {
-        if (msmEmail) {
+        if (msmEmail && notificationSent) {
           // Get MSM Salesforce User ID
           const msmUserId = await getMsmSalesforceUserId(msmEmail)
 
