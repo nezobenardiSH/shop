@@ -1404,8 +1404,8 @@ Merchant Email: ${merchantEmail || 'Not available'}
 Sales Order: ${orderNumber}
 
 🔗 Salesforce: ${getSalesforceRecordUrl(merchantId)}`,
-              status: 'Not Started',
-              priority: 'High',
+              status: 'Open',
+              priority: 'Normal',
               ownerId: msmUserId,
               whatId: merchantId,
               activityDate: getTodayDateString() // Due date is today (when booking was made)

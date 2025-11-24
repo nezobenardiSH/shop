@@ -131,8 +131,8 @@ The merchant has submitted their menu/product information.
 Menu Link: ${submissionLink}
 
 🔗 Salesforce: ${getSalesforceRecordUrl(trainerId)}`,
-              status: 'Not Started',
-              priority: 'High',
+              status: 'Open',
+              priority: 'Normal',
               ownerId: msmUserId,
               whatId: trainerId,
               activityDate: getTodayDateString()

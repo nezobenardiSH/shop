@@ -13,7 +13,7 @@ import { getSalesforceConnection } from './salesforce'
 export interface CreateTaskParams {
   subject: string
   description: string
-  status: 'Not Started' | 'In Progress' | 'Completed' | 'Waiting on someone else' | 'Deferred'
+  status: 'Open' | 'Not Started' | 'In Progress' | 'Completed' | 'Waiting on someone else' | 'Deferred'
   priority: 'High' | 'Normal' | 'Low'
   ownerId: string // Salesforce User ID
   whatId: string // Related record ID (e.g., Onboarding_Trainer__c)

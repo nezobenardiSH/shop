@@ -175,7 +175,7 @@ The merchant has ${isReplacement ? 'updated their' : 'uploaded their'} store set
 Video Link: ${downloadUrl}
 
 🔗 Salesforce: ${getSalesforceRecordUrl(trainerId)}`,
-            status: 'Not Started',
+            status: 'Open',
             priority: 'Normal',
             ownerId: msmUserId,
             whatId: trainerId,
