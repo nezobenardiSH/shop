@@ -8,7 +8,8 @@ import { prisma } from './prisma'
 import {
   createSalesforceTask,
   getMsmSalesforceUserId,
-  getSalesforceRecordUrl
+  getSalesforceRecordUrl,
+  getTodayDateString
 } from './salesforce-tasks'
 
 interface TimeSlot {
@@ -1407,7 +1408,7 @@ Sales Order: ${orderNumber}
               priority: 'High',
               ownerId: msmUserId,
               whatId: merchantId,
-              activityDate: preferredDate.split('T')[0] // Use requested date as due date
+              activityDate: getTodayDateString() // Due date is today (when booking was made)
             })
 
             if (taskResult.success && taskResult.taskId) {
