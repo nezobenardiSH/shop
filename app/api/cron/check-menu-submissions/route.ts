@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
           if (msmUserId) {
             // Create task in Salesforce
             const taskResult = await createSalesforceTask({
-              subject: `Review menu submission for ${merchantName}`,
+              subject: `[Portal] Check menu/product submission for ${merchantName}`,
               description: `Merchant: ${merchantName}
 
 The merchant has submitted their menu/product information.

@@ -160,10 +160,8 @@ export async function POST(request: NextRequest) {
         const msmUserId = await getMsmSalesforceUserId(msmEmail)
 
         if (msmUserId) {
-          // Determine if this is a replacement or new upload
-          const taskSubject = isReplacement
-            ? `Review updated video for ${merchantName}`
-            : `Review setup video for ${merchantName}`
+          // Task subject for video uploads
+          const taskSubject = `[Portal] Check PreInstallation Video for ${merchantName}`
 
           // Create task in Salesforce
           const taskResult = await createSalesforceTask({

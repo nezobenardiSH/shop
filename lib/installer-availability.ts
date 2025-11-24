@@ -1388,7 +1388,7 @@ export async function submitExternalInstallationRequest(
 
             // Create task in Salesforce
             const taskResult = await createSalesforceTask({
-              subject: `Book external installation for ${merchantName}`,
+              subject: `[Portal] Book / check external installation booking for ${merchantName}`,
               description: `Merchant: ${merchantName}
 Store Address: ${storeAddress}
 
