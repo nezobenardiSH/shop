@@ -1184,15 +1184,15 @@ export async function submitExternalInstallationRequest(
           console.log(`📝 Found Onboarding_Portal__c ID: ${portalId}`)
 
           // Update the Onboarding_Portal__c record with the installation date
-          // For external vendors, clear the Installer_Name__c field (set to null)
+          // For external vendors, set the Installer_Name__c field to "External Vendor"
           const portalUpdateData = {
             Id: portalId,
             Installation_Date__c: installationDateTime,  // DateTime field with timezone
-            Installer_Name__c: null  // Clear installer name for external vendors
+            Installer_Name__c: 'External Vendor'  // Set installer name for external vendors
           }
 
           const portalUpdateResult = await conn.sobject('Onboarding_Portal__c').update(portalUpdateData)
-          console.log(`✅ Updated Onboarding_Portal__c.Installation_Date__c and cleared Installer_Name__c:`, JSON.stringify(portalUpdateResult))
+          console.log(`✅ Updated Onboarding_Portal__c.Installation_Date__c and set Installer_Name__c to "External Vendor":`, JSON.stringify(portalUpdateResult))
         } else {
           console.log(`⚠️ No Onboarding_Portal__c record found for merchant ${merchantId}`)
           
@@ -1206,16 +1206,16 @@ export async function submitExternalInstallationRequest(
           const merchantResult = await conn.query(merchantQuery)
           const merchantName = merchantResult.totalSize > 0 ? merchantResult.records[0].Name : 'Unknown Merchant'
 
-          // For external vendors, don't set Installer_Name__c (leave it null)
+          // For external vendors, set Installer_Name__c to "External Vendor"
           const createData = {
             Name: `Portal - ${merchantName}`,
             Onboarding_Trainer_Record__c: merchantId,
-            Installation_Date__c: installationDateTime  // DateTime field with timezone
-            // Installer_Name__c is intentionally not set for external vendors
+            Installation_Date__c: installationDateTime,  // DateTime field with timezone
+            Installer_Name__c: 'External Vendor'  // Set installer name for external vendors
           }
 
           const createResult = await conn.sobject('Onboarding_Portal__c').create(createData)
-          console.log(`✅ Created new Portal record with Installation_Date__c (no installer for external vendor): ${createResult.id}`)
+          console.log(`✅ Created new Portal record with Installation_Date__c and Installer_Name__c set to "External Vendor": ${createResult.id}`)
         }
       } catch (portalError) {
         console.error('Failed to update Onboarding_Portal__c:', portalError)
