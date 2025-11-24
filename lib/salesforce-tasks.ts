@@ -203,9 +203,16 @@ export function getSalesforceRecordUrl(recordId: string): string {
 
 /**
  * Helper function to get today's date in Salesforce date format (YYYY-MM-DD)
+ * Uses Singapore timezone (GMT+8)
  */
 export function getTodayDateString(): string {
-  return new Date().toISOString().split('T')[0]
+  const now = new Date()
+  // Convert to Singapore timezone (GMT+8)
+  const singaporeTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Singapore' }))
+  const year = singaporeTime.getFullYear()
+  const month = String(singaporeTime.getMonth() + 1).padStart(2, '0')
+  const day = String(singaporeTime.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**
