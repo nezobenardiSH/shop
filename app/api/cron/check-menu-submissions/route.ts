@@ -107,19 +107,9 @@ export async function GET(request: NextRequest) {
         // Continue with next record even if this one fails
       }
 
-      // Create Salesforce Task
+      // Create Salesforce Task (always create new task for every submission/update)
       try {
-        // Check if task already created for this merchant
-        const existingTask = await prisma.salesforceTaskTracking.findUnique({
-          where: {
-            trainerId_taskType: {
-              trainerId,
-              taskType: 'MENU_SUBMISSION'
-            }
-          }
-        })
-
-        if (!existingTask && msmEmail) {
+        if (msmEmail) {
           // Get MSM Salesforce User ID
           const msmUserId = await getMsmSalesforceUserId(msmEmail)
 
@@ -159,8 +149,6 @@ Menu Link: ${submissionLink}
           } else {
             console.log(`   ⚠️  No Salesforce User found for ${msmEmail}, skipping task creation`)
           }
-        } else if (existingTask) {
-          console.log(`   ⏭️  Salesforce Task already exists: ${existingTask.taskId}`)
         }
       } catch (taskError) {
         console.error(`   ❌ Failed to create Salesforce Task:`, taskError)
