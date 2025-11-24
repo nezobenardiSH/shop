@@ -92,11 +92,13 @@ model SalesforceTaskTracking {
   createdAt       DateTime @default(now())
   completedAt     DateTime? // When the task was marked complete (for future automation)
 
-  @@unique([trainerId, taskType])
+  // Note: No unique constraint on trainerId+taskType to allow multiple tasks per merchant
+  // (e.g., multiple VIDEO_UPLOAD tasks when merchant re-uploads)
   @@index([trainerId])
   @@index([taskType])
   @@index([createdAt])
   @@index([completedAt])
+  @@index([trainerId, taskType])
   @@map("salesforce_task_tracking")
 }
 

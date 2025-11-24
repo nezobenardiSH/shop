@@ -155,59 +155,50 @@ export async function POST(request: NextRequest) {
     // Create Salesforce Task
     try {
       if (msmEmail && merchantName) {
-        // Check if task already created (within last 24 hours to allow for re-uploads)
-        const existingTask = await prisma.salesforceTaskTracking.findFirst({
-          where: {
-            trainerId,
-            taskType: 'VIDEO_UPLOAD',
-            createdAt: {
-              gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-            }
-          }
-        })
+        // Always create a new task for every video upload (including re-uploads)
+        // Get MSM Salesforce User ID
+        const msmUserId = await getMsmSalesforceUserId(msmEmail)
 
-        if (!existingTask) {
-          // Get MSM Salesforce User ID
-          const msmUserId = await getMsmSalesforceUserId(msmEmail)
+        if (msmUserId) {
+          // Determine if this is a replacement or new upload
+          const taskSubject = isReplacement
+            ? `Review updated video for ${merchantName}`
+            : `Review setup video for ${merchantName}`
 
-          if (msmUserId) {
-            // Create task in Salesforce
-            const taskResult = await createSalesforceTask({
-              subject: `Review setup video for ${merchantName}`,
-              description: `Merchant: ${merchantName}
+          // Create task in Salesforce
+          const taskResult = await createSalesforceTask({
+            subject: taskSubject,
+            description: `Merchant: ${merchantName}
 
-The merchant has uploaded their store setup video proof.
+The merchant has ${isReplacement ? 'updated their' : 'uploaded their'} store setup video proof.
 
 Video Link: ${downloadUrl}
 
 🔗 Salesforce: ${getSalesforceRecordUrl(trainerId)}`,
-              status: 'Not Started',
-              priority: 'Normal',
-              ownerId: msmUserId,
-              whatId: trainerId,
-              activityDate: getTodayDateString()
-            })
+            status: 'Not Started',
+            priority: 'Normal',
+            ownerId: msmUserId,
+            whatId: trainerId,
+            activityDate: getTodayDateString()
+          })
 
-            if (taskResult.success && taskResult.taskId) {
-              // Track task in database
-              await prisma.salesforceTaskTracking.create({
-                data: {
-                  taskId: taskResult.taskId,
-                  trainerId,
-                  taskType: 'VIDEO_UPLOAD',
-                  merchantName,
-                  msmEmail
-                }
-              })
-              console.log(`✅ Salesforce Task created: ${taskResult.taskId}`)
-            } else {
-              console.log(`⚠️ Failed to create Salesforce Task: ${taskResult.error}`)
-            }
+          if (taskResult.success && taskResult.taskId) {
+            // Track task in database
+            await prisma.salesforceTaskTracking.create({
+              data: {
+                taskId: taskResult.taskId,
+                trainerId,
+                taskType: 'VIDEO_UPLOAD',
+                merchantName,
+                msmEmail
+              }
+            })
+            console.log(`✅ Salesforce Task created: ${taskResult.taskId}`)
           } else {
-            console.log(`⚠️ No Salesforce User found for ${msmEmail}, skipping task creation`)
+            console.log(`⚠️ Failed to create Salesforce Task: ${taskResult.error}`)
           }
         } else {
-          console.log(`⏭️ Salesforce Task already exists (created ${existingTask.createdAt.toISOString()})`)
+          console.log(`⚠️ No Salesforce User found for ${msmEmail}, skipping task creation`)
         }
       }
     } catch (taskError) {
