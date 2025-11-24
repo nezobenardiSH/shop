@@ -26,13 +26,17 @@ export async function GET(request: NextRequest) {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
 
     const query = `
-      SELECT Id, Name, Menu_Collection_Submission_Link__c,
-             MSM_Name__r.Email, MSM_Name__r.Name,
-             LastModifiedDate
-      FROM Onboarding_Trainer__c
-      WHERE Menu_Collection_Submission_Link__c != NULL
-        AND LastModifiedDate >= ${tenMinutesAgo}
-      ORDER BY LastModifiedDate DESC
+      SELECT ot.Id, ot.Name, ot.Menu_Collection_Submission_Link__c,
+             ot.MSM_Name__r.Email, ot.MSM_Name__r.Name,
+             ot.LastModifiedDate
+      FROM Onboarding_Trainer__c ot,
+           Onboarding_Portal__c op
+      WHERE ot.Menu_Collection_Submission_Link__c != NULL
+        AND ot.LastModifiedDate >= ${tenMinutesAgo}
+        AND op.Onboarding_Trainer_Record__c = ot.Id
+        AND op.Onboarding_Portal_Access__c = true
+        AND op.Is_test_account__c = false
+      ORDER BY ot.LastModifiedDate DESC
     `
 
     console.log('📋 Querying Salesforce for recent submissions...')
