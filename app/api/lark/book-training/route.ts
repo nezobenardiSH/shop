@@ -8,6 +8,8 @@ import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
 import { verifyToken } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
 import trainersConfig from '@/config/trainers.json'
+import { createSalesforceTask, getMsmSalesforceUserId, getTodayDateString, getSalesforceRecordUrl } from '@/lib/salesforce-tasks'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -1026,6 +1028,67 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
       }
     } else {
       console.log('⚠️ No MSM email found - skipping manager notification')
+    }
+
+    // Create Salesforce Task for training booking/rescheduling
+    if (msmEmail && bookingType === 'training') {
+      try {
+        const msmUserId = await getMsmSalesforceUserId(msmEmail)
+
+        if (msmUserId) {
+          const formattedDate = new Date(`${date}T${startTime}`).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          })
+
+          const isRescheduling = !!existingEventId
+          const taskType = isRescheduling ? 'TRAINING_RESCHEDULING' : 'TRAINING_BOOKING'
+          const actionText = isRescheduling ? 'RESCHEDULED' : 'BOOKED'
+
+          const taskResult = await createSalesforceTask({
+            subject: `[Portal] Check training date for ${onboardingTrainerName || merchantName}`,
+            description: `Merchant: ${onboardingTrainerName || merchantName}
+
+Training ${actionText} via Portal
+
+Date: ${formattedDate}
+Time: ${startTime} - ${endTime}
+Type: ${serviceType === 'onsite' ? 'Onsite Training' : 'Remote Training'}
+Trainer: ${assignment.assigned}
+
+Contact: ${merchantPICName || merchantContactPerson || 'N/A'}
+Phone: ${merchantPICPhone || merchantPhone || 'N/A'}
+
+🔗 Salesforce: ${getSalesforceRecordUrl(merchantId)}`,
+            status: 'Open',
+            priority: 'Normal',
+            ownerId: msmUserId,
+            whatId: merchantId,
+            activityDate: getTodayDateString()
+          })
+
+          if (taskResult.success && taskResult.taskId) {
+            await prisma.salesforceTaskTracking.create({
+              data: {
+                taskId: taskResult.taskId,
+                trainerId: merchantId,
+                taskType: taskType,
+                merchantName: onboardingTrainerName || merchantName,
+                msmEmail
+              }
+            })
+            console.log(`✅ Salesforce Task created for training ${isRescheduling ? 'rescheduling' : 'booking'}: ${taskResult.taskId}`)
+          } else {
+            console.log(`⚠️ Failed to create Salesforce Task: ${taskResult.error}`)
+          }
+        } else {
+          console.log(`⚠️ No Salesforce User found for ${msmEmail}, skipping task creation`)
+        }
+      } catch (taskError) {
+        console.error('❌ Failed to create Salesforce Task for training:', taskError)
+        // Don't fail the booking if task creation fails
+      }
     }
 
     // Track the booking event

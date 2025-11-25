@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { larkService } from '@/lib/lark'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { sendCancellationNotification, sendManagerCancellationNotification } from '@/lib/lark-notifications'
+import { createSalesforceTask, getMsmSalesforceUserId, getTodayDateString, getSalesforceRecordUrl } from '@/lib/salesforce-tasks'
+import { prisma } from '@/lib/prisma'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -188,6 +190,64 @@ export async function DELETE(request: NextRequest) {
       }
     } else {
       console.log('⚠️ No MSM email found - skipping manager cancellation notification')
+    }
+
+    // Create Salesforce Task for cancellation
+    if (msmEmail) {
+      try {
+        const msmUserId = await getMsmSalesforceUserId(msmEmail)
+
+        if (msmUserId) {
+          const formattedDate = cancellationDate ? new Date(cancellationDate).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          }) : 'N/A'
+
+          const isTraining = bookingType === 'training'
+          const taskType = isTraining ? 'TRAINING_CANCELLATION' : 'INTERNAL_INSTALLATION_CANCELLATION'
+          const bookingTypeLabel = bookingType.charAt(0).toUpperCase() + bookingType.slice(1)
+
+          const taskResult = await createSalesforceTask({
+            subject: isTraining
+              ? `[Portal] Check training date for ${merchantName}`
+              : `[Portal] Check internal installation booking for ${merchantName}`,
+            description: `Merchant: ${merchantName}
+
+${bookingTypeLabel} CANCELLED via Portal
+
+Original Date: ${formattedDate}
+${isTraining ? 'Trainer' : 'Installer'}: ${trainerName}
+
+🔗 Salesforce: ${getSalesforceRecordUrl(merchantId)}`,
+            status: 'Open',
+            priority: 'Normal',
+            ownerId: msmUserId,
+            whatId: merchantId,
+            activityDate: getTodayDateString()
+          })
+
+          if (taskResult.success && taskResult.taskId) {
+            await prisma.salesforceTaskTracking.create({
+              data: {
+                taskId: taskResult.taskId,
+                trainerId: merchantId,
+                taskType: taskType,
+                merchantName,
+                msmEmail
+              }
+            })
+            console.log(`✅ Salesforce Task created for ${bookingType} cancellation: ${taskResult.taskId}`)
+          } else {
+            console.log(`⚠️ Failed to create Salesforce Task: ${taskResult.error}`)
+          }
+        } else {
+          console.log(`⚠️ No Salesforce User found for ${msmEmail}, skipping task creation`)
+        }
+      } catch (taskError) {
+        console.error('❌ Failed to create Salesforce Task for cancellation:', taskError)
+        // Don't fail the cancellation if task creation fails
+      }
     }
 
     return NextResponse.json({

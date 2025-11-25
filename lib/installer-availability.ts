@@ -1123,6 +1123,67 @@ export async function bookInternalInstallation(
     console.log('⚠️ No MSM email found - skipping manager notification')
   }
 
+  // Create Salesforce Task for internal installation booking/rescheduling
+  if (merchantDetails.msmEmail) {
+    try {
+      const msmUserId = await getMsmSalesforceUserId(merchantDetails.msmEmail)
+
+      if (msmUserId) {
+        const formattedDate = new Date(date).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        })
+
+        const isRescheduling = !!existingEventId
+        const taskType = isRescheduling ? 'INTERNAL_INSTALLATION_RESCHEDULING' : 'INTERNAL_INSTALLATION_BOOKING'
+        const actionText = isRescheduling ? 'RESCHEDULED' : 'BOOKED'
+
+        const taskResult = await createSalesforceTask({
+          subject: `[Portal] Check internal installation booking for ${merchantName}`,
+          description: `Merchant: ${merchantName}
+
+Installation ${actionText} via Portal
+
+Date: ${formattedDate}
+Time: ${timeSlot.start} - ${timeSlot.end}
+Installer: ${assignedInstaller}
+
+Location: ${merchantDetails.address || 'N/A'}
+Contact: ${merchantDetails.primaryContactName || 'N/A'}
+Phone: ${merchantDetails.primaryContactPhone || 'N/A'}
+
+🔗 Salesforce: ${getSalesforceRecordUrl(merchantId)}`,
+          status: 'Open',
+          priority: 'Normal',
+          ownerId: msmUserId,
+          whatId: merchantId,
+          activityDate: getTodayDateString()
+        })
+
+        if (taskResult.success && taskResult.taskId) {
+          await prisma.salesforceTaskTracking.create({
+            data: {
+              taskId: taskResult.taskId,
+              trainerId: merchantId,
+              taskType: taskType,
+              merchantName,
+              msmEmail: merchantDetails.msmEmail
+            }
+          })
+          console.log(`✅ Salesforce Task created for installation ${isRescheduling ? 'rescheduling' : 'booking'}: ${taskResult.taskId}`)
+        } else {
+          console.log(`⚠️ Failed to create Salesforce Task: ${taskResult.error}`)
+        }
+      } else {
+        console.log(`⚠️ No Salesforce User found for ${merchantDetails.msmEmail}, skipping task creation`)
+      }
+    } catch (taskError) {
+      console.error('❌ Failed to create Salesforce Task for installation:', taskError)
+      // Don't fail the booking if task creation fails
+    }
+  }
+
   return {
     success: true,
     assignedInstaller: assignedInstaller,
