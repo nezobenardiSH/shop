@@ -240,6 +240,9 @@ export async function POST(request: NextRequest) {
     let msmEmail: string | null = null
     let msmName: string | null = null
 
+    // Account ID for Einstein Activity Capture sync (WhatId must be standard object)
+    let accountId: string | null = null
+
     // For rescheduling: store current trainer and event ID
     let currentTrainerEmailForDeletion: string | null = null
     let currentEventIdForDeletion: string | null = null
@@ -253,7 +256,8 @@ export async function POST(request: NextRequest) {
                  Onboarding_Summary__c, Workaround_Elaboration__c,
                  Required_Features_by_Merchant__c,
                  Email__c, CSM_Name__c, CSM_Name__r.Email,
-                 MSM_Name__c, MSM_Name__r.Email, MSM_Name__r.Name
+                 MSM_Name__c, MSM_Name__r.Email, MSM_Name__r.Name,
+                 Account_Name__c
           FROM Onboarding_Trainer__c
           WHERE Id = '${merchantId}'
           LIMIT 1
@@ -280,6 +284,9 @@ export async function POST(request: NextRequest) {
           fetchedRequiredFeatures = trainerRecord.Required_Features_by_Merchant__c
           merchantEmail = trainerRecord.Email__c
 
+          // Get Account ID for Einstein Activity Capture sync (WhatId must be standard object)
+          accountId = trainerRecord.Account_Name__c
+
           // Get MSM (Onboarding Manager) data for manager notifications
           msmEmail = trainerRecord.MSM_Name__r?.Email || null
           msmName = trainerRecord.MSM_Name__r?.Name || null
@@ -294,6 +301,7 @@ export async function POST(request: NextRequest) {
             merchantPICName,
             merchantPICPhone,
             merchantEmail,
+            accountId,
             msmEmail,
             msmName,
             fetchedOnboardingSummary: fetchedOnboardingSummary ? 'Yes' : 'No',
@@ -851,10 +859,18 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
               startDateTime: dateTimeStart,
               endDateTime: dateTimeEnd,
               ownerId: userId,
-              whatId: merchantId,
+              whatId: accountId || merchantId, // Use Account ID for Einstein sync, fallback to merchantId
               type: eventType,
               description: eventDescription,
               location: eventLocation
+            }
+
+            // Log WhatId for Einstein sync troubleshooting
+            if (accountId) {
+              console.log(`✅ Using Account ID for WhatId (Einstein sync compatible): ${accountId}`)
+            } else {
+              console.log(`⚠️ No Account ID found, using merchantId for WhatId: ${merchantId}`)
+              console.log(`   Note: Einstein Activity Capture may not sync events with custom object WhatId`)
             }
 
             // Check if this is a reschedule with existing Salesforce Event
