@@ -879,18 +879,10 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
               startDateTime: dateTimeStart,
               endDateTime: dateTimeEnd,
               ownerId: userId,
-              whatId: accountId || merchantId, // Use Account ID for Einstein sync, fallback to merchantId
+              whatId: merchantId, // Use Onboarding_Trainer__c ID for proper Activity display
               type: eventType,
               description: eventDescription,
               location: eventLocation
-            }
-
-            // Log WhatId for Einstein sync troubleshooting
-            if (accountId) {
-              console.log(`✅ Using Account ID for WhatId (Einstein sync compatible): ${accountId}`)
-            } else {
-              console.log(`⚠️ No Account ID found, using merchantId for WhatId: ${merchantId}`)
-              console.log(`   Note: Einstein Activity Capture may not sync events with custom object WhatId`)
             }
 
             // Check if this is a reschedule with existing Salesforce Event
