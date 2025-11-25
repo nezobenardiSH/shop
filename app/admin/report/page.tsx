@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface MerchantReport {
@@ -27,14 +27,21 @@ interface ReportData {
   count: number
 }
 
+interface RemarksMap {
+  [merchantId: string]: string
+}
+
 export default function ReportPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [reportData, setReportData] = useState<ReportData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [remarks, setRemarks] = useState<RemarksMap>({})
+  const [savingRemark, setSavingRemark] = useState<string | null>(null)
 
   useEffect(() => {
     fetchReport()
+    fetchRemarks()
   }, [])
 
   const fetchReport = async () => {
@@ -60,6 +67,49 @@ export default function ReportPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fetchRemarks = async () => {
+    try {
+      const response = await fetch('/api/admin/remarks')
+      if (response.ok) {
+        const data = await response.json()
+        setRemarks(data.remarks || {})
+      }
+    } catch (err) {
+      console.error('Failed to fetch remarks:', err)
+    }
+  }
+
+  const saveRemark = useCallback(async (merchantId: string, remark: string) => {
+    setSavingRemark(merchantId)
+    try {
+      const response = await fetch('/api/admin/remarks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchantId, remark })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save remark')
+      }
+
+      setRemarks(prev => ({ ...prev, [merchantId]: remark }))
+    } catch (err) {
+      console.error('Failed to save remark:', err)
+      alert('Failed to save remark')
+    } finally {
+      setSavingRemark(null)
+    }
+  }, [])
+
+  const handleRemarkChange = (merchantId: string, value: string) => {
+    setRemarks(prev => ({ ...prev, [merchantId]: value }))
+  }
+
+  const handleRemarkBlur = (merchantId: string) => {
+    const remark = remarks[merchantId] || ''
+    saveRemark(merchantId, remark)
   }
 
   const formatDateTime = (dateString: string | null) => {
@@ -178,6 +228,9 @@ export default function ReportPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Page breakdown
                   </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+                    Remark
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -232,6 +285,23 @@ export default function ReportPage() {
                     <td className="px-4 py-4 text-sm text-gray-500 max-w-xs">
                       <div className="truncate" title={merchant.pageBreakdown}>
                         {merchant.pageBreakdown || '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-500">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={remarks[merchant.id] || ''}
+                          onChange={(e) => handleRemarkChange(merchant.id, e.target.value)}
+                          onBlur={() => handleRemarkBlur(merchant.id)}
+                          placeholder="Add remark..."
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+                        />
+                        {savingRemark === merchant.id && (
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                            Saving...
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>

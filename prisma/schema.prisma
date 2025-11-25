@@ -113,3 +113,15 @@ enum TaskType {
   INTERNAL_INSTALLATION_RESCHEDULING
   INTERNAL_INSTALLATION_CANCELLATION
 }
+
+model MerchantRemark {
+  id          String   @id @default(cuid())
+  merchantId  String   @unique // Salesforce Onboarding_Trainer__c ID
+  remark      String   @db.Text
+  updatedBy   String?  // Admin email who last updated
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([merchantId])
+  @@map("merchant_remarks")
+}
