@@ -263,11 +263,11 @@ export async function POST(request: NextRequest) {
           LIMIT 1
         `
 
-        // Query Portal for current event ID if rescheduling
+        // Query Portal for current event ID and trainer if rescheduling
         let portalQuery = ''
         if (existingEventId) {
           portalQuery = `
-            SELECT Training_Event_ID__c, Training_Salesforce_Event_ID__c
+            SELECT Training_Event_ID__c, Training_Salesforce_Event_ID__c, Trainer_Name__c
             FROM Onboarding_Portal__c
             WHERE Onboarding_Trainer_Record__c = '${merchantId}'
             LIMIT 1
@@ -319,6 +319,26 @@ export async function POST(request: NextRequest) {
             currentSalesforceEventId = portalRecord.Training_Salesforce_Event_ID__c
             console.log(`✅ Found current event ID from Onboarding_Portal__c.Training_Event_ID__c: ${currentEventIdForDeletion}`)
             console.log(`✅ Found current Salesforce Event ID: ${currentSalesforceEventId}`)
+
+            // CRITICAL: Get previous trainer email from Portal.Trainer_Name__c (User ID)
+            // This is the trainer who CREATED the event, not the new trainer being assigned
+            if (portalRecord.Trainer_Name__c) {
+              console.log(`🔍 Found Trainer_Name__c (User ID) in Portal: ${portalRecord.Trainer_Name__c}`)
+              try {
+                const userResult = await conn.query(`SELECT Email FROM User WHERE Id = '${portalRecord.Trainer_Name__c}' LIMIT 1`)
+                if (userResult.totalSize > 0) {
+                  const previousTrainerEmail = (userResult.records[0] as any).Email
+                  currentTrainerEmailForDeletion = previousTrainerEmail
+                  console.log(`✅ Found previous trainer email from Portal.Trainer_Name__c: ${currentTrainerEmailForDeletion}`)
+                } else {
+                  console.log(`⚠️ No User found for Trainer_Name__c: ${portalRecord.Trainer_Name__c}`)
+                }
+              } catch (userQueryError) {
+                console.log(`⚠️ Failed to query User for Trainer_Name__c: ${userQueryError}`)
+              }
+            } else {
+              console.log(`⚠️ No Trainer_Name__c found in Portal record`)
+            }
           }
         }
       }

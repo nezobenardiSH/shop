@@ -1024,6 +1024,58 @@ class LarkService {
   }
 
   /**
+   * List calendar events for a date range
+   * Used for searching events to delete duplicates
+   */
+  async listCalendarEvents(
+    calendarId: string,
+    startTime: string,  // Unix timestamp in seconds
+    endTime: string,    // Unix timestamp in seconds
+    userEmail?: string
+  ): Promise<{ items: any[] }> {
+    console.log('📋 Listing calendar events:', {
+      calendarId,
+      startTime,
+      endTime,
+      userEmail
+    })
+
+    // Find the user's writable calendar (same logic as deleteCalendarEvent)
+    let actualCalendarId = calendarId
+
+    if (userEmail) {
+      try {
+        const calendars = await this.getCalendarList(userEmail)
+        const primaryCalendar = calendars.find((cal: any) =>
+          cal.type === 'primary' && cal.role === 'owner'
+        )
+        if (primaryCalendar) {
+          actualCalendarId = primaryCalendar.calendar_id
+          console.log(`✅ Using primary calendar: ${actualCalendarId}`)
+        }
+      } catch (error) {
+        console.log('⚠️ Could not get calendar list, using provided ID')
+      }
+    }
+
+    try {
+      const response = await this.makeRequest(
+        `/open-apis/calendar/v4/calendars/${actualCalendarId}/events?start_time=${startTime}&end_time=${endTime}&page_size=50`,
+        {
+          method: 'GET',
+          userEmail: userEmail
+        }
+      )
+
+      console.log(`📋 Found ${response.data?.items?.length || 0} events`)
+      return { items: response.data?.items || [] }
+    } catch (error: any) {
+      console.error('❌ Failed to list calendar events:', error.message)
+      return { items: [] }
+    }
+  }
+
+  /**
    * Send notification message
    */
   async sendNotification(
