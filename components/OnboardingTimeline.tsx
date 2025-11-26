@@ -98,8 +98,9 @@ const getIndustryTerminology = (subIndustry: string | null | undefined) => {
       completedSetup: 'completed menu setup',
       completedSetupLabel: 'Completed Menu Setup',
       pendingStatus: 'Pending Menu',
+      submittedStatus: 'Menu Submitted',
       submitButtonText: 'Submit Menu Collection Form',
-      tooltipText: 'Menu setup will be completed within 3 working days of menu submission'
+      tooltipText: 'Product setup would be done by StoreHub and will be completed within 3 working days after product or menu submission'
     }
   } else if (industry.includes('retail')) {
     return {
@@ -111,8 +112,9 @@ const getIndustryTerminology = (subIndustry: string | null | undefined) => {
       completedSetup: 'completed product setup',
       completedSetupLabel: 'Completed Product Setup',
       pendingStatus: 'Pending Product',
+      submittedStatus: 'Product Submitted',
       submitButtonText: 'Submit Product Collection Form',
-      tooltipText: 'Product setup will be completed within 3 working days of product submission'
+      tooltipText: 'Product setup would be done by StoreHub and will be completed within 3 working days after product or menu submission'
     }
   } else {
     // Default to Product Setup for unknown industries
@@ -125,8 +127,9 @@ const getIndustryTerminology = (subIndustry: string | null | undefined) => {
       completedSetup: 'completed product setup',
       completedSetupLabel: 'Completed Product Setup',
       pendingStatus: 'Pending Product',
+      submittedStatus: 'Product Submitted',
       submitButtonText: 'Submit Product Collection Form',
-      tooltipText: 'Product setup will be completed within 3 working days of product submission'
+      tooltipText: 'Product setup would be done by StoreHub and will be completed within 3 working days after product or menu submission'
     }
   }
 }
@@ -768,7 +771,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <div className="text-sm text-gray-500 text-left">
                       {(() => {
                         if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
-                        if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">Pending Setup</span>;
+                        if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">{terminology.submittedStatus}</span>;
                         return <span className="text-orange-600">{terminology.pendingStatus}</span>;
                       })()}
                     </div>
@@ -782,42 +785,44 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </button>
               {expandedItems['mobile-product'] && (
                 <div className="pl-12 pr-4 pb-4 space-y-3 pt-3 text-left">
-                  {/* Menu Submission Deadline Notice - Mobile */}
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <div className="text-sm font-semibold text-red-900 mb-2">
-                      ⚠️ Important Reminder
-                    </div>
-                    <p className="text-sm text-gray-700">
-                      {trainerData?.actualInstallationDate ? (
-                        <>
-                          Please send us the menu maximum 3 working days before the installation date (
-                          <span className="font-semibold text-red-700">
-                            {(() => {
-                              const installDate = new Date(trainerData.actualInstallationDate);
-                              let deadlineDate = new Date(installDate);
-                              let workingDaysToSubtract = 3;
+                  {/* Menu Submission Deadline Notice - Mobile - Only show if menu not submitted */}
+                  {!trainerData?.menuCollectionSubmissionTimestamp && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="text-sm font-semibold text-red-900 mb-2">
+                        ⚠️ Important Reminder
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        {trainerData?.actualInstallationDate ? (
+                          <>
+                            Please send us the menu maximum 3 working days before the installation date (
+                            <span className="font-semibold text-red-700">
+                              {(() => {
+                                const installDate = new Date(trainerData.actualInstallationDate);
+                                let deadlineDate = new Date(installDate);
+                                let workingDaysToSubtract = 3;
 
-                              while (workingDaysToSubtract > 0) {
-                                deadlineDate.setDate(deadlineDate.getDate() - 1);
-                                const dayOfWeek = deadlineDate.getDay();
-                                // Skip weekends (0 = Sunday, 6 = Saturday)
-                                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                                  workingDaysToSubtract--;
+                                while (workingDaysToSubtract > 0) {
+                                  deadlineDate.setDate(deadlineDate.getDate() - 1);
+                                  const dayOfWeek = deadlineDate.getDay();
+                                  // Skip weekends (0 = Sunday, 6 = Saturday)
+                                  if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                                    workingDaysToSubtract--;
+                                  }
                                 }
-                              }
 
-                              return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-                            })()}
-                          </span>
-                          ). If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
-                        </>
-                      ) : (
-                        <>
-                          Please send us the menu maximum 3 working days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
-                        </>
-                      )}
-                    </p>
-                  </div>
+                                return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                              })()}
+                            </span>
+                            ). If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                          </>
+                        ) : (
+                          <>
+                            Please send us the menu maximum 3 working days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">{terminology.collectionFormLabel}</div>
@@ -961,6 +966,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       </svg>
                       {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
                     </button>
+
+                    {/* Important reminder - moved below Upload Video button */}
+                    <div className="bg-orange-50 border-l-4 border-orange-400 p-3">
+                      <p className="font-medium text-orange-900 mb-2">⚠️ Important</p>
+                      <p className="text-xs text-gray-700">Please send us the video before the installation date. If we don't receive it by then, we will still go ahead with the installation as planned.</p>
+                      <p className="text-xs text-gray-700 mt-2">However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, for an extra charge of RM200.</p>
+                    </div>
                   </div>
 
                   {/* Simplified Info Section */}
@@ -987,13 +999,6 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         <p className="text-gray-700"><span className="font-semibold">Kitchen/Other Stations:</span> Printer location, Power socket, LAN port</p>
                       </div>
                       <p className="text-blue-700 font-medium">📱 Quick Tip: Hold your phone sideways (horizontally) while recording!</p>
-                    </div>
-
-                    {/* Important reminder */}
-                    <div className="bg-orange-50 border-l-4 border-orange-400 p-3">
-                      <p className="font-medium text-orange-900 mb-2">⚠️ Important</p>
-                      <p className="text-xs text-gray-700">Please send us the video before the installation date. If we don't receive it by then, we will still go ahead with the installation as planned.</p>
-                      <p className="text-xs text-gray-700 mt-2">However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, for an extra charge of RM200.</p>
                     </div>
                   </div>
                 </div>
@@ -1829,7 +1834,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <div className="text-sm font-medium text-gray-500">
                       {(() => {
                         if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
-                        if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">Pending Setup</span>;
+                        if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">{terminology.submittedStatus}</span>;
                         return <span className="text-orange-600">{terminology.pendingStatus}</span>;
                       })()}
                     </div>
@@ -1842,42 +1847,44 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 {/* Expanded Details for Product Setup */}
                 {expandedItems['product-setup'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                    {/* Menu Submission Deadline Notice */}
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <div className="text-sm font-semibold text-red-900 mb-2">
-                        ⚠️ Important Reminder
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        {trainerData?.actualInstallationDate ? (
-                          <>
-                            Please send us the menu maximum 3 working days before the installation date (
-                            <span className="font-semibold text-red-700">
-                              {(() => {
-                                const installDate = new Date(trainerData.actualInstallationDate);
-                                let deadlineDate = new Date(installDate);
-                                let workingDaysToSubtract = 3;
+                    {/* Menu Submission Deadline Notice - Only show if menu not submitted */}
+                    {!trainerData?.menuCollectionSubmissionTimestamp && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div className="text-sm font-semibold text-red-900 mb-2">
+                          ⚠️ Important Reminder
+                        </div>
+                        <p className="text-sm text-gray-700">
+                          {trainerData?.actualInstallationDate ? (
+                            <>
+                              Please send us the menu maximum 3 working days before the installation date (
+                              <span className="font-semibold text-red-700">
+                                {(() => {
+                                  const installDate = new Date(trainerData.actualInstallationDate);
+                                  let deadlineDate = new Date(installDate);
+                                  let workingDaysToSubtract = 3;
 
-                                while (workingDaysToSubtract > 0) {
-                                  deadlineDate.setDate(deadlineDate.getDate() - 1);
-                                  const dayOfWeek = deadlineDate.getDay();
-                                  // Skip weekends (0 = Sunday, 6 = Saturday)
-                                  if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                                    workingDaysToSubtract--;
+                                  while (workingDaysToSubtract > 0) {
+                                    deadlineDate.setDate(deadlineDate.getDate() - 1);
+                                    const dayOfWeek = deadlineDate.getDay();
+                                    // Skip weekends (0 = Sunday, 6 = Saturday)
+                                    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                                      workingDaysToSubtract--;
+                                    }
                                   }
-                                }
 
-                                return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-                              })()}
-                            </span>
-                            ). If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
-                          </>
-                        ) : (
-                          <>
-                            Please send us the menu maximum 3 working days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
-                          </>
-                        )}
-                      </p>
-                    </div>
+                                  return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                                })()}
+                              </span>
+                              ). If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                            </>
+                          ) : (
+                            <>
+                              Please send us the menu maximum 3 working days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    )}
 
                     <div>
                       <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{terminology.collectionFormLabel}</div>
@@ -2044,6 +2051,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
                         </button>
                       </div>
+
+                      {/* Important reminder - moved below Upload Video button */}
+                      <div className="bg-orange-50 border-l-4 border-orange-400 p-3">
+                        <p className="font-medium text-orange-900 mb-2">⚠️ Important</p>
+                        <p className="text-xs text-gray-700">Please send us the video before the installation date. If we don't receive it by then, we will still go ahead with the installation as planned.</p>
+                        <p className="text-xs text-gray-700 mt-2">However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, for an extra charge of RM200.</p>
+                      </div>
                     </div>
 
                     {/* Simplified Info Section */}
@@ -2070,13 +2084,6 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           <p className="text-gray-700"><span className="font-semibold">Kitchen/Other Stations:</span> Printer location, Power socket, LAN port</p>
                         </div>
                         <p className="text-blue-700 font-medium">📱 Quick Tip: Hold your phone sideways (horizontally) while recording!</p>
-                      </div>
-
-                      {/* Important reminder */}
-                      <div className="bg-orange-50 border-l-4 border-orange-400 p-3">
-                        <p className="font-medium text-orange-900 mb-2">⚠️ Important</p>
-                        <p className="text-xs text-gray-700">Please send us the video before the installation date. If we don't receive it by then, we will still go ahead with the installation as planned.</p>
-                        <p className="text-xs text-gray-700 mt-2">However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, for an extra charge of RM200.</p>
                       </div>
                     </div>
                   </div>
@@ -2555,9 +2562,9 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') {
                         return <span className="text-gray-500">Completed</span>;
                       } else if (trainerData?.menuCollectionSubmissionTimestamp) {
-                        return <span className="text-orange-600">Pending Setup</span>;
+                        return <span className="text-orange-600">{terminology.submittedStatus}</span>;
                       } else {
-                        return <span className="text-orange-600">Pending Menu</span>;
+                        return <span className="text-orange-600">{terminology.pendingStatus}</span>;
                       }
                     })()}
                   </span>
