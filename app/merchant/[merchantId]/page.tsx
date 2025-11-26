@@ -401,6 +401,7 @@ function TrainerPortalContent() {
           displayName: trainer.name,
           bookingType: bookingType,
           onboardingServicesBought: trainer.onboardingServicesBought,
+          requiredFeatures: trainer.requiredFeaturesByMerchant, // Pass required features for training bookings
           dependentDate: dependentDate,
           goLiveDate: goLiveDate,
           installationDate: installationDate,
@@ -412,7 +413,8 @@ function TrainerPortalContent() {
           merchantState: bookingInfo.merchantState,
           bookingType: bookingInfo.bookingType,
           dependentDate: bookingInfo.dependentDate,
-          goLiveDate: bookingInfo.goLiveDate
+          goLiveDate: bookingInfo.goLiveDate,
+          requiredFeatures: bookingInfo.requiredFeatures
         })
 
         setCurrentBookingInfo(bookingInfo)
@@ -570,6 +572,7 @@ function TrainerPortalContent() {
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant'
     })
 
+    console.log('🔍 DEBUG - trainer.requiredFeaturesByMerchant:', trainer.requiredFeaturesByMerchant);
     const bookingInfo = {
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark

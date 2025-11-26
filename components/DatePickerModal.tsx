@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { X, ChevronLeft, ChevronRight, Calendar, Clock, Globe } from 'lucide-react'
 import { detectServiceType, getServiceTypeMessage, shouldFilterByLocation, type ServiceType } from '@/lib/service-type-detector'
 import { calculateInstallationDateLowerBound, getRegionType, getDaysToAddForRegion } from '@/lib/location-matcher'
+import { requiresExtendedTrainingSlot, EXTENDED_TRAINING_SLOT } from '@/lib/time-slot-config'
 
 interface DatePickerModalProps {
   isOpen: boolean
@@ -811,40 +812,69 @@ export default function DatePickerModal({
   }
 
   // Filter slots based on selected languages for training bookings
+  // Also restricts to 4-6pm slot if merchant has Membership, Engage, Composite Inventory, or Superbundle
   const filteredSlots = useMemo(() => {
     if (!selectedDate) return []
-    
+
     const allSlots = getDateSlots(selectedDate)
     console.log('All slots for date:', selectedDate.toISOString().split('T')[0], allSlots)
     console.log('Selected languages:', selectedLanguages)
     console.log('Booking type:', bookingType)
-    
+    console.log('Required features:', requiredFeatures)
+
     // Only filter for training bookings
     if (bookingType !== 'training') {
       const availableSlots = allSlots.filter(slot => slot.available)
       console.log('Non-training booking - available slots:', availableSlots)
       return availableSlots
     }
-    
+
+    // Check if merchant requires extended training slot (4-6pm only)
+    // This only applies to Dec 1, 2025 onwards (new time slots)
+    const cutoffDate = new Date('2025-12-01T00:00:00+08:00')
+    const isAfterCutoff = selectedDate >= cutoffDate
+    const needsExtendedSlot = requiresExtendedTrainingSlot(requiredFeatures) && isAfterCutoff
+    console.log('Needs extended training slot (4-6pm only):', needsExtendedSlot, '| isAfterCutoff:', isAfterCutoff)
+
     // Filter by available and language match
-    const filtered = allSlots.filter(slot => {
+    let filtered = allSlots.filter(slot => {
       if (!slot.available) return false
-      
+
       // If no languages selected, show no slots
       if (selectedLanguages.length === 0) return false
-      
+
+      // Special merchants (Dec 2025+): only show 4pm slot
+      if (needsExtendedSlot) {
+        // Only keep the 4pm slot (16:00)
+        if (slot.start !== '16:00') {
+          console.log(`Slot ${slot.start}-${slot.end} filtered out - special merchant can only book 4pm slot`)
+          return false
+        }
+      }
+
       // If slot has no language info, show it
       if (!slot.availableLanguages || slot.availableLanguages.length === 0) return true
-      
+
       // Check if any selected language matches available languages
       const matches = selectedLanguages.some(lang => slot.availableLanguages?.includes(lang))
       console.log(`Slot ${slot.start}: languages=${slot.availableLanguages?.join(',')}, matches=${matches}`)
       return matches
     })
-    
+
+    // For special merchants (Dec 2025+), extend the 4pm slot to 6pm (instead of 5:30pm)
+    if (needsExtendedSlot) {
+      filtered = filtered.map(slot => {
+        if (slot.start === '16:00') {
+          console.log('Extending 4pm slot to 6pm for special merchant')
+          return { ...slot, end: EXTENDED_TRAINING_SLOT.end }
+        }
+        return slot
+      })
+    }
+
     console.log('Filtered slots:', filtered)
     return filtered
-  }, [selectedDate, selectedLanguages, availability, bookingType])
+  }, [selectedDate, selectedLanguages, availability, bookingType, requiredFeatures])
 
   const isSelectedDate = (date: Date | null) => {
     if (!date || !selectedDate) return false
@@ -1283,6 +1313,14 @@ export default function DatePickerModal({
             ) : selectedDate ? (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 md:sticky md:top-0 bg-gray-50 pb-2">Available Time Slots</h3>
+                {/* Notice for merchants requiring extended training slot - only for Dec 2025+ */}
+                {bookingType === 'training' && requiresExtendedTrainingSlot(requiredFeatures) && selectedDate && selectedDate >= new Date('2025-12-01T00:00:00+08:00') && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                    <p className="text-amber-800">
+                      <span className="font-medium">Note:</span> Due to <span className="font-medium">{requiredFeatures}</span> feature, only the 4pm slot is available for training.
+                    </p>
+                  </div>
+                )}
                 {filteredSlots.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-3">
                     {filteredSlots.map((slot, index) => (

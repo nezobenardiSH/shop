@@ -154,12 +154,13 @@ export default function MerchantDetailsPage() {
       onboardingServicesBought: trainer.onboardingServicesBought
     });
 
+    console.log('[DEBUG] Setting booking info with requiredFeatures:', trainer.requiredFeaturesByMerchant);
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
       merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name || 'Unknown Merchant',
       merchantAddress: merchantAddress || '', // Use constructed address from shipping fields
-      merchantState: (trainer.shippingCity && trainer.shippingState 
+      merchantState: (trainer.shippingCity && trainer.shippingState
         ? `${trainer.shippingCity}, ${trainer.shippingState}`
         : trainer.shippingState || trainer.shippingCity || ''), // Include city with state for better display
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
