@@ -886,19 +886,53 @@ Always check `free_busy_status` field when determining availability. Events can 
 ## Training Schedule Configuration
 
 ### Time Slots Definition
-**Schedule**: 1-hour training sessions, Monday to Friday only
+
+**Timezone**: All times in Asia/Singapore timezone (GMT+8)
+
+#### Before December 1, 2025
+**Schedule**: 4 slots x 60 minutes, Monday to Friday only
 - **10:00 - 11:00** (Morning Session)
 - **12:00 - 13:00** (Lunch Session)
 - **14:30 - 15:30** (Afternoon Session)
 - **17:00 - 18:00** (Evening Session)
 
+#### December 1, 2025 Onwards
+**Schedule**: 3 slots x 90 minutes, Monday to Friday only
+
+**Normal Merchants**:
+- **10:00 - 11:30** (Morning Session)
+- **13:30 - 15:00** (Afternoon Session)
+- **16:00 - 17:30** (Late Afternoon Session)
+
+**Special Merchants** (with Membership, Engage, Composite Inventory, or Superbundle features):
+- **16:00 - 18:00** (Extended Evening Session - ONLY slot available)
+
+#### Feature-Based Slot Restrictions (Dec 2025+)
+
+Merchants with these features in `Required_Features_by_Merchant__c` can ONLY book the 4-6pm slot:
+- **Membership**
+- **Engage**
+- **Composite Inventory** (or just "Composite")
+- **Superbundle**
+
+**Why**: These features require extended training time (120 minutes instead of 90 minutes).
+
 **Implementation**:
+- Time slot configuration: `lib/time-slot-config.ts`
+- Feature detection: `requiresExtendedTrainingSlot()` function
+- Slot filtering: `components/DatePickerModal.tsx` (in `filteredSlots` useMemo)
+
+**User Experience**:
+- When a special merchant selects a December 2025+ date, only the 4-6pm slot is shown
+- A notice is displayed: "Note: Due to {Feature Name} feature, only the 4pm slot is available for training."
+
+**Implementation Files**:
+- `lib/time-slot-config.ts` - Time slot definitions and feature detection
+- `components/DatePickerModal.tsx` - Slot filtering and UI notice
 - Defined in `TIME_SLOTS` constant in `getCombinedAvailability()` function (`lib/trainer-availability.ts`)
 - Also defined in `convertBusyTimesToAvailability()` function (`lib/lark.ts`)
 
-**Timezone**: All times in Asia/Singapore timezone (GMT+8)
-
-**Note**: These are 1-hour slots for both POS Training and Back Office Training. Installation and other booking types may have different durations.
+**Note**: These are training session slots. Installation and other booking types may have different durations.
 
 ### Training Booking Criteria
 1. **Service Type**: Remote or On-site onboarding
