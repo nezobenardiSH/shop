@@ -46,7 +46,9 @@ const getCurrentStage = (trainerData: any): string => {
   if (!trainer) return 'welcome'
 
   // Check completion status for each stage
-  const hasFirstCall = !!trainer.firstCallTimestamp
+  // Welcome stage is completed when Welcome_Call_Status__c = 'Welcome Call Completed' or 'Completed'
+  const welcomeCompleted = trainer.welcomeCallStatus === 'Welcome Call Completed' ||
+                           trainer.welcomeCallStatus === 'Completed'
   const hasMenuSubmission = !!trainer.menuCollectionSubmissionTimestamp
   const hasCompletedProductSetup = trainer.completedProductSetup === 'Yes' || trainer.completedProductSetup === 'Yes - Self-serve'
   const hasVideoProof = !!trainer.videoProofLink && trainer.videoProofLink !== 'NA'
@@ -66,7 +68,7 @@ const getCurrentStage = (trainerData: any): string => {
   const preparationComplete = hasMenuSubmission && hasCompletedProductSetup && hasVideoProof && hasHardwareDelivery
   if (preparationComplete) return 'installation'
 
-  if (hasFirstCall) return 'preparation'
+  if (welcomeCompleted) return 'preparation'
 
   return 'welcome'
 }

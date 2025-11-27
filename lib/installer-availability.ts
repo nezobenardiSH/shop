@@ -11,6 +11,8 @@ import {
   getSalesforceRecordUrl,
   getTodayDateString
 } from './salesforce-tasks'
+import { getDeviceType, OrderItem } from './device-type-detector'
+import { createTicketForMerchant, MerchantDetails } from './surftek-api'
 
 interface TimeSlot {
   start: string
@@ -1315,6 +1317,7 @@ export async function submitExternalInstallationRequest(
       LIMIT 1
     `
     const merchantResult = await conn.query(merchantQuery)
+    console.log(`🔍 [SURFTEK-DEBUG] Merchant query returned ${merchantResult.totalSize} records`)
 
     if (merchantResult.totalSize > 0) {
       const merchant = merchantResult.records[0]
@@ -1322,6 +1325,12 @@ export async function submitExternalInstallationRequest(
       const msmName = merchant.MSM_Name__r?.Name
       const msmPhone = merchant.MSM_Name__r?.Phone
       const merchantEmail = merchant.Email__c
+
+      console.log(`🔍 [SURFTEK-DEBUG] MSM lookup result:`)
+      console.log(`   - MSM_Name__r object: ${JSON.stringify(merchant.MSM_Name__r)}`)
+      console.log(`   - msmEmail: ${msmEmail || 'NOT FOUND'}`)
+      console.log(`   - msmName: ${msmName || 'NOT FOUND'}`)
+      console.log(`   - merchantEmail: ${merchantEmail || 'NOT FOUND'}`)
 
       // Build store address
       const addressParts = [
@@ -1380,6 +1389,95 @@ export async function submitExternalInstallationRequest(
       if (msmEmail) {
         console.log(`📧 Notifying onboarding manager: ${msmName} (${msmEmail})`)
 
+        // ============================================================
+        // SURFTEK API INTEGRATION
+        // Automatically create installation ticket on Surftek system
+        // ============================================================
+        let surftekTicketId: number | null = null
+        let surftekCaseNum: string | null = null
+
+        try {
+          // Fetch onboarding summary for device type detection
+          const summaryQuery = `
+            SELECT Onboarding_Summary__c, Merchant_PIC_Name__c, Merchant_PIC_Contact_Number__c
+            FROM Onboarding_Trainer__c
+            WHERE Id = '${merchantId}'
+            LIMIT 1
+          `
+          const summaryResult = await conn.query(summaryQuery)
+          const onboardingSummary = summaryResult.records[0]?.Onboarding_Summary__c || ''
+          const picName = summaryResult.records[0]?.Merchant_PIC_Name__c || merchantName
+          const picPhone = summaryResult.records[0]?.Merchant_PIC_Contact_Number__c || contactPhone
+
+          // Convert hardware items to OrderItem format for device detection
+          const orderItemsForDetection: OrderItem[] = hardwareItems.map(item => ({
+            productName: item.split(' (Qty:')[0] // Remove quantity suffix
+          }))
+
+          // Detect device type (Android vs iOS)
+          const deviceType = await getDeviceType(orderItemsForDetection, onboardingSummary)
+          console.log(`📱 Detected device type: ${deviceType}`)
+
+          // Prepare merchant details for Surftek API
+          const merchantDetails: MerchantDetails = {
+            merchantName,
+            merchantId,
+            address: storeAddress,
+            contactName: picName,
+            contactPhone: picPhone,
+            contactEmail: merchantEmail || undefined,
+            msmName: msmName || undefined,
+            hardwareItems,
+            onboardingSummary,
+            preferredDate,
+            preferredTime
+          }
+
+          // Create ticket on Surftek
+          console.log('🎫 Creating Surftek ticket...')
+          const ticketResult = await createTicketForMerchant(merchantDetails, deviceType)
+
+          if (ticketResult) {
+            surftekTicketId = ticketResult.ticketId
+            surftekCaseNum = ticketResult.caseNum
+            console.log(`✅ Surftek ticket created: ${surftekCaseNum} (ID: ${surftekTicketId})`)
+
+            // Store Surftek ticket info in Onboarding_Portal__c
+            try {
+              const portalQuery = `
+                SELECT Id
+                FROM Onboarding_Portal__c
+                WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+                LIMIT 1
+              `
+              const portalResult = await conn.query(portalQuery)
+
+              if (portalResult.totalSize > 0) {
+                const portalId = portalResult.records[0].Id
+                await conn.sobject('Onboarding_Portal__c').update({
+                  Id: portalId,
+                  Surftek_Ticket_ID__c: String(surftekTicketId),
+                  Surftek_Case_Number__c: surftekCaseNum
+                })
+                console.log(`✅ Stored Surftek ticket info in Onboarding_Portal__c`)
+              }
+            } catch (portalError) {
+              console.error('Failed to store Surftek ticket info:', portalError)
+              // Don't fail - ticket was already created
+            }
+          } else {
+            console.log('⚠️ Surftek ticket creation failed, falling back to manual flow')
+          }
+        } catch (surftekError) {
+          console.error('❌ Surftek API error, falling back to manual flow:', surftekError)
+          // Continue with manual flow - don't fail the booking
+        }
+
+        // ============================================================
+        // MANUAL FALLBACK FLOW
+        // If Surftek API fails, continue with existing MSM notification flow
+        // ============================================================
+
         await sendExternalVendorNotificationToManager(
           msmEmail,
           merchantName,
@@ -1391,7 +1489,8 @@ export async function submitExternalInstallationRequest(
           orderNumber,
           hardwareItems,
           msmName || 'Not available',
-          msmPhone || 'Not available'
+          msmPhone || 'Not available',
+          surftekCaseNum // Pass Surftek case number if available
         )
 
         // Create record in Lark base for task management (only if we have MSM email)
@@ -1495,18 +1594,18 @@ Sales Order: ${orderNumber}
           // Don't fail the booking if task creation fails
         }
       } else {
-        console.log('⚠️ No MSM email found for notification and Lark base creation')
+        console.log('⚠️ [SURFTEK-DEBUG] No MSM email found - SKIPPING Surftek ticket creation!')
+        console.log('⚠️ [SURFTEK-DEBUG] To fix: Ensure MSM_Name__c lookup field is populated in Salesforce for this merchant')
       }
     } else {
-      console.log('⚠️ No merchant record found for notification')
+      console.log('⚠️ [SURFTEK-DEBUG] No merchant record found - SKIPPING Surftek ticket creation!')
     }
   } catch (notifyError) {
     console.error('Failed to notify onboarding manager:', notifyError)
     // Don't fail the request if notification fails
   }
 
-  // TODO: Send email notification to vendor
-  // For now, just log the request
+  // Log the request
   console.log('External installation request:', {
     vendor: vendor.name,
     merchant: merchantName,
@@ -1514,7 +1613,7 @@ Sales Order: ${orderNumber}
     preferredTime,
     contactPhone
   })
-  
+
   return {
     success: true,
     status: 'request_submitted',
