@@ -132,6 +132,8 @@ export async function createSurftekTicket(request: SurftekTicketRequest): Promis
   console.log('   Latitude:', request.Appointment.Latitude, '- type:', typeof request.Appointment.Latitude)
 
   // DRY RUN MODE - skip actual API call
+  console.log('🔍 SURFTEK_DRY_RUN env value:', process.env.SURFTEK_DRY_RUN)
+  console.log('🔍 SURFTEK_DRY_RUN resolved to:', SURFTEK_DRY_RUN)
   if (SURFTEK_DRY_RUN) {
     console.log('🧪 DRY RUN MODE - Skipping actual Surftek API call')
     console.log('🧪 Would have created ticket with above data')
