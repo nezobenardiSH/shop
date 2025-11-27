@@ -6,8 +6,9 @@ interface PageHeaderProps {
   merchantId: string
   merchantName: string
   lastModifiedDate?: string
-  currentPage: 'progress' | 'details'
+  currentPage: 'overview' | 'progress' | 'details'
   isInternalUser?: boolean
+  currentOnboardingStage?: string // The merchant's current onboarding stage
 }
 
 export default function PageHeader({
@@ -15,7 +16,8 @@ export default function PageHeader({
   merchantName,
   lastModifiedDate,
   currentPage,
-  isInternalUser = false
+  isInternalUser = false,
+  currentOnboardingStage = 'welcome'
 }: PageHeaderProps) {
   // merchantName is now the actual name from Salesforce, no need to format
   
@@ -81,7 +83,17 @@ export default function PageHeader({
       <div className="mb-6 border-b border-[#e5e7eb]">
         <nav className="flex space-x-8">
           <Link
-            href={`/merchant/${merchantId}`}
+            href={`/merchant/${merchantId}/overview`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+              currentPage === 'overview'
+                ? 'border-[#ff630f] text-[#ff630f]'
+                : 'border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]'
+            }`}
+          >
+            Overview
+          </Link>
+          <Link
+            href={`/merchant/${merchantId}?stage=${currentOnboardingStage}`}
             className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
               currentPage === 'progress'
                 ? 'border-[#ff630f] text-[#ff630f]'

@@ -245,28 +245,30 @@ function TrainerPortalContent() {
     }
   }, [merchantId])
 
-  // Handle stage URL parameter and auto-redirect
+  // Redirect to overview page if no URL parameters (first landing)
+  // If user clicks "Onboarding Progress" tab, they'll have ?stage= parameter
   useEffect(() => {
-    if (!trainerData?.success) return
-
     const urlStage = searchParams.get('stage')
     const bookingParam = searchParams.get('booking')
-    const calculatedStage = getCurrentStage(trainerData)
+    const sectionParam = searchParams.get('section')
 
-    if (!urlStage) {
-      // No stage in URL - redirect to current stage
-      // Preserve booking parameter if it exists
-      let redirectUrl = `/merchant/${merchantId}?stage=${calculatedStage}`
-      if (bookingParam && ['training', 'installation'].includes(bookingParam)) {
-        redirectUrl += `&booking=${bookingParam}`
-      }
-      router.replace(redirectUrl, { scroll: false })
-      setCurrentStage(calculatedStage)
-    } else {
-      // Stage in URL - use it
-      setCurrentStage(urlStage)
+    // Only redirect if there are NO URL parameters (first landing on portal)
+    if (merchantId && !urlStage && !bookingParam && !sectionParam) {
+      router.replace(`/merchant/${merchantId}/overview`)
     }
-  }, [trainerData, searchParams, merchantId, router])
+  }, [merchantId, router, searchParams])
+
+  // Handle stage URL parameter for currentStage state
+  useEffect(() => {
+    if (!trainerData?.success) return
+    const urlStage = searchParams.get('stage')
+    if (urlStage) {
+      setCurrentStage(urlStage)
+    } else {
+      const calculatedStage = getCurrentStage(trainerData)
+      setCurrentStage(calculatedStage)
+    }
+  }, [trainerData, searchParams])
 
 
 
@@ -784,6 +786,7 @@ function TrainerPortalContent() {
           lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
           currentPage="progress"
           isInternalUser={isInternalUser}
+          currentOnboardingStage={currentStage}
         />
         
         {/* Expected Go Live Date - Highlighted at the top */}
@@ -1104,6 +1107,7 @@ function TrainerPortalContent() {
                 onBookingComplete={handleBookingComplete}
                 onOpenBookingModal={handleOpenBookingModal}
                 onStageChange={(stage) => setCurrentStage(stage)}
+                expandSection={searchParams.get('section') || undefined}
               />
             </div>
           )}

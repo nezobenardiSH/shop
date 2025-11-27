@@ -71,6 +71,39 @@ const formatCurrency = (amount: number | null | undefined, currencyInfo: { symbo
   }
 }
 
+// Helper function to determine current stage based on onboarding data
+const getCurrentStage = (trainerData: any): string => {
+  if (!trainerData?.success) return 'welcome'
+
+  const trainer = trainerData.onboardingTrainerData?.trainers?.[0]
+  if (!trainer) return 'welcome'
+
+  // Check completion status for each stage
+  const hasFirstCall = !!trainer.firstCallTimestamp
+  const hasMenuSubmission = !!trainer.menuCollectionSubmissionTimestamp
+  const hasCompletedProductSetup = trainer.completedProductSetup === 'Yes' || trainer.completedProductSetup === 'Yes - Self-serve'
+  const hasVideoProof = !!trainer.videoProofLink && trainer.videoProofLink !== 'NA'
+  const hasHardwareDelivery = !!trainer.trackingLink
+  const hasActualInstallation = !!trainer.actualInstallationDate
+  const hasPOSTraining = !!trainer.posTrainingDate
+  const hasBOTraining = !!trainer.backOfficeTrainingDate
+  const posQrCount = trainer.posQrDeliveryTnxCount || 0
+  const isLive = posQrCount > 30
+
+  // Determine current stage (first incomplete stage)
+  if (isLive) return 'live'
+  if (hasPOSTraining || hasBOTraining) return 'ready-go-live'
+  if (hasActualInstallation) return 'training'
+
+  // Check preparation completion
+  const preparationComplete = hasMenuSubmission && hasCompletedProductSetup && hasVideoProof && hasHardwareDelivery
+  if (preparationComplete) return 'installation'
+
+  if (hasFirstCall) return 'preparation'
+
+  return 'welcome'
+}
+
 export default function MerchantDetailsPage() {
   const params = useParams()
   const router = useRouter()
@@ -210,6 +243,7 @@ export default function MerchantDetailsPage() {
           lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
           currentPage="details"
           isInternalUser={isInternalUser}
+          currentOnboardingStage={getCurrentStage(trainerData)}
         />
         
         <div>

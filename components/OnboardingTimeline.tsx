@@ -21,6 +21,7 @@ interface OnboardingTimelineProps {
   onBookingComplete?: (selectedDate?: string) => void
   onOpenBookingModal?: (bookingInfo: any) => void
   onStageChange?: (stage: string) => void
+  expandSection?: string // Auto-expand a specific section (e.g., 'product-setup', 'store-setup')
 }
 
 // Helper function to format date with time
@@ -134,7 +135,7 @@ const getIndustryTerminology = (subIndustry: string | null | undefined) => {
   }
 }
 
-export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange }: OnboardingTimelineProps) {
+export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange, expandSection }: OnboardingTimelineProps) {
   const router = useRouter()
   const params = useParams()
   const merchantId = params.merchantId as string
@@ -231,6 +232,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
     'document-submission': false,
     'hardware-delivery': false,
     'product-setup': false,
+    'store-setup': false,
     'installation': false,
     'training': false
   })
@@ -242,6 +244,44 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
     'ready-go-live': false,
     'live': false
   })
+
+  // Auto-expand section when expandSection prop is provided
+  useEffect(() => {
+    if (expandSection) {
+      // Map section names to expandedItems keys
+      const sectionMap: {[key: string]: string} = {
+        'product-setup': 'product-setup',
+        'store-setup': 'store-setup',
+        'document-submission': 'document-submission',
+        'hardware-delivery': 'hardware-delivery',
+        'installation': 'installation',
+        'training': 'training'
+      }
+
+      const expandKey = sectionMap[expandSection]
+      if (expandKey) {
+        setExpandedItems(prev => ({ ...prev, [expandKey]: true }))
+
+        // Also expand mobile stages if applicable
+        if (expandSection === 'product-setup' || expandSection === 'store-setup' ||
+            expandSection === 'document-submission' || expandSection === 'hardware-delivery') {
+          setExpandedMobileStages(prev => ({ ...prev, 'preparation': true }))
+        } else if (expandSection === 'installation') {
+          setExpandedMobileStages(prev => ({ ...prev, 'installation': true }))
+        } else if (expandSection === 'training') {
+          setExpandedMobileStages(prev => ({ ...prev, 'training': true }))
+        }
+
+        // Scroll to the section after a short delay
+        setTimeout(() => {
+          const element = document.getElementById(`section-${expandSection}`)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 300)
+      }
+    }
+  }, [expandSection])
 
   // Define the new 6-stage flow
   const mainStages = [
@@ -1442,18 +1482,18 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           case 'installation':
                             if (stage.status === 'completed') return 'Completed'
                             if (stage.status === 'current') return 'In Progress'
-                            // Show "Not Started" with date if scheduled
+                            // Show "Scheduled" with date if date is set, "Not set" if no date
                             return trainerData?.installationDate
-                              ? `Not Started • ${formatDate(trainerData.installationDate)}`
-                              : 'Not Started • Not Scheduled'
+                              ? `Scheduled • ${formatDate(trainerData.installationDate)}`
+                              : 'Not set'
                           case 'training':
                             if (stage.status === 'completed') return 'Completed'
                             if (stage.status === 'current') return 'In Progress'
-                            // Show "Not Started" with date if scheduled
+                            // Show "Scheduled" with date if date is set, "Not set" if no date
                             const trainingDate = trainerData?.posTrainingDate || trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
                             return trainingDate
-                              ? `Not Started • ${formatDate(trainingDate)}`
-                              : 'Not Started • Not Scheduled'
+                              ? `Scheduled • ${formatDate(trainingDate)}`
+                              : 'Not set'
                           case 'ready-go-live':
                             if (stage.status === 'completed') return 'Ready'
                             if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
@@ -1565,22 +1605,17 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                               }
                               // Show scheduled dates for Not Started stages
                               if (stage.status === 'pending') {
-                                let dateStr = 'Not Started'
                                 if (stage.id === 'installation') {
-                                  if (trainerData?.installationDate) {
-                                    dateStr += ` • ${formatDate(trainerData.installationDate)}`
-                                  } else {
-                                    dateStr += ' • Not Scheduled'
-                                  }
+                                  return trainerData?.installationDate
+                                    ? `Scheduled • ${formatDate(trainerData.installationDate)}`
+                                    : 'Not set'
                                 } else if (stage.id === 'training') {
                                   const trainingDate = trainerData?.posTrainingDate || trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
-                                  if (trainingDate) {
-                                    dateStr += ` • ${formatDate(trainingDate)}`
-                                  } else {
-                                    dateStr += ' • Not Scheduled'
-                                  }
+                                  return trainingDate
+                                    ? `Scheduled • ${formatDate(trainingDate)}`
+                                    : 'Not set'
                                 }
-                                return dateStr
+                                return 'Not Started'
                               }
                               return stage.status === 'current' ? 'In Progress' : ''
                             })()}
