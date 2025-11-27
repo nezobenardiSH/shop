@@ -13,9 +13,6 @@ import { getServiceId, DeviceType } from './device-type-detector'
 // API Configuration
 const SURFTEK_API_URL = process.env.SURFTEK_API_URL || 'https://storehub.trackking.biz/api/ticket/create'
 const SURFTEK_API_TOKEN = process.env.SURFTEK_API_TOKEN
-// Dry run only when explicitly enabled via SURFTEK_DRY_RUN=true
-// Default behavior: create real tickets (production-safe)
-const SURFTEK_DRY_RUN = process.env.SURFTEK_DRY_RUN === 'true'
 
 // Request interfaces matching the Surftek API spec
 export interface SurftekTicket {
@@ -130,21 +127,6 @@ export async function createSurftekTicket(request: SurftekTicketRequest): Promis
   console.log('   ServiceId:', request.Appointment.ServiceId, '- type:', typeof request.Appointment.ServiceId)
   console.log('   Longitude:', request.Appointment.Longitude, '- type:', typeof request.Appointment.Longitude)
   console.log('   Latitude:', request.Appointment.Latitude, '- type:', typeof request.Appointment.Latitude)
-
-  // DRY RUN MODE - skip actual API call
-  console.log('🔍 SURFTEK_DRY_RUN env value:', process.env.SURFTEK_DRY_RUN)
-  console.log('🔍 SURFTEK_DRY_RUN resolved to:', SURFTEK_DRY_RUN)
-  if (SURFTEK_DRY_RUN) {
-    console.log('🧪 DRY RUN MODE - Skipping actual Surftek API call')
-    console.log('🧪 Would have created ticket with above data')
-    return {
-      ErrorCode: '0',
-      Ticket: {
-        TicketId: 99999,
-        CaseNum: 'DRYRUN-TEST-TICKET'
-      }
-    } as SurftekSuccessResponse
-  }
 
   try {
     const response = await fetch(SURFTEK_API_URL, {
