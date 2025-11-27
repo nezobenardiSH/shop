@@ -208,7 +208,8 @@ export async function sendExternalVendorNotificationToManager(
   orderNumber: string,
   hardwareItems: string[],
   requesterName: string,
-  requesterPhone: string
+  requesterPhone: string,
+  surftekCaseNum?: string | null  // Optional Surftek case number
 ): Promise<void> {
   try {
     // Format time from 24h to 12h format (e.g., "14:00" to "2:00 PM")
@@ -232,18 +233,36 @@ export async function sendExternalVendorNotificationToManager(
 
     const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
 
-    const message = `🏪 External Vendor Installation Request\n\n` +
-                   `Merchant Name: ${merchantName}\n` +
-                   `Merchant ID: ${merchantId}\n` +
-                   `Merchant Email: ${merchantEmail}\n` +
-                   `Store Address: ${storeAddress}\n\n` +
-                   `Preferred Date: ${formattedDate}\n` +
-                   `Preferred Time: ${formattedTime}\n\n` +
-                   `Sales Order Number: ${orderNumber}\n` +
-                   `Hardware:\n${hardwareList}\n\n` +
-                   `Requester: ${requesterName}\n` +
-                   `Requester Phone Number: ${requesterPhone}\n\n` +
-                   `🔗 Salesforce: ${salesforceUrl}`
+    // Build message based on whether Surftek ticket was created
+    let message: string
+    if (surftekCaseNum) {
+      // Surftek ticket was created successfully
+      message = `🏪 External Vendor Installation - Ticket Created\n\n` +
+                `✅ Surftek Ticket: ${surftekCaseNum}\n\n` +
+                `Merchant Name: ${merchantName}\n` +
+                `Merchant Email: ${merchantEmail}\n` +
+                `Store Address: ${storeAddress}\n\n` +
+                `Requested Date: ${formattedDate}\n` +
+                `Requested Time: ${formattedTime}\n\n` +
+                `Sales Order Number: ${orderNumber}\n` +
+                `Hardware:\n${hardwareList}\n\n` +
+                `Note: Installation ticket has been automatically created on Surftek system.\n\n` +
+                `🔗 Salesforce: ${salesforceUrl}`
+    } else {
+      // Fallback - manual action required
+      message = `🏪 External Vendor Installation Request\n\n` +
+                `⚠️ ACTION REQUIRED: Please book on vendor website\n\n` +
+                `Merchant Name: ${merchantName}\n` +
+                `Merchant Email: ${merchantEmail}\n` +
+                `Store Address: ${storeAddress}\n\n` +
+                `Preferred Date: ${formattedDate}\n` +
+                `Preferred Time: ${formattedTime}\n\n` +
+                `Sales Order Number: ${orderNumber}\n` +
+                `Hardware:\n${hardwareList}\n\n` +
+                `Requester: ${requesterName}\n` +
+                `Requester Phone Number: ${requesterPhone}\n\n` +
+                `🔗 Salesforce: ${salesforceUrl}`
+    }
 
     await larkService.sendAppMessage(managerEmail, message, 'text')
     console.log(`📧 External vendor notification sent to onboarding manager: ${managerEmail}`)
