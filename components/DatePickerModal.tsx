@@ -1408,10 +1408,13 @@ export default function DatePickerModal({
 
             {/* Title */}
             <h3 className="text-2xl font-bold text-gray-900 text-center mb-2">
-              Booking Confirmed!
+              {isExternalVendor ? 'Installation Requested!' : 'Booking Confirmed!'}
             </h3>
             <p className="text-gray-600 text-center mb-6">
-              Your training session has been successfully scheduled
+              {isExternalVendor
+                ? 'Your installation session has been successfully requested'
+                : `Your ${bookingType === 'installation' ? 'installation' : 'training'} session has been successfully scheduled`
+              }
             </p>
 
             {/* Booking Details */}
