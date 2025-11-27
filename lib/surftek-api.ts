@@ -13,8 +13,9 @@ import { getServiceId, DeviceType } from './device-type-detector'
 // API Configuration
 const SURFTEK_API_URL = process.env.SURFTEK_API_URL || 'https://storehub.trackking.biz/api/ticket/create'
 const SURFTEK_API_TOKEN = process.env.SURFTEK_API_TOKEN
-// Dry run in development (localhost), real tickets in production
-const SURFTEK_DRY_RUN = process.env.NODE_ENV === 'development'
+// Dry run only when explicitly enabled via SURFTEK_DRY_RUN=true
+// Default behavior: create real tickets (production-safe)
+const SURFTEK_DRY_RUN = process.env.SURFTEK_DRY_RUN === 'true'
 
 // Request interfaces matching the Surftek API spec
 export interface SurftekTicket {
