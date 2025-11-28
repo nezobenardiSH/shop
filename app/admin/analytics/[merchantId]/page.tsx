@@ -53,6 +53,14 @@ interface StageEvent {
   actor: 'merchant' | 'internal_team' | 'unknown'
   changeType: string
   metadata: any
+  values?: {
+    date?: string
+    startTime?: string
+    endTime?: string
+    assignedPerson?: string
+    serviceType?: string
+    otherDetails?: string
+  }
 }
 
 interface StageProgressionEvent {
@@ -538,10 +546,13 @@ export default function MerchantAnalyticsPage() {
                       Status
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date & Time
+                      When Booked
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actor
+                      Booked By
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Booked Values
                     </th>
                   </tr>
                 </thead>
@@ -631,46 +642,142 @@ export default function MerchantAnalyticsPage() {
                               </span>
                             )}
                           </td>
+                          <td className="px-4 py-4">
+                            {/* Show latest values from most recent event */}
+                            {stage.events && stage.events[0]?.values ? (
+                              <div className="text-xs space-y-1">
+                                {stage.events[0].values.date && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-gray-500">Date:</span>
+                                    <span className="font-medium text-gray-900">
+                                      {new Date(stage.events[0].values.date).toLocaleDateString('en-US', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}
+                                    </span>
+                                  </div>
+                                )}
+                                {stage.events[0].values.startTime && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-gray-500">Time:</span>
+                                    <span className="font-medium text-gray-900">
+                                      {stage.events[0].values.startTime}
+                                      {stage.events[0].values.endTime && ` - ${stage.events[0].values.endTime}`}
+                                    </span>
+                                  </div>
+                                )}
+                                {stage.events[0].values.assignedPerson && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-gray-500">Assigned:</span>
+                                    <span className="font-medium text-gray-900">{stage.events[0].values.assignedPerson}</span>
+                                  </div>
+                                )}
+                                {stage.events[0].values.serviceType && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-gray-500">Type:</span>
+                                    <span className="font-medium text-gray-900">{stage.events[0].values.serviceType}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs">-</span>
+                            )}
+                          </td>
                         </tr>
 
                         {/* Expanded History Rows */}
                         {isExpanded && stage.events && stage.events.length > 0 && (
                           <tr>
-                            <td colSpan={4} className="px-4 py-2 bg-gray-50">
+                            <td colSpan={5} className="px-4 py-2 bg-gray-50">
                               <div className="pl-8">
                                 <div className="text-xs font-semibold text-gray-700 mb-2">Change History</div>
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                   {stage.events.map((event, eventIndex) => (
-                                    <div key={eventIndex} className="flex items-center gap-4 text-sm py-1">
-                                      <div className="text-gray-900 w-40">
-                                        {new Date(event.timestamp).toLocaleDateString('en-US', {
-                                          day: 'numeric',
-                                          month: 'short',
-                                          year: 'numeric'
-                                        })}{' '}
-                                        {new Date(event.timestamp).toLocaleTimeString('en-US', {
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })}
+                                    <div key={eventIndex} className="border-l-2 border-gray-200 pl-3 py-1">
+                                      <div className="flex items-center gap-4 text-sm">
+                                        <div className="text-gray-900 w-40">
+                                          {new Date(event.timestamp).toLocaleDateString('en-US', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric'
+                                          })}{' '}
+                                          {new Date(event.timestamp).toLocaleTimeString('en-US', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })}
+                                        </div>
+                                        <div className="flex-shrink-0">
+                                          {event.actor === 'internal_team' ? (
+                                            <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                              Internal Team
+                                            </span>
+                                          ) : event.actor === 'merchant' ? (
+                                            <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                              Merchant
+                                            </span>
+                                          ) : (
+                                            <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                              Unknown
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-gray-600 flex-1">
+                                          {event.changeType}
+                                        </div>
                                       </div>
-                                      <div className="flex-shrink-0">
-                                        {event.actor === 'internal_team' ? (
-                                          <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                                            Internal Team
-                                          </span>
-                                        ) : event.actor === 'merchant' ? (
-                                          <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                            Merchant
-                                          </span>
-                                        ) : (
-                                          <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                            Unknown
-                                          </span>
-                                        )}
-                                      </div>
-                                      <div className="text-gray-600 flex-1">
-                                        {event.changeType}
-                                      </div>
+                                      {/* Display actual values that were set */}
+                                      {event.values && Object.keys(event.values).length > 0 && (
+                                        <div className="mt-2 ml-40 bg-white rounded border border-gray-200 p-2 text-xs">
+                                          <div className="font-medium text-gray-700 mb-1">Values Set:</div>
+                                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                            {event.values.date && (
+                                              <div className="flex gap-2">
+                                                <span className="text-gray-500">Date:</span>
+                                                <span className="text-gray-900 font-medium">
+                                                  {new Date(event.values.date).toLocaleDateString('en-US', {
+                                                    day: 'numeric',
+                                                    month: 'short',
+                                                    year: 'numeric'
+                                                  })}
+                                                </span>
+                                              </div>
+                                            )}
+                                            {event.values.startTime && event.values.endTime && (
+                                              <div className="flex gap-2">
+                                                <span className="text-gray-500">Time:</span>
+                                                <span className="text-gray-900 font-medium">
+                                                  {event.values.startTime} - {event.values.endTime}
+                                                </span>
+                                              </div>
+                                            )}
+                                            {event.values.startTime && !event.values.endTime && (
+                                              <div className="flex gap-2">
+                                                <span className="text-gray-500">Preferred Time:</span>
+                                                <span className="text-gray-900 font-medium">{event.values.startTime}</span>
+                                              </div>
+                                            )}
+                                            {event.values.assignedPerson && (
+                                              <div className="flex gap-2">
+                                                <span className="text-gray-500">Assigned To:</span>
+                                                <span className="text-gray-900 font-medium">{event.values.assignedPerson}</span>
+                                              </div>
+                                            )}
+                                            {event.values.serviceType && (
+                                              <div className="flex gap-2">
+                                                <span className="text-gray-500">Type:</span>
+                                                <span className="text-gray-900 font-medium">{event.values.serviceType}</span>
+                                              </div>
+                                            )}
+                                            {event.values.otherDetails && (
+                                              <div className="flex gap-2 col-span-2">
+                                                <span className="text-gray-500">Details:</span>
+                                                <span className="text-gray-900">{event.values.otherDetails}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>

@@ -750,6 +750,15 @@ export interface StageEvent {
   actor: 'merchant' | 'internal_team' | 'unknown'
   changeType: string  // Human-readable label like "Initial upload by merchant"
   metadata: any       // Original event metadata for additional context
+  // Actual values that were set/changed
+  values?: {
+    date?: string           // The date that was booked/scheduled
+    startTime?: string      // Start time (for bookings)
+    endTime?: string        // End time (for bookings)
+    assignedPerson?: string // Trainer/Installer name
+    serviceType?: string    // e.g., "Remote Training", "Onsite Training"
+    otherDetails?: string   // Any other relevant details
+  }
 }
 
 // Stage progression with full history
@@ -913,6 +922,65 @@ export async function getStageProgression(
     return `Updated by ${actorLabel}`
   }
 
+  // Helper function to extract actual values from event metadata
+  const extractValues = (
+    stage: string,
+    metadata: any
+  ): StageEvent['values'] | undefined => {
+    if (!metadata) return undefined
+
+    // For Installation and Training bookings
+    if (stage === 'Installation' || stage === 'Training') {
+      const values: StageEvent['values'] = {}
+
+      if (metadata.date) {
+        values.date = metadata.date
+      }
+      if (metadata.startTime) {
+        values.startTime = metadata.startTime
+      }
+      if (metadata.endTime) {
+        values.endTime = metadata.endTime
+      }
+      if (metadata.preferredTime) {
+        // For external installations that only have preferred time
+        values.startTime = metadata.preferredTime
+      }
+      if (metadata.assignedTrainer) {
+        values.assignedPerson = metadata.assignedTrainer
+      }
+      if (metadata.assignedInstaller) {
+        values.assignedPerson = metadata.assignedInstaller
+      }
+      if (metadata.serviceType) {
+        values.serviceType = metadata.serviceType
+      }
+      if (metadata.installerType) {
+        values.otherDetails = `Installer type: ${metadata.installerType}`
+      }
+
+      return Object.keys(values).length > 0 ? values : undefined
+    }
+
+    // For Product Setup (menu submissions)
+    if (stage === 'Product Setup') {
+      // Menu submissions typically don't have much metadata
+      return undefined
+    }
+
+    // For Store Setup (video uploads)
+    if (stage === 'Store Setup') {
+      if (metadata.fileType || metadata.fileName) {
+        return {
+          otherDetails: metadata.fileType || metadata.fileName
+        }
+      }
+      return undefined
+    }
+
+    return undefined
+  }
+
   // Log Salesforce data for debugging
   console.log('[Stage Progression] Salesforce data:', {
     productSetupStatus: salesforceData.Product_Setup_Status__c,
@@ -950,12 +1018,13 @@ export async function getStageProgression(
       status = isDone ? 'Done' : productSetupStatus
     }
 
-    // Build events array with change type labels
+    // Build events array with change type labels and values
     const events: StageEvent[] = activityEvents.map((event, index) => ({
       timestamp: event.timestamp,
       actor: event.actor,
       changeType: generateChangeType('Product Setup', index, activityEvents.length, event.actor, event.metadata),
-      metadata: event.metadata
+      metadata: event.metadata,
+      values: extractValues('Product Setup', event.metadata)
     }))
 
     // If no analytics events, create fallback from Salesforce timestamp
@@ -1000,12 +1069,13 @@ export async function getStageProgression(
   if (hasVideoProof) {
     const activityEvents = activityMap.get('Store Setup') || []
 
-    // Build events array with change type labels
+    // Build events array with change type labels and values
     const events: StageEvent[] = activityEvents.map((event, index) => ({
       timestamp: event.timestamp,
       actor: event.actor,
       changeType: generateChangeType('Store Setup', index, activityEvents.length, event.actor, event.metadata),
-      metadata: event.metadata
+      metadata: event.metadata,
+      values: extractValues('Store Setup', event.metadata)
     }))
 
     // If no analytics events, create fallback from Salesforce timestamp
@@ -1049,18 +1119,29 @@ export async function getStageProgression(
   if (hasInstallation) {
     const activityEvents = activityMap.get('Installation') || []
 
-    // Build events array with change type labels
+    // Build events array with change type labels and values
     const events: StageEvent[] = activityEvents.map((event, index) => ({
       timestamp: event.timestamp,
       actor: event.actor,
       changeType: generateChangeType('Installation', index, activityEvents.length, event.actor, event.metadata),
-      metadata: event.metadata
+      metadata: event.metadata,
+      values: extractValues('Installation', event.metadata)
     }))
 
-    // If no analytics events, show stage but indicate data is not available
-    if (events.length === 0) {
+    // If no analytics events but we have Salesforce data, create fallback
+    if (events.length === 0 && installationDate) {
       events.push({
-        timestamp: new Date(), // Use current time as placeholder
+        timestamp: new Date(installationDate),
+        actor: 'unknown',
+        changeType: 'Booking data not tracked',
+        metadata: { noTrackingData: true },
+        values: {
+          date: installationDate.split('T')[0] // Extract just the date part
+        }
+      })
+    } else if (events.length === 0) {
+      events.push({
+        timestamp: new Date(),
         actor: 'unknown',
         changeType: 'Booking data not tracked',
         metadata: { noTrackingData: true }
@@ -1097,18 +1178,29 @@ export async function getStageProgression(
   if (hasTraining) {
     const activityEvents = activityMap.get('Training') || []
 
-    // Build events array with change type labels
+    // Build events array with change type labels and values
     const events: StageEvent[] = activityEvents.map((event, index) => ({
       timestamp: event.timestamp,
       actor: event.actor,
       changeType: generateChangeType('Training', index, activityEvents.length, event.actor, event.metadata),
-      metadata: event.metadata
+      metadata: event.metadata,
+      values: extractValues('Training', event.metadata)
     }))
 
-    // If no analytics events, show stage but indicate data is not available
-    if (events.length === 0) {
+    // If no analytics events but we have Salesforce data, create fallback
+    if (events.length === 0 && trainingDate) {
       events.push({
-        timestamp: new Date(), // Use current time as placeholder
+        timestamp: new Date(trainingDate),
+        actor: 'unknown',
+        changeType: 'Booking data not tracked',
+        metadata: { noTrackingData: true },
+        values: {
+          date: trainingDate.split('T')[0] // Extract just the date part
+        }
+      })
+    } else if (events.length === 0) {
+      events.push({
+        timestamp: new Date(),
         actor: 'unknown',
         changeType: 'Booking data not tracked',
         metadata: { noTrackingData: true }

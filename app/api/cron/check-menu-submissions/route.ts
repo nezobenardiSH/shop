@@ -25,18 +25,54 @@ export async function GET(request: NextRequest) {
     // Get records updated in last 10 minutes (to avoid missing any due to timing)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
 
+    // First, get Onboarding_Portal__c records that have portal access and are not test accounts
+    // Then use their Onboarding_Trainer_Record__c to filter Onboarding_Trainer__c
+    const portalQuery = `
+      SELECT Onboarding_Trainer_Record__c
+      FROM Onboarding_Portal__c
+      WHERE Onboarding_Portal_Access__c = true
+        AND Is_test_account__c = false
+        AND Onboarding_Trainer_Record__c != null
+    `
+
+    console.log('📋 Querying Portal records with access...')
+    const portalResult = await conn.query(portalQuery)
+
+    if (portalResult.totalSize === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'No portal records with access found',
+        checked: 0,
+        notified: 0
+      })
+    }
+
+    // Extract trainer IDs from portal records
+    const trainerIds = portalResult.records
+      .map((r: any) => r.Onboarding_Trainer_Record__c)
+      .filter((id: string) => id != null)
+
+    if (trainerIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'No trainer records linked to portal',
+        checked: 0,
+        notified: 0
+      })
+    }
+
+    // Format IDs for SOQL IN clause
+    const trainerIdList = trainerIds.map((id: string) => `'${id}'`).join(',')
+
     const query = `
-      SELECT ot.Id, ot.Name, ot.Menu_Collection_Submission_Link__c,
-             ot.MSM_Name__r.Email, ot.MSM_Name__r.Name,
-             ot.LastModifiedDate
-      FROM Onboarding_Trainer__c ot,
-           Onboarding_Portal__c op
-      WHERE ot.Menu_Collection_Submission_Link__c != NULL
-        AND ot.LastModifiedDate >= ${tenMinutesAgo}
-        AND op.Onboarding_Trainer_Record__c = ot.Id
-        AND op.Onboarding_Portal_Access__c = true
-        AND op.Is_test_account__c = false
-      ORDER BY ot.LastModifiedDate DESC
+      SELECT Id, Name, Menu_Collection_Submission_Link__c,
+             MSM_Name__r.Email, MSM_Name__r.Name,
+             LastModifiedDate
+      FROM Onboarding_Trainer__c
+      WHERE Menu_Collection_Submission_Link__c != null
+        AND LastModifiedDate >= ${tenMinutesAgo}
+        AND Id IN (${trainerIdList})
+      ORDER BY LastModifiedDate DESC
     `
 
     console.log('📋 Querying Salesforce for recent submissions...')
