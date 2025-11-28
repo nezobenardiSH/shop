@@ -1146,6 +1146,7 @@ function TrainerPortalContent() {
             goLiveDate={currentBookingInfo.goLiveDate}
             installationDate={currentBookingInfo.installationDate}
             trainingDate={currentBookingInfo.trainingDate}
+            isInternalUser={isInternalUser}
             onBookingComplete={handleBookingComplete}
           />
             </>

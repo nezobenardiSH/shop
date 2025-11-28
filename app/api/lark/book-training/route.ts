@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       workaroundElaboration,  // Workaround elaboration
       onboardingServicesBought,  // To determine if onsite or remote training
       existingEventId,  // Event ID of existing booking to be cancelled (for rescheduling)
-      currentTrainerEmail  // Email of the trainer who created the existing event (for rescheduling)
+      currentTrainerEmail,  // Email of the trainer who created the existing event (for rescheduling)
+      selectedTrainerEmail  // Internal user manually selected trainer (optional)
     } = body
 
     console.log('📥 Booking request received:', {
@@ -173,19 +174,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 4: Intelligently assign a trainer based on language requirements
+    // Step 4: Assign trainer - either manually selected by internal user or auto-assigned
     console.log('Available trainers for slot:', trainersWithAuth)
     console.log('Required languages:', trainerLanguages)
-    
+    console.log('Selected trainer email (internal user):', selectedTrainerEmail || 'AUTO-ASSIGN')
+
     let assignment
     try {
-      assignment = await assignTrainer(trainersWithAuth, trainerLanguages)
-      console.log('Assigned trainer:', assignment)
+      if (selectedTrainerEmail) {
+        // Internal user manually selected a trainer - use that trainer
+        const selectedTrainer = trainersConfig.trainers.find(t => t.email === selectedTrainerEmail)
+        if (!selectedTrainer) {
+          return NextResponse.json(
+            { error: 'Selected trainer not found', details: `No trainer found with email: ${selectedTrainerEmail}` },
+            { status: 400 }
+          )
+        }
+        assignment = { assigned: selectedTrainer.name, reason: 'Manually selected by internal user' }
+        console.log('🎯 Internal user selected trainer:', assignment)
+      } else {
+        // Auto-assign based on language requirements
+        assignment = await assignTrainer(trainersWithAuth, trainerLanguages)
+        console.log('Assigned trainer:', assignment)
+      }
     } catch (error: any) {
       // Language requirements couldn't be met
       console.error('Language assignment failed:', error.message)
       return NextResponse.json(
-        { 
+        {
           error: 'No trainers available with required language skills',
           details: error.message,
           availableTrainers: trainersWithAuth

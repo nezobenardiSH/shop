@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
       timeSlot,
       availableInstallers,
       contactPhone,
-      existingEventId  // Event ID of existing booking to be cancelled (for rescheduling)
+      existingEventId,  // Event ID of existing booking to be cancelled (for rescheduling)
+      selectedInstallerEmail  // Internal user manually selected installer (optional)
     } = body
 
     console.log('📥 Installation booking request:', {
@@ -29,7 +30,8 @@ export async function POST(request: NextRequest) {
       date,
       timeSlot,
       isRescheduling: !!existingEventId,
-      existingEventId: existingEventId || 'NONE (new booking)'
+      existingEventId: existingEventId || 'NONE (new booking)',
+      selectedInstallerEmail: selectedInstallerEmail || 'AUTO-ASSIGN'
     })
 
     if (!merchantId || !merchantName || !date) {
@@ -70,7 +72,8 @@ export async function POST(request: NextRequest) {
         date,
         timeSlot,
         availableInstallers,
-        existingEventId
+        existingEventId,
+        selectedInstallerEmail  // Pass manually selected installer if provided by internal user
       )
 
       // Track analytics event for installation scheduling

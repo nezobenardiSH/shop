@@ -42,9 +42,11 @@ export interface TrainerAvailability {
 export async function getCombinedAvailability(
   startDate: Date,
   endDate: Date,
-  merchantState?: string
+  merchantState?: string,
+  includeWeekends: boolean = false
 ): Promise<DayAvailability[]> {
   console.log('Getting combined availability for all trainers...')
+  console.log('Include weekends:', includeWeekends)
   if (merchantState) {
     console.log('Filtering by merchant state:', merchantState)
   }
@@ -176,8 +178,9 @@ export async function getCombinedAvailability(
   while (current <= endDate) {
     const dayOfWeek = current.getDay()
 
-    // Only weekdays (Monday=1 to Friday=5)
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+    // Only weekdays (Monday=1 to Friday=5) unless includeWeekends is true
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    if (!isWeekend || includeWeekends) {
       // Extract date components directly from the Date object (which is already in Singapore timezone)
       // Don't use toISOString() as it converts to UTC and may shift the date
       const year = current.getFullYear()
@@ -519,9 +522,11 @@ export async function getSingleTrainerAvailability(
   trainerName: string,
   startDate: Date,
   endDate: Date,
-  merchantState?: string
+  merchantState?: string,
+  includeWeekends: boolean = false
 ): Promise<DayAvailability[]> {
   console.log(`Getting availability for single trainer: ${trainerName}`)
+  console.log('Include weekends:', includeWeekends)
   if (merchantState) {
     console.log('Filtering by merchant state:', merchantState)
   }
@@ -583,8 +588,9 @@ export async function getSingleTrainerAvailability(
   while (current <= endDate) {
     const dayOfWeek = current.getDay()
 
-    // Only weekdays (Monday=1 to Friday=5)
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+    // Only weekdays (Monday=1 to Friday=5) unless includeWeekends is true
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    if (!isWeekend || includeWeekends) {
       const year = current.getFullYear()
       const month = String(current.getMonth() + 1).padStart(2, '0')
       const day = String(current.getDate()).padStart(2, '0')

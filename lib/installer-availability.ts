@@ -190,9 +190,11 @@ export async function getLocationCategory(merchantId: string): Promise<'klangVal
 export async function getInternalInstallersAvailability(
   startDate: string,
   endDate: string,
-  merchantId?: string
+  merchantId?: string,
+  includeWeekends: boolean = false
 ): Promise<InstallerAvailability[]> {
   console.log('Getting installer availability...')
+  console.log('Include weekends:', includeWeekends)
 
   // Read installers config dynamically to pick up changes without restart
   const installersConfig = await loadInstallersConfig()
@@ -268,8 +270,9 @@ export async function getInternalInstallersAvailability(
   while (current <= end) {
     const dayOfWeek = current.getUTCDay()
 
-    // Only weekdays (Monday=1 to Friday=5)
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+    // Only weekdays (Monday=1 to Friday=5) unless includeWeekends is true
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    if (!isWeekend || includeWeekends) {
       const year = current.getUTCFullYear()
       const month = String(current.getUTCMonth() + 1).padStart(2, '0')
       const day = String(current.getUTCDate()).padStart(2, '0')
@@ -336,7 +339,8 @@ export async function bookInternalInstallation(
   date: string,
   timeSlot: TimeSlot,
   availableInstallers: string[],
-  existingEventId?: string
+  existingEventId?: string,
+  selectedInstallerEmail?: string  // Internal user manually selected installer (optional)
 ) {
   console.log('📦 bookInternalInstallation called with:', {
     merchantId,
@@ -346,7 +350,8 @@ export async function bookInternalInstallation(
     date,
     timeSlot,
     availableInstallers,
-    existingEventId
+    existingEventId,
+    selectedInstallerEmail: selectedInstallerEmail || 'AUTO-ASSIGN'
   })
 
   // Read installers config dynamically to pick up changes without restart
@@ -356,26 +361,53 @@ export async function bookInternalInstallation(
   const locationCategory = await getLocationCategory(merchantId)
   const locationKey = locationCategory === 'external' ? 'klangValley' : locationCategory
 
-  const assignedInstaller = assignInstaller(availableInstallers)
   const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
-  
-  // Find installer by name - handle both short names (from config) and full names (from Lark)
-  let installer = locationConfig.installers.find((i: any) => i.name === assignedInstaller)
-  
-  // If not found by exact match, try finding by partial match (e.g., "Fairul" in "Mohamad Fairul Ismail")
-  if (!installer) {
-    installer = locationConfig.installers.find((i: any) => 
-      assignedInstaller.toLowerCase().includes(i.name.toLowerCase()) ||
-      i.name.toLowerCase().includes(assignedInstaller.toLowerCase())
-    )
+
+  let installer
+  let assignedInstaller: string = ''
+
+  // If internal user manually selected an installer, use that one
+  if (selectedInstallerEmail) {
+    console.log('🎯 Internal user selected installer email:', selectedInstallerEmail)
+    // Search across all regions for the selected installer
+    const allRegions = ['klangValley', 'penang', 'johorBahru']
+    for (const region of allRegions) {
+      const regionConfig = (installersConfig as any)[region]
+      if (regionConfig?.installers) {
+        installer = regionConfig.installers.find((i: any) => i.email === selectedInstallerEmail)
+        if (installer) {
+          console.log(`🎯 Found selected installer: ${installer.name} (${installer.email}) in region ${region}`)
+          assignedInstaller = installer.name
+          break
+        }
+      }
+    }
+    if (!installer) {
+      console.error(`❌ Selected installer not found. Looking for email: "${selectedInstallerEmail}"`)
+      throw new Error(`Selected installer not found: ${selectedInstallerEmail}`)
+    }
+  } else {
+    // Auto-assign installer
+    assignedInstaller = assignInstaller(availableInstallers)
+
+    // Find installer by name - handle both short names (from config) and full names (from Lark)
+    installer = locationConfig.installers.find((i: any) => i.name === assignedInstaller)
+
+    // If not found by exact match, try finding by partial match (e.g., "Fairul" in "Mohamad Fairul Ismail")
+    if (!installer) {
+      installer = locationConfig.installers.find((i: any) =>
+        assignedInstaller.toLowerCase().includes(i.name.toLowerCase()) ||
+        i.name.toLowerCase().includes(assignedInstaller.toLowerCase())
+      )
+    }
+
+    if (!installer) {
+      console.error(`❌ Installer not found. Looking for: "${assignedInstaller}"`)
+      console.error(`   Available installers:`, locationConfig.installers.map((i: any) => i.name))
+      throw new Error(`Installer configuration not found for: ${assignedInstaller}`)
+    }
   }
 
-  if (!installer) {
-    console.error(`❌ Installer not found. Looking for: "${assignedInstaller}"`)
-    console.error(`   Available installers:`, locationConfig.installers.map((i: any) => i.name))
-    throw new Error(`Installer configuration not found for: ${assignedInstaller}`)
-  }
-  
   console.log(`✅ Found installer: ${installer.name} (${installer.email})`)
 
   // Fetch merchant details from Salesforce for calendar event

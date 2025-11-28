@@ -11,16 +11,36 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const trainerName = searchParams.get('trainerName')
     const merchantState = searchParams.get('merchantState') // For location-based filtering
+    const includeWeekends = searchParams.get('includeWeekends') === 'true' // For internal users
+    const startDateParam = searchParams.get('startDate') // Optional: custom start date (YYYY-MM-DD)
+    const endDateParam = searchParams.get('endDate') // Optional: custom end date (YYYY-MM-DD)
 
-    // Start from midnight of current day in Singapore timezone
+    // Start from midnight of current day in Singapore timezone (or custom start date)
     const now = new Date()
     const singaporeNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}))
 
-    const startDate = new Date(`${singaporeNow.getFullYear()}-${String(singaporeNow.getMonth() + 1).padStart(2, '0')}-${String(singaporeNow.getDate()).padStart(2, '0')}T00:00:00+08:00`)
+    let startDate: Date
+    if (startDateParam) {
+      // Use custom start date if provided
+      startDate = new Date(`${startDateParam}T00:00:00+08:00`)
+      console.log('📅 Using custom start date:', startDateParam)
+    } else {
+      startDate = new Date(`${singaporeNow.getFullYear()}-${String(singaporeNow.getMonth() + 1).padStart(2, '0')}-${String(singaporeNow.getDate()).padStart(2, '0')}T00:00:00+08:00`)
+    }
 
-    const endDateSingapore = new Date(singaporeNow)
-    endDateSingapore.setDate(endDateSingapore.getDate() + 14)
-    const endDate = new Date(`${endDateSingapore.getFullYear()}-${String(endDateSingapore.getMonth() + 1).padStart(2, '0')}-${String(endDateSingapore.getDate()).padStart(2, '0')}T23:59:59+08:00`)
+    let endDate: Date
+    if (endDateParam) {
+      // Use custom end date if provided
+      endDate = new Date(`${endDateParam}T23:59:59+08:00`)
+      console.log('📅 Using custom end date:', endDateParam)
+    } else {
+      // Default: 14 days from start date
+      const endDateSingapore = new Date(startDate)
+      endDateSingapore.setDate(endDateSingapore.getDate() + 14)
+      endDate = new Date(`${endDateSingapore.getFullYear()}-${String(endDateSingapore.getMonth() + 1).padStart(2, '0')}-${String(endDateSingapore.getDate()).padStart(2, '0')}T23:59:59+08:00`)
+    }
+
+    console.log('📅 Availability date range:', startDate.toISOString(), 'to', endDate.toISOString())
 
     let availability
     let mode = 'combined'
@@ -28,7 +48,7 @@ export async function GET(request: NextRequest) {
     // If trainerName is provided, get single trainer availability
     if (trainerName) {
       console.log(`📅 Fetching availability for single trainer: ${trainerName}`)
-      availability = await getSingleTrainerAvailability(trainerName, startDate, endDate, merchantState || undefined)
+      availability = await getSingleTrainerAvailability(trainerName, startDate, endDate, merchantState || undefined, includeWeekends)
       mode = 'single'
       console.log(`Single trainer availability: ${availability.length} days with slots`)
 
@@ -45,7 +65,8 @@ export async function GET(request: NextRequest) {
     } else {
       // Otherwise get combined availability from all trainers
       console.log('📅 Fetching combined availability from all trainers')
-      availability = await getCombinedAvailability(startDate, endDate, merchantState || undefined)
+      console.log('📅 Include weekends:', includeWeekends)
+      availability = await getCombinedAvailability(startDate, endDate, merchantState || undefined, includeWeekends)
       console.log(`Combined availability: ${availability.length} days with slots`)
 
       // Debug: Log first 3 days of availability
