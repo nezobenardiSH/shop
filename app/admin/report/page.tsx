@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 interface MerchantReport {
   id: string
   name: string
+  analyticsLink: string
   salesforceLink: string
   onboardingManagers: string
   onboardingStartDate: string
+  expectedGoLiveDate: string
   trainingCompletedTimestamp: string
   onboardingServiceBought: string
   firstCallTimestamp: string
@@ -190,13 +192,16 @@ export default function ReportPage() {
                     Merchant Name
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Analytics Link
+                    Links
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Onboarding Managers
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Onboarding Start Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Expected Go-Live Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Training Completed TimeStamp
@@ -240,20 +245,36 @@ export default function ReportPage() {
                       {merchant.name}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
-                      <a
-                        href={merchant.salesforceLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline"
-                      >
-                        View
-                      </a>
+                      <div className="flex gap-2">
+                        <a
+                          href={merchant.analyticsLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                          title="View Analytics"
+                        >
+                          Analytics
+                        </a>
+                        <span className="text-gray-300">|</span>
+                        <a
+                          href={merchant.salesforceLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-orange-600 hover:text-orange-800 underline"
+                          title="View in Salesforce"
+                        >
+                          Salesforce
+                        </a>
+                      </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {merchant.onboardingManagers || '-'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(merchant.onboardingStartDate)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(merchant.expectedGoLiveDate)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDateTime(merchant.trainingCompletedTimestamp)}
