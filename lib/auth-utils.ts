@@ -37,27 +37,29 @@ export function validatePIN(
 }
 
 /**
- * Check if the submitted PIN is the universal internal team PIN
+ * Check if the submitted input is the internal team passphrase
+ * Supports alphanumeric + special characters (no cleaning)
  */
-export function isInternalTeamPIN(submittedPIN: string): boolean {
-  const cleanPIN = submittedPIN.replace(/\D/g, '')
-  return cleanPIN === INTERNAL_TEAM_PIN
+export function isInternalTeamPIN(submittedInput: string): boolean {
+  // Direct comparison - allow alphanumeric and special characters
+  return submittedInput === INTERNAL_TEAM_PIN
 }
 
 export function validatePINWithUser(
   submittedPIN: string,
   phoneData: Array<{ phone: string | null | undefined; name: string | null | undefined }>
 ): { isValid: boolean; userName: string; isInternalUser: boolean } {
-  // Clean submitted PIN
+  // Check internal team passphrase FIRST (before any validation)
+  // This allows alphanumeric + special characters for internal team
+  if (isInternalTeamPIN(submittedPIN)) {
+    return { isValid: true, userName: 'StoreHub Team', isInternalUser: true }
+  }
+
+  // For merchant PIN: clean and validate (must be exactly 4 digits)
   const cleanPIN = submittedPIN.replace(/\D/g, '')
 
   if (cleanPIN.length !== 4) {
     return { isValid: false, userName: 'User', isInternalUser: false }
-  }
-
-  // Check if it's the internal team PIN first
-  if (isInternalTeamPIN(submittedPIN)) {
-    return { isValid: true, userName: 'StoreHub Team', isInternalUser: true }
   }
 
   // Check against all available phone numbers and their associated names

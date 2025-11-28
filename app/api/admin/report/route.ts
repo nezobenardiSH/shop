@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         Name,
         MSM_Name__r.Name,
         Onboarding_Start_Date__c,
-        First_Revised_EGLD__c,
+        Planned_Go_Live_Date__c,
         Onboarding_Services_Bought__c,
         First_Call_Timestamp__c
       FROM Onboarding_Trainer__c
@@ -259,7 +259,7 @@ export async function GET(request: NextRequest) {
         salesforceLink: `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${trainer.Id}/view`,
         onboardingManagers: trainer.MSM_Name__r?.Name || '',
         onboardingStartDate: trainer.Onboarding_Start_Date__c,
-        expectedGoLiveDate: trainer.First_Revised_EGLD__c,
+        expectedGoLiveDate: trainer.Planned_Go_Live_Date__c,
         trainingCompletedTimestamp: portal?.Training_Date__c,
         onboardingServiceBought: trainer.Onboarding_Services_Bought__c,
         firstCallTimestamp: trainer.First_Call_Timestamp__c,
