@@ -14,8 +14,6 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
   const [error, setError] = useState('')
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null)
   const [displayName, setDisplayName] = useState('')
-  const [isInternalMode, setIsInternalMode] = useState(false)
-  const [passphrase, setPassphrase] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -49,42 +47,27 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
     fetchMerchantName()
   }, [searchParams, merchantId])
 
-  // Keyboard shortcut to toggle internal mode (Ctrl+Shift+I)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'I') {
-        e.preventDefault()
-        setIsInternalMode(prev => !prev)
-        setPIN('')
-        setPassphrase('')
-        setError('')
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
     setRemainingAttempts(null)
-    
+
     try {
       const response = await fetch('/api/auth/merchant-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ merchantId, pin: isInternalMode ? passphrase : pin })
+        body: JSON.stringify({ merchantId, pin })
       })
-      
+
       const data = await response.json()
-      
+
       if (response.ok) {
         // Get redirect URL or default to merchant page
         const redirectUrl = searchParams.get('redirect') || `/merchant/${merchantId}`
         console.log('Login successful, redirecting to:', redirectUrl)
         console.log('Response data:', data)
-        
+
         // Use window.location for a hard redirect to ensure cookies are picked up
         window.location.href = redirectUrl
       } else {
@@ -103,14 +86,15 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
       setLoading(false)
     }
   }
-  
+
   const handlePINChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '') // Only allow digits
-    if (value.length <= 4) {
+    // Allow digits and common symbols for internal team
+    const value = e.target.value.replace(/[^0-9!@#$%^&*]/g, '')
+    if (value.length <= 8) {
       setPIN(value)
     }
   }
-  
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#faf9f6]">
       <div className="max-w-md w-full mx-4">
@@ -132,51 +116,30 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
               {displayName}
             </p>
           </div>
-          
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="pin" className="block text-sm font-medium text-[#0b0707] mb-2">
-                {isInternalMode ? 'Enter Passphrase' : 'Enter 4-Digit PIN'}
+                Enter 4-Digit PIN
               </label>
-              {isInternalMode ? (
-                <input
-                  id="passphrase"
-                  type="password"
-                  value={passphrase}
-                  onChange={(e) => setPassphrase(e.target.value)}
-                  className="block w-full text-center text-xl
-                           px-4 py-3 border-2 border-[#e5e7eb] rounded-lg
-                           focus:outline-none focus:border-[#ff630f]
-                           disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="Enter passphrase"
-                  required
-                  disabled={loading}
-                  autoComplete="off"
-                />
-              ) : (
-                <input
-                  id="pin"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  pattern="[0-9]{4}"
-                  value={pin}
-                  onChange={handlePINChange}
-                  className="block w-full text-center text-3xl tracking-[1em] font-mono
-                           px-4 py-3 border-2 border-[#e5e7eb] rounded-lg
-                           focus:outline-none focus:border-[#ff630f]
-                           disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="••••"
-                  required
-                  disabled={loading}
-                  autoComplete="off"
-                />
-              )}
-              {isInternalMode && (
-                <p className="text-xs text-orange-500 mt-2 text-center">Internal Team Mode</p>
-              )}
+              <input
+                id="pin"
+                type="text"
+                inputMode="text"
+                maxLength={8}
+                value={pin}
+                onChange={handlePINChange}
+                className="block w-full text-center text-3xl tracking-[0.5em] font-mono
+                         px-4 py-3 border-2 border-[#e5e7eb] rounded-lg
+                         focus:outline-none focus:border-[#ff630f]
+                         disabled:bg-gray-50 disabled:text-gray-500"
+                placeholder="••••"
+                required
+                disabled={loading}
+                autoComplete="off"
+              />
             </div>
-            
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 <div className="flex items-start">
@@ -194,10 +157,10 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
                 </div>
               </div>
             )}
-            
+
             <button
               type="submit"
-              disabled={loading || (isInternalMode ? passphrase.length < 8 : pin.length !== 4)}
+              disabled={loading || pin.length < 4}
               className="w-full flex items-center justify-center py-3 px-4
                        border border-transparent rounded-full text-white font-medium
                        bg-[#ff630f] hover:bg-[#fe5b25] focus:outline-none focus:ring-2
