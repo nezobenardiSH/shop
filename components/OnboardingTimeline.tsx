@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { detectServiceType, getServiceTypeMessage } from '@/lib/service-type-detector'
+import ImportantReminderBox from '@/components/ImportantReminderBox'
 
 interface TimelineStage {
   id: string
@@ -94,6 +95,7 @@ const getIndustryTerminology = (subIndustry: string | null | undefined) => {
       setupLabel: 'Menu Setup',
       collectionForm: 'menu collection form',
       collectionFormLabel: 'Menu Collection Form',
+      collectionName: 'menu',
       submissionTimestamp: 'menu collection submission timestamp',
       submissionTimestampLabel: 'Menu Collection Submission Timestamp',
       completedSetup: 'completed menu setup',
@@ -108,6 +110,7 @@ const getIndustryTerminology = (subIndustry: string | null | undefined) => {
       setupLabel: 'Product Setup',
       collectionForm: 'product collection form',
       collectionFormLabel: 'Product Collection Form',
+      collectionName: 'product list',
       submissionTimestamp: 'product collection submission timestamp',
       submissionTimestampLabel: 'Product Collection Submission Timestamp',
       completedSetup: 'completed product setup',
@@ -123,6 +126,7 @@ const getIndustryTerminology = (subIndustry: string | null | undefined) => {
       setupLabel: 'Product Setup',
       collectionForm: 'product collection form',
       collectionFormLabel: 'Product Collection Form',
+      collectionName: 'product list',
       submissionTimestamp: 'product collection submission timestamp',
       submissionTimestampLabel: 'Product Collection Submission Timestamp',
       completedSetup: 'completed product setup',
@@ -208,6 +212,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
   const trainingCompleted = trainerData?.trainingDate
     ? new Date(trainerData.trainingDate) <= new Date()
     : false
+
+  // Scheduling prerequisites
+  const canScheduleInstallation = storeSetupCompleted
+  const productListSubmitted = !!trainerData?.menuCollectionSubmissionTimestamp
+  const installationDateSet = !!trainerData?.installationDate
+  const canScheduleTraining = productListSubmitted && installationDateSet
 
   // Initialize selectedStage based on URL parameter or welcome call completion status
   const initialStage = currentStageFromUrl ||
@@ -825,44 +835,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </button>
               {expandedItems['mobile-product'] && (
                 <div className="pl-12 pr-4 pb-4 space-y-3 pt-3 text-left">
-                  {/* Menu Submission Deadline Notice - Mobile - Only show if menu not submitted */}
-                  {!trainerData?.menuCollectionSubmissionTimestamp && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <div className="text-sm font-semibold text-red-900 mb-2">
-                        ⚠️ Important Reminder
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        {trainerData?.actualInstallationDate ? (
-                          <>
-                            Please send us the menu maximum 3 working days before the installation date (
-                            <span className="font-semibold text-red-700">
-                              {(() => {
-                                const installDate = new Date(trainerData.actualInstallationDate);
-                                let deadlineDate = new Date(installDate);
-                                let workingDaysToSubtract = 3;
-
-                                while (workingDaysToSubtract > 0) {
-                                  deadlineDate.setDate(deadlineDate.getDate() - 1);
-                                  const dayOfWeek = deadlineDate.getDay();
-                                  // Skip weekends (0 = Sunday, 6 = Saturday)
-                                  if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                                    workingDaysToSubtract--;
-                                  }
-                                }
-
-                                return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-                              })()}
-                            </span>
-                            ). If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
-                          </>
-                        ) : (
-                          <>
-                            Please send us the menu maximum 3 working days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  )}
+                  {/* Menu Submission Deadline Notice - Mobile */}
+                  <ImportantReminderBox
+                    type="product-list"
+                    installationDate={trainerData?.actualInstallationDate}
+                    trainingDate={trainerData?.trainingDate}
+                    isCompleted={!!trainerData?.menuCollectionSubmissionTimestamp}
+                    collectionName={terminology.collectionName}
+                  />
 
                   <div>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">{terminology.collectionFormLabel}</div>
@@ -947,6 +927,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </button>
               {expandedItems['mobile-video'] && (
                 <div className="pl-12 pr-4 pb-4 space-y-4 pt-3 text-left">
+                  {/* Store Setup Video Deadline Notice - Mobile */}
+                  <ImportantReminderBox
+                    type="store-setup"
+                    installationDate={trainerData?.installationDate}
+                    isCompleted={!!(trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA')}
+                  />
+
                   {/* CTA Section - Most Prominent */}
                   <div className="space-y-3">
                     {(trainerData?.videoProofLink || uploadedVideoUrl) && (
@@ -1006,13 +993,6 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       </svg>
                       {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
                     </button>
-
-                    {/* Important reminder - moved below Upload Video button */}
-                    <div className="bg-orange-50 border-l-4 border-orange-400 p-3">
-                      <p className="font-medium text-orange-900 mb-2">⚠️ Important</p>
-                      <p className="text-xs text-gray-700">Please send us the video before the installation date. If we don't receive it by then, we will still go ahead with the installation as planned.</p>
-                      <p className="text-xs text-gray-700 mt-2">However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, for an extra charge of RM200.</p>
-                    </div>
                   </div>
 
                   {/* Simplified Info Section */}
@@ -1076,20 +1056,28 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 </div>
                 {(() => {
                   const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
+                  // If date is already set, allow them to change it (don't block for prerequisites)
+                  const hasExistingDate = !!trainerData?.installationDate
+                  const isButtonDisabled = cannotReschedule || (!canScheduleInstallation && !hasExistingDate)
                   return (
                     <div>
                       <button
-                        onClick={() => !cannotReschedule && handleBookingClick('installation', trainerData?.installationDate)}
-                        disabled={cannotReschedule}
+                        onClick={() => !isButtonDisabled && handleBookingClick('installation', trainerData?.installationDate)}
+                        disabled={isButtonDisabled}
                         className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                          cannotReschedule
+                          isButtonDisabled
                             ? 'bg-gray-400 cursor-not-allowed'
                             : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                         }`}
-                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
+                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
                       >
                         {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
                       </button>
+                      {!canScheduleInstallation && !hasExistingDate && (
+                        <div className="mt-2 text-sm text-amber-600">
+                          Please submit your Store Setup Video before scheduling installation.
+                        </div>
+                      )}
                       {cannotReschedule && (
                         <div className="mt-2 text-sm text-gray-600">
                           To reschedule, please contact your onboarding manager
@@ -1181,20 +1169,33 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 </div>
                 {(() => {
                   const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
+                  // If date is already set, allow them to change it (don't block for prerequisites)
+                  const hasExistingDate = !!trainerData?.trainingDate
+                  const isButtonDisabled = cannotReschedule || (!canScheduleTraining && !hasExistingDate)
                   return (
                     <div>
                       <button
-                        onClick={() => !cannotReschedule && handleBookingClick('training', trainerData?.trainingDate)}
-                        disabled={cannotReschedule}
+                        onClick={() => !isButtonDisabled && handleBookingClick('training', trainerData?.trainingDate)}
+                        disabled={isButtonDisabled}
                         className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                          cannotReschedule
+                          isButtonDisabled
                             ? 'bg-gray-400 cursor-not-allowed'
                             : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                         }`}
-                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
+                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
                       >
                         {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
                       </button>
+                      {!productListSubmitted && !hasExistingDate && (
+                        <div className="mt-2 text-sm text-amber-600">
+                          Please submit your {terminology.collectionName} before scheduling training.
+                        </div>
+                      )}
+                      {productListSubmitted && !installationDateSet && !hasExistingDate && (
+                        <div className="mt-2 text-sm text-amber-600">
+                          Please schedule installation first before scheduling training.
+                        </div>
+                      )}
                       {cannotReschedule && (
                         <div className="mt-2 text-sm text-gray-600">
                           To reschedule, please contact your onboarding manager
@@ -1437,15 +1438,46 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       {/* Desktop: Horizontal Progress Bar Timeline */}
       <div className="hidden md:block bg-gray-50 rounded-lg p-2 mb-3">
         <div className="flex items-center justify-between">
-          {stages.map((stage, index) => (
-            <div key={stage.id} className="flex-1 relative">
+          {stages.map((stage, index) => {
+            // Check if stage is locked due to unmet prerequisites
+            // Don't lock if date is already set (they should be able to change it)
+            const trainingDateSet = !!trainerData?.trainingDate
+            const isInstallationLocked = stage.id === 'installation' && !canScheduleInstallation && !installationDateSet && !installationCompleted
+            const isTrainingLocked = stage.id === 'training' && !canScheduleTraining && !trainingDateSet && !trainingCompleted
+            const isStageLocked = isInstallationLocked || isTrainingLocked
+
+            // Tooltip message for locked stages
+            const lockedTooltip = isInstallationLocked
+              ? 'Please submit your Store Setup Video first'
+              : isTrainingLocked
+                ? !productListSubmitted
+                  ? `Please submit your ${terminology.collectionName} first`
+                  : 'Please schedule Installation first'
+                : ''
+
+            return (
+            <div
+              key={stage.id}
+              className={`flex-1 relative group ${isStageLocked ? 'opacity-50' : ''}`}
+            >
+              {/* Tooltip for locked stages */}
+              {isStageLocked && lockedTooltip && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                  {lockedTooltip}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                </div>
+              )}
               <div
-                className={`cursor-pointer transition-all duration-200 rounded-lg p-2 -m-2 ${
+                className={`transition-all duration-200 rounded-lg p-2 -m-2 ${
+                  isStageLocked
+                    ? 'cursor-not-allowed'
+                    : 'cursor-pointer'
+                } ${
                   selectedStage === stage.id
                     ? 'bg-orange-50 shadow-sm'
-                    : 'hover:bg-white hover:shadow-sm'
+                    : isStageLocked ? '' : 'hover:bg-white hover:shadow-sm'
                 }`}
-                onClick={() => handleStageClick(stage.id)}
+                onClick={() => !isStageLocked && handleStageClick(stage.id)}
               >
                 {/* Progress Bar Section */}
                 <div className="relative">
@@ -1523,25 +1555,44 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 
       {/* Mobile: Vertical Timeline with Expandable Drawers */}
       <div className="md:hidden">
         <div className="space-y-4">
-          {stages.map((stage, index) => (
-            <div key={stage.id} className="relative">
+          {stages.map((stage, index) => {
+            // Check if stage is locked due to unmet prerequisites
+            // Don't lock if date is already set (they should be able to change it)
+            const trainingDateSet = !!trainerData?.trainingDate
+            const isInstallationLocked = stage.id === 'installation' && !canScheduleInstallation && !installationDateSet && !installationCompleted
+            const isTrainingLocked = stage.id === 'training' && !canScheduleTraining && !trainingDateSet && !trainingCompleted
+            const isStageLocked = isInstallationLocked || isTrainingLocked
+
+            // Prerequisite message for locked stages
+            const lockedMessage = isInstallationLocked
+              ? 'Please submit your Store Setup Video first'
+              : isTrainingLocked
+                ? !productListSubmitted
+                  ? `Please submit your ${terminology.collectionName} first`
+                  : 'Please schedule Installation first'
+                : ''
+
+            return (
+            <div key={stage.id} className={`relative ${isStageLocked ? 'opacity-50' : ''}`}>
               {/* Connector Line */}
               {index < stages.length - 1 && (
                 <div className="absolute left-[16px] top-12 bottom-0 w-0.5 bg-gray-300" />
               )}
-              
+
               {/* Stage Item */}
               <div className="relative">
                 <button
-                  onClick={() => toggleMobileStage(stage.id)}
-                  className="w-full text-left py-2 px-1 -mx-1 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => !isStageLocked && toggleMobileStage(stage.id)}
+                  className={`w-full text-left py-2 px-1 -mx-1 rounded-lg transition-colors ${
+                    isStageLocked ? 'cursor-not-allowed' : 'hover:bg-gray-50'
+                  }`}
                 >
                   <div className="flex items-start gap-4">
                     {/* Stage Icon/Circle - Medium size for balance */}
@@ -1620,8 +1671,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                               return stage.status === 'current' ? 'In Progress' : ''
                             })()}
                           </p>
+                          {/* Prerequisite message for locked stages */}
+                          {isStageLocked && lockedMessage && (
+                            <p className="text-xs text-amber-600 mt-0.5">{lockedMessage}</p>
+                          )}
                         </div>
-                        
+
                         {/* Expand/Collapse Arrow - Larger tap target */}
                         <div className="p-1">
                           <svg className={`w-6 h-6 text-gray-400 transition-transform ${
@@ -1643,7 +1698,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 )}
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 
@@ -1882,44 +1937,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 {/* Expanded Details for Product Setup */}
                 {expandedItems['product-setup'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                    {/* Menu Submission Deadline Notice - Only show if menu not submitted */}
-                    {!trainerData?.menuCollectionSubmissionTimestamp && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <div className="text-sm font-semibold text-red-900 mb-2">
-                          ⚠️ Important Reminder
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          {trainerData?.actualInstallationDate ? (
-                            <>
-                              Please send us the menu maximum 3 working days before the installation date (
-                              <span className="font-semibold text-red-700">
-                                {(() => {
-                                  const installDate = new Date(trainerData.actualInstallationDate);
-                                  let deadlineDate = new Date(installDate);
-                                  let workingDaysToSubtract = 3;
-
-                                  while (workingDaysToSubtract > 0) {
-                                    deadlineDate.setDate(deadlineDate.getDate() - 1);
-                                    const dayOfWeek = deadlineDate.getDay();
-                                    // Skip weekends (0 = Sunday, 6 = Saturday)
-                                    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                                      workingDaysToSubtract--;
-                                    }
-                                  }
-
-                                  return deadlineDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-                                })()}
-                              </span>
-                              ). If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
-                            </>
-                          ) : (
-                            <>
-                              Please send us the menu maximum 3 working days before the installation date. If we don't receive it by then, we will <span className="font-semibold text-red-700">NOT</span> go ahead with the training.
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    )}
+                    {/* Menu Submission Deadline Notice - Desktop */}
+                    <ImportantReminderBox
+                      type="product-list"
+                      installationDate={trainerData?.actualInstallationDate}
+                      trainingDate={trainerData?.trainingDate}
+                      isCompleted={!!trainerData?.menuCollectionSubmissionTimestamp}
+                      collectionName={terminology.collectionName}
+                    />
 
                     <div>
                       <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{terminology.collectionFormLabel}</div>
@@ -2020,6 +2045,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 {/* Expanded Details for Store Setup */}
                 {expandedItems['store-setup'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-4">
+                    {/* Store Setup Video Deadline Notice - Desktop */}
+                    <ImportantReminderBox
+                      type="store-setup"
+                      installationDate={trainerData?.installationDate}
+                      isCompleted={!!(trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA')}
+                    />
+
                     {/* CTA Section - Most Prominent */}
                     <div className="space-y-3">
                       {(trainerData?.videoProofLink || uploadedVideoUrl) && (
@@ -2085,13 +2117,6 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           </svg>
                           {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
                         </button>
-                      </div>
-
-                      {/* Important reminder - moved below Upload Video button */}
-                      <div className="bg-orange-50 border-l-4 border-orange-400 p-3">
-                        <p className="font-medium text-orange-900 mb-2">⚠️ Important</p>
-                        <p className="text-xs text-gray-700">Please send us the video before the installation date. If we don't receive it by then, we will still go ahead with the installation as planned.</p>
-                        <p className="text-xs text-gray-700 mt-2">However, if the equipment isn't ready on your side and we need to come back for a second installation once everything is set up, for an extra charge of RM200.</p>
                       </div>
                     </div>
 
@@ -2259,16 +2284,19 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   </div>
                   {(() => {
                     const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
+                    // If date is already set, allow them to change it (don't block for prerequisites)
+                    const hasExistingDate = !!trainerData?.installationDate
+                    const isButtonDisabled = cannotReschedule || (!canScheduleInstallation && !hasExistingDate)
                     return (
                       <button
-                        onClick={() => !cannotReschedule && handleBookingClick('installation', trainerData?.installationDate)}
-                        disabled={cannotReschedule}
+                        onClick={() => !isButtonDisabled && handleBookingClick('installation', trainerData?.installationDate)}
+                        disabled={isButtonDisabled}
                         className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                          cannotReschedule
+                          isButtonDisabled
                             ? 'bg-gray-400 cursor-not-allowed'
                             : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                         }`}
-                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
+                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
                       >
                         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -2280,6 +2308,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 </div>
                 {(() => {
                   const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
+                  const hasExistingDate = !!trainerData?.installationDate
+                  if (!canScheduleInstallation && !hasExistingDate) {
+                    return (
+                      <div className="mt-2 text-sm text-amber-600">
+                        Please submit your Store Setup Video before scheduling installation.
+                      </div>
+                    )
+                  }
                   return cannotReschedule ? (
                     <div className="mt-2 text-sm text-gray-600">
                       To reschedule, please contact your onboarding manager
@@ -2379,16 +2415,19 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   </div>
                   {(() => {
                     const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
+                    // If date is already set, allow them to change it (don't block for prerequisites)
+                    const hasExistingDate = !!trainerData?.trainingDate
+                    const isButtonDisabled = cannotReschedule || (!canScheduleTraining && !hasExistingDate)
                     return (
                       <button
-                        onClick={() => !cannotReschedule && handleBookingClick('training', trainerData?.trainingDate)}
-                        disabled={cannotReschedule}
+                        onClick={() => !isButtonDisabled && handleBookingClick('training', trainerData?.trainingDate)}
+                        disabled={isButtonDisabled}
                         className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                          cannotReschedule
+                          isButtonDisabled
                             ? 'bg-gray-400 cursor-not-allowed'
                             : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                         }`}
-                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : ''}
+                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
                       >
                         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -2400,6 +2439,21 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 </div>
                 {(() => {
                   const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
+                  const hasExistingDate = !!trainerData?.trainingDate
+                  if (!productListSubmitted && !hasExistingDate) {
+                    return (
+                      <div className="mt-2 text-sm text-amber-600">
+                        Please submit your {terminology.collectionName} before scheduling training.
+                      </div>
+                    )
+                  }
+                  if (!installationDateSet && !hasExistingDate) {
+                    return (
+                      <div className="mt-2 text-sm text-amber-600">
+                        Please schedule installation first before scheduling training.
+                      </div>
+                    )
+                  }
                   return cannotReschedule ? (
                     <div className="mt-2 text-sm text-gray-600">
                       To reschedule, please contact your onboarding manager

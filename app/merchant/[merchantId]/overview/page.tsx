@@ -7,6 +7,7 @@ import WhatsAppButton from '@/components/WhatsAppButton'
 import MerchantHeader from '@/components/MerchantHeader'
 import PageHeader from '@/components/PageHeader'
 import { usePageTracking } from '@/lib/useAnalytics'
+import { getStoreSetupVideoDueDate, getProductListDueDate } from '@/lib/date-utils'
 
 // Helper to format dates consistently
 const formatDate = (dateString: string | null | undefined) => {
@@ -28,6 +29,9 @@ interface ActionItem {
   label: string
   completed: boolean
   stageLink: string
+  dueDate?: string | null
+  disabled?: boolean
+  disabledReason?: string
 }
 
 // Important date interface
@@ -166,30 +170,53 @@ export default function OverviewPage() {
     // BackOffice activated
     const backOfficeActivated = !!trainer.subscriptionActivationDate
 
+    // Get training date (prefer POS, then BackOffice, then generic)
+    const trainingDateValue = trainer.posTrainingDate ||
+                              trainer.backOfficeTrainingDate ||
+                              trainer.trainingDate
+
+    // Calculate due dates
+    const storeSetupDueDate = trainer.installationDate
+      ? getStoreSetupVideoDueDate(trainer.installationDate)
+      : null
+    const productListDueDate = trainingDateValue
+      ? getProductListDueDate(trainingDateValue)
+      : null
+
+    // Determine disabled states for scheduling
+    const canScheduleInstallation = storeSetupCompleted
+    const canScheduleTraining = productSubmitted && installationDateSet
+
     return [
       {
         id: 'product-setup',
         label: productLabel,
         completed: productSubmitted,
-        stageLink: `/merchant/${merchantId}?stage=preparation&section=product-setup`
+        stageLink: `/merchant/${merchantId}?stage=preparation&section=product-setup`,
+        dueDate: productListDueDate
       },
       {
         id: 'store-setup',
         label: 'Submit store setup video',
         completed: storeSetupCompleted,
-        stageLink: `/merchant/${merchantId}?stage=preparation&section=store-setup`
+        stageLink: `/merchant/${merchantId}?stage=preparation&section=store-setup`,
+        dueDate: storeSetupDueDate
       },
       {
         id: 'installation-date',
         label: 'Set installation date',
         completed: installationDateSet,
-        stageLink: `/merchant/${merchantId}?stage=installation&section=installation`
+        stageLink: `/merchant/${merchantId}?stage=installation&section=installation`,
+        disabled: !canScheduleInstallation && !installationDateSet,
+        disabledReason: 'Submit store setup video first'
       },
       {
         id: 'training-date',
         label: 'Set training date',
         completed: trainingDateSet,
-        stageLink: `/merchant/${merchantId}?stage=training&section=training`
+        stageLink: `/merchant/${merchantId}?stage=training&section=training`,
+        disabled: !canScheduleTraining && !trainingDateSet,
+        disabledReason: !productSubmitted ? 'Submit product list first' : 'Set installation date first'
       },
       {
         id: 'backoffice-activation',
@@ -332,10 +359,10 @@ export default function OverviewPage() {
                       >
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
-                      {/* Tooltip */}
-                      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
+                      {/* Tooltip - positioned to right on mobile to avoid cutoff */}
+                      <div className="absolute right-0 sm:left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
                         Expected Go Live Date can only be changed by StoreHub Onboarding Manager
-                        <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                        <div className="absolute top-full right-4 sm:left-4 sm:right-auto -mt-1 border-4 border-transparent border-t-gray-900"></div>
                       </div>
                     </div>
                   </div>
@@ -501,40 +528,84 @@ export default function OverviewPage() {
               </div>
 
               <div className="space-y-3">
-                {actionItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={item.stageLink}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-[#e5e7eb] hover:border-[#ff630f] hover:bg-orange-50 transition-all duration-200 group"
-                  >
-                    {/* Checkbox */}
-                    <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                      item.completed
-                        ? 'bg-green-500 border-green-500'
-                        : 'border-gray-300 group-hover:border-[#ff630f]'
-                    }`}>
-                      {item.completed && (
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                {actionItems.map((item) => {
+                  const isDisabled = item.disabled && !item.completed
+
+                  if (isDisabled) {
+                    // Disabled item - not clickable
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-[#e5e7eb] bg-gray-50 opacity-60 cursor-not-allowed"
+                        title={item.disabledReason}
+                      >
+                        {/* Checkbox */}
+                        <div className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center border-gray-300">
+                        </div>
+
+                        {/* Label and Disabled Reason */}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm block text-gray-400">
+                            {item.label}
+                          </span>
+                          {item.disabledReason && (
+                            <span className="text-xs text-gray-400">
+                              {item.disabledReason}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Lock icon for disabled */}
+                        <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
-                      )}
-                    </div>
+                      </div>
+                    )
+                  }
 
-                    {/* Label */}
-                    <span className={`flex-1 text-sm ${
-                      item.completed
-                        ? 'text-gray-500 line-through'
-                        : 'text-[#0b0707] group-hover:text-[#ff630f]'
-                    }`}>
-                      {item.label}
-                    </span>
+                  // Normal clickable item
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.stageLink}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-[#e5e7eb] hover:border-[#ff630f] hover:bg-orange-50 transition-all duration-200 group"
+                    >
+                      {/* Checkbox */}
+                      <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        item.completed
+                          ? 'bg-green-500 border-green-500'
+                          : 'border-gray-300 group-hover:border-[#ff630f]'
+                      }`}>
+                        {item.completed && (
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
 
-                    {/* Arrow */}
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-[#ff630f] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                ))}
+                      {/* Label and Due Date */}
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-sm block ${
+                          item.completed
+                            ? 'text-gray-500 line-through'
+                            : 'text-[#0b0707] group-hover:text-[#ff630f]'
+                        }`}>
+                          {item.label}
+                        </span>
+                        {item.dueDate && !item.completed && (
+                          <span className="text-xs text-orange-600 font-medium">
+                            Due by {item.dueDate}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Arrow */}
+                      <svg className="w-5 h-5 text-gray-400 group-hover:text-[#ff630f] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  )
+                })}
               </div>
             </div>
 
