@@ -312,9 +312,9 @@ export default function OverviewPage() {
 
         {/* Expected Go Live Date - Highlighted at the top */}
         {trainerData?.success && trainer && (
-          <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-3 sm:p-4">
+          <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg py-1.5 px-3 sm:p-4">
             {/* Mobile Layout: Title-Value pairs */}
-            <div className="block sm:hidden space-y-2">
+            <div className="block sm:hidden space-y-0.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="text-orange-600">
@@ -455,18 +455,18 @@ export default function OverviewPage() {
         {trainerData?.success && trainer && (
           <Link
             href={`/merchant/${merchantId}?stage=${getCurrentStage(trainerData)}`}
-            className="mb-6 bg-white border border-[#e5e7eb] rounded-lg px-4 py-4 flex items-center justify-between hover:border-[#ff630f] hover:bg-orange-50 transition-all duration-200 cursor-pointer block"
+            className="mb-4 sm:mb-6 bg-white border border-[#e5e7eb] rounded-lg px-3 py-1.5 sm:px-4 sm:py-4 flex items-center justify-between hover:border-[#ff630f] hover:bg-orange-50 transition-all duration-200 cursor-pointer block"
           >
-            <div className="flex items-center gap-3">
-              {/* Progress/Steps icon */}
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#ff630f] text-white flex items-center justify-center">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Progress/Steps icon - smaller on mobile to match checklist circles */}
+              <div className="flex-shrink-0 w-6 h-6 sm:w-10 sm:h-10 rounded-full bg-[#ff630f] text-white flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
               </div>
-              <div>
-                <span className="text-sm text-[#6b6a6a]">Onboarding Stage</span>
-                <div className="text-lg font-semibold text-[#0b0707]">
+              <div className="leading-tight">
+                <span className="text-xs sm:text-sm text-[#6b6a6a]">Onboarding Stage</span>
+                <div className="text-sm sm:text-lg font-semibold text-[#0b0707] -mt-0.5 sm:mt-0">
                   {(() => {
                     const stage = getCurrentStage(trainerData)
                     const stageLabels: { [key: string]: string } = {
@@ -490,11 +490,11 @@ export default function OverviewPage() {
 
         {/* Main content */}
         {trainerData?.success && trainer && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Action Items Column */}
-            <div className="bg-white rounded-xl border border-[#e5e7eb] p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[#0b0707]">To do</h2>
+            <div className="bg-white rounded-xl border border-[#e5e7eb] p-3 sm:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h2 className="text-base sm:text-lg font-semibold text-[#0b0707]">To do</h2>
                 <span className="text-sm text-[#6b6a6a]">
                   {completedCount}/{actionItems.length} completed
                 </span>
@@ -539,26 +539,28 @@ export default function OverviewPage() {
             </div>
 
             {/* Important Dates Column */}
-            <div className="bg-white rounded-xl border border-[#e5e7eb] p-6">
-              <h2 className="text-lg font-semibold text-[#0b0707] mb-4">Important Dates</h2>
+            <div className="bg-white rounded-xl border border-[#e5e7eb] p-3 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold text-[#0b0707] mb-3 sm:mb-4">Important Dates</h2>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {importantDates.map((dateItem, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-4 p-3 rounded-lg bg-gray-50"
+                    className="flex items-center gap-3 p-2 sm:p-3 rounded-lg bg-gray-50"
                   >
-                    {/* Icon */}
-                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                    {/* Icon - smaller on mobile to match checklist circles */}
+                    <div className={`flex-shrink-0 w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${
                       dateItem.completed ? 'bg-green-500 text-white' :
                       dateItem.date ? 'bg-[#ff630f] text-white' : 'bg-gray-200 text-gray-400'
                     }`}>
                       {dateItem.completed ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       ) : (
-                        dateItem.icon
+                        <span className="[&>svg]:w-3.5 [&>svg]:h-3.5 sm:[&>svg]:w-5 sm:[&>svg]:h-5">
+                          {dateItem.icon}
+                        </span>
                       )}
                     </div>
 
