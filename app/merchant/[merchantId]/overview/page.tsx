@@ -465,7 +465,7 @@ export default function OverviewPage() {
                 </svg>
               </div>
               <div className="leading-tight">
-                <span className="text-xs sm:text-sm text-[#6b6a6a]">Onboarding Stage</span>
+                <span className="text-xs sm:text-sm text-[#6b6a6a]">Onboarding Progress</span>
                 <div className="text-sm sm:text-lg font-semibold text-[#0b0707] -mt-0.5 sm:mt-0">
                   {(() => {
                     const stage = getCurrentStage(trainerData)

@@ -28,8 +28,8 @@ export default function PageHeader({
       <div className="mb-6">
         {/* Mobile Layout: Title and timestamp stacked */}
         <div className="block sm:hidden">
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-[#0b0707]">
+          <div className="flex items-center gap-2 mb-1 min-w-0">
+            <h1 className="text-2xl font-bold text-[#0b0707] truncate flex-1 min-w-0">
               {merchantName}
             </h1>
             {isInternalUser && (
@@ -100,7 +100,7 @@ export default function PageHeader({
                 : 'border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]'
             }`}
           >
-            Onboarding Progress
+            Progress
           </Link>
           <Link
             href={`/merchant/${merchantId}/details`}
@@ -110,7 +110,7 @@ export default function PageHeader({
                 : 'border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]'
             }`}
           >
-            Merchant Details
+            Details
           </Link>
         </nav>
       </div>

@@ -38,17 +38,17 @@ export default function MerchantHeader({
   }
 
   return (
-    <div className="py-3">
+    <div className="py-1.5 sm:py-3">
       <div className="flex justify-between items-center">
         {/* Left side - Logo and Portal Name */}
-        {/* Mobile: Logo and text stacked */}
-        <div className="flex md:hidden flex-col items-start gap-1">
+        {/* Mobile: Logo and text in single line, smaller */}
+        <div className="flex md:hidden items-center gap-2">
           <img
             src="/SH_logo.avif"
             alt="StoreHub"
-            className="h-5 w-auto"
+            className="h-3.5 w-auto"
           />
-          <span className="text-sm text-[#6b6a6a]">Onboarding Portal</span>
+          <span className="text-xs text-[#6b6a6a]">Onboarding Portal</span>
         </div>
 
         {/* Desktop: Logo and text side by side */}

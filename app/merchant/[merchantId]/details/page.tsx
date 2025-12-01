@@ -363,39 +363,9 @@ export default function MerchantDetailsPage() {
               <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
                 {(() => {
                   const trainer = trainerData.onboardingTrainerData.trainers[0];
-                  // Determine if this is remote training based on onboardingServicesBought
-                  const isRemoteTraining = trainer.onboardingServicesBought?.toLowerCase().includes('remote');
 
                   return (
                     <>
-                      {/* Training Type Badge */}
-                      {trainer.onboardingServicesBought && (
-                        <div className="mb-4">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                            isRemoteTraining
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {isRemoteTraining ? (
-                              <>
-                                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                                Remote Training
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                Onsite Training
-                              </>
-                            )}
-                          </span>
-                        </div>
-                      )}
-
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
                       <div>
                         <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Onboarding Service</div>
