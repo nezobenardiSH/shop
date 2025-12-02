@@ -133,6 +133,25 @@ export async function GET(request: NextRequest) {
       orderBy: { timestamp: 'desc' }
     })
 
+    // Query for product setup (menu submission) scheduling data
+    const productSetupSchedulingData = await prisma.pageView.findMany({
+      where: {
+        OR: merchantIds.flatMap((id: string) => {
+          const baseId = id.substring(0, 15)
+          return [
+            { merchantId: baseId, action: 'menu_submitted' },
+            { merchantId: { startsWith: baseId }, action: 'menu_submitted' }
+          ]
+        })
+      },
+      select: {
+        merchantId: true,
+        timestamp: true,
+        isInternalUser: true
+      },
+      orderBy: { timestamp: 'desc' }
+    })
+
     // Calculate analytics metrics per merchant
     const analyticsMap = new Map<string, { uniqueSessions: number, avgPages: number, pageBreakdown: string }>()
 
@@ -214,6 +233,7 @@ export async function GET(request: NextRequest) {
     // Create maps for first scheduling event (oldest) per merchant
     const trainingSchedulingMap = new Map<string, { timestamp: Date, actor: string }>()
     const installationSchedulingMap = new Map<string, { timestamp: Date, actor: string }>()
+    const productSetupSchedulingMap = new Map<string, { timestamp: Date, actor: string }>()
 
     // Group by merchant and get the FIRST (oldest) event
     trainingSchedulingData.reverse().forEach(event => {
@@ -242,12 +262,26 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    productSetupSchedulingData.reverse().forEach(event => {
+      if (!event.merchantId) return
+      const baseId = event.merchantId.substring(0, 15)
+      // Find the matching full merchant ID from our list
+      const fullMerchantId = merchantIds.find(id => id.startsWith(baseId))
+      if (fullMerchantId && !productSetupSchedulingMap.has(fullMerchantId)) {
+        productSetupSchedulingMap.set(fullMerchantId, {
+          timestamp: event.timestamp,
+          actor: event.isInternalUser ? 'Internal Team' : 'Merchant'
+        })
+      }
+    })
+
     // Merge the data
     const merchants = merchantIds.map((trainerId: string) => {
       const trainer: any = trainerMap.get(trainerId)
       const portal: any = portalMap.get(trainerId)
       const trainingScheduling = trainingSchedulingMap.get(trainerId)
       const installationScheduling = installationSchedulingMap.get(trainerId)
+      const productSetupScheduling = productSetupSchedulingMap.get(trainerId)
       const analytics = analyticsMap.get(trainerId)
 
       if (!trainer) return null
@@ -267,6 +301,8 @@ export async function GET(request: NextRequest) {
         trainingScheduledActor: trainingScheduling?.actor || '',
         installationScheduledTimestamp: installationScheduling?.timestamp || null,
         installationScheduledActor: installationScheduling?.actor || '',
+        productSetupTimestamp: productSetupScheduling?.timestamp || null,
+        productSetupActor: productSetupScheduling?.actor || '',
         uniqueSessions: analytics?.uniqueSessions || 0,
         avgPagesPerSession: analytics?.avgPages || 0,
         pageBreakdown: analytics?.pageBreakdown || ''

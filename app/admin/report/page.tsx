@@ -18,6 +18,8 @@ interface MerchantReport {
   trainingScheduledActor: string
   installationScheduledTimestamp: string
   installationScheduledActor: string
+  productSetupTimestamp: string
+  productSetupActor: string
   uniqueSessions: number
   avgPagesPerSession: number
   pageBreakdown: string
@@ -225,6 +227,12 @@ export default function ReportPage() {
                     Installation Scheduled Actor
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product Setup Timestamp
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product Setup Actor
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Unique Sessions by Merchant
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -296,6 +304,12 @@ export default function ReportPage() {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {merchant.installationScheduledActor || '-'}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDateTime(merchant.productSetupTimestamp)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {merchant.productSetupActor || '-'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {merchant.uniqueSessions}

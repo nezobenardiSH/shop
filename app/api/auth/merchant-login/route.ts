@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { validatePIN, validatePINWithUser, generateToken, checkRateLimit, recordLoginAttempt } from '@/lib/auth-utils'
-import { trackLogin, generateSessionId, getClientInfo } from '@/lib/analytics'
+import { trackLogin, generateSessionId, getClientInfo, isSessionExpired } from '@/lib/analytics'
 import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
@@ -106,7 +106,12 @@ export async function POST(request: NextRequest) {
       const updatedRateLimit = checkRateLimit(merchantId)
 
       // Track failed login
-      const sessionId = generateSessionId(request)
+      const cookieStore = await cookies()
+      const existingSessionId = cookieStore.get('analytics-session-id')?.value
+      const lastActivity = cookieStore.get('analytics-last-activity')?.value
+      const sessionId = (existingSessionId && !isSessionExpired(lastActivity))
+        ? existingSessionId
+        : generateSessionId(request)
       const { userAgent, ipAddress } = getClientInfo(request)
       trackLogin({
         merchantId,
@@ -138,7 +143,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Track successful login
-    const sessionId = generateSessionId(request)
+    const successCookieStore = await cookies()
+    const successExistingSessionId = successCookieStore.get('analytics-session-id')?.value
+    const successLastActivity = successCookieStore.get('analytics-last-activity')?.value
+    const sessionId = (successExistingSessionId && !isSessionExpired(successLastActivity))
+      ? successExistingSessionId
+      : generateSessionId(request)
     const { userAgent, ipAddress } = getClientInfo(request)
     trackLogin({
       merchantId,
@@ -169,20 +179,31 @@ export async function POST(request: NextRequest) {
     })
     
     // Set httpOnly cookie
-    const cookieStore = await cookies()
-    
+    const loginCookieStore = await cookies()
+
     // First, explicitly delete any existing auth-token to ensure clean state
-    cookieStore.delete('auth-token')
-    
+    loginCookieStore.delete('auth-token')
+
     // Then set the new token
-    cookieStore.set('auth-token', token, {
+    loginCookieStore.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60, // 24 hours in seconds
       path: '/'
     })
-    
+
+    // Set analytics session cookies
+    const analyticsCookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: '/'
+    }
+    loginCookieStore.set('analytics-session-id', sessionId, analyticsCookieOptions)
+    loginCookieStore.set('analytics-last-activity', Date.now().toString(), analyticsCookieOptions)
+
     return NextResponse.json({
       success: true,
       merchantName: trainer.Name

@@ -4,19 +4,48 @@ import crypto from 'crypto'
 
 const prisma = new PrismaClient()
 
+// Session timeout in milliseconds (30 minutes)
+export const SESSION_TIMEOUT_MS = 30 * 60 * 1000
+
+/**
+ * Generate a new session ID
+ */
+export function createNewSessionId(): string {
+  return crypto.randomBytes(16).toString('hex')
+}
+
+/**
+ * Check if session has expired based on last activity timestamp
+ */
+export function isSessionExpired(lastActivityTimestamp: string | undefined): boolean {
+  if (!lastActivityTimestamp) {
+    return true
+  }
+
+  const lastActivity = parseInt(lastActivityTimestamp, 10)
+  if (isNaN(lastActivity)) {
+    return true
+  }
+
+  const now = Date.now()
+  return (now - lastActivity) > SESSION_TIMEOUT_MS
+}
+
 /**
  * Generate or retrieve session ID from cookies
- * Session lasts 24 hours
+ * Session expires after 30 minutes of inactivity
  */
 export function generateSessionId(request: NextRequest): string {
   const existingSessionId = request.cookies.get('analytics-session-id')?.value
-  
-  if (existingSessionId) {
+  const lastActivity = request.cookies.get('analytics-last-activity')?.value
+
+  // If we have an existing session and it hasn't expired, reuse it
+  if (existingSessionId && !isSessionExpired(lastActivity)) {
     return existingSessionId
   }
-  
-  // Generate new session ID
-  return crypto.randomBytes(16).toString('hex')
+
+  // Generate new session ID (either no session exists or it expired)
+  return createNewSessionId()
 }
 
 /**

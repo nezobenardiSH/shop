@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { trackPageView, generateSessionId, getClientInfo } from '@/lib/analytics'
+import { trackPageView, generateSessionId, getClientInfo, isSessionExpired } from '@/lib/analytics'
 import { verifyToken } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
 
@@ -11,12 +11,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { merchantId, merchantName, page, action, metadata } = body
-    
-    // Get or create session ID
+
+    // Get or create session ID with inactivity timeout check
     const cookieStore = await cookies()
-    let sessionId = cookieStore.get('analytics-session-id')?.value
-    
-    if (!sessionId) {
+    const existingSessionId = cookieStore.get('analytics-session-id')?.value
+    const lastActivity = cookieStore.get('analytics-last-activity')?.value
+
+    // Check if session has expired due to inactivity (30 min timeout)
+    let sessionId: string
+    if (existingSessionId && !isSessionExpired(lastActivity)) {
+      sessionId = existingSessionId
+    } else {
       sessionId = generateSessionId(request)
     }
     
@@ -51,15 +56,18 @@ export async function POST(request: NextRequest) {
       metadata
     })
     
-    // Set session cookie (24 hour expiry)
+    // Set session cookie and update last activity timestamp
     const response = NextResponse.json({ success: true })
-    response.cookies.set('analytics-session-id', sessionId, {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       maxAge: 60 * 60 * 24 // 24 hours
-    })
-    
+    }
+
+    response.cookies.set('analytics-session-id', sessionId, cookieOptions)
+    response.cookies.set('analytics-last-activity', Date.now().toString(), cookieOptions)
+
     return response
     
   } catch (error) {

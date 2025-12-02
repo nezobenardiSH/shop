@@ -4,7 +4,7 @@ import { getSlotAvailability, assignTrainer, getTrainerDetails } from '@/lib/tra
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { createSalesforceEvent, updateSalesforceEvent } from '@/lib/salesforce-events'
 import { sendBookingNotification, sendManagerBookingNotification } from '@/lib/lark-notifications'
-import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
+import { trackEvent, generateSessionId, getClientInfo, isSessionExpired } from '@/lib/analytics'
 import { verifyToken } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
 import trainersConfig from '@/config/trainers.json'
@@ -1122,7 +1122,11 @@ Phone: ${merchantPICPhone || merchantPhone || 'N/A'}
     // Track the booking event
     try {
       const cookieStore = await cookies()
-      const sessionId = cookieStore.get('analytics-session-id')?.value || generateSessionId(request)
+      const existingSessionId = cookieStore.get('analytics-session-id')?.value
+      const lastActivity = cookieStore.get('analytics-last-activity')?.value
+      const sessionId = (existingSessionId && !isSessionExpired(lastActivity))
+        ? existingSessionId
+        : generateSessionId(request)
       const { userAgent, ipAddress, deviceType } = getClientInfo(request)
       
       // Get user info from auth token

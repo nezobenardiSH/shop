@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { verifyToken } from '@/lib/auth-utils'
-import { trackEvent, generateSessionId, getClientInfo } from '@/lib/analytics'
+import { trackEvent, generateSessionId, getClientInfo, isSessionExpired } from '@/lib/analytics'
 import { sendStoreVideoNotification } from '@/lib/lark-notifications'
 import { prisma } from '@/lib/prisma'
 import {
@@ -207,7 +207,11 @@ Video Link: ${downloadUrl}
     // Track analytics event for video upload
     try {
       const cookieStore = await cookies()
-      const sessionId = cookieStore.get('analytics-session-id')?.value || generateSessionId(request)
+      const existingSessionId = cookieStore.get('analytics-session-id')?.value
+      const lastActivity = cookieStore.get('analytics-last-activity')?.value
+      const sessionId = (existingSessionId && !isSessionExpired(lastActivity))
+        ? existingSessionId
+        : generateSessionId(request)
       const { userAgent, ipAddress, deviceType } = getClientInfo(request)
 
       // Get user info from auth token to track who uploaded
