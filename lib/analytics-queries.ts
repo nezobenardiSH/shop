@@ -1042,15 +1042,15 @@ export async function getStageProgression(
       status: status,
       events: events,
       latestTimestamp: events[0]?.timestamp || null,
-      latestActor: events[0]?.actor || 'merchant',
+      latestActor: events[0]?.actor || 'unknown',
       // Deprecated fields for backward compatibility
       timestamp: events[0]?.timestamp || null,
-      actor: events[0]?.actor || 'merchant'
+      actor: events[0]?.actor || 'unknown'
     })
     console.log('[Stage Progression] Added Product Setup to progression:', {
       eventCount: events.length,
       latestTimestamp: events[0]?.timestamp,
-      latestActor: events[0]?.actor || 'merchant (default)'
+      latestActor: events[0]?.actor || 'unknown (default)'
     })
   }
 

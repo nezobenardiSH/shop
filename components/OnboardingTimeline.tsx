@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { detectServiceType, getServiceTypeMessage } from '@/lib/service-type-detector'
 import ImportantReminderBox from '@/components/ImportantReminderBox'
+import { useEventTracking } from '@/lib/useAnalytics'
 
 interface TimelineStage {
   id: string
@@ -144,9 +145,23 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
   const params = useParams()
   const merchantId = params.merchantId as string
   const [stages, setStages] = useState<TimelineStage[]>([])
+  const { trackEvent } = useEventTracking()
 
   // Get industry-specific terminology
   const terminology = getIndustryTerminology(trainerData?.subIndustry)
+
+  // Track when user clicks the product setup form link
+  const handleProductSetupClick = () => {
+    if (merchantId && trainerData?.trainerName) {
+      trackEvent(
+        merchantId,
+        trainerData.trainerName,
+        'product-setup',
+        'form_link_clicked',
+        { formLink: trainerData.menuCollectionFormLink }
+      )
+    }
+  }
 
   // Handle stage click - update URL and scroll to section
   const handleStageClick = (stageId: string) => {
@@ -848,6 +863,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">{terminology.collectionFormLabel}</div>
                     {trainerData?.menuCollectionFormLink ? (
                       <a href={trainerData.menuCollectionFormLink} target="_blank" rel="noopener noreferrer"
+                         onClick={handleProductSetupClick}
                          className="inline-flex items-center px-3 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
                         Submit Form
                       </a>
@@ -1953,6 +1969,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           href={trainerData.menuCollectionFormLink}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={handleProductSetupClick}
                           className="inline-flex items-center px-4 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95"
                         >
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
