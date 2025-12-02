@@ -1031,8 +1031,8 @@ export async function getStageProgression(
     if (events.length === 0 && menuSubmissionTimestamp) {
       events.push({
         timestamp: new Date(menuSubmissionTimestamp),
-        actor: 'merchant',  // Menu submissions are always done by merchants via external form
-        changeType: 'Submitted by merchant',
+        actor: 'unknown',  // Submission came from external form (not tracked in portal)
+        changeType: 'Submitted via external form',
         metadata: {}
       })
     }

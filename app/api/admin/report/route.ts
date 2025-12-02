@@ -294,7 +294,7 @@ export async function GET(request: NextRequest) {
       // Fallback to Salesforce Menu_Collection_Submission_Timestamp__c if no analytics event
       if (!productSetupTimestamp && trainer.Menu_Collection_Submission_Timestamp__c) {
         productSetupTimestamp = new Date(trainer.Menu_Collection_Submission_Timestamp__c)
-        productSetupActor = 'Merchant' // Menu submissions via external form are done by merchants
+        productSetupActor = 'External Form' // Submission came from outside the portal (not tracked)
       }
 
       return {
