@@ -77,7 +77,8 @@ export async function GET(request: NextRequest) {
         Onboarding_Start_Date__c,
         Planned_Go_Live_Date__c,
         Onboarding_Services_Bought__c,
-        First_Call_Timestamp__c
+        First_Call_Timestamp__c,
+        Menu_Collection_Submission_Timestamp__c
       FROM Onboarding_Trainer__c
       WHERE Id IN ('${merchantIds.join("','")}')
       ORDER BY Name ASC
@@ -286,6 +287,16 @@ export async function GET(request: NextRequest) {
 
       if (!trainer) return null
 
+      // For product setup, use analytics event if available, otherwise fallback to Salesforce timestamp
+      let productSetupTimestamp = productSetupScheduling?.timestamp || null
+      let productSetupActor = productSetupScheduling?.actor || ''
+
+      // Fallback to Salesforce Menu_Collection_Submission_Timestamp__c if no analytics event
+      if (!productSetupTimestamp && trainer.Menu_Collection_Submission_Timestamp__c) {
+        productSetupTimestamp = new Date(trainer.Menu_Collection_Submission_Timestamp__c)
+        productSetupActor = 'Merchant' // Menu submissions via external form are done by merchants
+      }
+
       return {
         id: trainer.Id,
         name: trainer.Name || 'Unknown',
@@ -301,8 +312,8 @@ export async function GET(request: NextRequest) {
         trainingScheduledActor: trainingScheduling?.actor || '',
         installationScheduledTimestamp: installationScheduling?.timestamp || null,
         installationScheduledActor: installationScheduling?.actor || '',
-        productSetupTimestamp: productSetupScheduling?.timestamp || null,
-        productSetupActor: productSetupScheduling?.actor || '',
+        productSetupTimestamp: productSetupTimestamp,
+        productSetupActor: productSetupActor,
         uniqueSessions: analytics?.uniqueSessions || 0,
         avgPagesPerSession: analytics?.avgPages || 0,
         pageBreakdown: analytics?.pageBreakdown || ''
