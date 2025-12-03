@@ -24,6 +24,7 @@ interface OnboardingTimelineProps {
   onOpenBookingModal?: (bookingInfo: any) => void
   onStageChange?: (stage: string) => void
   expandSection?: string // Auto-expand a specific section (e.g., 'product-setup', 'store-setup')
+  isInternalUser?: boolean // Internal users have relaxed scheduling rules
 }
 
 // Helper function to format date with time
@@ -140,7 +141,7 @@ const getIndustryTerminology = (subIndustry: string | null | undefined) => {
   }
 }
 
-export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange, expandSection }: OnboardingTimelineProps) {
+export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange, expandSection, isInternalUser = false }: OnboardingTimelineProps) {
   const router = useRouter()
   const params = useParams()
   const merchantId = params.merchantId as string
@@ -229,10 +230,11 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
     : false
 
   // Scheduling prerequisites
-  const canScheduleInstallation = storeSetupCompleted
+  // Internal users can schedule anytime without prerequisites
+  const canScheduleInstallation = isInternalUser || storeSetupCompleted
   const productListSubmitted = !!trainerData?.menuCollectionSubmissionTimestamp
   const installationDateSet = !!trainerData?.installationDate
-  const canScheduleTraining = productListSubmitted && installationDateSet
+  const canScheduleTraining = isInternalUser || (productListSubmitted && installationDateSet)
 
   // Initialize selectedStage based on URL parameter or welcome call completion status
   const initialStage = currentStageFromUrl ||
@@ -1071,7 +1073,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     : 'Not Scheduled'}
                 </div>
                 {(() => {
-                  const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
+                  // Internal users can reschedule anytime, no buffer required
+                  const cannotReschedule = !isInternalUser && trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
                   // If date is already set, allow them to change it (don't block for prerequisites)
                   const hasExistingDate = !!trainerData?.installationDate
                   const isButtonDisabled = cannotReschedule || (!canScheduleInstallation && !hasExistingDate)
@@ -1184,7 +1187,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     : 'Not Scheduled'}
                 </div>
                 {(() => {
-                  const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
+                  // Internal users can reschedule anytime, no buffer required
+                  const cannotReschedule = !isInternalUser && trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
                   // If date is already set, allow them to change it (don't block for prerequisites)
                   const hasExistingDate = !!trainerData?.trainingDate
                   const isButtonDisabled = cannotReschedule || (!canScheduleTraining && !hasExistingDate)
@@ -1202,12 +1206,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       >
                         {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
                       </button>
-                      {!productListSubmitted && !hasExistingDate && (
+                      {!productListSubmitted && !hasExistingDate && !isInternalUser && (
                         <div className="mt-2 text-sm text-amber-600">
                           Please submit your {terminology.collectionName} before scheduling training.
                         </div>
                       )}
-                      {productListSubmitted && !installationDateSet && !hasExistingDate && (
+                      {productListSubmitted && !installationDateSet && !hasExistingDate && !isInternalUser && (
                         <div className="mt-2 text-sm text-amber-600">
                           Please schedule installation first before scheduling training.
                         </div>
@@ -2300,7 +2304,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       : 'Not Scheduled'}
                   </div>
                   {(() => {
-                    const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
+                    // Internal users can reschedule anytime, no buffer required
+                    const cannotReschedule = !isInternalUser && trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
                     // If date is already set, allow them to change it (don't block for prerequisites)
                     const hasExistingDate = !!trainerData?.installationDate
                     const isButtonDisabled = cannotReschedule || (!canScheduleInstallation && !hasExistingDate)
@@ -2324,7 +2329,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   })()}
                 </div>
                 {(() => {
-                  const cannotReschedule = trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
+                  // Internal users can reschedule anytime, no buffer required
+                  const cannotReschedule = !isInternalUser && trainerData?.installationDate && isWithinNextDay(trainerData.installationDate)
                   const hasExistingDate = !!trainerData?.installationDate
                   if (!canScheduleInstallation && !hasExistingDate) {
                     return (
@@ -2431,7 +2437,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       : 'Not Scheduled'}
                   </div>
                   {(() => {
-                    const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
+                    // Internal users can reschedule anytime, no buffer required
+                    const cannotReschedule = !isInternalUser && trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
                     // If date is already set, allow them to change it (don't block for prerequisites)
                     const hasExistingDate = !!trainerData?.trainingDate
                     const isButtonDisabled = cannotReschedule || (!canScheduleTraining && !hasExistingDate)
@@ -2455,16 +2462,18 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   })()}
                 </div>
                 {(() => {
-                  const cannotReschedule = trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
+                  // Internal users can reschedule anytime, no buffer required
+                  const cannotReschedule = !isInternalUser && trainerData?.trainingDate && isWithinNextDay(trainerData.trainingDate)
                   const hasExistingDate = !!trainerData?.trainingDate
-                  if (!productListSubmitted && !hasExistingDate) {
+                  // Internal users bypass all prerequisites
+                  if (!isInternalUser && !productListSubmitted && !hasExistingDate) {
                     return (
                       <div className="mt-2 text-sm text-amber-600">
                         Please submit your {terminology.collectionName} before scheduling training.
                       </div>
                     )
                   }
-                  if (!installationDateSet && !hasExistingDate) {
+                  if (!isInternalUser && !installationDateSet && !hasExistingDate) {
                     return (
                       <div className="mt-2 text-sm text-amber-600">
                         Please schedule installation first before scheduling training.

@@ -1108,6 +1108,7 @@ function TrainerPortalContent() {
                 onOpenBookingModal={handleOpenBookingModal}
                 onStageChange={(stage) => setCurrentStage(stage)}
                 expandSection={searchParams.get('section') || undefined}
+                isInternalUser={isInternalUser}
               />
             </div>
           )}
