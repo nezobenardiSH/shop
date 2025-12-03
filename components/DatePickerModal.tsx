@@ -413,7 +413,8 @@ export default function DatePickerModal({
 
         // For training bookings, start from day after installation date if set
         // This ensures we fetch availability for the valid date range
-        if (bookingType === 'training' && installationDate) {
+        // Internal users bypass these date restrictions
+        if (bookingType === 'training' && installationDate && !isInternalUser) {
           const instDate = new Date(installationDate)
           instDate.setDate(instDate.getDate() + 1) // Day after installation
           const startDateStr = `${instDate.getFullYear()}-${String(instDate.getMonth() + 1).padStart(2, '0')}-${String(instDate.getDate()).padStart(2, '0')}`
@@ -425,6 +426,8 @@ export default function DatePickerModal({
             params.append('endDate', goLiveDate)
             console.log('📅 Training availability ending at go-live:', goLiveDate)
           }
+        } else if (bookingType === 'training' && isInternalUser) {
+          console.log('📅 Internal user - fetching training availability without date restrictions')
         }
 
         if (params.toString()) {
@@ -729,18 +732,15 @@ export default function DatePickerModal({
     // ALSO: Training cannot be booked if installation is not scheduled yet
     // Internal users can reschedule to tomorrow (no minimum buffer)
     if (bookingType === 'training') {
-      // Check if installation is booked (required for training)
-      if (!installationDate) {
+      // Check if installation is booked (required for training) - internal users bypass this
+      if (!installationDate && !isInternalUser) {
         console.log('  -> ❌ BLOCKED: Training cannot be booked without installation date')
         return false // Block all dates if installation not booked
       }
 
-      if (currentBooking?.eventId && isInternalUser) {
-        // Internal users rescheduling can book from tomorrow
-        const tomorrow = new Date(minDate)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        minDate = tomorrow
-        console.log('  -> Internal user rescheduling training - can book from tomorrow:', minDate.toDateString())
+      if (isInternalUser) {
+        // Internal users can book from today (no minimum buffer)
+        console.log('  -> Internal user training - can book from today:', minDate.toDateString())
       } else {
         const dayAfterTomorrow = new Date(minDate)
         dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
@@ -752,41 +752,36 @@ export default function DatePickerModal({
     // For installation bookings with external vendor, require 2 days advance booking
     // For internal installers, initial booking requires 2 days advance
     // For rescheduling, require 1 business day buffer (weekdays only) - UNLESS internal user
+    // Internal users can book/reschedule from tomorrow
     if (bookingType === 'installation') {
-      if (currentBooking?.eventId) {
-        // This is a rescheduling
-        if (isInternalUser) {
-          // Internal users have no minimum rescheduling buffer - can reschedule to tomorrow
-          console.log('🔄 RESCHEDULING DETECTED - Internal user, no buffer required')
-          const tomorrow = new Date(minDate)
-          tomorrow.setDate(tomorrow.getDate() + 1)
-          minDate = tomorrow
-          console.log('  -> Internal user can reschedule from tomorrow:', minDate.toDateString())
-        } else {
-          // Regular users require 1 business day buffer (weekdays only)
-          // The buffer day itself cannot be selected, so earliest selectable is the day after the buffer
-          console.log('🔄 RESCHEDULING DETECTED - Applying 1 business day buffer')
-          console.log('   Current minDate:', minDate.toDateString())
+      if (isInternalUser) {
+        // Internal users can book/reschedule from today (no minimum buffer)
+        console.log('🔄 Internal user installation - can book from today:', minDate.toDateString())
+      } else if (currentBooking?.eventId) {
+        // This is a rescheduling for regular users
+        // Regular users require 1 business day buffer (weekdays only)
+        // The buffer day itself cannot be selected, so earliest selectable is the day after the buffer
+        console.log('🔄 RESCHEDULING DETECTED - Applying 1 business day buffer')
+        console.log('   Current minDate:', minDate.toDateString())
 
-          let businessDaysAdded = 0
-          let bufferDate = new Date(minDate)
+        let businessDaysAdded = 0
+        let bufferDate = new Date(minDate)
 
-          // Add days until we have 1 business day buffer
-          while (businessDaysAdded < 1) {
-            bufferDate.setDate(bufferDate.getDate() + 1)
-            const dayOfWeek = bufferDate.getDay()
-            console.log('   Checking day:', bufferDate.toDateString(), 'Day of week:', dayOfWeek, 'Is weekday:', dayOfWeek >= 1 && dayOfWeek <= 5)
-            // Count only weekdays (Monday=1 to Friday=5)
-            if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-              businessDaysAdded++
-            }
-          }
-
-          // Move to the day after the buffer day
+        // Add days until we have 1 business day buffer
+        while (businessDaysAdded < 1) {
           bufferDate.setDate(bufferDate.getDate() + 1)
-          minDate = bufferDate
-          console.log('  -> Rescheduling requires 1 business day buffer. Buffer day:', new Date(bufferDate.getTime() - 24*60*60*1000).toDateString(), 'Earliest selectable date:', minDate.toDateString())
+          const dayOfWeek = bufferDate.getDay()
+          console.log('   Checking day:', bufferDate.toDateString(), 'Day of week:', dayOfWeek, 'Is weekday:', dayOfWeek >= 1 && dayOfWeek <= 5)
+          // Count only weekdays (Monday=1 to Friday=5)
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            businessDaysAdded++
+          }
         }
+
+        // Move to the day after the buffer day
+        bufferDate.setDate(bufferDate.getDate() + 1)
+        minDate = bufferDate
+        console.log('  -> Rescheduling requires 1 business day buffer. Buffer day:', new Date(bufferDate.getTime() - 24*60*60*1000).toDateString(), 'Earliest selectable date:', minDate.toDateString())
       } else if (isExternalVendor) {
         const dayAfterTomorrow = new Date(minDate)
         dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2)
@@ -801,7 +796,8 @@ export default function DatePickerModal({
     }
 
     // For training bookings, installation date is the lower bound
-    if (bookingType === 'training' && installationDate) {
+    // Internal users bypass this constraint
+    if (bookingType === 'training' && installationDate && !isInternalUser) {
       // Parse installation date in Singapore timezone
       const instDateParts = installationDate.split('-')
       const instDate = createSingaporeDate(
@@ -819,9 +815,12 @@ export default function DatePickerModal({
       }
 
       console.log('  -> Training must be after installation date:', installationDate, 'Min date:', minDate.toDateString())
+    } else if (bookingType === 'training' && installationDate && isInternalUser) {
+      console.log('  -> ✅ Internal user - installation date lower bound constraint BYPASSED for training')
     }
     // For installation bookings, use dependent date (hardware fulfillment) if provided
-    else if (bookingType === 'installation' && dependentDate) {
+    // Internal users bypass this constraint
+    else if (bookingType === 'installation' && dependentDate && !isInternalUser) {
       // Use location-based calculation for installation date lower bound
       const calculatedLowerBound = calculateInstallationDateLowerBound(
         dependentDate,
@@ -865,6 +864,8 @@ export default function DatePickerModal({
 
         console.log('  -> Installation must be after hardware fulfillment (fallback):', dependentDate, 'Min date:', minDate.toDateString())
       }
+    } else if (bookingType === 'installation' && dependentDate && isInternalUser) {
+      console.log('  -> ✅ Internal user - hardware fulfillment lower bound constraint BYPASSED for installation')
     }
 
     // Maximum date is 14 days from the minimum eligible date
@@ -872,7 +873,8 @@ export default function DatePickerModal({
     maxDate.setDate(maxDate.getDate() + 14)
 
     // For installation bookings, training date is the upper bound
-    if (bookingType === 'installation') {
+    // Internal users bypass this constraint
+    if (bookingType === 'installation' && !isInternalUser) {
       console.log('  -> Checking training date constraint for installation:', {
         trainingDate: trainingDate,
         hasTrainingDate: !!trainingDate
@@ -907,12 +909,15 @@ export default function DatePickerModal({
       } else {
         console.log('  -> ⚠️ WARNING: No training date set for installation booking. Installation can be scheduled without upper bound constraint.')
       }
+    } else if (bookingType === 'installation' && isInternalUser) {
+      console.log('  -> ✅ Internal user - training date upper bound constraint BYPASSED for installation')
     }
 
     // For training bookings, check against go-live date if provided
-    if (bookingType === 'training') {
+    // Internal users bypass this constraint
+    if (bookingType === 'training' && !isInternalUser) {
       console.log('  -> Checking go-live constraint. goLiveDate value:', goLiveDate)
-      
+
       if (goLiveDate) {
         // Parse go-live date in Singapore timezone
         const goLiveParts = goLiveDate.split('-')
@@ -941,6 +946,8 @@ export default function DatePickerModal({
       } else {
         console.log('  -> No go-live date provided - no constraint applied')
       }
+    } else if (bookingType === 'training' && isInternalUser) {
+      console.log('  -> ✅ Internal user - go-live date constraint BYPASSED')
     }
 
     // Normalize the date for comparison (set to midnight)
@@ -1174,7 +1181,7 @@ export default function DatePickerModal({
                 )}
 
                 {/* Installation Scheduling Info */}
-                {bookingType === 'installation' && !isExternalVendor && (() => {
+                {bookingType === 'installation' && !isExternalVendor && !isInternalUser && (() => {
                   const regionType = getRegionType(merchantAddress)
                   const daysToAdd = getDaysToAddForRegion(regionType)
 
@@ -1198,8 +1205,11 @@ export default function DatePickerModal({
                     </>
                   )
                 })()}
+                {bookingType === 'installation' && !isExternalVendor && isInternalUser && (
+                  <li className="text-green-700">• Internal user: No date restrictions applied</li>
+                )}
 
-                {bookingType === 'training' && (
+                {bookingType === 'training' && !isInternalUser && (
                   <>
                     {installationDate && goLiveDate && (
                       <li>• Training must be scheduled after Installation date ({formatDate(installationDate)}) and on or before Go-Live date ({formatDate(goLiveDate)})</li>
@@ -1215,6 +1225,9 @@ export default function DatePickerModal({
                     )}
                   </>
                 )}
+                {bookingType === 'training' && isInternalUser && (
+                  <li className="text-green-700">• Internal user: No date restrictions applied</li>
+                )}
 
                 {(dependentDate || goLiveDate || installationDate || trainingDate) && (
                   <li>• You can select dates up to 14 days from the earliest eligible date</li>
@@ -1223,8 +1236,8 @@ export default function DatePickerModal({
             </div>
           ) : null}
           
-          {/* Show error when training is attempted without installation */}
-          {bookingType === 'training' && !installationDate && (
+          {/* Show error when training is attempted without installation - internal users bypass this */}
+          {bookingType === 'training' && !installationDate && !isInternalUser && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="text-base font-medium text-red-800">
                 ⚠️ Installation must be scheduled first
@@ -1287,7 +1300,7 @@ export default function DatePickerModal({
                 <Globe className="inline h-4 w-4 mr-1" />
                 Training Language
               </label>
-              <div className={`flex gap-3 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !installationDate)) ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className={`flex gap-3 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || (!installationDate && !isInternalUser))) ? 'opacity-50 pointer-events-none' : ''}`}>
                 {['Chinese', 'Bahasa Malaysia', 'English'].map((lang) => {
                   const isAvailable = availableLanguages.includes(lang)
                   const isDisabled = (serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !isAvailable
@@ -1402,7 +1415,7 @@ export default function DatePickerModal({
           {/* Calendar and Time Slots Section */}
           <div className="flex flex-col md:flex-row">
             {/* Calendar Section - Full width on mobile - Disabled when state is missing or service type not configured */}
-            <div className={`md:flex-1 p-4 md:p-6 md:border-r border-gray-200 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !installationDate)) ? 'opacity-30 pointer-events-none' : ''}`}>
+            <div className={`md:flex-1 p-4 md:p-6 md:border-r border-gray-200 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || (!installationDate && !isInternalUser))) ? 'opacity-30 pointer-events-none' : ''}`}>
             {/* Desktop: Traditional calendar grid */}
             <div className="hidden md:block">
               <div className="flex items-center justify-between mb-4">
@@ -1553,7 +1566,7 @@ export default function DatePickerModal({
           </div>
 
             {/* Time Slots Section - Full width on mobile, sidebar on desktop - Disabled when state is missing or service type not configured */}
-            <div className={`w-full md:w-96 bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !installationDate)) ? 'opacity-30 pointer-events-none' : ''}`}>
+            <div className={`w-full md:w-96 bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || (!installationDate && !isInternalUser))) ? 'opacity-30 pointer-events-none' : ''}`}>
               <div className="p-4 md:p-6">
             {loading || isFilteringSlots ? (
               <div className="flex justify-center items-center h-full">
@@ -1638,7 +1651,7 @@ export default function DatePickerModal({
           </button>
           <button
             onClick={handleBooking}
-            disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading' || bookingStatus === 'success' || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || !installationDate))}
+            disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading' || bookingStatus === 'success' || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || (!installationDate && !isInternalUser)))}
             className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed order-1 sm:order-2"
           >
             {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}
