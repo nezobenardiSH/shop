@@ -1,13 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState } from 'react'
+import { useParams } from 'next/navigation'
 import DatePickerModal from '@/components/DatePickerModal'
-import WhatsAppButton from '@/components/WhatsAppButton'
-import MerchantHeader from '@/components/MerchantHeader'
-import PageHeader from '@/components/PageHeader'
 import { usePageTracking } from '@/lib/useAnalytics'
+import { useMerchantContext } from '../layout'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -106,53 +103,13 @@ const getCurrentStage = (trainerData: any): string => {
 
 export default function MerchantDetailsPage() {
   const params = useParams()
-  const router = useRouter()
-  const merchantId = params.merchantId as string // This is now the Salesforce ID
+  const merchantId = params.merchantId as string
 
-  const [trainerData, setTrainerData] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
+  // Use shared context for merchant data
+  const { merchantData: trainerData, refreshData, isInternalUser } = useMerchantContext()
+
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
-  const [isInternalUser, setIsInternalUser] = useState(false)
-
-  const checkUserType = async () => {
-    try {
-      const response = await fetch('/api/auth/me')
-      const data = await response.json()
-      if (data.success && data.user) {
-        setIsInternalUser(data.user.isInternalUser || false)
-      }
-    } catch (error) {
-      console.error('Failed to check user type:', error)
-    }
-  }
-
-  const loadTrainerData = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch(`/api/salesforce/merchant/${merchantId}`)
-      const data = await response.json()
-      console.log('📦 Merchant data received:', data)
-      console.log('📦 Order NS Number:', data.orderNSOrderNumber)
-      console.log('📦 orderShippingAddress:', data.orderShippingAddress)
-      console.log('📦 Full data keys:', Object.keys(data))
-      setTrainerData(data)
-
-      // Update page title with merchant name
-      if (data.success && data.name) {
-        document.title = `${data.name} - Details - Onboarding Portal`
-      }
-    } catch (error) {
-      setTrainerData({ success: false, message: `Error: ${error}` })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    checkUserType()
-    loadTrainerData()
-  }, [merchantId])
 
   const handleOpenBookingModal = (trainer: any) => {
     // For future use: Determine which date to use based on bookingType
@@ -213,7 +170,7 @@ export default function MerchantDetailsPage() {
     console.log('Booking completed, refreshing trainer data...')
 
     // Refresh the trainer data to show the new training date
-    await loadTrainerData()
+    await refreshData()
 
     // Clear booking modal state
     setBookingModalOpen(false)
@@ -227,26 +184,7 @@ export default function MerchantDetailsPage() {
   usePageTracking(merchantId, merchantName !== 'Loading...' ? merchantName : undefined, 'details')
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] py-4">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="mb-4">
-          <MerchantHeader
-            onRefresh={loadTrainerData}
-            loading={loading}
-            merchantId={merchantId}
-          />
-        </div>
-
-        <PageHeader
-          merchantId={merchantId}
-          merchantName={merchantName}
-          lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
-          currentPage="details"
-          isInternalUser={isInternalUser}
-          currentOnboardingStage={getCurrentStage(trainerData)}
-        />
-        
-        <div>
+    <>
           {trainerData && !trainerData.success && (
             <div className="mt-6">
               <div className="p-4 rounded-lg border bg-red-50 border-red-200 text-red-800">
@@ -556,8 +494,6 @@ export default function MerchantDetailsPage() {
             )
           })() : null}
 
-        </div>
-
         {/* Booking Modal */}
         {bookingModalOpen && currentBookingInfo && (
           <DatePickerModal
@@ -579,10 +515,6 @@ export default function MerchantDetailsPage() {
             onBookingComplete={handleBookingComplete}
           />
         )}
-
-        {/* WhatsApp Floating Button */}
-        <WhatsAppButton />
-      </div>
-    </div>
+    </>
   )
 }

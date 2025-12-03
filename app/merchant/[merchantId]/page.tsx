@@ -5,10 +5,8 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import DatePickerModal from '@/components/DatePickerModal'
 import OnboardingTimeline from '@/components/OnboardingTimeline'
-import WhatsAppButton from '@/components/WhatsAppButton'
-import MerchantHeader from '@/components/MerchantHeader'
-import PageHeader from '@/components/PageHeader'
 import { usePageTracking } from '@/lib/useAnalytics'
+import { useMerchantContext } from './layout'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -109,8 +107,9 @@ function TrainerPortalContent() {
   const searchParams = useSearchParams()
   const merchantId = params.merchantId as string // This is now the Salesforce ID
 
-  const [trainerData, setTrainerData] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
+  // Use shared context for merchant data
+  const { merchantData: trainerData, loading, refreshData, isInternalUser } = useMerchantContext()
+
   const [editingTrainer, setEditingTrainer] = useState<any>(null)
   const [editData, setEditData] = useState<any>({})
   const [saving, setSaving] = useState(false)
@@ -122,66 +121,10 @@ function TrainerPortalContent() {
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
   const [hasProcessedUrlParam, setHasProcessedUrlParam] = useState(false)
-  const [isInternalUser, setIsInternalUser] = useState(false)
   const [currentStage, setCurrentStage] = useState<string>('welcome')
 
-  const checkUserType = async () => {
-    try {
-      const response = await fetch('/api/auth/me')
-      const data = await response.json()
-      if (data.success && data.user) {
-        setIsInternalUser(data.user.isInternalUser || false)
-      }
-    } catch (error) {
-      console.error('Failed to check user type:', error)
-    }
-  }
-
-  const loadTrainerData = async () => {
-    setLoading(true)
-    setSuccessMessage('')
-    try {
-      // Add timestamp to force fresh data
-      const timestamp = new Date().getTime()
-      const response = await fetch(`/api/salesforce/merchant/${merchantId}?t=${timestamp}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      })
-      const data = await response.json()
-
-      // Debug: Log training and installation dates from API response
-      console.log('📅 Dates from API response:', {
-        installationDate: data.onboardingTrainerData?.trainers?.[0]?.installationDate,
-        installationEventId: data.onboardingTrainerData?.trainers?.[0]?.installationEventId,
-        posTrainingDate: data.onboardingTrainerData?.trainers?.[0]?.posTrainingDate,
-        backOfficeTrainingDate: data.onboardingTrainerData?.trainers?.[0]?.backOfficeTrainingDate,
-        trainingDate: data.onboardingTrainerData?.trainers?.[0]?.trainingDate,
-        plannedGoLiveDate: data.onboardingTrainerData?.trainers?.[0]?.plannedGoLiveDate,
-        firstRevisedEGLD: data.onboardingTrainerData?.trainers?.[0]?.firstRevisedEGLD
-      })
-
-      // Debug: Log all keys in trainer object to see what's available
-      console.log('🔍 All trainer object keys:', Object.keys(data.onboardingTrainerData?.trainers?.[0] || {}))
-
-      setTrainerData(data)
-
-      // Update page title with merchant name
-      if (data.success && data.name) {
-        document.title = `${data.name} - Onboarding Portal`
-      }
-
-      // Set active tab to current stage if trainer data is loaded
-      if (data.success && data.onboardingTrainerData?.trainers?.[0]?.onboardingTrainerStage) {
-        setActiveTab(data.onboardingTrainerData.trainers[0].onboardingTrainerStage)
-      }
-    } catch (error) {
-      setTrainerData({ success: false, message: `Error: ${error}` })
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Alias for refreshData to maintain compatibility
+  const loadTrainerData = refreshData
 
   const loadAvailableStages = async () => {
     try {
@@ -239,8 +182,6 @@ function TrainerPortalContent() {
 
   useEffect(() => {
     if (merchantId) {
-      checkUserType()
-      loadTrainerData()
       loadAvailableStages()
     }
   }, [merchantId])
@@ -706,20 +647,10 @@ function TrainerPortalContent() {
         }
         setSuccessMessage(message)
         
-        // Update the data with new values
-        if (updateResult.updatedData) {
-          setTrainerData((prev: any) => ({
-            ...prev,
-            onboardingTrainerData: {
-              ...prev.onboardingTrainerData,
-              trainers: prev.onboardingTrainerData.trainers.map((trainer: any) =>
-                trainer.id === editingTrainer.id ? updateResult.updatedData : trainer
-              )
-            }
-          }))
-          setEditingTrainer(null)
-          setEditData({})
-        }
+        // Refresh data from context and clear editing state
+        await refreshData()
+        setEditingTrainer(null)
+        setEditData({})
       } else {
         alert(`Update failed: ${updateResult.error}`)
       }
@@ -770,167 +701,7 @@ function TrainerPortalContent() {
   )
 
   return (
-    <div className="min-h-screen bg-[#faf9f6] py-4">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="mb-4">
-          <MerchantHeader
-            onRefresh={loadTrainerData}
-            loading={loading}
-            merchantId={merchantId}
-          />
-        </div>
-
-        <PageHeader
-          merchantId={merchantId}
-          merchantName={merchantName}
-          lastModifiedDate={trainerData?.success ? trainerData?.onboardingTrainerData?.trainers?.[0]?.lastModifiedDate : undefined}
-          currentPage="progress"
-          isInternalUser={isInternalUser}
-          currentOnboardingStage={currentStage}
-        />
-        
-        {/* Expected Go Live Date - Highlighted at the top */}
-        {trainerData?.success && trainerData?.onboardingTrainerData?.trainers?.[0] && (
-          <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg py-1.5 px-3 sm:p-4">
-            {/* Mobile Layout: Title-Value pairs */}
-            <div className="block sm:hidden space-y-0.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="text-orange-600">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1">
-                    <span>Expected Go Live Date</span>
-                    <div className="relative group">
-                      <svg
-                        className="w-3.5 h-3.5 text-orange-400 cursor-help"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                      {/* Tooltip - positioned to right on mobile to avoid cutoff */}
-                      <div className="absolute right-0 sm:left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                        Expected Go Live Date can only be changed by StoreHub Onboarding Manager
-                        <div className="absolute top-full right-4 sm:left-4 sm:right-auto -mt-1 border-4 border-transparent border-t-gray-900"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-sm font-bold text-gray-900">
-                  {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate
-                    ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                      })
-                    : 'Not Set'}
-                </div>
-              </div>
-              {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate && (
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-600">Days until go-live</div>
-                  <div className={`text-lg font-bold ${(() => {
-                    const today = new Date();
-                    const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
-                    const diffTime = goLive.getTime() - today.getTime();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    const isLive = (trainerData.onboardingTrainerData.trainers[0].posQrDeliveryTnxCount ?? 0) > 30;
-
-                    // Green if Live, orange otherwise
-                    return (diffDays < 0 && isLive) ? 'text-green-600' : 'text-orange-600';
-                  })()}`}>
-                    {(() => {
-                      const today = new Date();
-                      const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
-                      const diffTime = goLive.getTime() - today.getTime();
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      const isLive = (trainerData.onboardingTrainerData.trainers[0].posQrDeliveryTnxCount ?? 0) > 30;
-
-                      if (diffDays > 0) return diffDays;
-                      // If days < 0 and merchant is Live, show "Live"
-                      if (isLive) return 'Live';
-                      // If days < 0 and merchant is NOT Live, show "Overdue"
-                      return 'Overdue';
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Desktop Layout: Original horizontal layout */}
-            <div className="hidden sm:flex sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-orange-600 flex-shrink-0">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1">
-                    <span>Expected Go Live Date</span>
-                    <div className="relative group">
-                      <svg
-                        className="w-3.5 h-3.5 text-orange-400 cursor-help"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                      {/* Tooltip */}
-                      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                        Expected Go Live Date can only be changed by StoreHub Onboarding Manager
-                        <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 truncate">
-                    {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate
-                      ? new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate).toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })
-                      : 'Not Set'}
-                  </div>
-                </div>
-              </div>
-              {trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate && (
-                <div className="text-right flex-shrink-0">
-                  <div className="text-sm text-gray-600">Days until go-live</div>
-                  <div className={`text-3xl font-bold ${(() => {
-                    const today = new Date();
-                    const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
-                    const diffTime = goLive.getTime() - today.getTime();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    const isLive = (trainerData.onboardingTrainerData.trainers[0].posQrDeliveryTnxCount ?? 0) > 30;
-
-                    // Green if Live, orange otherwise
-                    return (diffDays < 0 && isLive) ? 'text-green-600' : 'text-orange-600';
-                  })()}`}>
-                    {(() => {
-                      const today = new Date();
-                      const goLive = new Date(trainerData.onboardingTrainerData.trainers[0].plannedGoLiveDate);
-                      const diffTime = goLive.getTime() - today.getTime();
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      const isLive = (trainerData.onboardingTrainerData.trainers[0].posQrDeliveryTnxCount ?? 0) > 30;
-
-                      if (diffDays > 0) return diffDays;
-                      // If days < 0 and merchant is Live, show "Live"
-                      if (isLive) return 'Live';
-                      // If days < 0 and merchant is NOT Live, show "Overdue"
-                      return 'Overdue';
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        <div>
+    <>
           {successMessage && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="text-green-700 font-medium whitespace-pre-line">{successMessage}</div>
@@ -1113,9 +884,6 @@ function TrainerPortalContent() {
             </div>
           )}
 
-
-        </div>
-        
         {/* Booking Modal */}
         {bookingModalOpen && currentBookingInfo && (
           <>
@@ -1152,11 +920,7 @@ function TrainerPortalContent() {
           />
             </>
         )}
-
-        {/* WhatsApp Floating Button */}
-        <WhatsAppButton />
-      </div>
-    </div>
+    </>
   )
 }
 

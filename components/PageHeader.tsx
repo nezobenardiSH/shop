@@ -9,6 +9,8 @@ interface PageHeaderProps {
   currentPage: 'overview' | 'progress' | 'details'
   isInternalUser?: boolean
   currentOnboardingStage?: string // The merchant's current onboarding stage
+  plannedGoLiveDate?: string
+  posQrDeliveryTnxCount?: number
 }
 
 export default function PageHeader({
@@ -17,10 +19,32 @@ export default function PageHeader({
   lastModifiedDate,
   currentPage,
   isInternalUser = false,
-  currentOnboardingStage = 'welcome'
+  currentOnboardingStage = 'welcome',
+  plannedGoLiveDate,
+  posQrDeliveryTnxCount
 }: PageHeaderProps) {
   // merchantName is now the actual name from Salesforce, no need to format
-  
+
+  // Calculate days until go-live and status
+  const getGoLiveInfo = () => {
+    if (!plannedGoLiveDate) return { diffDays: 0, isLive: false, status: 'Not Set' }
+
+    const today = new Date()
+    const goLive = new Date(plannedGoLiveDate)
+    const diffTime = goLive.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const isLive = (posQrDeliveryTnxCount ?? 0) > 30
+
+    let status: string | number = diffDays
+    if (diffDays <= 0) {
+      status = isLive ? 'Live' : 'Overdue'
+    }
+
+    return { diffDays, isLive, status }
+  }
+
+  const goLiveInfo = getGoLiveInfo()
+
   return (
     <>
 
@@ -78,7 +102,102 @@ export default function PageHeader({
           )}
         </div>
       </div>
-      
+
+      {/* Expected Go Live Date - Before tabs */}
+      {plannedGoLiveDate && (
+        <div className="mb-4 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg py-1.5 px-3 sm:p-4">
+          {/* Mobile Layout: Title-Value pairs */}
+          <div className="block sm:hidden space-y-0.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="text-orange-600">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1">
+                  <span>Expected Go Live Date</span>
+                  <div className="relative group">
+                    <svg
+                      className="w-3.5 h-3.5 text-orange-400 cursor-help"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    {/* Tooltip - positioned to right on mobile to avoid cutoff */}
+                    <div className="absolute right-0 sm:left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
+                      Expected Go Live Date can only be changed by StoreHub Onboarding Manager
+                      <div className="absolute top-full right-4 sm:left-4 sm:right-auto -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="text-sm font-bold text-gray-900">
+                {new Date(plannedGoLiveDate).toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
+                })}
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-gray-600">Days until go-live</div>
+              <div className={`text-lg font-bold ${
+                goLiveInfo.diffDays <= 0 && goLiveInfo.isLive ? 'text-green-600' : 'text-orange-600'
+              }`}>
+                {goLiveInfo.status}
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Layout: Original horizontal layout */}
+          <div className="hidden sm:flex sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-orange-600 flex-shrink-0">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1">
+                  <span>Expected Go Live Date</span>
+                  <div className="relative group">
+                    <svg
+                      className="w-3.5 h-3.5 text-orange-400 cursor-help"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    {/* Tooltip */}
+                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
+                      Expected Go Live Date can only be changed by StoreHub Onboarding Manager
+                      <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 truncate">
+                  {new Date(plannedGoLiveDate).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <div className="text-sm text-gray-600">Days until go-live</div>
+              <div className={`text-3xl font-bold ${
+                goLiveInfo.diffDays <= 0 && goLiveInfo.isLive ? 'text-green-600' : 'text-orange-600'
+              }`}>
+                {goLiveInfo.status}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navigation Menu */}
       <div className="mb-6 border-b border-[#e5e7eb]">
         <nav className="flex space-x-8">
