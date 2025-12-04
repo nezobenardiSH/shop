@@ -1,0 +1,303 @@
+{
+  "header": {
+    "title": "Portal Onboarding",
+    "logout": "Log Keluar",
+    "loggingOut": "Sedang log keluar..."
+  },
+  "navigation": {
+    "overview": "Gambaran Keseluruhan",
+    "progress": "Kemajuan",
+    "details": "Butiran"
+  },
+  "goLive": {
+    "expectedDate": "Tarikh Jangkaan Go Live",
+    "daysUntil": "Hari sehingga go-live",
+    "live": "Live",
+    "overdue": "Tertunggak",
+    "notSet": "Tidak Ditetapkan",
+    "tooltip": "Tarikh Jangkaan Go Live hanya boleh diubah oleh Pengurus Onboarding StoreHub"
+  },
+  "common": {
+    "lastModified": "Terakhir Diubah",
+    "notSet": "Tidak Ditetapkan",
+    "loading": "Memuatkan...",
+    "storeHubTeam": "Pasukan StoreHub"
+  },
+  "overview": {
+    "onboardingProgress": "Kemajuan Onboarding",
+    "requiredActions": "Tindakan Diperlukan",
+    "completedCount": "{completed}/{total} selesai",
+    "importantDates": "Tarikh Penting",
+    "completed": "Selesai",
+    "dueBy": "Tarikh akhir {date}",
+    "stages": {
+      "welcome": "Selamat Datang",
+      "preparation": "Persediaan",
+      "installation": "Pemasangan",
+      "training": "Latihan",
+      "readyGoLive": "Sedia untuk Go Live",
+      "live": "Live"
+    },
+    "actions": {
+      "submitMenu": "Hantar menu",
+      "submitProductList": "Hantar senarai produk",
+      "submitStoreSetupVideo": "Hantar video persediaan kedai",
+      "setInstallationDate": "Tetapkan tarikh pemasangan",
+      "setTrainingDate": "Tetapkan tarikh latihan",
+      "activateBackOffice": "Aktifkan BackOffice"
+    },
+    "disabledReasons": {
+      "submitStoreSetupFirst": "Hantar video persediaan kedai dahulu",
+      "submitProductListFirst": "Hantar senarai produk dahulu",
+      "setInstallationFirst": "Tetapkan tarikh pemasangan dahulu"
+    },
+    "dates": {
+      "hardwareDelivery": "Penghantaran Perkakasan",
+      "installation": "Pemasangan",
+      "training": "Latihan"
+    }
+  },
+  "timeline": {
+    "stages": {
+      "welcome": "Selamat Datang ke StoreHub",
+      "preparation": "Persediaan",
+      "installation": "Pemasangan",
+      "training": "Latihan",
+      "readyToGoLive": "Sedia untuk Go Live",
+      "live": "Live"
+    },
+    "subStages": {
+      "documentSubmission": "Penyerahan Dokumen",
+      "hardwareDelivery": "Penghantaran Perkakasan",
+      "productSetup": "Persediaan Produk",
+      "storeSetup": "Persediaan Kedai",
+      "welcomeCall": "Panggilan Selamat Datang",
+      "hardwareFulfillment": "Pemenuhan Perkakasan",
+      "hardwareInstallation": "Pemasangan Perkakasan",
+      "goLive": "Go Live",
+      "postGoLiveCheckIn": "Semakan Selepas Go Live"
+    },
+    "status": {
+      "completed": "Selesai",
+      "inProgress": "Sedang Berjalan",
+      "pending": "Menunggu",
+      "scheduled": "Dijadualkan",
+      "notStarted": "Belum Bermula",
+      "notSet": "Tidak Ditetapkan",
+      "notScheduled": "Tidak Dijadualkan",
+      "notRecorded": "Tidak Direkodkan",
+      "notAssigned": "Tidak Ditugaskan",
+      "notAvailable": "Tidak Tersedia",
+      "notSubmitted": "Tidak Dihantar",
+      "notCompleted": "Tidak Selesai",
+      "delivered": "Dihantar",
+      "inTransit": "Dalam Perjalanan",
+      "ready": "Sedia",
+      "preparing": "Menyediakan",
+      "goingLive": "Sedang Go Live",
+      "overdue": "Tertunggak",
+      "live": "Live",
+      "awaitingGoLive": "Menunggu Go-Live",
+      "merchantIsLive": "Peniaga Sudah Live",
+      "xOfYCompleted": "{completed}/{total} Selesai"
+    },
+    "industry": {
+      "fnb": {
+        "setupLabel": "Persediaan Menu",
+        "collectionFormLabel": "Borang Pengumpulan Menu",
+        "collectionName": "menu",
+        "submissionTimestampLabel": "Cap Masa Penyerahan Pengumpulan Menu",
+        "completedSetupLabel": "Persediaan Menu Selesai",
+        "pendingStatus": "Menu Menunggu",
+        "submittedStatus": "Menu Dihantar",
+        "submitButtonText": "Hantar Borang Pengumpulan Menu",
+        "tooltipText": "Persediaan produk akan dilakukan oleh StoreHub dan akan siap dalam masa 3 hari bekerja selepas penyerahan produk atau menu"
+      },
+      "retail": {
+        "setupLabel": "Persediaan Produk",
+        "collectionFormLabel": "Borang Pengumpulan Produk",
+        "collectionName": "senarai produk",
+        "submissionTimestampLabel": "Cap Masa Penyerahan Pengumpulan Produk",
+        "completedSetupLabel": "Persediaan Produk Selesai",
+        "pendingStatus": "Produk Menunggu",
+        "submittedStatus": "Produk Dihantar",
+        "submitButtonText": "Hantar Borang Pengumpulan Produk",
+        "tooltipText": "Persediaan produk akan dilakukan oleh StoreHub dan akan siap dalam masa 3 hari bekerja selepas penyerahan produk atau menu"
+      }
+    },
+    "fields": {
+      "firstCallTimestamp": "Cap Masa Panggilan Pertama",
+      "welcomeCallStatus": "Status Panggilan Selamat Datang",
+      "onboardingManagerName": "Nama Pengurus Onboarding",
+      "scheduledInstallationDate": "Tarikh Pemasangan Dijadualkan",
+      "proposedInstallationDate": "Tarikh Pemasangan Dicadangkan",
+      "actualInstallationDate": "Tarikh Pemasangan Sebenar",
+      "installationStatus": "Status Pemasangan",
+      "installationIssues": "Isu Pemasangan",
+      "installerName": "Nama Pemasang",
+      "storeAddress": "Alamat Kedai",
+      "scheduledTrainingDate": "Tarikh Latihan",
+      "trainingType": "Jenis Latihan",
+      "trainerName": "Nama Jurulatih",
+      "trainingCompleted": "Latihan Selesai",
+      "preferredLanguage": "Bahasa Pilihan",
+      "requiredFeatures": "Ciri-ciri Diperlukan oleh Peniaga",
+      "onboardingServicesBought": "Perkhidmatan Onboarding Dibeli",
+      "remoteTrainingMeetingLink": "Pautan Mesyuarat Latihan Jarak Jauh",
+      "hardwareFulfillmentDate": "Tarikh Pemenuhan",
+      "hardwareShipmentDate": "Tarikh Penghantaran Perkakasan",
+      "orderStatus": "Status Pesanan",
+      "shippingAddress": "Alamat Penghantaran",
+      "trackingLink": "Pautan Penjejakan",
+      "submissionTimestamp": "Cap Masa Penyerahan",
+      "subscriptionActivationDate": "Tarikh Pengaktifan Langganan",
+      "backOfficeAccount": "Akaun BackOffice",
+      "onboardingSurvey": "Kaji Selidik Onboarding",
+      "status": "Status",
+      "externalVendor": "Vendor Luar"
+    },
+    "buttons": {
+      "schedule": "Jadual",
+      "changeDate": "Tukar Tarikh",
+      "uploadVideo": "Muat Naik Video",
+      "replaceVideo": "Ganti Video",
+      "uploading": "Memuat naik...",
+      "submitForm": "Hantar Borang",
+      "trackPackage": "Jejak Pakej",
+      "joinTraining": "Sertai Latihan",
+      "copyLink": "Salin Pautan",
+      "viewVideo": "Lihat Video",
+      "viewActivationGuide": "Lihat panduan pengaktifan",
+      "shareFeedback": "Kongsi Maklum Balas Anda"
+    },
+    "completion": {
+      "yes": "Ya",
+      "no": "Tidak",
+      "noneSpecified": "Tiada Dinyatakan",
+      "none": "Tiada"
+    },
+    "messages": {
+      "rescheduleWarning": "Penjadualan semula perlu dilakukan sekurang-kurangnya 2 hari lebih awal",
+      "contactOnboardingManager": "Untuk menjadualkan semula, sila hubungi pengurus onboarding anda",
+      "submitVideoFirst": "Sila hantar Video Persediaan Kedai anda sebelum menjadualkan pemasangan.",
+      "submitCollectionFirst": "Sila hantar {collectionName} anda sebelum menjadualkan latihan.",
+      "scheduleInstallationFirst": "Sila jadualkan pemasangan terlebih dahulu sebelum menjadualkan latihan.",
+      "formNotAvailable": "Pautan borang tidak tersedia",
+      "noTrackingAvailable": "Tiada penjejakan tersedia",
+      "shipmentDateTooltip": "Tarikh penghantaran hanya boleh ditetapkan oleh Pengurus Onboarding StoreHub. Hubungi Pengurus Onboarding anda untuk menetapkan tarikh.",
+      "vendorWillConfirm": "Vendor akan mengesahkan secara langsung untuk mengesahkan tarikh",
+      "meetingLinkCopied": "Pautan mesyuarat disalin ke papan keratan!",
+      "videoUploaded": "Video dimuat naik - ",
+      "activateSubscriptionAt": "Sila aktifkan langganan peniaga di:",
+      "activateSubscriptionWarning": "Sila aktifkan langganan di:",
+      "actionRequiredActivate": "Tindakan Diperlukan: Aktifkan Langganan",
+      "needHelpActivation": "Perlukan bantuan dengan pengaktifan?",
+      "helpImproveExperience": "Bantu kami meningkatkan pengalaman onboarding anda"
+    },
+    "welcomeCallSummary": {
+      "title": "Ringkasan Panggilan Selamat Datang:",
+      "goLiveDate": "Tarikh go live:",
+      "hardwareDeliveryDate": "Tarikh penghantaran perkakasan:",
+      "installationDate": "Tarikh pemasangan:",
+      "trainingDate": "Tarikh Latihan:"
+    },
+    "readyToGoLive": {
+      "checklistTitle": "Senarai Semak Kesediaan Go-Live",
+      "hardwareDelivered": "Perkakasan Dihantar",
+      "productSetupCompleted": "Persediaan Produk Selesai",
+      "hardwareInstallationCompleted": "Pemasangan Perkakasan Selesai",
+      "trainingCompleted": "Latihan Selesai",
+      "subscriptionActivated": "Langganan Diaktifkan"
+    },
+    "storeSetup": {
+      "title": "Persediaan Kedai",
+      "pendingUpload": "Menunggu Muat Naik",
+      "howToSetupStore": "1. Cara menyediakan kedai:",
+      "guideForNetworkSetup": "Panduan untuk persediaan rangkaian kedai anda (kabel dan pendawaian)",
+      "howToRecordVideo": "2. Cara merakam video:",
+      "showUsThreeThings": "Tunjukkan kepada kami 3 perkara di setiap lokasi:",
+      "mainCounter": "Kaunter Utama:",
+      "mainCounterDetails": "Lokasi terminal & pencetak resit, Soket kuasa, Port LAN",
+      "kitchenOtherStations": "Stesen Dapur/Lain:",
+      "kitchenDetails": "Lokasi pencetak, Soket kuasa, Port LAN",
+      "quickTip": "Tip Pantas: Pegang telefon anda secara mendatar semasa merakam!"
+    }
+  },
+  "booking": {
+    "selectDate": "Pilih Tarikh",
+    "selectTime": "Pilih Slot Masa",
+    "confirm": "Sahkan Tempahan",
+    "cancel": "Batal",
+    "reschedule": "Jadual Semula",
+    "noSlotsAvailable": "Tiada slot tersedia",
+    "hardwareFulfillmentTitle": "Jadualkan Tarikh Penghantaran Perkakasan",
+    "installationTitle": "Jadualkan Tarikh Pemasangan",
+    "trainingTitle": "Tempah Sesi Latihan",
+    "goLiveTitle": "Jadualkan Tarikh Go-Live",
+    "scheduleTitle": "Jadualkan Tarikh",
+    "currentBooking": "Tempahan Semasa",
+    "date": "Tarikh",
+    "time": "Masa",
+    "cancelBooking": "Batalkan Tempahan",
+    "cancelling": "Membatalkan...",
+    "booking": "Menempah...",
+    "selectLanguage": "Pilih Bahasa Latihan",
+    "selectAtLeastOneLanguage": "Sila pilih sekurang-kurangnya satu bahasa",
+    "bookingSummary": "Ringkasan Tempahan",
+    "trainer": "Jurulatih",
+    "languages": "Bahasa",
+    "trainersAvailable": "{count} jurulatih tersedia",
+    "trainerAvailable": "{name} tersedia",
+    "noTrainerForLanguage": "Tiada jurulatih {languages}",
+    "bookingSuccess": "Sesi latihan berjaya ditempah!",
+    "assignedTo": "Ditugaskan kepada: {trainer}",
+    "salesforcePending": "Nota: Kemaskini Salesforce tertunda",
+    "cancelSuccess": "Sesi latihan berjaya dibatalkan",
+    "fetchError": "Gagal mendapatkan ketersediaan",
+    "bookError": "Gagal menempah latihan",
+    "cancelError": "Gagal membatalkan latihan"
+  },
+  "login": {
+    "title": "Portal Onboarding",
+    "pinLabel": "Masukkan PIN 4-Digit",
+    "pinPlaceholder": "••••",
+    "submit": "Log Masuk",
+    "verifying": "Mengesahkan...",
+    "sessionExpired": "Sesi anda telah tamat. Sila log masuk semula.",
+    "connectionError": "Ralat sambungan. Sila cuba lagi.",
+    "attemptsRemaining": "{count} percubaan lagi",
+    "helpText": "Ada masalah? Hubungi pengurus onboarding anda."
+  },
+  "details": {
+    "sections": {
+      "merchantDetails": "Butiran Peniaga",
+      "servicesFeatures": "Perkhidmatan & Ciri",
+      "contacts": "Kenalan",
+      "productsPayment": "Produk & Pembayaran"
+    },
+    "fields": {
+      "merchant": "Peniaga",
+      "account": "Akaun",
+      "industry": "Industri",
+      "language": "Bahasa",
+      "storeAddress": "Alamat Kedai",
+      "hardwareShipment": "Penghantaran Perkakasan",
+      "onboardingService": "Perkhidmatan Onboarding",
+      "serviceType": "Jenis Perkhidmatan",
+      "requiredFeatures": "Ciri Diperlukan",
+      "merchantPic": "PIC Peniaga",
+      "businessOwner": "Pemilik Perniagaan",
+      "operationManager": "Pengurus Operasi",
+      "quoteTotalAmount": "Jumlah Sebut Harga",
+      "pendingPayment": "Bayaran Tertunggak",
+      "syncedFromQuote": "Disegerakkan dari sebut harga",
+      "amountOutstanding": "Jumlah belum dibayar",
+      "notAvailable": "Tidak Tersedia",
+      "product": "Produk",
+      "qty": "Ktn",
+      "unit": "Unit",
+      "total": "Jumlah",
+      "items": "item"
+    }
+  }
+}

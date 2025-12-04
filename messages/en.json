@@ -1,0 +1,303 @@
+{
+  "header": {
+    "title": "Onboarding Portal",
+    "logout": "Log out",
+    "loggingOut": "Logging out..."
+  },
+  "navigation": {
+    "overview": "Overview",
+    "progress": "Progress",
+    "details": "Details"
+  },
+  "goLive": {
+    "expectedDate": "Expected Go Live Date",
+    "daysUntil": "Days until go-live",
+    "live": "Live",
+    "overdue": "Overdue",
+    "notSet": "Not Set",
+    "tooltip": "Expected Go Live Date can only be changed by StoreHub Onboarding Manager"
+  },
+  "common": {
+    "lastModified": "Last Modified",
+    "notSet": "Not Set",
+    "loading": "Loading...",
+    "storeHubTeam": "StoreHub Team"
+  },
+  "overview": {
+    "onboardingProgress": "Onboarding Progress",
+    "requiredActions": "Required Actions",
+    "completedCount": "{completed}/{total} completed",
+    "importantDates": "Important Dates",
+    "completed": "Completed",
+    "dueBy": "Due by {date}",
+    "stages": {
+      "welcome": "Welcome",
+      "preparation": "Preparation",
+      "installation": "Installation",
+      "training": "Training",
+      "readyGoLive": "Ready to Go Live",
+      "live": "Live"
+    },
+    "actions": {
+      "submitMenu": "Submit menu",
+      "submitProductList": "Submit product list",
+      "submitStoreSetupVideo": "Submit store setup video",
+      "setInstallationDate": "Set installation date",
+      "setTrainingDate": "Set training date",
+      "activateBackOffice": "Activate BackOffice"
+    },
+    "disabledReasons": {
+      "submitStoreSetupFirst": "Submit store setup video first",
+      "submitProductListFirst": "Submit product list first",
+      "setInstallationFirst": "Set installation date first"
+    },
+    "dates": {
+      "hardwareDelivery": "Hardware Delivery",
+      "installation": "Installation",
+      "training": "Training"
+    }
+  },
+  "timeline": {
+    "stages": {
+      "welcome": "Welcome to StoreHub",
+      "preparation": "Preparation",
+      "installation": "Installation",
+      "training": "Training",
+      "readyToGoLive": "Ready to go live",
+      "live": "Live"
+    },
+    "subStages": {
+      "documentSubmission": "Document Submission",
+      "hardwareDelivery": "Hardware Delivery",
+      "productSetup": "Product Setup",
+      "storeSetup": "Store Setup",
+      "welcomeCall": "Welcome Call",
+      "hardwareFulfillment": "Hardware Fulfillment",
+      "hardwareInstallation": "Hardware Installation",
+      "goLive": "Go Live",
+      "postGoLiveCheckIn": "Post Go Live Check In"
+    },
+    "status": {
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "pending": "Pending",
+      "scheduled": "Scheduled",
+      "notStarted": "Not Started",
+      "notSet": "Not Set",
+      "notScheduled": "Not Scheduled",
+      "notRecorded": "Not Recorded",
+      "notAssigned": "Not Assigned",
+      "notAvailable": "Not Available",
+      "notSubmitted": "Not Submitted",
+      "notCompleted": "Not Completed",
+      "delivered": "Delivered",
+      "inTransit": "In Transit",
+      "ready": "Ready",
+      "preparing": "Preparing",
+      "goingLive": "Going Live",
+      "overdue": "Overdue",
+      "live": "Live",
+      "awaitingGoLive": "Awaiting Go-Live",
+      "merchantIsLive": "Merchant is Live",
+      "xOfYCompleted": "{completed}/{total} Completed"
+    },
+    "industry": {
+      "fnb": {
+        "setupLabel": "Menu Setup",
+        "collectionFormLabel": "Menu Collection Form",
+        "collectionName": "menu",
+        "submissionTimestampLabel": "Menu Collection Submission Timestamp",
+        "completedSetupLabel": "Completed Menu Setup",
+        "pendingStatus": "Pending Menu",
+        "submittedStatus": "Menu Submitted",
+        "submitButtonText": "Submit Menu Collection Form",
+        "tooltipText": "Product setup would be done by StoreHub and will be completed within 3 working days after product or menu submission"
+      },
+      "retail": {
+        "setupLabel": "Product Setup",
+        "collectionFormLabel": "Product Collection Form",
+        "collectionName": "product list",
+        "submissionTimestampLabel": "Product Collection Submission Timestamp",
+        "completedSetupLabel": "Completed Product Setup",
+        "pendingStatus": "Pending Product",
+        "submittedStatus": "Product Submitted",
+        "submitButtonText": "Submit Product Collection Form",
+        "tooltipText": "Product setup would be done by StoreHub and will be completed within 3 working days after product or menu submission"
+      }
+    },
+    "fields": {
+      "firstCallTimestamp": "First Call Timestamp",
+      "welcomeCallStatus": "Welcome Call Status",
+      "onboardingManagerName": "Onboarding Manager Name",
+      "scheduledInstallationDate": "Scheduled Installation Date",
+      "proposedInstallationDate": "Proposed Installation Date",
+      "actualInstallationDate": "Actual Installation Date",
+      "installationStatus": "Installation Status",
+      "installationIssues": "Installation Issues",
+      "installerName": "Installer Name",
+      "storeAddress": "Store Address",
+      "scheduledTrainingDate": "Training Date",
+      "trainingType": "Training Type",
+      "trainerName": "Trainer Name",
+      "trainingCompleted": "Training Completed",
+      "preferredLanguage": "Preferred Language",
+      "requiredFeatures": "Required Features by Merchant",
+      "onboardingServicesBought": "Onboarding Services Bought",
+      "remoteTrainingMeetingLink": "Remote Training Meeting Link",
+      "hardwareFulfillmentDate": "Fulfillment Date",
+      "hardwareShipmentDate": "Hardware Shipment Date",
+      "orderStatus": "Order Status",
+      "shippingAddress": "Shipping Address",
+      "trackingLink": "Tracking Link",
+      "submissionTimestamp": "Submission Timestamp",
+      "subscriptionActivationDate": "Subscription Activation Date",
+      "backOfficeAccount": "BackOffice Account",
+      "onboardingSurvey": "Onboarding Survey",
+      "status": "Status",
+      "externalVendor": "External Vendor"
+    },
+    "buttons": {
+      "schedule": "Schedule",
+      "changeDate": "Change Date",
+      "uploadVideo": "Upload Video",
+      "replaceVideo": "Replace Video",
+      "uploading": "Uploading...",
+      "submitForm": "Submit Form",
+      "trackPackage": "Track Package",
+      "joinTraining": "Join Training",
+      "copyLink": "Copy Link",
+      "viewVideo": "View Video",
+      "viewActivationGuide": "View activation guide",
+      "shareFeedback": "Share Your Feedback"
+    },
+    "completion": {
+      "yes": "Yes",
+      "no": "No",
+      "noneSpecified": "None Specified",
+      "none": "None"
+    },
+    "messages": {
+      "rescheduleWarning": "Rescheduling must be done at least 2 days in advance",
+      "contactOnboardingManager": "To reschedule, please contact your onboarding manager",
+      "submitVideoFirst": "Please submit your Store Setup Video before scheduling installation.",
+      "submitCollectionFirst": "Please submit your {collectionName} before scheduling training.",
+      "scheduleInstallationFirst": "Please schedule installation first before scheduling training.",
+      "formNotAvailable": "Form link not available",
+      "noTrackingAvailable": "No tracking available",
+      "shipmentDateTooltip": "Shipment date can only be set by StoreHub Onboarding Manager. Contact your Onboarding Manager to set the date.",
+      "vendorWillConfirm": "Vendor will confirm directly to finalise the date",
+      "meetingLinkCopied": "Meeting link copied to clipboard!",
+      "videoUploaded": "Video uploaded - ",
+      "activateSubscriptionAt": "Please activate the merchant's subscription at:",
+      "activateSubscriptionWarning": "Please activate subscription at:",
+      "actionRequiredActivate": "Action Required: Activate Subscription",
+      "needHelpActivation": "Need help with activation?",
+      "helpImproveExperience": "Help us improve your onboarding experience"
+    },
+    "welcomeCallSummary": {
+      "title": "Welcome Call Summary:",
+      "goLiveDate": "Go live date:",
+      "hardwareDeliveryDate": "Hardware delivery date:",
+      "installationDate": "Installation date:",
+      "trainingDate": "Training Date:"
+    },
+    "readyToGoLive": {
+      "checklistTitle": "Go-Live Readiness Checklist",
+      "hardwareDelivered": "Hardware Delivered",
+      "productSetupCompleted": "Product Setup Completed",
+      "hardwareInstallationCompleted": "Hardware Installation Completed",
+      "trainingCompleted": "Training Completed",
+      "subscriptionActivated": "Subscription Activated"
+    },
+    "storeSetup": {
+      "title": "Store Setup",
+      "pendingUpload": "Pending Upload",
+      "howToSetupStore": "1. How to set up the store:",
+      "guideForNetworkSetup": "Guide for your store network setup (cabling and wiring)",
+      "howToRecordVideo": "2. How to record video:",
+      "showUsThreeThings": "Show us 3 things at each location:",
+      "mainCounter": "Main Counter:",
+      "mainCounterDetails": "Terminal & receipt printer location, Power socket, LAN port",
+      "kitchenOtherStations": "Kitchen/Other Stations:",
+      "kitchenDetails": "Printer location, Power socket, LAN port",
+      "quickTip": "Quick Tip: Hold your phone sideways (horizontally) while recording!"
+    }
+  },
+  "booking": {
+    "selectDate": "Select Date",
+    "selectTime": "Select Time Slot",
+    "confirm": "Confirm Booking",
+    "cancel": "Cancel",
+    "reschedule": "Reschedule",
+    "noSlotsAvailable": "No slots available",
+    "hardwareFulfillmentTitle": "Schedule Hardware Fulfillment Date",
+    "installationTitle": "Schedule Installation Date",
+    "trainingTitle": "Book Training Session",
+    "goLiveTitle": "Schedule Go-Live Date",
+    "scheduleTitle": "Schedule Date",
+    "currentBooking": "Current Booking",
+    "date": "Date",
+    "time": "Time",
+    "cancelBooking": "Cancel Booking",
+    "cancelling": "Cancelling...",
+    "booking": "Booking...",
+    "selectLanguage": "Select Training Language",
+    "selectAtLeastOneLanguage": "Please select at least one language",
+    "bookingSummary": "Booking Summary",
+    "trainer": "Trainer",
+    "languages": "Language(s)",
+    "trainersAvailable": "{count} trainers available",
+    "trainerAvailable": "{name} available",
+    "noTrainerForLanguage": "No {languages} trainer",
+    "bookingSuccess": "Training session booked successfully!",
+    "assignedTo": "Assigned to: {trainer}",
+    "salesforcePending": "Note: Salesforce update pending",
+    "cancelSuccess": "Training session cancelled successfully",
+    "fetchError": "Failed to fetch availability",
+    "bookError": "Failed to book training",
+    "cancelError": "Failed to cancel training"
+  },
+  "login": {
+    "title": "Onboarding Portal",
+    "pinLabel": "Enter 4-Digit PIN",
+    "pinPlaceholder": "••••",
+    "submit": "Log in",
+    "verifying": "Verifying...",
+    "sessionExpired": "Your session has expired. Please log in again.",
+    "connectionError": "Connection error. Please try again.",
+    "attemptsRemaining": "{count} attempt{count, plural, =1 {} other {s}} remaining",
+    "helpText": "Having trouble? Contact your onboarding manager."
+  },
+  "details": {
+    "sections": {
+      "merchantDetails": "Merchant Details",
+      "servicesFeatures": "Services & Features",
+      "contacts": "Contacts",
+      "productsPayment": "Products & Payment"
+    },
+    "fields": {
+      "merchant": "Merchant",
+      "account": "Account",
+      "industry": "Industry",
+      "language": "Language",
+      "storeAddress": "Store Address",
+      "hardwareShipment": "Hardware Shipment",
+      "onboardingService": "Onboarding Service",
+      "serviceType": "Service Type",
+      "requiredFeatures": "Required Features",
+      "merchantPic": "Merchant PIC",
+      "businessOwner": "Business Owner",
+      "operationManager": "Operation Manager",
+      "quoteTotalAmount": "Quote Total Amount",
+      "pendingPayment": "Pending Payment",
+      "syncedFromQuote": "Synced from quote",
+      "amountOutstanding": "Amount outstanding",
+      "notAvailable": "Not Available",
+      "product": "Product",
+      "qty": "Qty",
+      "unit": "Unit",
+      "total": "Total",
+      "items": "items"
+    }
+  }
+}

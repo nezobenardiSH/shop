@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useTranslations, useFormatter } from 'next-intl'
 import { detectServiceType, getServiceTypeMessage } from '@/lib/service-type-detector'
 import ImportantReminderBox from '@/components/ImportantReminderBox'
 import { useEventTracking } from '@/lib/useAnalytics'
@@ -27,32 +28,6 @@ interface OnboardingTimelineProps {
   isInternalUser?: boolean // Internal users have relaxed scheduling rules
 }
 
-// Helper function to format date with time
-const formatDateTime = (dateString: string | null | undefined): string => {
-  if (!dateString) return 'Not Set'
-
-  const date = new Date(dateString)
-  return date.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  })
-}
-
-// Helper function to format date only (dd mmm yyyy)
-const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return 'Not Set'
-
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  })
-}
 
 // Helper function to check if rescheduling is allowed
 // Returns true if rescheduling is NOT allowed (less than 1 business day buffer)
@@ -88,58 +63,6 @@ const isWithinNextDay = (dateString: string | null | undefined): boolean => {
   return businessDaysRemaining <= 1
 }
 
-// Helper function to get industry-specific terminology
-const getIndustryTerminology = (subIndustry: string | null | undefined) => {
-  const industry = (subIndustry || '').toLowerCase()
-
-  if (industry.includes('f&b') || industry.includes('fnb') || industry.includes('food') || industry.includes('beverage') || industry.includes('restaurant') || industry.includes('cafe') || industry.includes('café')) {
-    return {
-      setupLabel: 'Menu Setup',
-      collectionForm: 'menu collection form',
-      collectionFormLabel: 'Menu Collection Form',
-      collectionName: 'menu',
-      submissionTimestamp: 'menu collection submission timestamp',
-      submissionTimestampLabel: 'Menu Collection Submission Timestamp',
-      completedSetup: 'completed menu setup',
-      completedSetupLabel: 'Completed Menu Setup',
-      pendingStatus: 'Pending Menu',
-      submittedStatus: 'Menu Submitted',
-      submitButtonText: 'Submit Menu Collection Form',
-      tooltipText: 'Product setup would be done by StoreHub and will be completed within 3 working days after product or menu submission'
-    }
-  } else if (industry.includes('retail')) {
-    return {
-      setupLabel: 'Product Setup',
-      collectionForm: 'product collection form',
-      collectionFormLabel: 'Product Collection Form',
-      collectionName: 'product list',
-      submissionTimestamp: 'product collection submission timestamp',
-      submissionTimestampLabel: 'Product Collection Submission Timestamp',
-      completedSetup: 'completed product setup',
-      completedSetupLabel: 'Completed Product Setup',
-      pendingStatus: 'Pending Product',
-      submittedStatus: 'Product Submitted',
-      submitButtonText: 'Submit Product Collection Form',
-      tooltipText: 'Product setup would be done by StoreHub and will be completed within 3 working days after product or menu submission'
-    }
-  } else {
-    // Default to Product Setup for unknown industries
-    return {
-      setupLabel: 'Product Setup',
-      collectionForm: 'product collection form',
-      collectionFormLabel: 'Product Collection Form',
-      collectionName: 'product list',
-      submissionTimestamp: 'product collection submission timestamp',
-      submissionTimestampLabel: 'Product Collection Submission Timestamp',
-      completedSetup: 'completed product setup',
-      completedSetupLabel: 'Completed Product Setup',
-      pendingStatus: 'Pending Product',
-      submittedStatus: 'Product Submitted',
-      submitButtonText: 'Submit Product Collection Form',
-      tooltipText: 'Product setup would be done by StoreHub and will be completed within 3 working days after product or menu submission'
-    }
-  }
-}
 
 export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange, expandSection, isInternalUser = false }: OnboardingTimelineProps) {
   const router = useRouter()
@@ -148,8 +71,58 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
   const [stages, setStages] = useState<TimelineStage[]>([])
   const { trackEvent } = useEventTracking()
 
+  // i18n hooks
+  const t = useTranslations('timeline')
+  const format = useFormatter()
+
+  // Locale-aware date formatting functions
+  const formatDateTimeLocale = (dateString: string | null | undefined): string => {
+    if (!dateString) return t('status.notSet')
+    const date = new Date(dateString)
+    return format.dateTime(date, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+  }
+
+  const formatDateLocale = (dateString: string | null | undefined): string => {
+    if (!dateString) return t('status.notSet')
+    const date = new Date(dateString)
+    return format.dateTime(date, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    })
+  }
+
+  // Get industry-specific terminology with translations
+  const getTerminology = (subIndustry: string | null | undefined) => {
+    const industry = (subIndustry || '').toLowerCase()
+    const isFnB = industry.includes('f&b') || industry.includes('fnb') || industry.includes('food') || industry.includes('beverage') || industry.includes('restaurant') || industry.includes('cafe') || industry.includes('café')
+    const key = isFnB ? 'fnb' : 'retail'
+
+    return {
+      setupLabel: t(`industry.${key}.setupLabel`),
+      collectionForm: t(`industry.${key}.collectionFormLabel`).toLowerCase(),
+      collectionFormLabel: t(`industry.${key}.collectionFormLabel`),
+      collectionName: t(`industry.${key}.collectionName`),
+      submissionTimestamp: t(`industry.${key}.submissionTimestampLabel`).toLowerCase(),
+      submissionTimestampLabel: t(`industry.${key}.submissionTimestampLabel`),
+      completedSetup: t(`industry.${key}.completedSetupLabel`).toLowerCase(),
+      completedSetupLabel: t(`industry.${key}.completedSetupLabel`),
+      pendingStatus: t(`industry.${key}.pendingStatus`),
+      submittedStatus: t(`industry.${key}.submittedStatus`),
+      submitButtonText: t(`industry.${key}.submitButtonText`),
+      tooltipText: t(`industry.${key}.tooltipText`)
+    }
+  }
+
   // Get industry-specific terminology
-  const terminology = getIndustryTerminology(trainerData?.subIndustry)
+  const terminology = getTerminology(trainerData?.subIndustry)
 
   // Track when user clicks the product setup form link
   const handleProductSetupClick = () => {
@@ -412,7 +385,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
     timelineStages.push({
       id: 'welcome',
-      label: 'Welcome to StoreHub',
+      label: t('stages.welcome'),
       status: welcomeCompleted ? 'completed' : 'current',
       completedDate: trainerData?.firstCallTimestamp
     })
@@ -420,18 +393,18 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
     // Preparation Stage - (completion statuses calculated at component level)
     timelineStages.push({
       id: 'preparation',
-      label: 'Preparation',
+      label: t('stages.preparation'),
       status: preparationStatus,
       completedDate: preparationStatus === 'completed' ? trainerData?.productSetupCompletedDate : undefined,
       completedCount: preparationSubStagesCompleted,
       totalCount: totalPreparationStages
     })
-    
+
     // Installation Stage - (completion status calculated at component level)
     // Installation is completed if actualInstallationDate exists, regardless of Preparation status
     timelineStages.push({
       id: 'installation',
-      label: 'Installation',
+      label: t('stages.installation'),
       status: installationCompleted ? 'completed' : (preparationStatus === 'completed' ? 'current' : 'pending'),
       completedDate: trainerData?.actualInstallationDate
     })
@@ -439,7 +412,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
     // Training Stage - (completion status calculated at component level)
     timelineStages.push({
       id: 'training',
-      label: 'Training',
+      label: t('stages.training'),
       status: installationCompleted ? (trainingCompleted ? 'completed' : 'current') : 'pending',
       completedDate: trainerData?.trainingDate
     })
@@ -477,13 +450,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
     timelineStages.push({
       id: 'ready-go-live',
-      label: 'Ready to go live',
+      label: t('stages.readyToGoLive'),
       status: readyToGoLiveStatus,
       completedDate: allChecklistItemsCompleted ? trainerData?.subscriptionActivationDate : undefined,
       completedCount: readyToGoLiveCompletedCount,
       totalCount: readyToGoLiveTotalCount
     })
-    
+
     // Live Stage
     // Live is completed when POS/QR/Delivery transaction count in past 30 days > 30
     const isLive = (trainerData?.posQrDeliveryTnxCount ?? 0) > 30
@@ -496,7 +469,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
     timelineStages.push({
       id: 'live',
-      label: 'Live',
+      label: t('stages.live'),
       status: isLive ? 'completed' : (readyToGoLive ? 'current' : 'pending'),
       completedDate: isLive ? trainerData?.subscriptionActivationDate : undefined
     })
@@ -511,7 +484,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
         [currentStageObj.id]: true
       }))
     }
-  }, [trainerData])
+  }, [trainerData, t])
 
   const getStageIcon = (stage: TimelineStage, index: number) => {
     if (stage.status === 'completed') {
@@ -632,50 +605,50 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
         return (
           <div className="space-y-4">
             <div>
-              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">First Call Timestamp</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">{t('fields.firstCallTimestamp')}</div>
               <div className="text-base font-medium text-gray-900">
                 {trainerData?.firstCallTimestamp
-                  ? formatDateTime(trainerData.firstCallTimestamp)
-                  : 'Not Recorded'}
+                  ? formatDateTimeLocale(trainerData.firstCallTimestamp)
+                  : t('status.notRecorded')}
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Onboarding Manager Name</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">{t('fields.onboardingManagerName')}</div>
               <div className="text-base font-medium text-gray-900">
-                {trainerData?.msmName || 'Not Assigned'}
+                {trainerData?.msmName || t('status.notAssigned')}
               </div>
             </div>
-            
+
             {/* Welcome Call Summary */}
             <div className="pt-3 border-t border-gray-200">
-              <h5 className="text-sm font-semibold text-gray-900 mb-3">Welcome Call Summary:</h5>
+              <h5 className="text-sm font-semibold text-gray-900 mb-3">{t('welcomeCallSummary.title')}</h5>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Go live date:</span>
+                  <span className="text-sm text-gray-600">{t('welcomeCallSummary.goLiveDate')}</span>
                   <span className="text-sm font-medium text-gray-900">
                     {trainerData?.plannedGoLiveDate
-                      ? formatDate(trainerData.plannedGoLiveDate)
-                      : 'Not Set'}
+                      ? formatDateLocale(trainerData.plannedGoLiveDate)
+                      : t('status.notSet')}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Hardware delivery:</span>
+                  <span className="text-sm text-gray-600">{t('welcomeCallSummary.hardwareDeliveryDate')}</span>
                   <span className="text-sm font-medium text-gray-900">
                     {trainerData?.hardwareFulfillmentDate
-                      ? formatDate(trainerData.hardwareFulfillmentDate)
-                      : 'Not Set'}
+                      ? formatDateLocale(trainerData.hardwareFulfillmentDate)
+                      : t('status.notSet')}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Installation:</span>
+                  <span className="text-sm text-gray-600">{t('welcomeCallSummary.installationDate')}</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatDateTime(trainerData?.installationDate)}
+                    {formatDateTimeLocale(trainerData?.installationDate)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Training:</span>
+                  <span className="text-sm text-gray-600">{t('welcomeCallSummary.trainingDate')}</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatDateTime(trainerData?.trainingDate)}
+                    {formatDateTimeLocale(trainerData?.trainingDate)}
                   </span>
                 </div>
               </div>
@@ -722,13 +695,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     }
                   })()}
                   <div className="flex-1 text-left">
-                    <div className="text-base font-medium text-gray-900 text-left">Hardware Delivery</div>
+                    <div className="text-base font-medium text-gray-900 text-left">{t('subStages.hardwareDelivery')}</div>
                     <div className="text-sm text-left">
                       {(() => {
-                        if (trainerData?.hardwareDeliveryStatus === 'Delivered') return <span className="text-gray-500">Delivered</span>;
-                        if (trainerData?.trackingLink) return <span className="text-gray-500">In Transit</span>;
-                        if (trainerData?.hardwareFulfillmentDate) return <span className="text-orange-600">Scheduled</span>;
-                        return <span className="text-orange-600">Pending</span>;
+                        if (trainerData?.hardwareDeliveryStatus === 'Delivered') return <span className="text-gray-500">{t('status.delivered')}</span>;
+                        if (trainerData?.trackingLink) return <span className="text-gray-500">{t('status.inTransit')}</span>;
+                        if (trainerData?.hardwareFulfillmentDate) return <span className="text-orange-600">{t('status.scheduled')}</span>;
+                        return <span className="text-orange-600">{t('status.pending')}</span>;
                       })()}
                     </div>
                   </div>
@@ -742,38 +715,38 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               {expandedItems['mobile-hardware'] && (
                 <div className="pl-12 pr-4 pb-4 space-y-3 pt-3 text-left">
                   <div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">Order Status</div>
-                    <div className="text-base text-gray-900">{trainerData?.orderNSStatus || 'Not Available'}</div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 text-left">{t('fields.orderStatus')}</div>
+                    <div className="text-base text-gray-900">{trainerData?.orderNSStatus || t('status.notAvailable')}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">{t('fields.shippingAddress')}</div>
                     <div className="text-base text-gray-900">
                       {(() => {
-                        if (!trainerData?.orderShippingAddress) return 'Not Available';
+                        if (!trainerData?.orderShippingAddress) return t('status.notAvailable');
                         if (typeof trainerData.orderShippingAddress === 'string') {
                           return trainerData.orderShippingAddress;
                         }
                         const addr = trainerData.orderShippingAddress;
-                        const parts = [addr.street, addr.city, addr.state || addr.stateCode, 
+                        const parts = [addr.street, addr.city, addr.state || addr.stateCode,
                                      addr.postalCode, addr.country || addr.countryCode].filter(Boolean);
-                        return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                        return parts.length > 0 ? parts.join(', ') : t('status.notAvailable');
                       })()}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Tracking Link</div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">{t('fields.trackingLink')}</div>
                     {trainerData?.trackingLink ? (
                       <a href={trainerData.trackingLink} target="_blank" rel="noopener noreferrer"
                          className="inline-block text-base text-blue-600 hover:text-blue-700">
-                        Track Package
+                        {t('buttons.trackPackage')}
                       </a>
                     ) : (
-                      <span className="text-base text-gray-500">No tracking available</span>
+                      <span className="text-base text-gray-500">{t('messages.noTrackingAvailable')}</span>
                     )}
                   </div>
                   <div>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <span>Fulfillment Date</span>
+                      <span>{t('fields.hardwareFulfillmentDate')}</span>
                       <div className="relative group">
                         <svg
                           className="w-3.5 h-3.5 text-gray-400 cursor-help"
@@ -784,15 +757,15 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         </svg>
                         {/* Tooltip */}
                         <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                          Shipment date can only be set by StoreHub Onboarding Manager
+                          {t('messages.shipmentDateTooltip')}
                           <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                         </div>
                       </div>
                     </div>
                     <div className="text-base text-gray-900">
                       {trainerData?.hardwareFulfillmentDate
-                        ? formatDate(trainerData.hardwareFulfillmentDate)
-                        : 'Not Scheduled'}
+                        ? formatDateLocale(trainerData.hardwareFulfillmentDate)
+                        : t('status.notScheduled')}
                     </div>
                   </div>
                 </div>
@@ -837,7 +810,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <div className="text-base font-medium text-gray-900 text-left">{terminology.setupLabel}</div>
                     <div className="text-sm text-gray-500 text-left">
                       {(() => {
-                        if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
+                        if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return t('status.completed');
                         if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">{terminology.submittedStatus}</span>;
                         return <span className="text-orange-600">{terminology.pendingStatus}</span>;
                       })()}
@@ -867,18 +840,18 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       <a href={trainerData.menuCollectionFormLink} target="_blank" rel="noopener noreferrer"
                          onClick={handleProductSetupClick}
                          className="inline-flex items-center px-3 py-2 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg active:scale-95">
-                        Submit Form
+                        {t('buttons.submitForm')}
                       </a>
                     ) : (
-                      <span className="text-base text-gray-500">Form not available</span>
+                      <span className="text-base text-gray-500">{t('messages.formNotAvailable')}</span>
                     )}
                   </div>
                   <div>
-                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">Submission Timestamp</div>
+                    <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">{t('fields.submissionTimestamp')}</div>
                     <div className="text-base text-gray-900">
                       {trainerData?.menuCollectionSubmissionTimestamp
-                        ? formatDateTime(trainerData.menuCollectionSubmissionTimestamp)
-                        : 'Not Submitted'}
+                        ? formatDateTimeLocale(trainerData.menuCollectionSubmissionTimestamp)
+                        : t('status.notSubmitted')}
                     </div>
                   </div>
                   <div>
@@ -900,7 +873,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       </div>
                     </div>
                     <div className="text-base font-medium text-gray-900">
-                      {trainerData?.completedProductSetup || 'No'}
+                      {trainerData?.completedProductSetup || t('completion.no')}
                     </div>
                   </div>
                 </div>
@@ -927,12 +900,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     </div>
                   )}
                   <div className="flex-1 text-left">
-                    <div className="text-base font-medium text-gray-900 text-left">Store Setup</div>
+                    <div className="text-base font-medium text-gray-900 text-left">{t('storeSetup.title')}</div>
                     <div className="text-sm text-left">
                       {trainerData?.videoProofLink || uploadedVideoUrl ? (
-                        <span className="text-gray-500">Completed</span>
+                        <span className="text-gray-500">{t('status.completed')}</span>
                       ) : (
-                        <span className="text-orange-600">Pending Upload</span>
+                        <span className="text-orange-600">{t('storeSetup.pendingUpload')}</span>
                       )}
                     </div>
                   </div>
@@ -959,10 +932,10 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
-                        <span className="text-gray-700">Video uploaded - </span>
+                        <span className="text-gray-700">{t('messages.videoUploaded')}</span>
                         <a href={uploadedVideoUrl || trainerData?.videoProofLink} target="_blank" rel="noopener noreferrer"
                            className="text-blue-600 hover:text-blue-700 underline">
-                          View Video
+                          {t('buttons.viewVideo')}
                         </a>
                       </div>
                     )}
@@ -1009,7 +982,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                       </svg>
-                      {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
+                      {uploadingVideo ? t('buttons.uploading') : (trainerData?.videoProofLink || uploadedVideoUrl ? t('buttons.replaceVideo') : t('buttons.uploadVideo'))}
                     </button>
                   </div>
 
@@ -1017,11 +990,11 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   <div className="space-y-4 text-sm text-gray-700">
                     {/* Section 1: How to set up the store */}
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                      <p className="font-semibold text-gray-900 mb-2">1. How to set up the store:</p>
+                      <p className="font-semibold text-gray-900 mb-2">{t('storeSetup.howToSetupStore')}</p>
                       <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
                          target="_blank" rel="noopener noreferrer"
                          className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
-                        📖 Guide for your store network setup (cabling and wiring)
+                        📖 {t('storeSetup.guideForNetworkSetup')}
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
@@ -1030,13 +1003,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
                     {/* Section 2: How to record video */}
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <p className="font-semibold text-gray-900 mb-3">2. How to record video:</p>
+                      <p className="font-semibold text-gray-900 mb-3">{t('storeSetup.howToRecordVideo')}</p>
                       <div className="space-y-2 mb-3">
-                        <p className="text-gray-700">Show us 3 things at each location:</p>
-                        <p className="text-gray-700"><span className="font-semibold">Main Counter:</span> Terminal & receipt printer location, Power socket, LAN port</p>
-                        <p className="text-gray-700"><span className="font-semibold">Kitchen/Other Stations:</span> Printer location, Power socket, LAN port</p>
+                        <p className="text-gray-700">{t('storeSetup.showUsThreeThings')}</p>
+                        <p className="text-gray-700"><span className="font-semibold">{t('storeSetup.mainCounter')}</span> {t('storeSetup.mainCounterDetails')}</p>
+                        <p className="text-gray-700"><span className="font-semibold">{t('storeSetup.kitchenOtherStations')}</span> {t('storeSetup.kitchenDetails')}</p>
                       </div>
-                      <p className="text-blue-700 font-medium">📱 Quick Tip: Hold your phone sideways (horizontally) while recording!</p>
+                      <p className="text-blue-700 font-medium">📱 {t('storeSetup.quickTip')}</p>
                     </div>
                   </div>
                 </div>
@@ -1056,11 +1029,11 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 return (
                   <>
                     <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">
-                      {isExternalVendor ? 'Proposed Installation Date' : 'Scheduled Installation Date'}
+                      {isExternalVendor ? t('fields.proposedInstallationDate') : t('fields.scheduledInstallationDate')}
                     </div>
                     {isExternalVendor && (
                       <div className="text-xs text-gray-500 mb-2 italic">
-                        Vendor will confirm directly to finalise the date
+                        {t('messages.vendorWillConfirm')}
                       </div>
                     )}
                   </>
@@ -1069,8 +1042,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               <div>
                 <div className="text-base font-medium text-gray-900 mb-2">
                   {trainerData?.installationDate
-                    ? formatDateTime(trainerData.installationDate)
-                    : 'Not Scheduled'}
+                    ? formatDateTimeLocale(trainerData.installationDate)
+                    : t('status.notScheduled')}
                 </div>
                 {(() => {
                   // Internal users can reschedule anytime, no buffer required
@@ -1090,16 +1063,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         }`}
                         title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
                       >
-                        {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
+                        {trainerData?.installationDate ? t('buttons.changeDate') : t('buttons.schedule')}
                       </button>
                       {!canScheduleInstallation && !hasExistingDate && (
                         <div className="mt-2 text-sm text-amber-600">
-                          Please submit your Store Setup Video before scheduling installation.
+                          {t('messages.submitVideoFirst')}
                         </div>
                       )}
                       {cannotReschedule && (
                         <div className="mt-2 text-sm text-gray-600">
-                          To reschedule, please contact your onboarding manager
+                          {t('messages.contactOnboardingManager')}
                         </div>
                       )}
                     </div>
@@ -1109,7 +1082,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Installer Name</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">{t('fields.installerName')}</div>
               <div className="text-base font-medium text-gray-900">
                 {(() => {
                   // If installer name is set, show it
@@ -1120,15 +1093,15 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   if (trainerData?.installationDate) {
                     // Use installerType from parent trainerData object (not nested in trainers array)
                     const installerType = (trainerData as any)?.installerType
-                    return installerType === 'external' ? 'External Vendor' : 'Not Assigned'
+                    return installerType === 'external' ? t('fields.externalVendor') : t('status.notAssigned')
                   }
-                  return 'Not Assigned'
+                  return t('status.notAssigned')
                 })()}
               </div>
             </div>
 
             <div>
-              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Store Address</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">{t('fields.storeAddress')}</div>
               <div className="text-base font-medium text-gray-900">
                 {(() => {
                   const parts = [
@@ -1138,22 +1111,22 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     trainerData?.shippingZipPostalCode,
                     trainerData?.shippingCountry
                   ].filter(Boolean);
-                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                  return parts.length > 0 ? parts.join(', ') : t('status.notAvailable');
                 })()}
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Actual Installation Date</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.actualInstallationDate')}</div>
               <div className="text-sm font-medium text-gray-900">
                 {trainerData?.actualInstallationDate
-                  ? formatDate(trainerData.actualInstallationDate)
-                  : 'Not Completed'}
+                  ? formatDateLocale(trainerData.actualInstallationDate)
+                  : t('status.notCompleted')}
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Status</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.installationStatus')}</div>
               <span className={`text-xs px-2 py-1 rounded-full ${
                 trainerData?.installationStatus === 'Completed' ? 'bg-green-100 text-green-800' :
                 trainerData?.installationStatus === 'In Progress' ? 'bg-blue-100 text-blue-800' :
@@ -1166,7 +1139,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {trainerData?.installationIssuesElaboration && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Issues</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.installationIssues')}</div>
                 <div className="text-sm text-gray-900 bg-red-50 border border-red-200 rounded p-2">
                   {trainerData.installationIssuesElaboration}
                 </div>
@@ -1179,12 +1152,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
         return (
           <div className="space-y-4">
             <div>
-              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">Training Date</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">{t('fields.scheduledTrainingDate')}</div>
               <div>
                 <div className="text-base font-medium text-gray-900 mb-2">
                   {trainerData?.trainingDate
-                    ? formatDateTime(trainerData.trainingDate)
-                    : 'Not Scheduled'}
+                    ? formatDateTimeLocale(trainerData.trainingDate)
+                    : t('status.notScheduled')}
                 </div>
                 {(() => {
                   // Internal users can reschedule anytime, no buffer required
@@ -1204,7 +1177,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         }`}
                         title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
                       >
-                        {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
+                        {trainerData?.trainingDate ? t('buttons.changeDate') : t('buttons.schedule')}
                       </button>
                       {!productListSubmitted && !hasExistingDate && !isInternalUser && (
                         <div className="mt-2 text-sm text-amber-600">
@@ -1213,12 +1186,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       )}
                       {productListSubmitted && !installationDateSet && !hasExistingDate && !isInternalUser && (
                         <div className="mt-2 text-sm text-amber-600">
-                          Please schedule installation first before scheduling training.
+                          {t('messages.scheduleInstallationFirst')}
                         </div>
                       )}
                       {cannotReschedule && (
                         <div className="mt-2 text-sm text-gray-600">
-                          To reschedule, please contact your onboarding manager
+                          {t('messages.contactOnboardingManager')}
                         </div>
                       )}
                     </div>
@@ -1230,7 +1203,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {/* Remote Training Meeting Link - Only for Remote Training */}
             {trainerData?.onboardingServicesBought?.toLowerCase().includes('remote') && trainerData?.remoteTrainingMeetingLink && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Remote Training Meeting Link</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">{t('fields.remoteTrainingMeetingLink')}</div>
                 <div className="space-y-3">
                   <a
                     href={trainerData.remoteTrainingMeetingLink}
@@ -1241,12 +1214,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Join Training
+                    {t('buttons.joinTraining')}
                   </a>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(trainerData?.remoteTrainingMeetingLink || '');
-                      alert('Meeting link copied to clipboard!');
+                      alert(t('messages.meetingLinkCopied'));
                     }}
                     className="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors w-full justify-center"
                     title="Copy meeting link"
@@ -1254,7 +1227,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Copy Link
+                    {t('buttons.copyLink')}
                   </button>
                   <div className="text-xs text-gray-500 font-mono break-all">
                     {trainerData.remoteTrainingMeetingLink}
@@ -1265,7 +1238,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Training Type */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Type</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.trainingType')}</div>
               <div className="text-sm font-medium text-gray-900">
                 {(() => {
                   const serviceType = detectServiceType(trainerData?.onboardingServicesBought)
@@ -1283,16 +1256,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Trainer Name</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.trainerName')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.csmName || 'Not Assigned'}
+                {trainerData?.csmName || t('status.notAssigned')}
               </div>
             </div>
 
             {/* Store Address - Only for Onsite Training */}
             {!trainerData?.onboardingServicesBought?.toLowerCase().includes('remote') && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.storeAddress')}</div>
                 <div className="text-sm font-medium text-gray-900">
                   {(() => {
                     const parts = [
@@ -1302,7 +1275,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       trainerData?.shippingZipPostalCode,
                       trainerData?.shippingCountry
                     ].filter(Boolean);
-                    return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                    return parts.length > 0 ? parts.join(', ') : t('status.notAvailable');
                   })()}
                 </div>
               </div>
@@ -1310,23 +1283,23 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Required Features by Merchant */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Required Features by Merchant</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.requiredFeatures')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.requiredFeaturesByMerchant || 'None Specified'}
+                {trainerData?.requiredFeaturesByMerchant || t('completion.noneSpecified')}
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.onboardingServicesBought')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.onboardingServicesBought || 'None'}
+                {trainerData?.onboardingServicesBought || t('completion.none')}
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed Training</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.trainingCompleted')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.completedTraining ? 'Yes' : 'No'}
+                {trainerData?.completedTraining ? t('completion.yes') : t('completion.no')}
               </div>
             </div>
           </div>
@@ -1336,38 +1309,38 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
         return (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-base text-gray-700">✓ Hardware Delivered</span>
+              <span className="text-base text-gray-700">✓ {t('readyToGoLive.hardwareDelivered')}</span>
               <span className={`text-sm ${trainerData?.hardwareFulfillmentDate ? 'text-green-600' : 'text-gray-400'}`}>
-                {trainerData?.hardwareFulfillmentDate ? 'Yes' : 'No'}
+                {trainerData?.hardwareFulfillmentDate ? t('completion.yes') : t('completion.no')}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-base text-gray-700">✓ Product Setup</span>
+              <span className="text-base text-gray-700">✓ {t('readyToGoLive.productSetupCompleted')}</span>
               <span className={`text-sm ${(trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') ? 'text-green-600' : 'text-gray-400'}`}>
-                {(trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') ? trainerData?.completedProductSetup : 'No'}
+                {(trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') ? trainerData?.completedProductSetup : t('completion.no')}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-base text-gray-700">✓ Installation</span>
+              <span className="text-base text-gray-700">✓ {t('readyToGoLive.hardwareInstallationCompleted')}</span>
               <span className={`text-sm ${trainerData?.installationStatus === 'Completed' ? 'text-green-600' : 'text-gray-400'}`}>
-                {trainerData?.installationStatus === 'Completed' ? 'Yes' : 'No'}
+                {trainerData?.installationStatus === 'Completed' ? t('completion.yes') : t('completion.no')}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-base text-gray-700">✓ Training</span>
+              <span className="text-base text-gray-700">✓ {t('readyToGoLive.trainingCompleted')}</span>
               <span className={`text-sm ${trainerData?.completedTraining === 'Yes' ? 'text-green-600' : 'text-gray-400'}`}>
-                {trainerData?.completedTraining === 'Yes' ? 'Yes' : 'No'}
+                {trainerData?.completedTraining === 'Yes' ? t('completion.yes') : t('completion.no')}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-base text-gray-700">✓ Subscription Activated</span>
+              <span className="text-base text-gray-700">✓ {t('readyToGoLive.subscriptionActivated')}</span>
               <span className={`text-sm ${trainerData?.subscriptionActivationDate ? 'text-green-600' : 'text-gray-400'}`}>
-                {trainerData?.subscriptionActivationDate ? 'Yes' : 'No'}
+                {trainerData?.subscriptionActivationDate ? t('completion.yes') : t('completion.no')}
               </span>
             </div>
             {trainerData?.boAccountName && !trainerData?.subscriptionActivationDate && (
               <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded">
-                <p className="text-orange-800 mb-1 text-sm">⚠️ Please activate subscription at:</p>
+                <p className="text-orange-800 mb-1 text-sm">⚠️ {t('messages.activateSubscriptionWarning')}</p>
                 <a
                   href={`https://${trainerData.boAccountName}.storehubhq.com`}
                   target="_blank"
@@ -1377,14 +1350,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   {trainerData.boAccountName}.storehubhq.com
                 </a>
                 <div className="mt-2 pt-2 border-t border-orange-200">
-                  <p className="text-xs text-orange-700 mb-1">Need help?</p>
+                  <p className="text-xs text-orange-700 mb-1">{t('messages.needHelpActivation')}</p>
                   <a
                     href="https://care.storehub.com/en/articles/10650521-manage-subscription-how-to-self-activate-your-account"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 underline"
                   >
-                    View activation guide
+                    {t('buttons.viewActivationGuide')}
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
@@ -1399,12 +1372,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
         return (
           <div className="space-y-3">
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.status')}</div>
               <div className="text-sm font-medium">
                 {trainerData?.firstRevisedEGLD && new Date(trainerData.firstRevisedEGLD) <= new Date() ? (
-                  <span className="text-green-600">✅ Merchant is Live</span>
+                  <span className="text-green-600">✅ {t('status.merchantIsLive')}</span>
                 ) : (
-                  <span className="text-gray-500">⏳ Awaiting Go-Live</span>
+                  <span className="text-gray-500">⏳ {t('status.awaitingGoLive')}</span>
                 )}
               </div>
             </div>
@@ -1412,7 +1385,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {/* BackOffice Account Name */}
             {trainerData?.boAccountName && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">BackOffice Account</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.backOfficeAccount')}</div>
                 <a
                   href={`https://${trainerData.boAccountName}.storehubhq.com`}
                   target="_blank"
@@ -1430,19 +1403,19 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {/* Onboarding Survey Link */}
             {trainerData?.boAccountName && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Survey</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.onboardingSurvey')}</div>
                 <a
                   href={`https://storehub.sg.larksuite.com/share/base/form/shrlgoT9OUwf6B1w5bdBSQTOCeb?prefill_Your+BackOffice+Account+Name=${encodeURIComponent(trainerData.boAccountName)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm font-medium text-[#ff630f] hover:text-[#e55a0e] transition-colors"
                 >
-                  <span>Share Your Feedback</span>
+                  <span>{t('buttons.shareFeedback')}</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </a>
-                <p className="text-xs text-gray-500 mt-1">Help us improve your onboarding experience</p>
+                <p className="text-xs text-gray-500 mt-1">{t('messages.helpImproveExperience')}</p>
               </div>
             )}
           </div>
@@ -1468,11 +1441,11 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             // Tooltip message for locked stages
             const lockedTooltip = isInstallationLocked
-              ? 'Please submit your Store Setup Video first'
+              ? t('messages.submitVideoFirst')
               : isTrainingLocked
                 ? !productListSubmitted
-                  ? `Please submit your ${terminology.collectionName} first`
-                  : 'Please schedule Installation first'
+                  ? t('messages.submitCollectionFirst', { collectionName: terminology.collectionName })
+                  : t('messages.scheduleInstallationFirst')
                 : ''
 
             return (
@@ -1524,34 +1497,34 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       {(() => {
                         switch(stage.id) {
                           case 'welcome':
-                            return stage.status === 'completed' ? 'Completed' : 'In Progress'
+                            return stage.status === 'completed' ? t('status.completed') : t('status.inProgress')
                           case 'preparation':
-                            if (stage.status === 'completed') return 'Completed'
+                            if (stage.status === 'completed') return t('status.completed')
                             if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
-                              return `${stage.completedCount}/${stage.totalCount} Completed`
+                              return t('status.xOfYCompleted', { completed: stage.completedCount, total: stage.totalCount })
                             }
-                            return 'In Progress'
+                            return t('status.inProgress')
                           case 'installation':
-                            if (stage.status === 'completed') return 'Completed'
-                            if (stage.status === 'current') return 'In Progress'
+                            if (stage.status === 'completed') return t('status.completed')
+                            if (stage.status === 'current') return t('status.inProgress')
                             // Show "Scheduled" with date if date is set, "Not set" if no date
                             return trainerData?.installationDate
-                              ? `Scheduled • ${formatDate(trainerData.installationDate)}`
-                              : 'Not set'
+                              ? `${t('status.scheduled')} • ${formatDateLocale(trainerData.installationDate)}`
+                              : t('status.notSet')
                           case 'training':
-                            if (stage.status === 'completed') return 'Completed'
-                            if (stage.status === 'current') return 'In Progress'
+                            if (stage.status === 'completed') return t('status.completed')
+                            if (stage.status === 'current') return t('status.inProgress')
                             // Show "Scheduled" with date if date is set, "Not set" if no date
                             const trainingDate = trainerData?.posTrainingDate || trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
                             return trainingDate
-                              ? `Scheduled • ${formatDate(trainingDate)}`
-                              : 'Not set'
+                              ? `${t('status.scheduled')} • ${formatDateLocale(trainingDate)}`
+                              : t('status.notSet')
                           case 'ready-go-live':
-                            if (stage.status === 'completed') return 'Ready'
+                            if (stage.status === 'completed') return t('status.ready')
                             if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
-                              return `${stage.completedCount}/${stage.totalCount} Completed`
+                              return t('status.xOfYCompleted', { completed: stage.completedCount, total: stage.totalCount })
                             }
-                            return stage.status === 'current' ? 'Preparing' : 'Not Started'
+                            return stage.status === 'current' ? t('status.preparing') : t('status.notStarted')
                           case 'live':
                             // Show "Live" if merchant is Live (stage.status === 'completed')
                             // Show "Overdue" if Days to Go Live < 0 and not Live
@@ -1560,12 +1533,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                               ? Math.ceil((new Date(trainerData.plannedGoLiveDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                               : null
                             if (stage.status === 'completed') {
-                              return 'Live'
+                              return t('status.live')
                             }
                             if (daysToGoLive !== null && daysToGoLive < 0) {
-                              return 'Overdue'
+                              return t('status.overdue')
                             }
-                            return stage.status === 'current' ? 'Going Live' : 'Not Started'
+                            return stage.status === 'current' ? t('status.goingLive') : t('status.notStarted')
                           default:
                             return ''
                         }
@@ -1592,11 +1565,11 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             // Prerequisite message for locked stages
             const lockedMessage = isInstallationLocked
-              ? 'Please submit your Store Setup Video first'
+              ? t('messages.submitVideoFirst')
               : isTrainingLocked
                 ? !productListSubmitted
-                  ? `Please submit your ${terminology.collectionName} first`
-                  : 'Please schedule Installation first'
+                  ? t('messages.submitCollectionFirst', { collectionName: terminology.collectionName })
+                  : t('messages.scheduleInstallationFirst')
                 : ''
 
             return (
@@ -1646,7 +1619,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           <p className="text-sm text-gray-500 mt-1">
                             {(() => {
                               if (stage.id === 'welcome') {
-                                return welcomeCompleted ? 'Completed' : 'In Progress'
+                                return welcomeCompleted ? t('status.completed') : t('status.inProgress')
                               }
                               if (stage.id === 'live') {
                                 // Show "Live" if merchant is Live (stage.status === 'completed')
@@ -1656,39 +1629,39 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                                   ? Math.ceil((new Date(trainerData.plannedGoLiveDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                                   : null
                                 if (stage.status === 'completed') {
-                                  return 'Live'
+                                  return t('status.live')
                                 }
                                 if (daysToGoLive !== null && daysToGoLive < 0) {
-                                  return 'Overdue'
+                                  return t('status.overdue')
                                 }
-                                return stage.status === 'current' ? 'Going Live' : 'Not Started'
+                                return stage.status === 'current' ? t('status.goingLive') : t('status.notStarted')
                               }
                               // For stages with completion counts (Preparation, Ready to Go Live)
                               if (stage.completedCount !== undefined && stage.totalCount !== undefined) {
                                 // Show "Completed" if stage status is completed
                                 if (stage.status === 'completed') {
-                                  return 'Completed'
+                                  return t('status.completed')
                                 }
-                                return `${stage.completedCount}/${stage.totalCount} Completed`
+                                return t('status.xOfYCompleted', { completed: stage.completedCount, total: stage.totalCount })
                               }
                               if (stage.completedDate) {
-                                return formatDate(stage.completedDate)
+                                return formatDateLocale(stage.completedDate)
                               }
                               // Show scheduled dates for Not Started stages
                               if (stage.status === 'pending') {
                                 if (stage.id === 'installation') {
                                   return trainerData?.installationDate
-                                    ? `Scheduled • ${formatDate(trainerData.installationDate)}`
-                                    : 'Not set'
+                                    ? `${t('status.scheduled')} • ${formatDateLocale(trainerData.installationDate)}`
+                                    : t('status.notSet')
                                 } else if (stage.id === 'training') {
                                   const trainingDate = trainerData?.posTrainingDate || trainerData?.backOfficeTrainingDate || trainerData?.trainingDate
                                   return trainingDate
-                                    ? `Scheduled • ${formatDate(trainingDate)}`
-                                    : 'Not set'
+                                    ? `${t('status.scheduled')} • ${formatDateLocale(trainingDate)}`
+                                    : t('status.notSet')
                                 }
-                                return 'Not Started'
+                                return t('status.notStarted')
                               }
-                              return stage.status === 'current' ? 'In Progress' : ''
+                              return stage.status === 'current' ? t('status.inProgress') : ''
                             })()}
                           </p>
                           {/* Prerequisite message for locked stages */}
@@ -1726,7 +1699,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       {selectedStage === 'preparation' && (
         <div id="stage-preparation" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
-            <span>Preparation</span>
+            <span>{t('stages.preparation')}</span>
             {(() => {
               // Use the same completion logic as defined at component level
               // Hardware delivery is completed when tracking link is provided
@@ -1750,7 +1723,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   completed >= 1 ? 'bg-yellow-100 text-yellow-800' :
                   'bg-gray-100 text-gray-800'
                 }`}>
-                  {allDone ? 'Completed' : `${completed}/3 Completed`}
+                  {allDone ? t('status.completed') : t('status.xOfYCompleted', { completed, total: 3 })}
                 </span>
               );
             })()}
@@ -1796,18 +1769,18 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         );
                       }
                     })()}
-                    <div className="text-sm font-medium text-gray-900">Hardware Delivery</div>
+                    <div className="text-sm font-medium text-gray-900">{t('subStages.hardwareDelivery')}</div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium">
                       {(() => {
                         if (trainerData?.hardwareDeliveryStatus === 'Delivered' || trainerData?.trackingLink) {
-                          return <span className="text-gray-500">Delivered</span>;
+                          return <span className="text-gray-500">{t('status.delivered')}</span>;
                         }
                         if (trainerData?.hardwareFulfillmentDate) {
-                          return <span className="text-orange-600">Scheduled</span>;
+                          return <span className="text-orange-600">{t('status.scheduled')}</span>;
                         }
-                        return <span className="text-orange-600">Pending</span>;
+                        return <span className="text-orange-600">{t('status.pending')}</span>;
                       })()}
                     </div>
                     <svg className={`w-4 h-4 transition-transform text-gray-400 ${expandedItems['hardware-delivery'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1820,16 +1793,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 {expandedItems['hardware-delivery'] && (
                   <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Order Status</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.orderStatus')}</div>
                       <div className="text-sm text-gray-900">
-                        {trainerData?.orderNSStatus || 'Not Available'}
+                        {trainerData?.orderNSStatus || t('status.notAvailable')}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Shipping Address</div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.shippingAddress')}</div>
                       <div className="text-sm text-gray-900">
                         {(() => {
-                          if (!trainerData?.orderShippingAddress) return 'Not Available';
+                          if (!trainerData?.orderShippingAddress) return t('status.notAvailable');
 
                           // Handle if it's already a string
                           if (typeof trainerData.orderShippingAddress === 'string') {
@@ -1846,14 +1819,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                             addr.country || addr.countryCode
                           ].filter(Boolean);
 
-                          return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                          return parts.length > 0 ? parts.join(', ') : t('status.notAvailable');
                         })()}
                       </div>
                     </div>
 
                     <div className="space-y-3">
                       <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Tracking Link</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.trackingLink')}</div>
                         {trainerData?.trackingLink ? (
                           <a
                             href={trainerData.trackingLink}
@@ -1861,18 +1834,18 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
                           >
-                            Track Package
+                            {t('buttons.trackPackage')}
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
                           </a>
                         ) : (
-                          <span className="text-sm text-gray-500">No tracking available</span>
+                          <span className="text-sm text-gray-500">{t('messages.noTrackingAvailable')}</span>
                         )}
                       </div>
                       <div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                          <span>Hardware Shipment Date</span>
+                          <span>{t('fields.hardwareShipmentDate')}</span>
                           <div className="relative group">
                             <svg
                               className="w-3.5 h-3.5 text-gray-400 cursor-help"
@@ -1890,8 +1863,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         </div>
                         <div className="text-sm text-gray-900">
                           {trainerData?.hardwareFulfillmentDate
-                            ? formatDate(trainerData.hardwareFulfillmentDate)
-                            : 'Not Scheduled'}
+                            ? formatDateLocale(trainerData.hardwareFulfillmentDate)
+                            : t('status.notScheduled')}
                         </div>
                       </div>
                     </div>
@@ -1943,7 +1916,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
                       {(() => {
-                        if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return 'Completed';
+                        if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') return t('status.completed');
                         if (trainerData?.menuCollectionSubmissionTimestamp) return <span className="text-orange-600">{terminology.submittedStatus}</span>;
                         return <span className="text-orange-600">{terminology.pendingStatus}</span>;
                       })()}
@@ -1982,15 +1955,15 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           {terminology.submitButtonText}
                         </a>
                       ) : (
-                        <span className="text-sm text-gray-500">Form link not available</span>
+                        <span className="text-sm text-gray-500">{t('messages.formNotAvailable')}</span>
                       )}
                     </div>
                     <div>
                       <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{terminology.submissionTimestampLabel}</div>
                       <div className="text-sm text-gray-900">
                         {trainerData?.menuCollectionSubmissionTimestamp
-                          ? formatDateTime(trainerData.menuCollectionSubmissionTimestamp)
-                          : 'Not Submitted'}
+                          ? formatDateTimeLocale(trainerData.menuCollectionSubmissionTimestamp)
+                          : t('status.notSubmitted')}
                       </div>
                     </div>
 
@@ -2013,7 +1986,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         </div>
                       </div>
                       <div className="text-sm font-medium text-gray-900">
-                        {trainerData?.completedProductSetup || 'No'}
+                        {trainerData?.completedProductSetup || t('completion.no')}
                       </div>
                     </div>
                   </div>
@@ -2047,14 +2020,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         </div>
                       );
                     })()}
-                    <div className="text-sm font-medium text-gray-900">Store Setup</div>
+                    <div className="text-sm font-medium text-gray-900">{t('storeSetup.title')}</div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-sm font-medium text-gray-500">
                       {((trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA') || uploadedVideoUrl) ? (
-                        <span>Completed</span>
+                        <span>{t('status.completed')}</span>
                       ) : (
-                        <span className="text-orange-600">Pending Upload</span>
+                        <span className="text-orange-600">{t('storeSetup.pendingUpload')}</span>
                       )}
                     </div>
                     <svg className={`w-4 h-4 transition-transform text-gray-400 ${expandedItems['store-setup'] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2080,10 +2053,10 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
-                          <span className="text-gray-700">Video uploaded - </span>
+                          <span className="text-gray-700">{t('messages.videoUploaded')}</span>
                           <a href={uploadedVideoUrl || trainerData?.videoProofLink} target="_blank" rel="noopener noreferrer"
                              className="text-blue-600 hover:text-blue-700 underline">
-                            View Video
+                            {t('buttons.viewVideo')}
                           </a>
                         </div>
                       )}
@@ -2136,7 +2109,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                           </svg>
-                          {uploadingVideo ? 'Uploading...' : (trainerData?.videoProofLink || uploadedVideoUrl ? 'Replace Video' : 'Upload Video')}
+                          {uploadingVideo ? t('buttons.uploading') : (trainerData?.videoProofLink || uploadedVideoUrl ? t('buttons.replaceVideo') : t('buttons.uploadVideo'))}
                         </button>
                       </div>
                     </div>
@@ -2145,11 +2118,11 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <div className="space-y-4 text-sm text-gray-700">
                       {/* Section 1: How to set up the store */}
                       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <p className="font-semibold text-gray-900 mb-2">1. How to set up the store:</p>
+                        <p className="font-semibold text-gray-900 mb-2">{t('storeSetup.howToSetupStore')}</p>
                         <a href="https://drive.google.com/file/d/1vPr7y0VdD6sKaKG_h8JbwNi0RBE16xdc/view"
                            target="_blank" rel="noopener noreferrer"
                            className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
-                          📖 Guide for your store network setup (cabling and wiring)
+                          📖 {t('storeSetup.guideForNetworkSetup')}
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
@@ -2158,13 +2131,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
                       {/* Section 2: How to record video */}
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <p className="font-semibold text-gray-900 mb-3">2. How to record video:</p>
+                        <p className="font-semibold text-gray-900 mb-3">{t('storeSetup.howToRecordVideo')}</p>
                         <div className="space-y-2 mb-3">
-                          <p className="text-gray-700">Show us 3 things at each location:</p>
-                          <p className="text-gray-700"><span className="font-semibold">Main Counter:</span> Terminal & receipt printer location, Power socket, LAN port</p>
-                          <p className="text-gray-700"><span className="font-semibold">Kitchen/Other Stations:</span> Printer location, Power socket, LAN port</p>
+                          <p className="text-gray-700">{t('storeSetup.showUsThreeThings')}</p>
+                          <p className="text-gray-700"><span className="font-semibold">{t('storeSetup.mainCounter')}</span> {t('storeSetup.mainCounterDetails')}</p>
+                          <p className="text-gray-700"><span className="font-semibold">{t('storeSetup.kitchenOtherStations')}</span> {t('storeSetup.kitchenDetails')}</p>
                         </div>
-                        <p className="text-blue-700 font-medium">📱 Quick Tip: Hold your phone sideways (horizontally) while recording!</p>
+                        <p className="text-blue-700 font-medium">📱 {t('storeSetup.quickTip')}</p>
                       </div>
                     </div>
                   </div>
@@ -2179,16 +2152,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       {selectedStage === 'welcome' && (
         <div id="stage-welcome" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
-            <span>Welcome to StoreHub</span>
+            <span>{t('stages.welcome')}</span>
             {(trainerData?.welcomeCallStatus === 'Welcome Call Completed' || trainerData?.welcomeCallStatus === 'Completed') &&
-              <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Completed</span>
+              <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">{t('status.completed')}</span>
             }
           </h4>
 
           <div className="space-y-4">
             {/* Welcome Call Status */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Welcome Call Status</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.welcomeCallStatus')}</div>
               <div className="text-sm font-medium">
                 {trainerData?.welcomeCallStatus ? (
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -2199,59 +2172,59 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     {trainerData.welcomeCallStatus}
                   </span>
                 ) : (
-                  <span className="text-gray-500">Not Set</span>
+                  <span className="text-gray-500">{t('status.notSet')}</span>
                 )}
               </div>
             </div>
 
             {/* First Call Timestamp */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">First Call Timestamp</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.firstCallTimestamp')}</div>
               <div className="text-sm font-medium text-gray-900">
                 {trainerData?.firstCallTimestamp
-                  ? formatDateTime(trainerData.firstCallTimestamp)
-                  : 'Not Recorded'}
+                  ? formatDateTimeLocale(trainerData.firstCallTimestamp)
+                  : t('status.notRecorded')}
               </div>
             </div>
 
             {/* Onboarding Manager Name */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Manager Name</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.onboardingManagerName')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.msmName || 'Not Assigned'}
+                {trainerData?.msmName || t('status.notAssigned')}
               </div>
             </div>
 
             {/* Welcome Call Summary */}
             <div className="mt-6 pt-4 border-t border-gray-300">
-              <h5 className="text-md font-semibold text-gray-900 mb-3">Welcome Call Summary:</h5>
+              <h5 className="text-md font-semibold text-gray-900 mb-3">{t('welcomeCallSummary.title')}</h5>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">• Go live date:</span>
+                  <span className="text-sm text-gray-600">• {t('welcomeCallSummary.goLiveDate')}</span>
                   <span className="text-sm font-medium text-gray-900">
                     {trainerData?.plannedGoLiveDate
-                      ? formatDate(trainerData.plannedGoLiveDate)
-                      : 'Not Set'}
+                      ? formatDateLocale(trainerData.plannedGoLiveDate)
+                      : t('status.notSet')}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">• Hardware delivery date:</span>
+                  <span className="text-sm text-gray-600">• {t('welcomeCallSummary.hardwareDeliveryDate')}</span>
                   <span className="text-sm font-medium text-gray-900">
                     {trainerData?.hardwareFulfillmentDate
-                      ? formatDate(trainerData.hardwareFulfillmentDate)
-                      : 'Not Set'}
+                      ? formatDateLocale(trainerData.hardwareFulfillmentDate)
+                      : t('status.notSet')}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">• Installation date:</span>
+                  <span className="text-sm text-gray-600">• {t('welcomeCallSummary.installationDate')}</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatDateTime(trainerData?.installationDate)}
+                    {formatDateTimeLocale(trainerData?.installationDate)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">• Training Date:</span>
+                  <span className="text-sm text-gray-600">• {t('welcomeCallSummary.trainingDate')}</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatDateTime(trainerData?.trainingDate)}
+                    {formatDateTimeLocale(trainerData?.trainingDate)}
                   </span>
                 </div>
               </div>
@@ -2266,13 +2239,13 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       {selectedStage === 'installation' && (
         <div id="stage-installation" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
-            <span>Installation</span>
+            <span>{t('stages.installation')}</span>
             <span className={`text-xs px-3 py-1 rounded-full font-medium ${
               installationCompleted ? 'bg-green-100 text-green-800' :
               trainerData?.installationDate ? 'bg-yellow-100 text-yellow-800' :
               'bg-gray-100 text-gray-800'
             }`}>
-              {installationCompleted ? 'Completed' : trainerData?.installationDate ? 'Scheduled' : 'Not Started'}
+              {installationCompleted ? t('status.completed') : trainerData?.installationDate ? t('status.scheduled') : t('status.notStarted')}
             </span>
           </h4>
 
@@ -2286,11 +2259,11 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 return (
                   <>
                     <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                      {isExternalVendor ? 'Proposed Installation Date' : 'Scheduled Installation Date'}
+                      {isExternalVendor ? t('fields.proposedInstallationDate') : t('fields.scheduledInstallationDate')}
                     </div>
                     {isExternalVendor && (
                       <div className="text-xs text-gray-500 mb-1 italic">
-                        Vendor will confirm directly to finalise the date
+                        {t('messages.vendorWillConfirm')}
                       </div>
                     )}
                   </>
@@ -2300,8 +2273,8 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 <div className="flex items-center gap-2">
                   <div className="text-sm font-medium text-gray-900">
                     {trainerData?.installationDate
-                      ? formatDateTime(trainerData.installationDate)
-                      : 'Not Scheduled'}
+                      ? formatDateTimeLocale(trainerData.installationDate)
+                      : t('status.notScheduled')}
                   </div>
                   {(() => {
                     // Internal users can reschedule anytime, no buffer required
@@ -2323,7 +2296,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        {trainerData?.installationDate ? 'Change Date' : 'Schedule'}
+                        {trainerData?.installationDate ? t('buttons.changeDate') : t('buttons.schedule')}
                       </button>
                     )
                   })()}
@@ -2341,7 +2314,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   }
                   return cannotReschedule ? (
                     <div className="mt-2 text-sm text-gray-600">
-                      To reschedule, please contact your onboarding manager
+                      {t('messages.contactOnboardingManager')}
                     </div>
                   ) : null
                 })()}
@@ -2350,7 +2323,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Installer Name */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installer Name</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.installerName')}</div>
               <div className="text-sm font-medium text-gray-900">
                 {(() => {
                   // If installer name is set, show it
@@ -2361,16 +2334,16 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   if (trainerData?.installationDate) {
                     // Use installerType from parent trainerData object (not nested in trainers array)
                     const installerType = (trainerData as any)?.installerType
-                    return installerType === 'external' ? 'External Vendor' : 'Not Assigned'
+                    return installerType === 'external' ? t('fields.externalVendor') : t('status.notAssigned')
                   }
-                  return 'Not Assigned'
+                  return t('status.notAssigned')
                 })()}
               </div>
             </div>
 
             {/* Store Address from Onboarding_Trainer__c */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.storeAddress')}</div>
               <div className="text-sm font-medium text-gray-900">
                 {(() => {
                   // Build full address from Onboarding_Trainer__c shipping fields
@@ -2382,25 +2355,25 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     trainerData?.shippingCountry
                   ].filter(Boolean);
                   
-                  return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                  return parts.length > 0 ? parts.join(', ') : t('status.notAvailable');
                 })()}
               </div>
             </div>
 
             {/* Actual Installation Date */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Actual Installation Date</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.actualInstallationDate')}</div>
               <div className="text-sm font-medium text-gray-900">
                 {trainerData?.actualInstallationDate
-                  ? formatDate(trainerData.actualInstallationDate)
-                  : 'Not Completed'}
+                  ? formatDateLocale(trainerData.actualInstallationDate)
+                  : t('status.notCompleted')}
               </div>
             </div>
 
             {/* Installation Issues Elaboration */}
             {trainerData?.installationIssuesElaboration && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Installation Issues</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.installationIssues')}</div>
                 <div className="text-sm text-gray-900 bg-red-50 border border-red-200 rounded p-2">
                   {trainerData.installationIssuesElaboration}
                 </div>
@@ -2415,26 +2388,26 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       {selectedStage === 'training' && (
         <div id="stage-training" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
-            <span>Training</span>
+            <span>{t('stages.training')}</span>
             <span className={`text-xs px-3 py-1 rounded-full font-medium ${
               trainingCompleted ? 'bg-green-100 text-green-800' :
               trainerData?.trainingDate ? 'bg-yellow-100 text-yellow-800' :
               'bg-gray-100 text-gray-800'
             }`}>
-              {trainingCompleted ? 'Completed' : trainerData?.trainingDate ? 'Scheduled' : 'Not Started'}
+              {trainingCompleted ? t('status.completed') : trainerData?.trainingDate ? t('status.scheduled') : t('status.notStarted')}
             </span>
           </h4>
 
           <div className="space-y-4">
             {/* Training Date - Editable */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Date</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.scheduledTrainingDate')}</div>
               <div>
                 <div className="flex items-center gap-2">
                   <div className="text-sm font-medium text-gray-900">
                     {trainerData?.trainingDate
-                      ? formatDateTime(trainerData.trainingDate)
-                      : 'Not Scheduled'}
+                      ? formatDateTimeLocale(trainerData.trainingDate)
+                      : t('status.notScheduled')}
                   </div>
                   {(() => {
                     // Internal users can reschedule anytime, no buffer required
@@ -2456,7 +2429,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        {trainerData?.trainingDate ? 'Change Date' : 'Schedule'}
+                        {trainerData?.trainingDate ? t('buttons.changeDate') : t('buttons.schedule')}
                       </button>
                     )
                   })()}
@@ -2482,7 +2455,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   }
                   return cannotReschedule ? (
                     <div className="mt-2 text-sm text-gray-600">
-                      To reschedule, please contact your onboarding manager
+                      {t('messages.contactOnboardingManager')}
                     </div>
                   ) : null
                 })()}
@@ -2492,7 +2465,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {/* Remote Training Meeting Link - Only for Remote Training */}
             {trainerData?.onboardingServicesBought?.toLowerCase().includes('remote') && trainerData?.remoteTrainingMeetingLink && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Remote Training Meeting Link</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">{t('fields.remoteTrainingMeetingLink')}</div>
                 <div className="flex items-center gap-3">
                   <a
                     href={trainerData.remoteTrainingMeetingLink}
@@ -2503,12 +2476,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Join Training
+                    {t('buttons.joinTraining')}
                   </a>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(trainerData?.remoteTrainingMeetingLink || '');
-                      alert('Meeting link copied to clipboard!');
+                      alert(t('messages.meetingLinkCopied'));
                     }}
                     className="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
                     title="Copy meeting link"
@@ -2516,7 +2489,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Copy Link
+                    {t('buttons.copyLink')}
                   </button>
                   <div className="text-xs text-gray-500 font-mono truncate max-w-md">
                     {trainerData.remoteTrainingMeetingLink}
@@ -2527,7 +2500,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Training Type */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Type</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.trainingType')}</div>
               <div className="text-sm font-medium text-gray-900">
                 {(() => {
                   const serviceType = detectServiceType(trainerData?.onboardingServicesBought)
@@ -2547,25 +2520,25 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {/* Trainer Name - Only show if training date exists */}
             {trainerData?.trainingDate && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Trainer Name</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.trainerName')}</div>
                 <div className="text-sm font-medium text-gray-900">
-                  {trainerData?.csmName || 'Not Assigned'}
+                  {trainerData?.csmName || t('status.notAssigned')}
                 </div>
               </div>
             )}
 
             {/* Preferred Language */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Preferred Language</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.preferredLanguage')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.preferredLanguage || 'Not Specified'}
+                {trainerData?.preferredLanguage || t('completion.noneSpecified')}
               </div>
             </div>
 
             {/* Store Address from Onboarding_Trainer__c - Only for Onsite Training */}
             {!trainerData?.onboardingServicesBought?.toLowerCase().includes('remote') && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Store Address</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.storeAddress')}</div>
                 <div className="text-sm font-medium text-gray-900">
                   {(() => {
                     // Build full address from Onboarding_Trainer__c shipping fields
@@ -2577,7 +2550,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       trainerData?.shippingCountry
                     ].filter(Boolean);
 
-                    return parts.length > 0 ? parts.join(', ') : 'Not Available';
+                    return parts.length > 0 ? parts.join(', ') : t('status.notAvailable');
                   })()}
                 </div>
               </div>
@@ -2585,25 +2558,25 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             {/* Training Completed Status */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Training Completed</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.trainingCompleted')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.completedTraining ? 'Yes' : 'No'}
+                {trainerData?.completedTraining ? t('completion.yes') : t('completion.no')}
               </div>
             </div>
 
             {/* Required Features by Merchant */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Required Features by Merchant</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.requiredFeatures')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.requiredFeaturesByMerchant || 'None Specified'}
+                {trainerData?.requiredFeaturesByMerchant || t('completion.noneSpecified')}
               </div>
             </div>
 
             {/* Onboarding Services Bought */}
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Services Bought</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.onboardingServicesBought')}</div>
               <div className="text-sm font-medium text-gray-900">
-                {trainerData?.onboardingServicesBought || 'None'}
+                {trainerData?.onboardingServicesBought || t('completion.none')}
               </div>
             </div>
           </div>
@@ -2614,7 +2587,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       {selectedStage === 'ready-go-live' && (
         <div id="stage-ready-go-live" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
-            <span>Ready to Go Live</span>
+            <span>{t('stages.readyToGoLive')}</span>
             {(() => {
               // Ready to Go Live is done when all previous stages are completed
               const allDone = welcomeCompleted &&
@@ -2626,7 +2599,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 <span className={`text-xs px-3 py-1 rounded-full font-medium ${
                   allDone ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {allDone ? 'Ready' : 'In Progress'}
+                  {allDone ? t('status.ready') : t('status.inProgress')}
                 </span>
               );
             })()}
@@ -2635,7 +2608,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
           <div className="space-y-4">
             {/* Checklist Items */}
             <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h5 className="text-sm font-semibold text-gray-900 mb-3">Go-Live Readiness Checklist</h5>
+              <h5 className="text-sm font-semibold text-gray-900 mb-3">{t('readyToGoLive.checklistTitle')}</h5>
               <div className="space-y-3">
                 {/* Hardware Fulfillment */}
                 <div className="flex items-center justify-between">
@@ -2649,12 +2622,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-base text-gray-700">Hardware Delivered</span>
+                    <span className="text-base text-gray-700">{t('readyToGoLive.hardwareDelivered')}</span>
                   </div>
                   <span className="text-sm text-gray-500">
                     {trainerData?.hardwareFulfillmentDate
-                      ? formatDate(trainerData.hardwareFulfillmentDate)
-                      : 'Pending'}
+                      ? formatDateLocale(trainerData.hardwareFulfillmentDate)
+                      : t('status.pending')}
                   </span>
                 </div>
 
@@ -2670,12 +2643,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-base text-gray-700">Product Setup Completed</span>
+                    <span className="text-base text-gray-700">{t('readyToGoLive.productSetupCompleted')}</span>
                   </div>
                   <span className="text-sm">
                     {(() => {
                       if (trainerData?.completedProductSetup === 'Yes' || trainerData?.completedProductSetup === 'Yes - Self-serve') {
-                        return <span className="text-gray-500">Completed</span>;
+                        return <span className="text-gray-500">{t('status.completed')}</span>;
                       } else if (trainerData?.menuCollectionSubmissionTimestamp) {
                         return <span className="text-orange-600">{terminology.submittedStatus}</span>;
                       } else {
@@ -2697,10 +2670,10 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-base text-gray-700">Hardware Installation Completed</span>
+                    <span className="text-base text-gray-700">{t('readyToGoLive.hardwareInstallationCompleted')}</span>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {installationCompleted ? 'Completed' : trainerData?.installationDate ? 'Scheduled' : 'Pending'}
+                    {installationCompleted ? t('status.completed') : trainerData?.installationDate ? t('status.scheduled') : t('status.pending')}
                   </span>
                 </div>
 
@@ -2716,10 +2689,10 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-base text-gray-700">Training Completed</span>
+                    <span className="text-base text-gray-700">{t('readyToGoLive.trainingCompleted')}</span>
                   </div>
                   <span className="text-sm text-gray-500">
-                    {trainingCompleted ? 'Completed' : trainerData?.trainingDate ? 'Scheduled' : 'Pending'}
+                    {trainingCompleted ? t('status.completed') : trainerData?.trainingDate ? t('status.scheduled') : t('status.pending')}
                   </span>
                 </div>
 
@@ -2735,12 +2708,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     ) : (
                       <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
                     )}
-                    <span className="text-base text-gray-700">Subscription Activated</span>
+                    <span className="text-base text-gray-700">{t('readyToGoLive.subscriptionActivated')}</span>
                   </div>
                   <span className="text-sm text-gray-500">
                     {trainerData?.subscriptionActivationDate
-                      ? formatDate(trainerData.subscriptionActivationDate)
-                      : 'Pending'}
+                      ? formatDateLocale(trainerData.subscriptionActivationDate)
+                      : t('status.pending')}
                   </span>
                 </div>
               </div>
@@ -2756,9 +2729,9 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h5 className="text-sm font-semibold text-orange-900 mb-1">Action Required: Activate Subscription</h5>
+                    <h5 className="text-sm font-semibold text-orange-900 mb-1">{t('messages.actionRequiredActivate')}</h5>
                     <p className="text-sm text-orange-800 mb-2">
-                      Please activate the merchant's subscription at:
+                      {t('messages.activateSubscriptionAt')}
                     </p>
                     <a
                       href={`https://${trainerData.boAccountName}.storehubhq.com`}
@@ -2772,14 +2745,14 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       </svg>
                     </a>
                     <div className="mt-3 pt-3 border-t border-orange-200">
-                      <p className="text-xs text-orange-700 mb-1">Need help with activation?</p>
+                      <p className="text-xs text-orange-700 mb-1">{t('messages.needHelpActivation')}</p>
                       <a
                         href="https://care.storehub.com/en/articles/10650521-manage-subscription-how-to-self-activate-your-account"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 underline"
                       >
-                        View activation guide
+                        {t('buttons.viewActivationGuide')}
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
@@ -2797,20 +2770,20 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
       {selectedStage === 'live' && (
         <div id="stage-live" className="hidden md:block">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
-            <span>Live</span>
+            <span>{t('stages.live')}</span>
             {(trainerData?.posQrDeliveryTnxCount ?? 0) > 30 &&
-              <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">Live</span>
+              <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">{t('status.live')}</span>
             }
           </h4>
 
           <div className="space-y-4">
             <div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.status')}</div>
               <div className="text-sm font-medium">
                 {(trainerData?.posQrDeliveryTnxCount ?? 0) > 30 ? (
-                  <span className="text-green-600">✅ Merchant is Live</span>
+                  <span className="text-green-600">✅ {t('status.merchantIsLive')}</span>
                 ) : (
-                  <span className="text-gray-500">⏳ Awaiting Go-Live</span>
+                  <span className="text-gray-500">⏳ {t('status.awaitingGoLive')}</span>
                 )}
               </div>
             </div>
@@ -2818,7 +2791,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {/* BackOffice Account Name */}
             {trainerData?.boAccountName && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">BackOffice Account</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.backOfficeAccount')}</div>
                 <a
                   href={`https://${trainerData.boAccountName}.storehubhq.com`}
                   target="_blank"
@@ -2836,19 +2809,19 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {/* Onboarding Survey Link */}
             {trainerData?.boAccountName && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Onboarding Survey</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.onboardingSurvey')}</div>
                 <a
                   href={`https://storehub.sg.larksuite.com/share/base/form/shrlgoT9OUwf6B1w5bdBSQTOCeb?prefill_Your+BackOffice+Account+Name=${encodeURIComponent(trainerData.boAccountName)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm font-medium text-[#ff630f] hover:text-[#e55a0e] transition-colors"
                 >
-                  <span>Share Your Feedback</span>
+                  <span>{t('buttons.shareFeedback')}</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </a>
-                <p className="text-xs text-gray-500 mt-1">Help us improve your onboarding experience</p>
+                <p className="text-xs text-gray-500 mt-1">{t('messages.helpImproveExperience')}</p>
               </div>
             )}
           </div>

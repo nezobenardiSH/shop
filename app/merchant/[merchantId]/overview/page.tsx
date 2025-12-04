@@ -2,23 +2,10 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useTranslations, useFormatter } from 'next-intl'
 import { usePageTracking } from '@/lib/useAnalytics'
 import { getStoreSetupVideoDueDate, getProductListDueDate } from '@/lib/date-utils'
 import { useMerchantContext } from '../layout'
-
-// Helper to format dates consistently
-const formatDate = (dateString: string | null | undefined) => {
-  if (!dateString) return null
-  try {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    })
-  } catch {
-    return null
-  }
-}
 
 // Action item interface
 interface ActionItem {
@@ -77,6 +64,24 @@ export default function OverviewPage() {
   const params = useParams()
   const merchantId = params.merchantId as string
   const { merchantData: trainerData, loading } = useMerchantContext()
+  const t = useTranslations('overview')
+  const tCommon = useTranslations('common')
+  const format = useFormatter()
+
+  // Locale-aware date formatting
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return null
+    try {
+      const date = new Date(dateString)
+      return format.dateTime(date, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    } catch {
+      return null
+    }
+  }
 
   // Get merchant name from context
   const merchantName = trainerData?.success && trainerData?.name ? trainerData.name : 'Loading...'
@@ -101,7 +106,7 @@ export default function OverviewPage() {
                   subIndustry.toLowerCase().includes('cafe') ||
                   subIndustry.toLowerCase().includes('coffee')
 
-    const productLabel = isFnB ? 'Submit menu' : 'Submit product list'
+    const productLabel = isFnB ? t('actions.submitMenu') : t('actions.submitProductList')
 
     // Product/Menu submitted - completed when submission timestamp is filled
     const productSubmitted = !!trainer.menuCollectionSubmissionTimestamp
@@ -147,30 +152,30 @@ export default function OverviewPage() {
       },
       {
         id: 'store-setup',
-        label: 'Submit store setup video',
+        label: t('actions.submitStoreSetupVideo'),
         completed: storeSetupCompleted,
         stageLink: `/merchant/${merchantId}?stage=preparation&section=store-setup`,
         dueDate: storeSetupDueDate
       },
       {
         id: 'installation-date',
-        label: 'Set installation date',
+        label: t('actions.setInstallationDate'),
         completed: installationDateSet,
         stageLink: `/merchant/${merchantId}?stage=installation&section=installation`,
         disabled: !canScheduleInstallation && !installationDateSet,
-        disabledReason: 'Submit store setup video first'
+        disabledReason: t('disabledReasons.submitStoreSetupFirst')
       },
       {
         id: 'training-date',
-        label: 'Set training date',
+        label: t('actions.setTrainingDate'),
         completed: trainingDateSet,
         stageLink: `/merchant/${merchantId}?stage=training&section=training`,
         disabled: !canScheduleTraining && !trainingDateSet,
-        disabledReason: !productSubmitted ? 'Submit product list first' : 'Set installation date first'
+        disabledReason: !productSubmitted ? t('disabledReasons.submitProductListFirst') : t('disabledReasons.setInstallationFirst')
       },
       {
         id: 'backoffice-activation',
-        label: 'Activate BackOffice',
+        label: t('actions.activateBackOffice'),
         completed: backOfficeActivated,
         stageLink: `/merchant/${merchantId}?stage=ready-go-live`
       }
@@ -224,19 +229,19 @@ export default function OverviewPage() {
 
     return [
       {
-        label: 'Hardware Delivery',
+        label: t('dates.hardwareDelivery'),
         date: formatDate(trainer.hardwareFulfillmentDate),
         icon: truckIcon,
         completed: hardwareDelivered
       },
       {
-        label: 'Installation',
+        label: t('dates.installation'),
         date: formatDate(trainer.installationDate),
         icon: wrenchIcon,
         completed: installationCompleted
       },
       {
-        label: 'Training',
+        label: t('dates.training'),
         date: formatDate(trainingDate),
         icon: trainingIcon,
         completed: trainingCompleted
@@ -272,19 +277,19 @@ export default function OverviewPage() {
               </svg>
             </div>
             <div className="leading-tight">
-              <span className="text-xs sm:text-sm text-[#6b6a6a]">Onboarding Progress</span>
+              <span className="text-xs sm:text-sm text-[#6b6a6a]">{t('onboardingProgress')}</span>
               <div className="text-sm sm:text-lg font-semibold text-[#0b0707] -mt-0.5 sm:mt-0">
                 {(() => {
                   const stage = getCurrentStage(trainerData)
-                  const stageLabels: { [key: string]: string } = {
-                    'welcome': 'Welcome',
-                    'preparation': 'Preparation',
-                    'installation': 'Installation',
-                    'training': 'Training',
-                    'ready-go-live': 'Ready to Go Live',
-                    'live': 'Live'
+                  const stageKeys: { [key: string]: string } = {
+                    'welcome': 'welcome',
+                    'preparation': 'preparation',
+                    'installation': 'installation',
+                    'training': 'training',
+                    'ready-go-live': 'readyGoLive',
+                    'live': 'live'
                   }
-                  return stageLabels[stage] || stage
+                  return t(`stages.${stageKeys[stage] || 'welcome'}`)
                 })()}
               </div>
             </div>
@@ -303,10 +308,10 @@ export default function OverviewPage() {
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h2 className="text-base sm:text-lg font-semibold text-[#0b0707] flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-5 h-5 bg-red-500 text-white rounded-full text-xs font-bold">!</span>
-                Required Actions
+                {t('requiredActions')}
               </h2>
               <span className="text-sm text-[#6b6a6a]">
-                {completedCount}/{actionItems.length} completed
+                {t('completedCount', { completed: completedCount, total: actionItems.length })}
               </span>
             </div>
 
@@ -367,7 +372,7 @@ export default function OverviewPage() {
                       </span>
                       {item.dueDate && !item.completed && (
                         <span className="text-xs text-orange-600 font-medium">
-                          Due by {item.dueDate}
+                          {t('dueBy', { date: item.dueDate })}
                         </span>
                       )}
                     </div>
@@ -382,7 +387,7 @@ export default function OverviewPage() {
 
           {/* Important Dates Column */}
           <div className="bg-white rounded-xl border border-[#e5e7eb] p-3 sm:p-6">
-            <h2 className="text-base sm:text-lg font-semibold text-[#0b0707] mb-3 sm:mb-4">Important Dates</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-[#0b0707] mb-3 sm:mb-4">{t('importantDates')}</h2>
 
             <div className="space-y-3 sm:space-y-4">
               {importantDates.map((dateItem, index) => (
@@ -411,13 +416,13 @@ export default function OverviewPage() {
                     <div className={`text-base font-medium ${
                       dateItem.date ? 'text-[#0b0707]' : 'text-gray-400'
                     }`}>
-                      {dateItem.date || 'Not set'}
+                      {dateItem.date || tCommon('notSet')}
                     </div>
                   </div>
                   {dateItem.completed && (
                     <div className="flex-shrink-0">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Completed
+                        {t('completed')}
                       </span>
                     </div>
                   )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import WhatsAppButton from '@/components/WhatsAppButton'
 
 interface LoginFormProps {
@@ -16,11 +17,12 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
   const [displayName, setDisplayName] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useTranslations('login')
 
   useEffect(() => {
     // Check if session expired
     if (searchParams.get('expired') === 'true') {
-      setError('Your session has expired. Please log in again.')
+      setError(t('sessionExpired'))
     }
 
     // Fetch merchant name from API since merchantId is now a Salesforce ID
@@ -80,7 +82,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
         }
       }
     } catch (error) {
-      setError('Connection error. Please try again.')
+      setError(t('connectionError'))
       console.error('Login error:', error)
     } finally {
       setLoading(false)
@@ -110,7 +112,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
             </div>
 
             <h2 className="text-2xl font-bold text-[#0b0707] mb-2">
-              Onboarding Portal
+              {t('title')}
             </h2>
             <p className="text-lg text-[#6b6a6a]">
               {displayName}
@@ -120,7 +122,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="pin" className="block text-sm font-medium text-[#0b0707] mb-2">
-                Enter 4-Digit PIN
+                {t('pinLabel')}
               </label>
               <input
                 id="pin"
@@ -133,7 +135,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
                          px-4 py-3 border-2 border-[#e5e7eb] rounded-lg
                          focus:outline-none focus:border-[#ff630f]
                          disabled:bg-gray-50 disabled:text-gray-500"
-                placeholder="••••"
+                placeholder={t('pinPlaceholder')}
                 required
                 disabled={loading}
                 autoComplete="off"
@@ -150,7 +152,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
                     <p>{error}</p>
                     {remainingAttempts !== null && remainingAttempts > 0 && (
                       <p className="mt-1 text-xs">
-                        {remainingAttempts} attempt{remainingAttempts !== 1 ? 's' : ''} remaining
+                        {t('attemptsRemaining', { count: remainingAttempts })}
                       </p>
                     )}
                   </div>
@@ -174,17 +176,17 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Verifying...
+                  {t('verifying')}
                 </>
               ) : (
-                'Log in'
+                t('submit')
               )}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-xs text-[#6b6a6a]">
-              Having trouble? Contact your onboarding manager.
+              {t('helpText')}
             </p>
           </div>
         </div>

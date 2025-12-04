@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations, useFormatter } from 'next-intl'
 
 interface PageHeaderProps {
   merchantId: string
@@ -23,11 +24,14 @@ export default function PageHeader({
   plannedGoLiveDate,
   posQrDeliveryTnxCount
 }: PageHeaderProps) {
-  // merchantName is now the actual name from Salesforce, no need to format
+  const tNav = useTranslations('navigation')
+  const tGoLive = useTranslations('goLive')
+  const tCommon = useTranslations('common')
+  const format = useFormatter()
 
   // Calculate days until go-live and status
   const getGoLiveInfo = () => {
-    if (!plannedGoLiveDate) return { diffDays: 0, isLive: false, status: 'Not Set' }
+    if (!plannedGoLiveDate) return { diffDays: 0, isLive: false, status: tGoLive('notSet') }
 
     const today = new Date()
     const goLive = new Date(plannedGoLiveDate)
@@ -37,7 +41,7 @@ export default function PageHeader({
 
     let status: string | number = diffDays
     if (diffDays <= 0) {
-      status = isLive ? 'Live' : 'Overdue'
+      status = isLive ? tGoLive('live') : tGoLive('overdue')
     }
 
     return { diffDays, isLive, status }
@@ -58,13 +62,13 @@ export default function PageHeader({
             </h1>
             {isInternalUser && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-300">
-                StoreHub Team
+                {tCommon('storeHubTeam')}
               </span>
             )}
           </div>
           {lastModifiedDate && (
             <p className="text-xs text-[#6b6a6a]">
-              Last Modified: {new Date(lastModifiedDate).toLocaleString('en-GB', {
+              {tCommon('lastModified')}: {format.dateTime(new Date(lastModifiedDate), {
                 day: '2-digit',
                 month: 'short',
                 year: 'numeric',
@@ -84,13 +88,13 @@ export default function PageHeader({
             </h1>
             {isInternalUser && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 border border-orange-300">
-                StoreHub Team
+                {tCommon('storeHubTeam')}
               </span>
             )}
           </div>
           {lastModifiedDate && (
             <p className="text-sm text-[#6b6a6a]">
-              Last Modified: {new Date(lastModifiedDate).toLocaleString('en-GB', {
+              {tCommon('lastModified')}: {format.dateTime(new Date(lastModifiedDate), {
                 day: '2-digit',
                 month: 'short',
                 year: 'numeric',
@@ -116,7 +120,7 @@ export default function PageHeader({
                   </svg>
                 </div>
                 <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1">
-                  <span>Expected Go Live Date</span>
+                  <span>{tGoLive('expectedDate')}</span>
                   <div className="relative group">
                     <svg
                       className="w-3.5 h-3.5 text-orange-400 cursor-help"
@@ -127,14 +131,14 @@ export default function PageHeader({
                     </svg>
                     {/* Tooltip - positioned to right on mobile to avoid cutoff */}
                     <div className="absolute right-0 sm:left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                      Expected Go Live Date can only be changed by StoreHub Onboarding Manager
+                      {tGoLive('tooltip')}
                       <div className="absolute top-full right-4 sm:left-4 sm:right-auto -mt-1 border-4 border-transparent border-t-gray-900"></div>
                     </div>
                   </div>
                 </div>
               </div>
               <div className="text-sm font-bold text-gray-900">
-                {new Date(plannedGoLiveDate).toLocaleDateString('en-GB', {
+                {format.dateTime(new Date(plannedGoLiveDate), {
                   day: '2-digit',
                   month: 'short',
                   year: 'numeric'
@@ -142,7 +146,7 @@ export default function PageHeader({
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <div className="text-xs text-gray-600">Days until go-live</div>
+              <div className="text-xs text-gray-600">{tGoLive('daysUntil')}</div>
               <div className={`text-lg font-bold ${
                 goLiveInfo.diffDays <= 0 && goLiveInfo.isLive ? 'text-green-600' : 'text-orange-600'
               }`}>
@@ -161,7 +165,7 @@ export default function PageHeader({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-orange-600 uppercase tracking-wider flex items-center gap-1">
-                  <span>Expected Go Live Date</span>
+                  <span>{tGoLive('expectedDate')}</span>
                   <div className="relative group">
                     <svg
                       className="w-3.5 h-3.5 text-orange-400 cursor-help"
@@ -172,13 +176,13 @@ export default function PageHeader({
                     </svg>
                     {/* Tooltip */}
                     <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-56 bg-gray-900 text-white text-xs rounded py-2 px-3 z-10 normal-case">
-                      Expected Go Live Date can only be changed by StoreHub Onboarding Manager
+                      {tGoLive('tooltip')}
                       <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                     </div>
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 truncate">
-                  {new Date(plannedGoLiveDate).toLocaleDateString('en-GB', {
+                  {format.dateTime(new Date(plannedGoLiveDate), {
                     day: '2-digit',
                     month: 'short',
                     year: 'numeric'
@@ -187,7 +191,7 @@ export default function PageHeader({
               </div>
             </div>
             <div className="text-right flex-shrink-0">
-              <div className="text-sm text-gray-600">Days until go-live</div>
+              <div className="text-sm text-gray-600">{tGoLive('daysUntil')}</div>
               <div className={`text-3xl font-bold ${
                 goLiveInfo.diffDays <= 0 && goLiveInfo.isLive ? 'text-green-600' : 'text-orange-600'
               }`}>
@@ -209,7 +213,7 @@ export default function PageHeader({
                 : 'border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]'
             }`}
           >
-            Overview
+            {tNav('overview')}
           </Link>
           <Link
             href={`/merchant/${merchantId}?stage=${currentOnboardingStage}`}
@@ -219,7 +223,7 @@ export default function PageHeader({
                 : 'border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]'
             }`}
           >
-            Progress
+            {tNav('progress')}
           </Link>
           <Link
             href={`/merchant/${merchantId}/details`}
@@ -229,7 +233,7 @@ export default function PageHeader({
                 : 'border-transparent text-[#6b6a6a] hover:text-[#0b0707] hover:border-[#e5e7eb]'
             }`}
           >
-            Details
+            {tNav('details')}
           </Link>
         </nav>
       </div>
