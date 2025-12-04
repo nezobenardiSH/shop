@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { X, ChevronLeft, ChevronRight, Calendar, Clock, Globe } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { detectServiceType, getServiceTypeMessage, shouldFilterByLocation, type ServiceType } from '@/lib/service-type-detector'
 import { calculateInstallationDateLowerBound, getRegionType, getDaysToAddForRegion } from '@/lib/location-matcher'
 import { requiresExtendedTrainingSlot, EXTENDED_TRAINING_SLOT } from '@/lib/time-slot-config'
@@ -54,8 +55,11 @@ interface DayAvailability {
   slots: TimeSlot[]
 }
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+// Month/weekday keys for translation lookup
+const MONTH_KEYS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+const WEEKDAY_FULL_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] // Sunday = 0
+const MONTH_SHORT_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 
 export default function DatePickerModal({
   isOpen,
@@ -116,6 +120,7 @@ export default function DatePickerModal({
     endTime: string
   } | null>(null)
   const [completedBookingDate, setCompletedBookingDate] = useState<string | undefined>(undefined)
+  const t = useTranslations('booking')
 
   // Internal user manual selection states
   const [availableTrainersList, setAvailableTrainersList] = useState<Array<{ name: string; email: string; languages?: string[] }>>([])
@@ -1098,15 +1103,15 @@ export default function DatePickerModal({
   const getBookingTypeTitle = () => {
     switch(bookingType) {
       case 'hardware-fulfillment':
-        return 'Schedule Hardware Fulfillment'
+        return t('hardwareFulfillmentTitle')
       case 'installation':
-        return 'Schedule Installation'
+        return t('installationTitle')
       case 'training':
-        return 'Schedule Training'
+        return t('trainingTitle')
       case 'go-live':
-        return 'Schedule Go-Live'
+        return t('goLiveTitle')
       default:
-        return 'Schedule Appointment'
+        return t('scheduleTitle')
     }
   }
 
@@ -1123,8 +1128,8 @@ export default function DatePickerModal({
           <div className="absolute inset-0 bg-white bg-opacity-95 rounded-2xl flex items-center justify-center z-50">
             <div className="flex flex-col items-center gap-4">
               <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
-              <div className="text-lg font-semibold text-gray-700">Booking in progress...</div>
-              <div className="text-sm text-gray-500">Please wait while we confirm your booking</div>
+              <div className="text-lg font-semibold text-gray-700">{t('bookingInProgress')}</div>
+              <div className="text-sm text-gray-500">{t('pleaseWait')}</div>
             </div>
           </div>
         )}
@@ -1165,10 +1170,10 @@ export default function DatePickerModal({
                 {isExternalVendor && bookingType === 'installation' && (
                   <>
                     <li className="font-medium text-blue-900">
-                      • Choose preferred date and vendor will call to finalise
+                      • {t('externalVendorNotice')}
                     </li>
                     <li className="text-blue-700">
-                      • External vendor requires 2 days advance booking (earliest: day after tomorrow)
+                      • {t('externalVendorAdvance')}
                     </li>
                   </>
                 )}
@@ -1176,7 +1181,7 @@ export default function DatePickerModal({
                 {/* Rescheduling Info */}
                 {currentBooking?.eventId && currentBooking?.date && (
                   <li className="font-medium text-blue-900">
-                    📅 Current booking: <span className="font-semibold">{formatDate(currentBooking.date)}</span> (will be cancelled when you reschedule)
+                    📅 {t('currentBookingWillCancel', { date: formatDate(currentBooking.date) })}
                   </li>
                 )}
 
@@ -1189,48 +1194,51 @@ export default function DatePickerModal({
                     <>
                       {dependentDate ? (
                         <li className="font-medium text-blue-900">
-                          📍 Available from: <span className="font-semibold">
-                            {(() => {
-                              const calculated = calculateInstallationDateLowerBound(dependentDate, merchantAddress)
-                              return calculated ? formatDate(calculated.toISOString().split('T')[0]) : 'Calculating...'
-                            })()}
-                          </span> (+{daysToAdd} day{daysToAdd > 1 ? 's' : ''} after hardware shipment)
-                          {trainingDate && <span> to <span className="font-semibold">{formatDate(trainingDate)}</span></span>}
+                          📍 {(() => {
+                            const calculated = calculateInstallationDateLowerBound(dependentDate, merchantAddress)
+                            const fromDate = calculated ? formatDate(calculated.toISOString().split('T')[0]) : t('calculating')
+                            if (trainingDate) {
+                              return t('availableFromTo', { fromDate, days: daysToAdd, toDate: formatDate(trainingDate) })
+                            }
+                            return daysToAdd > 1
+                              ? t('availableFromDays', { fromDate, days: daysToAdd })
+                              : t('availableFromDay', { fromDate, days: daysToAdd })
+                          })()}
                         </li>
                       ) : (
                         <li className="text-amber-700">
-                          ⚠️ Set Hardware Shipment Date first
+                          ⚠️ {t('setHardwareFirst')}
                         </li>
                       )}
                     </>
                   )
                 })()}
                 {bookingType === 'installation' && !isExternalVendor && isInternalUser && (
-                  <li className="text-green-700">• Internal user: No date restrictions applied</li>
+                  <li className="text-green-700">• {t('internalNoRestrictions')}</li>
                 )}
 
                 {bookingType === 'training' && !isInternalUser && (
                   <>
                     {installationDate && goLiveDate && (
-                      <li>• Training must be scheduled after Installation date ({formatDate(installationDate)}) and on or before Go-Live date ({formatDate(goLiveDate)})</li>
+                      <li>• {t('trainingAfterInstallation', { installDate: formatDate(installationDate), goLiveDate: formatDate(goLiveDate) })}</li>
                     )}
                     {installationDate && !goLiveDate && (
-                      <li>• Training must be scheduled after Installation date ({formatDate(installationDate)})</li>
+                      <li>• {t('trainingAfterInstallationOnly', { installDate: formatDate(installationDate) })}</li>
                     )}
                     {!installationDate && goLiveDate && (
-                      <li>• Training must be scheduled on or before Go-Live date ({formatDate(goLiveDate)})</li>
+                      <li>• {t('trainingBeforeGoLive', { goLiveDate: formatDate(goLiveDate) })}</li>
                     )}
                     {!installationDate && !goLiveDate && (
-                      <li>• No go-live date set - please check with your onboarding manager</li>
+                      <li>• {t('noGoLiveSet')}</li>
                     )}
                   </>
                 )}
                 {bookingType === 'training' && isInternalUser && (
-                  <li className="text-green-700">• Internal user: No date restrictions applied</li>
+                  <li className="text-green-700">• {t('internalNoRestrictions')}</li>
                 )}
 
                 {(dependentDate || goLiveDate || installationDate || trainingDate) && (
-                  <li>• You can select dates up to 14 days from the earliest eligible date</li>
+                  <li>• {t('dateRange14Days')}</li>
                 )}
               </ul>
             </div>
@@ -1240,10 +1248,10 @@ export default function DatePickerModal({
           {bookingType === 'training' && !installationDate && !isInternalUser && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="text-base font-medium text-red-800">
-                ⚠️ Installation must be scheduled first
+                ⚠️ {t('installationFirst')}
               </div>
               <div className="text-sm text-red-700 mt-1">
-                Training cannot be booked until installation has been scheduled. Please schedule the installation date first.
+                {t('installationFirstDesc')}
               </div>
             </div>
           )}
@@ -1252,10 +1260,10 @@ export default function DatePickerModal({
           {bookingType === 'training' && serviceType === 'none' && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="text-base font-medium text-red-800">
-                ⚠️ Training configuration incomplete
+                ⚠️ {t('trainingConfigIncomplete')}
               </div>
               <div className="text-sm text-red-700 mt-1">
-                Onboarding Services Bought is not configured in Salesforce. Please set it to either "Onsite Training" or "Remote Training" before scheduling.
+                {t('trainingConfigIncompleteDesc')}
               </div>
             </div>
           )}
@@ -1264,10 +1272,10 @@ export default function DatePickerModal({
           {bookingType === 'training' && serviceType === 'onsite' && !merchantState && (
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="text-base font-medium text-amber-800">
-                ⚠️ No store state detected
+                ⚠️ {t('noStoreState')}
               </div>
               <div className="text-sm text-amber-700 mt-1">
-                  Cannot schedule training without location information. Please contact your onboarding manager.
+                  {t('noStoreStateDesc')}
                 </div>
               </div>
             )}
@@ -1276,15 +1284,15 @@ export default function DatePickerModal({
             {bookingType === 'training' && isInternalUser && availableTrainersList.length > 0 && (
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Trainer (Internal Only)
+                  {t('selectTrainer')}
                 </label>
                 <select
                   value={selectedTrainerEmail}
                   onChange={(e) => setSelectedTrainerEmail(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
-                  <option value="">-- Select a trainer --</option>
-                  <option value="all">All Trainers</option>
+                  <option value="">{t('selectATrainer')}</option>
+                  <option value="all">{t('allTrainers')}</option>
                   {availableTrainersList.map((trainer) => (
                     <option key={trainer.email} value={trainer.email}>
                       {trainer.name} {trainer.languages ? `(${trainer.languages.join(', ')})` : ''}
@@ -1298,7 +1306,7 @@ export default function DatePickerModal({
               <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Globe className="inline h-4 w-4 mr-1" />
-                Training Language
+                {t('trainingLanguage')}
               </label>
               <div className={`flex gap-3 ${(bookingStatus === 'loading' || bookingStatus === 'success') || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || (!installationDate && !isInternalUser))) ? 'opacity-50 pointer-events-none' : ''}`}>
                 {['Chinese', 'Bahasa Malaysia', 'English'].map((lang) => {
@@ -1377,12 +1385,12 @@ export default function DatePickerModal({
               {availableLanguages.length === 0 && !loading && !(bookingType === 'training' && serviceType === 'onsite' && !merchantState) && !(isInternalUser && !selectedTrainerEmail) && (
                 <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="text-sm text-amber-800 font-medium">
-                    ⚠️ No trainers available for this location
+                    ⚠️ {t('noTrainersAtLocation')}
                   </div>
                   <div className="text-xs text-amber-700 mt-1">
                     {serviceType === 'onsite' && merchantState && !['Selangor', 'Kuala Lumpur', 'Putrajaya', 'Penang', 'Johor'].some(s => merchantState.toLowerCase().includes(s.toLowerCase()))
-                      ? `Onsite training is currently not available in ${merchantState}. Please contact support for alternative arrangements.`
-                      : 'Please contact support for assistance with scheduling training.'}
+                      ? t('noTrainersAtLocationDesc', { state: merchantState })
+                      : t('contactSupportTraining')}
                   </div>
                 </div>
                 )}
@@ -1394,14 +1402,14 @@ export default function DatePickerModal({
           {isInternalUser && bookingType === 'installation' && !isExternalVendor && availableInstallersList.length > 0 && (
             <div className="mt-4 px-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Installer (Internal Only)
+                {t('selectInstaller')}
               </label>
               <select
                 value={selectedInstallerEmail}
                 onChange={(e) => setSelectedInstallerEmail(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
-                <option value="">-- Select an installer --</option>
+                <option value="">{t('selectAnInstaller')}</option>
                 {availableInstallersList.map((installer: any) => (
                   <option key={installer.email} value={installer.email}>
                     {installer.name} {installer.region ? `(${installer.region})` : ''}
@@ -1426,7 +1434,7 @@ export default function DatePickerModal({
                   <ChevronLeft className="h-5 w-5 text-gray-600" />
                 </button>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {currentMonth.getFullYear()} {MONTHS[currentMonth.getMonth()].slice(0, 3).toUpperCase()}
+                  {currentMonth.getFullYear()} {t(`monthsShort.${MONTH_SHORT_KEYS[currentMonth.getMonth()]}`).toUpperCase()}
                 </h3>
                 <button
                   onClick={() => navigateMonth('next')}
@@ -1437,9 +1445,9 @@ export default function DatePickerModal({
               </div>
 
               <div className="grid grid-cols-7 gap-1 mb-2">
-                {WEEKDAYS.map(day => (
+                {WEEKDAY_KEYS.map(day => (
                   <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-                    {day}
+                    {t(`weekdays.${day}`)}
                   </div>
                 ))}
               </div>
@@ -1473,7 +1481,7 @@ export default function DatePickerModal({
 
             {/* Mobile: Horizontal scrollable date row */}
             <div className="block md:hidden">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Date</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('selectDate')}</h3>
               <div className="overflow-x-auto pb-2">
                 <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
                   {/* Show dates from eligible start to max allowed date */}
@@ -1548,13 +1556,13 @@ export default function DatePickerModal({
                         `}
                       >
                         <div className="text-xs font-medium">
-                          {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                          {t(`weekdaysFull.${WEEKDAY_FULL_KEYS[date.getDay()]}`)}
                         </div>
                         <div className="text-lg font-bold">
                           {date.getDate()}
                         </div>
                         <div className="text-xs">
-                          {date.toLocaleDateString('en-US', { month: 'short' })}
+                          {t(`monthsShort.${MONTH_SHORT_KEYS[date.getMonth()]}`)}
                         </div>
                       </button>
                       )
@@ -1574,12 +1582,12 @@ export default function DatePickerModal({
               </div>
             ) : selectedDate ? (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 md:sticky md:top-0 bg-gray-50 pb-2">Available Time Slots</h3>
+                <h3 className="text-lg font-semibold text-gray-900 md:sticky md:top-0 bg-gray-50 pb-2">{t('availableTimeSlots')}</h3>
                 {/* Notice for merchants requiring extended training slot - only for Dec 2025+ */}
                 {bookingType === 'training' && requiresExtendedTrainingSlot(requiredFeatures) && selectedDate && selectedDate >= new Date('2025-12-01T00:00:00+08:00') && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
                     <p className="text-amber-800">
-                      <span className="font-medium">Note:</span> Due to <span className="font-medium">{requiredFeatures}</span> feature, only the 4pm slot is available for training.
+                      {t('noteFeatureSlot', { feature: requiredFeatures || '' })}
                     </p>
                   </div>
                 )}
@@ -1622,8 +1630,8 @@ export default function DatePickerModal({
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     {bookingType === 'training' && selectedLanguages.length === 0
-                      ? 'Please select at least one language'
-                      : 'No available slots for this date'}
+                      ? t('selectLanguageFirst')
+                      : t('noSlotsForDate')}
                   </div>
                 )}
               </div>
@@ -1631,7 +1639,7 @@ export default function DatePickerModal({
               <div className="flex items-center justify-center h-full text-gray-400">
                 <div className="text-center">
                   <Calendar className="h-12 w-12 mx-auto mb-3" />
-                  <p>Select a date to view available slots</p>
+                  <p>{t('selectDateToViewSlots')}</p>
                 </div>
               </div>
             )}
@@ -1647,14 +1655,14 @@ export default function DatePickerModal({
             disabled={bookingStatus === 'loading' || bookingStatus === 'success'}
             className="w-full sm:w-auto px-6 py-2.5 text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-2 sm:order-1"
           >
-            Cancel
+            {t('cancel')}
           </button>
           <button
             onClick={handleBooking}
             disabled={!selectedDate || !selectedSlot || bookingStatus === 'loading' || bookingStatus === 'success' || (bookingType === 'training' && ((serviceType === 'onsite' && !merchantState) || serviceType === 'none' || (!installationDate && !isInternalUser)))}
             className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed order-1 sm:order-2"
           >
-            {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}
+            {bookingStatus === 'loading' ? t('booking') : t('confirmBooking')}
           </button>
         </div>
       </div>
@@ -1674,12 +1682,12 @@ export default function DatePickerModal({
 
             {/* Title */}
             <h3 className="text-2xl font-bold text-gray-900 text-center mb-2">
-              {isExternalVendor ? 'Installation Requested!' : 'Booking Confirmed!'}
+              {isExternalVendor ? t('installationRequested') : t('bookingConfirmedTitle')}
             </h3>
             <p className="text-gray-600 text-center mb-6">
               {isExternalVendor
-                ? 'Your installation session has been successfully requested'
-                : `Your ${bookingType === 'installation' ? 'installation' : 'training'} session has been successfully scheduled`
+                ? t('installationRequestedDesc')
+                : bookingType === 'installation' ? t('installationScheduledDesc') : t('trainingScheduledDesc')
               }
             </p>
 
@@ -1692,7 +1700,7 @@ export default function DatePickerModal({
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500">{bookingType === 'installation' ? 'Installer' : 'Trainer'}</div>
+                  <div className="text-sm text-gray-500">{bookingType === 'installation' ? t('installer') : t('trainer')}</div>
                   <div className="text-base font-semibold text-gray-900">{bookingDetails.assignedTrainer}</div>
                 </div>
               </div>
@@ -1704,7 +1712,7 @@ export default function DatePickerModal({
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500">Date</div>
+                  <div className="text-sm text-gray-500">{t('date')}</div>
                   <div className="text-base font-semibold text-gray-900">{formatDate(bookingDetails.date)}</div>
                 </div>
               </div>
@@ -1716,7 +1724,7 @@ export default function DatePickerModal({
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm text-gray-500">Time</div>
+                  <div className="text-sm text-gray-500">{t('time')}</div>
                   <div className="text-base font-semibold text-gray-900">
                     {formatTime(bookingDetails.startTime)} - {formatTime(bookingDetails.endTime)}
                   </div>
@@ -1729,7 +1737,7 @@ export default function DatePickerModal({
               onClick={handleConfirmationClose}
               className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
             >
-              OK
+              {t('ok')}
             </button>
           </div>
         </div>

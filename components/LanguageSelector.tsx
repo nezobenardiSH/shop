@@ -12,7 +12,8 @@ export default function LanguageSelector({ currentLocale }: LanguageSelectorProp
 
   const handleChange = (newLocale: Locale) => {
     document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000`
-    router.refresh()
+    // Hard reload to ensure the new locale is picked up by the server
+    window.location.reload()
   }
 
   return (

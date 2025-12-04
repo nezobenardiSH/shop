@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import WhatsAppButton from '@/components/WhatsAppButton'
+import LanguageSelector from '@/components/LanguageSelector'
+import { type Locale, salesforceLocaleMap, defaultLocale } from '@/i18n/config'
 
 interface LoginFormProps {
   merchantId: string
@@ -18,6 +20,10 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const t = useTranslations('login')
+  const currentLocale = useLocale() as Locale
+
+  // Track if we've already set the locale from Salesforce to avoid loops
+  const localeSetRef = useRef(false)
 
   useEffect(() => {
     // Check if session expired
@@ -25,29 +31,52 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
       setError(t('sessionExpired'))
     }
 
-    // Fetch merchant name from API since merchantId is now a Salesforce ID
-    const fetchMerchantName = async () => {
+    // Fetch merchant name and preferred language from API
+    const fetchMerchantData = async () => {
       try {
         const response = await fetch(`/api/salesforce/merchant/${merchantId}`)
         const data = await response.json()
         console.log('Login page - API response:', data)
+
         if (data.success && (data.name || data.trainerName)) {
           const merchantName = data.name || data.trainerName
           setDisplayName(merchantName)
-          // Update page title with merchant name
           document.title = `${merchantName} - Onboarding Portal`
         } else {
           console.log('No merchant name found in response')
           setDisplayName('Merchant Portal')
         }
+
+        // Check if we've already set locale for THIS merchant in this session
+        const localeSetForMerchant = sessionStorage.getItem(`locale_set_${merchantId}`)
+
+        // Set locale from Salesforce preferred language if:
+        // 1. We haven't already set it for this merchant in this browser session
+        // 2. Salesforce has a preferred language
+        // 3. The current locale doesn't match the Salesforce preference
+        if (!localeSetForMerchant && !localeSetRef.current && data.preferredLanguage) {
+          const sfLocale = salesforceLocaleMap[data.preferredLanguage]
+          if (sfLocale && sfLocale !== currentLocale) {
+            console.log(`Setting locale from Salesforce: ${data.preferredLanguage} -> ${sfLocale}`)
+            localeSetRef.current = true
+            // Mark that we've set locale for this merchant in this session
+            sessionStorage.setItem(`locale_set_${merchantId}`, 'true')
+            document.cookie = `NEXT_LOCALE=${sfLocale}; path=/; max-age=31536000`
+            // Refresh to apply the new locale
+            router.refresh()
+          } else if (sfLocale) {
+            // Locale already matches, just mark as set
+            sessionStorage.setItem(`locale_set_${merchantId}`, 'true')
+          }
+        }
       } catch (error) {
-        console.error('Failed to fetch merchant name:', error)
+        console.error('Failed to fetch merchant data:', error)
         setDisplayName('Merchant Portal')
       }
     }
 
-    fetchMerchantName()
-  }, [searchParams, merchantId])
+    fetchMerchantData()
+  }, [searchParams, merchantId, currentLocale, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,7 +127,12 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#faf9f6]">
+    <div className="min-h-screen flex items-center justify-center bg-[#faf9f6] relative">
+      {/* Language selector in top-right corner */}
+      <div className="absolute top-4 right-4">
+        <LanguageSelector currentLocale={currentLocale} />
+      </div>
+
       <div className="max-w-md w-full mx-4">
         <div className="p-8">
           <div className="text-center mb-8">

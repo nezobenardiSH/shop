@@ -82,15 +82,15 @@ export default function BookingModal({
       if (response.ok) {
         setAvailability(data.availability || [])
         if (!data.availability || data.availability.length === 0) {
-          setMessage('No availability data returned')
+          setMessage(t('noSlotsAvailable'))
         }
       } else {
-        setMessage(data.error || 'Failed to fetch availability')
+        setMessage(data.error || t('fetchError'))
         console.error('Error response:', data)
       }
     } catch (error) {
       console.error('Error fetching availability:', error)
-      setMessage(`Failed to fetch availability: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setMessage(t('fetchError'))
     } finally {
       setLoading(false)
     }
@@ -127,15 +127,15 @@ export default function BookingModal({
       if (response.ok) {
         setBookingStatus('success')
         setAssignedTrainer(data.assignedTrainer || '')
-        
-        let successMsg = data.assignedTrainer 
-          ? `Training session booked successfully!\nAssigned to: ${data.assignedTrainer}`
-          : 'Training session booked successfully!'
-        
+
+        let successMsg = data.assignedTrainer
+          ? `${t('bookingSuccess')}\n${t('assignedTo', { trainer: data.assignedTrainer })}`
+          : t('bookingSuccess')
+
         if (!data.salesforceUpdated) {
-          successMsg += '\n⚠️ Note: Salesforce update pending'
+          successMsg += `\n⚠️ ${t('salesforcePending')}`
         }
-        
+
         setMessage(successMsg)
         
         // Call onBookingComplete with the selected date to update Salesforce
@@ -147,7 +147,7 @@ export default function BookingModal({
         }, 3000)
       } else {
         setBookingStatus('error')
-        const errorMsg = data.error || 'Failed to book training'
+        const errorMsg = data.error || t('bookError')
         const details = data.details ? ` - ${data.details}` : ''
         const hint = data.hint ? `\n${data.hint}` : ''
         setMessage(errorMsg + details + hint)
@@ -156,7 +156,7 @@ export default function BookingModal({
     } catch (error) {
       console.error('Error booking training:', error)
       setBookingStatus('error')
-      setMessage('Failed to book training')
+      setMessage(t('bookError'))
     }
   }
 
@@ -181,19 +181,19 @@ export default function BookingModal({
       
       if (response.ok) {
         setBookingStatus('success')
-        setMessage('Training session cancelled successfully')
+        setMessage(t('cancelSuccess'))
         setTimeout(() => {
           onBookingComplete()
           onClose()
         }, 2000)
       } else {
         setBookingStatus('error')
-        setMessage(data.error || 'Failed to cancel training')
+        setMessage(data.error || t('cancelError'))
       }
     } catch (error) {
       console.error('Error cancelling training:', error)
       setBookingStatus('error')
-      setMessage('Failed to cancel training')
+      setMessage(t('cancelError'))
     }
   }
 
@@ -395,14 +395,14 @@ export default function BookingModal({
                             </div>
                             {relevantTrainers.length > 0 && isSlotAvailable && (
                               <span className="text-xs opacity-75">
-                                {relevantTrainers.length === 1 
-                                  ? `${relevantTrainers[0]} available`
-                                  : `${relevantTrainers.length} trainers available`}
+                                {relevantTrainers.length === 1
+                                  ? t('trainerAvailable', { name: relevantTrainers[0] })
+                                  : t('trainersAvailable', { count: relevantTrainers.length })}
                               </span>
                             )}
                             {!isSlotAvailable && isTrainingBooking && selectedLanguages.length > 0 && (
                               <span className="text-xs opacity-75">
-                                No {selectedLanguages.join('/')} trainer
+                                {t('noTrainerForLanguage', { languages: selectedLanguages.join('/') })}
                               </span>
                             )}
                           </button>
@@ -450,7 +450,7 @@ export default function BookingModal({
                   <div className="whitespace-pre-line">{message}</div>
                   {assignedTrainer && bookingStatus === 'success' && (
                     <div className="mt-2 text-sm font-semibold">
-                      Trainer: {assignedTrainer}
+                      {t('trainer')}: {assignedTrainer}
                     </div>
                   )}
                 </div>
