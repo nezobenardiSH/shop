@@ -1381,6 +1381,7 @@ class LarkService {
       merchantEmail?: string | null  // Merchant Email from Salesforce
       onboardingServicesBought?: string  // Onboarding Services Bought (to show onsite/remote)
       meetingLink?: string  // VC meeting link for remote training
+      boAccountName?: string  // Backoffice Account Name from Salesforce
     },
     trainerEmail: string,
     trainerCalendarId: string,
@@ -1511,6 +1512,9 @@ class LarkService {
         description = `Training Details\n`
         description += `==================\n\n`
         description += `Merchant: ${trainerName || merchantInfo.name}\n`
+        if (merchantInfo.boAccountName) {
+          description += `Backoffice Account: ${merchantInfo.boAccountName}\n`
+        }
 
         if (merchantInfo.address) {
           description += `\nStore Address:\n${merchantInfo.address}\n`

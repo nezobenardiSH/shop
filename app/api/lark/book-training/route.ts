@@ -248,6 +248,7 @@ export async function POST(request: NextRequest) {
     let fetchedOnboardingSummary: string | undefined
     let fetchedWorkaroundElaboration: string | undefined
     let fetchedRequiredFeatures: string | undefined
+    let fetchedBoAccountName: string | undefined
 
     // Fetch merchant email from Salesforce
     let merchantEmail: string | null = null
@@ -273,7 +274,7 @@ export async function POST(request: NextRequest) {
                  Required_Features_by_Merchant__c,
                  Email__c, CSM_Name__c, CSM_Name__r.Email,
                  MSM_Name__c, MSM_Name__r.Email, MSM_Name__r.Name,
-                 Account_Name__c
+                 Account_Name__c, BO_Account_Name__c
           FROM Onboarding_Trainer__c
           WHERE Id = '${merchantId}'
           LIMIT 1
@@ -298,6 +299,7 @@ export async function POST(request: NextRequest) {
           fetchedOnboardingSummary = trainerRecord.Onboarding_Summary__c
           fetchedWorkaroundElaboration = trainerRecord.Workaround_Elaboration__c
           fetchedRequiredFeatures = trainerRecord.Required_Features_by_Merchant__c
+          fetchedBoAccountName = trainerRecord.BO_Account_Name__c
           merchantEmail = trainerRecord.Email__c
 
           // Get Account ID for Einstein Activity Capture sync (WhatId must be standard object)
@@ -520,7 +522,8 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
             merchantPICPhone: merchantPICPhone,  // Merchant PIC Contact Number from Salesforce
             merchantEmail: merchantEmail,  // Merchant Email from Salesforce
             onboardingServicesBought: onboardingServicesBought,  // Onboarding Services Bought (to show onsite/remote)
-            meetingLink: meetingLink || undefined  // Pass VC meeting link to include in calendar event
+            meetingLink: meetingLink || undefined,  // Pass VC meeting link to include in calendar event
+            boAccountName: fetchedBoAccountName  // Backoffice Account Name from Salesforce
           },
           trainer.email,
           calendarId,
