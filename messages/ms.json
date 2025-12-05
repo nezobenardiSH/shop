@@ -6,25 +6,25 @@
   },
   "navigation": {
     "overview": "Gambaran Keseluruhan",
-    "progress": "Kemajuan",
+    "progress": "Progres",
     "details": "Butiran"
   },
   "goLive": {
-    "expectedDate": "Tarikh Jangkaan Go Live",
-    "daysUntil": "Hari sehingga go-live",
+    "expectedDate": "Tarikh Jangkaan Mula Guna",
+    "daysUntil": "Hari sehingga Mula Guna",
     "live": "Live",
     "overdue": "Tertunggak",
-    "notSet": "Tidak Ditetapkan",
-    "tooltip": "Tarikh Jangkaan Go Live hanya boleh diubah oleh Pengurus Onboarding StoreHub"
+    "notSet": "Belum Ditetapkan",
+    "tooltip": "Tarikh Jangkaan Mula Guna hanya boleh diubah oleh StoreHub Onboarding Manager"
   },
   "common": {
     "lastModified": "Terakhir Diubah",
-    "notSet": "Tidak Ditetapkan",
-    "loading": "Memuatkan...",
-    "storeHubTeam": "Pasukan StoreHub"
+    "notSet": "Belum Ditetapkan",
+    "loading": "Loading...",
+    "storeHubTeam": "StoreHub Team"
   },
   "overview": {
-    "onboardingProgress": "Kemajuan Onboarding",
+    "onboardingProgress": "Progres Onboarding",
     "requiredActions": "Tindakan Diperlukan",
     "completedCount": "{completed}/{total} selesai",
     "importantDates": "Tarikh Penting",
@@ -35,7 +35,7 @@
       "preparation": "Persediaan",
       "installation": "Pemasangan",
       "training": "Latihan",
-      "readyGoLive": "Sedia untuk Go Live",
+      "readyGoLive": "Sedia untuk Mula Guna",
       "live": "Live"
     },
     "actions": {
@@ -52,7 +52,7 @@
       "setInstallationFirst": "Tetapkan tarikh pemasangan dahulu"
     },
     "dates": {
-      "hardwareDelivery": "Penghantaran Perkakasan",
+      "hardwareDelivery": "Penghantaran Hardware",
       "installation": "Pemasangan",
       "training": "Latihan"
     }
@@ -63,19 +63,19 @@
       "preparation": "Persediaan",
       "installation": "Pemasangan",
       "training": "Latihan",
-      "readyToGoLive": "Sedia untuk Go Live",
+      "readyToGoLive": "Sedia untuk Mula Guna",
       "live": "Live"
     },
     "subStages": {
-      "documentSubmission": "Penyerahan Dokumen",
-      "hardwareDelivery": "Penghantaran Perkakasan",
+      "documentSubmission": "Hantar Dokumen",
+      "hardwareDelivery": "Penghantaran Hardware",
       "productSetup": "Persediaan Produk",
       "storeSetup": "Persediaan Kedai",
       "welcomeCall": "Panggilan Selamat Datang",
-      "hardwareFulfillment": "Pemenuhan Perkakasan",
-      "hardwareInstallation": "Pemasangan Perkakasan",
-      "goLive": "Go Live",
-      "postGoLiveCheckIn": "Semakan Selepas Go Live"
+      "hardwareFulfillment": "Pemenuhan Hardware",
+      "hardwareInstallation": "Pemasangan Hardware",
+      "goLive": "Mula Guna",
+      "postGoLiveCheckIn": "Semakan Selepas Mula Guna"
     },
     "status": {
       "completed": "Selesai",
@@ -83,22 +83,22 @@
       "pending": "Menunggu",
       "scheduled": "Dijadualkan",
       "notStarted": "Belum Bermula",
-      "notSet": "Tidak Ditetapkan",
-      "notScheduled": "Tidak Dijadualkan",
-      "notRecorded": "Tidak Direkodkan",
-      "notAssigned": "Tidak Ditugaskan",
+      "notSet": "Belum Ditetapkan",
+      "notScheduled": "Belum Dijadualkan",
+      "notRecorded": "Belum Direkodkan",
+      "notAssigned": "Belum Ditugaskan",
       "notAvailable": "Tidak Tersedia",
-      "notSubmitted": "Tidak Dihantar",
-      "notCompleted": "Tidak Selesai",
+      "notSubmitted": "Belum Dihantar",
+      "notCompleted": "Belum Selesai",
       "delivered": "Dihantar",
       "inTransit": "Dalam Perjalanan",
       "ready": "Sedia",
       "preparing": "Menyediakan",
-      "goingLive": "Sedang Go Live",
+      "goingLive": "Sedang Mula Guna",
       "overdue": "Tertunggak",
       "live": "Live",
       "awaitingGoLive": "Menunggu Go-Live",
-      "merchantIsLive": "Peniaga Sudah Live",
+      "merchantIsLive": "Merchant Sudah Live",
       "xOfYCompleted": "{completed}/{total} Selesai"
     },
     "industry": {
@@ -145,7 +145,7 @@
       "onboardingServicesBought": "Perkhidmatan Onboarding Dibeli",
       "remoteTrainingMeetingLink": "Pautan Mesyuarat Latihan Jarak Jauh",
       "hardwareFulfillmentDate": "Tarikh Pemenuhan",
-      "hardwareShipmentDate": "Tarikh Penghantaran Perkakasan",
+      "hardwareShipmentDate": "Tarikh Penghantaran Hardware",
       "orderStatus": "Status Pesanan",
       "shippingAddress": "Alamat Penghantaran",
       "trackingLink": "Pautan Penjejakan",
@@ -196,16 +196,16 @@
     },
     "welcomeCallSummary": {
       "title": "Ringkasan Panggilan Selamat Datang:",
-      "goLiveDate": "Tarikh go live:",
-      "hardwareDeliveryDate": "Tarikh penghantaran perkakasan:",
+      "goLiveDate": "Tarikh Mula Guna:",
+      "hardwareDeliveryDate": "Tarikh penghantaran Hardware:",
       "installationDate": "Tarikh pemasangan:",
       "trainingDate": "Tarikh Latihan:"
     },
     "readyToGoLive": {
       "checklistTitle": "Senarai Semak Kesediaan Go-Live",
-      "hardwareDelivered": "Perkakasan Dihantar",
+      "hardwareDelivered": "Hardware Dihantar",
       "productSetupCompleted": "Persediaan Produk Selesai",
-      "hardwareInstallationCompleted": "Pemasangan Perkakasan Selesai",
+      "hardwareInstallationCompleted": "Pemasangan Hardware Selesai",
       "trainingCompleted": "Latihan Selesai",
       "subscriptionActivated": "Langganan Diaktifkan"
     },
@@ -276,7 +276,7 @@
     "cancel": "Batal",
     "reschedule": "Jadual Semula",
     "noSlotsAvailable": "Tiada slot tersedia",
-    "hardwareFulfillmentTitle": "Jadualkan Tarikh Penghantaran Perkakasan",
+    "hardwareFulfillmentTitle": "Jadualkan Tarikh Penghantaran Hardware",
     "installationTitle": "Jadualkan Tarikh Pemasangan",
     "trainingTitle": "Tempah Sesi Latihan",
     "goLiveTitle": "Jadualkan Tarikh Go-Live",
@@ -325,9 +325,9 @@
     "externalVendorNotice": "Pilih tarikh pilihan dan vendor akan menghubungi untuk pengesahan",
     "externalVendorAdvance": "Vendor luar memerlukan tempahan 2 hari lebih awal (paling awal: lusa)",
     "currentBookingNotice": "Tempahan semasa: {date} (akan dibatalkan apabila anda menjadual semula)",
-    "availableFrom": "Tersedia dari: {date} (+{days} hari selepas penghantaran perkakasan)",
+    "availableFrom": "Tersedia dari: {date} (+{days} hari selepas penghantaran Hardware)",
     "toDate": "hingga {date}",
-    "setHardwareFirst": "Tetapkan Tarikh Penghantaran Perkakasan dahulu",
+    "setHardwareFirst": "Tetapkan Tarikh Penghantaran Hardware dahulu",
     "internalNoRestrictions": "Pengguna dalaman: Tiada sekatan tarikh digunakan",
     "trainingAfterInstallation": "Latihan mesti dijadualkan selepas tarikh Pemasangan ({installDate}) dan pada atau sebelum tarikh Go-Live ({goLiveDate})",
     "trainingAfterInstallationOnly": "Latihan mesti dijadualkan selepas tarikh Pemasangan ({installDate})",
@@ -346,11 +346,11 @@
     "noteFeatureSlot": "Nota: Disebabkan ciri {feature}, hanya slot 4pm tersedia untuk latihan.",
     "ok": "OK",
     "currentBookingWillCancel": "Tempahan semasa: {date} (akan dibatalkan apabila anda menjadual semula)",
-    "availableFromTo": "Tersedia dari: {fromDate} (+{days} hari selepas penghantaran perkakasan) hingga {toDate}",
-    "availableFromDays": "Tersedia dari: {fromDate} (+{days} hari selepas penghantaran perkakasan)",
-    "availableFromDay": "Tersedia dari: {fromDate} (+{days} hari selepas penghantaran perkakasan)",
+    "availableFromTo": "Tersedia dari: {fromDate} (+{days} hari selepas penghantaran Hardware) hingga {toDate}",
+    "availableFromDays": "Tersedia dari: {fromDate} (+{days} hari selepas penghantaran Hardware)",
+    "availableFromDay": "Tersedia dari: {fromDate} (+{days} hari selepas penghantaran Hardware)",
     "calculating": "Mengira...",
-    "afterHardwareShipment": "selepas penghantaran perkakasan",
+    "afterHardwareShipment": "selepas penghantaran Hardware",
     "selectDate": "Pilih Tarikh"
   },
   "login": {
@@ -377,7 +377,7 @@
       "industry": "Industri",
       "language": "Bahasa",
       "storeAddress": "Alamat Kedai",
-      "hardwareShipment": "Penghantaran Perkakasan",
+      "hardwareShipment": "Penghantaran Hardware",
       "onboardingService": "Perkhidmatan Onboarding",
       "serviceType": "Jenis Perkhidmatan",
       "requiredFeatures": "Ciri Diperlukan",

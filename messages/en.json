@@ -10,12 +10,12 @@
     "details": "Details"
   },
   "goLive": {
-    "expectedDate": "Expected Go Live Date",
+    "expectedDate": "Expected Start Date",
     "daysUntil": "Days until go-live",
     "live": "Live",
     "overdue": "Overdue",
     "notSet": "Not Set",
-    "tooltip": "Expected Go Live Date can only be changed by StoreHub Onboarding Manager"
+    "tooltip": "Expected Start Date can only be changed by StoreHub Onboarding Manager"
   },
   "common": {
     "lastModified": "Last Modified",

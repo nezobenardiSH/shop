@@ -25,14 +25,14 @@
   },
   "overview": {
     "onboardingProgress": "入驻进度",
-    "requiredActions": "必要操作",
+    "requiredActions": "必须完成事项",
     "completedCount": "{completed}/{total} 已完成",
     "importantDates": "重要日期",
     "completed": "已完成",
     "dueBy": "截止日期 {date}",
     "stages": {
       "welcome": "欢迎",
-      "preparation": "准备",
+      "preparation": "准备工作",
       "installation": "安装",
       "training": "培训",
       "readyGoLive": "准备上线",
@@ -72,7 +72,7 @@
       "productSetup": "产品设置",
       "storeSetup": "门店设置",
       "welcomeCall": "欢迎电话",
-      "hardwareFulfillment": "硬件履行",
+      "hardwareFulfillment": "硬件配送履行",
       "hardwareInstallation": "硬件安装",
       "goLive": "上线",
       "postGoLiveCheckIn": "上线后跟进"
