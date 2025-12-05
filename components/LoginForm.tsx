@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
 import WhatsAppButton from '@/components/WhatsAppButton'
+import LanguageSelector from '@/components/LanguageSelector'
+import { type Locale, salesforceLocaleMap, defaultLocale } from '@/i18n/config'
 
 interface LoginFormProps {
   merchantId: string
@@ -16,36 +19,64 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
   const [displayName, setDisplayName] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useTranslations('login')
+  const currentLocale = useLocale() as Locale
+
+  // Track if we've already set the locale from Salesforce to avoid loops
+  const localeSetRef = useRef(false)
 
   useEffect(() => {
     // Check if session expired
     if (searchParams.get('expired') === 'true') {
-      setError('Your session has expired. Please log in again.')
+      setError(t('sessionExpired'))
     }
 
-    // Fetch merchant name from API since merchantId is now a Salesforce ID
-    const fetchMerchantName = async () => {
+    // Fetch merchant name and preferred language from API
+    const fetchMerchantData = async () => {
       try {
         const response = await fetch(`/api/salesforce/merchant/${merchantId}`)
         const data = await response.json()
         console.log('Login page - API response:', data)
+
         if (data.success && (data.name || data.trainerName)) {
           const merchantName = data.name || data.trainerName
           setDisplayName(merchantName)
-          // Update page title with merchant name
           document.title = `${merchantName} - Onboarding Portal`
         } else {
           console.log('No merchant name found in response')
           setDisplayName('Merchant Portal')
         }
+
+        // Check if we've already set locale for THIS merchant in this session
+        const localeSetForMerchant = sessionStorage.getItem(`locale_set_${merchantId}`)
+
+        // Set locale from Salesforce preferred language if:
+        // 1. We haven't already set it for this merchant in this browser session
+        // 2. Salesforce has a preferred language
+        // 3. The current locale doesn't match the Salesforce preference
+        if (!localeSetForMerchant && !localeSetRef.current && data.preferredLanguage) {
+          const sfLocale = salesforceLocaleMap[data.preferredLanguage]
+          if (sfLocale && sfLocale !== currentLocale) {
+            console.log(`Setting locale from Salesforce: ${data.preferredLanguage} -> ${sfLocale}`)
+            localeSetRef.current = true
+            // Mark that we've set locale for this merchant in this session
+            sessionStorage.setItem(`locale_set_${merchantId}`, 'true')
+            document.cookie = `NEXT_LOCALE=${sfLocale}; path=/; max-age=31536000`
+            // Refresh to apply the new locale
+            router.refresh()
+          } else if (sfLocale) {
+            // Locale already matches, just mark as set
+            sessionStorage.setItem(`locale_set_${merchantId}`, 'true')
+          }
+        }
       } catch (error) {
-        console.error('Failed to fetch merchant name:', error)
+        console.error('Failed to fetch merchant data:', error)
         setDisplayName('Merchant Portal')
       }
     }
 
-    fetchMerchantName()
-  }, [searchParams, merchantId])
+    fetchMerchantData()
+  }, [searchParams, merchantId, currentLocale, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,7 +111,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
         }
       }
     } catch (error) {
-      setError('Connection error. Please try again.')
+      setError(t('connectionError'))
       console.error('Login error:', error)
     } finally {
       setLoading(false)
@@ -96,7 +127,12 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#faf9f6]">
+    <div className="min-h-screen flex items-center justify-center bg-[#faf9f6] relative">
+      {/* Language selector in top-right corner */}
+      <div className="absolute top-4 right-4">
+        <LanguageSelector currentLocale={currentLocale} />
+      </div>
+
       <div className="max-w-md w-full mx-4">
         <div className="p-8">
           <div className="text-center mb-8">
@@ -110,7 +146,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
             </div>
 
             <h2 className="text-2xl font-bold text-[#0b0707] mb-2">
-              Onboarding Portal
+              {t('title')}
             </h2>
             <p className="text-lg text-[#6b6a6a]">
               {displayName}
@@ -120,7 +156,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="pin" className="block text-sm font-medium text-[#0b0707] mb-2">
-                Enter 4-Digit PIN
+                {t('pinLabel')}
               </label>
               <input
                 id="pin"
@@ -133,7 +169,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
                          px-4 py-3 border-2 border-[#e5e7eb] rounded-lg
                          focus:outline-none focus:border-[#ff630f]
                          disabled:bg-gray-50 disabled:text-gray-500"
-                placeholder="••••"
+                placeholder={t('pinPlaceholder')}
                 required
                 disabled={loading}
                 autoComplete="off"
@@ -150,7 +186,7 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
                     <p>{error}</p>
                     {remainingAttempts !== null && remainingAttempts > 0 && (
                       <p className="mt-1 text-xs">
-                        {remainingAttempts} attempt{remainingAttempts !== 1 ? 's' : ''} remaining
+                        {t('attemptsRemaining', { count: remainingAttempts })}
                       </p>
                     )}
                   </div>
@@ -174,17 +210,17 @@ export default function LoginForm({ merchantId }: LoginFormProps) {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Verifying...
+                  {t('verifying')}
                 </>
               ) : (
-                'Log in'
+                t('submit')
               )}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-xs text-[#6b6a6a]">
-              Having trouble? Contact your onboarding manager.
+              {t('helpText')}
             </p>
           </div>
         </div>

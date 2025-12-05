@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Calendar, Clock, CheckCircle } from 'lucide-react'
+import { useTranslations, useFormatter } from 'next-intl'
 
 interface BookingModalProps {
   isOpen: boolean
@@ -59,6 +60,8 @@ export default function BookingModal({
   const [message, setMessage] = useState('')
   const [assignedTrainer, setAssignedTrainer] = useState<string>('')
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
+  const t = useTranslations('booking')
+  const format = useFormatter()
 
   useEffect(() => {
     if (isOpen) {
@@ -79,15 +82,15 @@ export default function BookingModal({
       if (response.ok) {
         setAvailability(data.availability || [])
         if (!data.availability || data.availability.length === 0) {
-          setMessage('No availability data returned')
+          setMessage(t('noSlotsAvailable'))
         }
       } else {
-        setMessage(data.error || 'Failed to fetch availability')
+        setMessage(data.error || t('fetchError'))
         console.error('Error response:', data)
       }
     } catch (error) {
       console.error('Error fetching availability:', error)
-      setMessage(`Failed to fetch availability: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setMessage(t('fetchError'))
     } finally {
       setLoading(false)
     }
@@ -124,15 +127,15 @@ export default function BookingModal({
       if (response.ok) {
         setBookingStatus('success')
         setAssignedTrainer(data.assignedTrainer || '')
-        
-        let successMsg = data.assignedTrainer 
-          ? `Training session booked successfully!\nAssigned to: ${data.assignedTrainer}`
-          : 'Training session booked successfully!'
-        
+
+        let successMsg = data.assignedTrainer
+          ? `${t('bookingSuccess')}\n${t('assignedTo', { trainer: data.assignedTrainer })}`
+          : t('bookingSuccess')
+
         if (!data.salesforceUpdated) {
-          successMsg += '\n⚠️ Note: Salesforce update pending'
+          successMsg += `\n⚠️ ${t('salesforcePending')}`
         }
-        
+
         setMessage(successMsg)
         
         // Call onBookingComplete with the selected date to update Salesforce
@@ -144,7 +147,7 @@ export default function BookingModal({
         }, 3000)
       } else {
         setBookingStatus('error')
-        const errorMsg = data.error || 'Failed to book training'
+        const errorMsg = data.error || t('bookError')
         const details = data.details ? ` - ${data.details}` : ''
         const hint = data.hint ? `\n${data.hint}` : ''
         setMessage(errorMsg + details + hint)
@@ -153,7 +156,7 @@ export default function BookingModal({
     } catch (error) {
       console.error('Error booking training:', error)
       setBookingStatus('error')
-      setMessage('Failed to book training')
+      setMessage(t('bookError'))
     }
   }
 
@@ -178,19 +181,19 @@ export default function BookingModal({
       
       if (response.ok) {
         setBookingStatus('success')
-        setMessage('Training session cancelled successfully')
+        setMessage(t('cancelSuccess'))
         setTimeout(() => {
           onBookingComplete()
           onClose()
         }, 2000)
       } else {
         setBookingStatus('error')
-        setMessage(data.error || 'Failed to cancel training')
+        setMessage(data.error || t('cancelError'))
       }
     } catch (error) {
       console.error('Error cancelling training:', error)
       setBookingStatus('error')
-      setMessage('Failed to cancel training')
+      setMessage(t('cancelError'))
     }
   }
 
@@ -222,15 +225,15 @@ export default function BookingModal({
             {(() => {
               switch(bookingType) {
                 case 'hardware-fulfillment':
-                  return 'Schedule Hardware Fulfillment Date'
+                  return t('hardwareFulfillmentTitle')
                 case 'installation':
-                  return 'Schedule Installation Date'
+                  return t('installationTitle')
                 case 'training':
-                  return 'Book Training Session'
+                  return t('trainingTitle')
                 case 'go-live':
-                  return 'Schedule Go-Live Date'
+                  return t('goLiveTitle')
                 default:
-                  return 'Schedule Date'
+                  return t('scheduleTitle')
               }
             })()}
           </h2>
@@ -250,30 +253,30 @@ export default function BookingModal({
           ) : currentBooking ? (
             <div className="space-y-6">
               <div className="bg-[#fff4ed] border border-[#ff630f] rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-[#0b0707] mb-4">Current Booking</h3>
+                <h3 className="text-lg font-semibold text-[#0b0707] mb-4">{t('currentBooking')}</h3>
                 <p className="text-[#6b6a6a] mb-2">
-                  Date: <span className="font-medium">{currentBooking.date}</span>
+                  {t('date')}: <span className="font-medium">{currentBooking.date}</span>
                 </p>
                 <p className="text-[#6b6a6a] mb-4">
-                  Time: <span className="font-medium">{currentBooking.time}</span>
+                  {t('time')}: <span className="font-medium">{currentBooking.time}</span>
                 </p>
                 <button
                   onClick={handleCancellation}
                   disabled={bookingStatus === 'loading'}
                   className="bg-red-500 hover:bg-red-600 text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105 disabled:bg-gray-400"
                 >
-                  {bookingStatus === 'loading' ? 'Cancelling...' : 'Cancel Booking'}
+                  {bookingStatus === 'loading' ? t('cancelling') : t('cancelBooking')}
                 </button>
               </div>
             </div>
           ) : (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-[#0b0707] mb-4">Select Date</h3>
+                <h3 className="text-lg font-semibold text-[#0b0707] mb-4">{t('selectDate')}</h3>
                 {/* Language Selection for Training - moved up for better UX */}
                 {bookingType === 'training' && (
                   <div className="bg-[#fff4ed] rounded-xl p-4 border border-[#ff630f]/20 mb-4">
-                    <h4 className="font-semibold text-[#0b0707] mb-3">Select Training Language</h4>
+                    <h4 className="font-semibold text-[#0b0707] mb-3">{t('selectLanguage')}</h4>
                     <div className="space-y-2">
                       {['English', 'Bahasa Malaysia', 'Chinese'].map((language) => (
                         <label
@@ -300,7 +303,7 @@ export default function BookingModal({
                       ))}
                     </div>
                     {selectedLanguages.length === 0 && (
-                      <p className="text-xs text-red-600 mt-2">Please select at least one language</p>
+                      <p className="text-xs text-red-600 mt-2">{t('selectAtLeastOneLanguage')}</p>
                     )}
                   </div>
                 )}
@@ -344,7 +347,7 @@ export default function BookingModal({
 
               {selectedDate && (
                 <div>
-                  <h3 className="text-lg font-semibold text-[#0b0707] mb-4">Select Time Slot</h3>
+                  <h3 className="text-lg font-semibold text-[#0b0707] mb-4">{t('selectTime')}</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {availability
                       .find(day => day.date === selectedDate)
@@ -392,14 +395,14 @@ export default function BookingModal({
                             </div>
                             {relevantTrainers.length > 0 && isSlotAvailable && (
                               <span className="text-xs opacity-75">
-                                {relevantTrainers.length === 1 
-                                  ? `${relevantTrainers[0]} available`
-                                  : `${relevantTrainers.length} trainers available`}
+                                {relevantTrainers.length === 1
+                                  ? t('trainerAvailable', { name: relevantTrainers[0] })
+                                  : t('trainersAvailable', { count: relevantTrainers.length })}
                               </span>
                             )}
                             {!isSlotAvailable && isTrainingBooking && selectedLanguages.length > 0 && (
                               <span className="text-xs opacity-75">
-                                No {selectedLanguages.join('/')} trainer
+                                {t('noTrainerForLanguage', { languages: selectedLanguages.join('/') })}
                               </span>
                             )}
                           </button>
@@ -412,21 +415,21 @@ export default function BookingModal({
               {selectedDate && selectedSlot && (
                 <>
                   <div className="bg-[#faf9f6] rounded-xl p-4">
-                    <h4 className="font-semibold text-[#0b0707] mb-2">Booking Summary</h4>
+                    <h4 className="font-semibold text-[#0b0707] mb-2">{t('bookingSummary')}</h4>
                     <p className="text-sm text-[#6b6a6a]">
-                      Date: <span className="font-medium text-[#0b0707]">{formatDate(selectedDate)}</span>
+                      {t('date')}: <span className="font-medium text-[#0b0707]">{formatDate(selectedDate)}</span>
                     </p>
                     <p className="text-sm text-[#6b6a6a]">
-                      Time: <span className="font-medium text-[#0b0707]">
+                      {t('time')}: <span className="font-medium text-[#0b0707]">
                         {formatTime(selectedSlot.start)} - {formatTime(selectedSlot.end)}
                       </span>
                     </p>
                     <p className="text-sm text-[#6b6a6a]">
-                      Trainer: <span className="font-medium text-[#0b0707]">{trainerName}</span>
+                      {t('trainer')}: <span className="font-medium text-[#0b0707]">{trainerName}</span>
                     </p>
                     {bookingType === 'training' && selectedLanguages.length > 0 && (
                       <p className="text-sm text-[#6b6a6a] mt-1">
-                        Language(s): <span className="font-medium text-[#0b0707]">{selectedLanguages.join(', ')}</span>
+                        {t('languages')}: <span className="font-medium text-[#0b0707]">{selectedLanguages.join(', ')}</span>
                       </p>
                     )}
                   </div>
@@ -447,7 +450,7 @@ export default function BookingModal({
                   <div className="whitespace-pre-line">{message}</div>
                   {assignedTrainer && bookingStatus === 'success' && (
                     <div className="mt-2 text-sm font-semibold">
-                      Trainer: {assignedTrainer}
+                      {t('trainer')}: {assignedTrainer}
                     </div>
                   )}
                 </div>
@@ -461,20 +464,20 @@ export default function BookingModal({
             onClick={onClose}
             className="bg-white hover:bg-gray-50 text-[#0b0707] font-medium rounded-full px-6 py-2.5 border border-[#e5e7eb] transition-all duration-200"
           >
-            Cancel
+            {t('cancel')}
           </button>
           {!currentBooking && (
             <button
               onClick={handleBooking}
               disabled={
-                !selectedDate || 
-                !selectedSlot || 
+                !selectedDate ||
+                !selectedSlot ||
                 bookingStatus === 'loading' ||
                 (bookingType === 'training' && selectedLanguages.length === 0)
               }
               className="bg-[#ff630f] hover:bg-[#fe5b25] text-white font-medium rounded-full px-6 py-2.5 transition-all duration-200 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {bookingStatus === 'loading' ? 'Booking...' : 'Confirm Booking'}
+              {bookingStatus === 'loading' ? t('booking') : t('confirm')}
             </button>
           )}
         </div>

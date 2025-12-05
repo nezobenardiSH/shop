@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, createContext, useContext } from 'react'
-import { useParams, usePathname, useSearchParams } from 'next/navigation'
+import { useParams, usePathname, useSearchParams, useRouter } from 'next/navigation'
 import MerchantHeader from '@/components/MerchantHeader'
 import PageHeader from '@/components/PageHeader'
 import WhatsAppButton from '@/components/WhatsAppButton'
+import { salesforceLocaleMap, type Locale } from '@/i18n/config'
 
 // Context to share merchant data across pages
 interface MerchantContextType {
@@ -66,6 +67,7 @@ export default function MerchantLayout({
   const params = useParams()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const merchantId = params.merchantId as string
 
   // Determine current page from pathname
@@ -122,6 +124,25 @@ export default function MerchantLayout({
       loadMerchantData()
     }
   }, [merchantId])
+
+  // Set locale from Salesforce preferredLanguage on first load (if no cookie exists)
+  useEffect(() => {
+    if (merchantData?.success && merchantData?.preferredLanguage) {
+      const existingLocaleCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('NEXT_LOCALE='))
+
+      // Only set cookie if it doesn't exist yet
+      if (!existingLocaleCookie) {
+        const sfLanguage = merchantData.preferredLanguage
+        const locale = salesforceLocaleMap[sfLanguage]
+        if (locale) {
+          document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=31536000`
+          router.refresh()
+        }
+      }
+    }
+  }, [merchantData?.success, merchantData?.preferredLanguage, router])
 
   // Get data for header
   const merchantName = merchantData?.success && merchantData?.name ? merchantData.name : 'Loading...'

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import DatePickerModal from '@/components/DatePickerModal'
 import { usePageTracking } from '@/lib/useAnalytics'
 import { useMerchantContext } from '../layout'
@@ -104,6 +105,7 @@ const getCurrentStage = (trainerData: any): string => {
 export default function MerchantDetailsPage() {
   const params = useParams()
   const merchantId = params.merchantId as string
+  const t = useTranslations('details')
 
   // Use shared context for merchant data
   const { merchantData: trainerData, refreshData, isInternalUser } = useMerchantContext()
@@ -217,7 +219,7 @@ export default function MerchantDetailsPage() {
           {/* Merchant Details Section */}
           {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
             <div className="mt-4">
-                <h3 className="text-xl font-semibold text-[#0b0707] mb-4">Merchant Details</h3>
+                <h3 className="text-xl font-semibold text-[#0b0707] mb-4">{t('sections.merchantDetails')}</h3>
                 <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
                   {(() => {
                     const trainer = trainerData.onboardingTrainerData.trainers[0];
@@ -239,11 +241,11 @@ export default function MerchantDetailsPage() {
                           {/* Column 1 */}
                           <div className="space-y-2">
                             <div>
-                              <span className="text-xs font-semibold text-gray-500 uppercase">Merchant: </span>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">{t('fields.merchant')}: </span>
                               <span className="text-sm text-gray-900">{trainer.name || 'N/A'}</span>
                             </div>
                             <div>
-                              <span className="text-xs font-semibold text-gray-500 uppercase">Account: </span>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">{t('fields.account')}: </span>
                               <span className="text-sm text-gray-900">{trainer.accountName || 'N/A'}</span>
                             </div>
                           </div>
@@ -251,11 +253,11 @@ export default function MerchantDetailsPage() {
                           {/* Column 2 */}
                           <div className="space-y-2">
                             <div>
-                              <span className="text-xs font-semibold text-gray-500 uppercase">Industry: </span>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">{t('fields.industry')}: </span>
                               <span className="text-sm text-gray-900">{trainer.subIndustry || 'N/A'}</span>
                             </div>
                             <div>
-                              <span className="text-xs font-semibold text-gray-500 uppercase">Language: </span>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">{t('fields.language')}: </span>
                               <span className="text-sm text-gray-900">{trainer.preferredLanguage || 'N/A'}</span>
                             </div>
                           </div>
@@ -263,12 +265,12 @@ export default function MerchantDetailsPage() {
                           {/* Column 3 */}
                           <div className="space-y-2">
                             <div>
-                              <span className="text-xs font-semibold text-gray-500 uppercase">Store Address: </span>
+                              <span className="text-xs font-semibold text-gray-500 uppercase">{t('fields.storeAddress')}: </span>
                               <span className="text-sm text-gray-900">{formatAddress()}</span>
                             </div>
                             {trainer.orderShippingAddress && (
                               <div>
-                                <span className="text-xs font-semibold text-gray-500 uppercase">Hardware Shipment: </span>
+                                <span className="text-xs font-semibold text-gray-500 uppercase">{t('fields.hardwareShipment')}: </span>
                                 <span className="text-sm text-gray-900">
                                   {(() => {
                                     const addr = trainer.orderShippingAddress;
@@ -297,7 +299,7 @@ export default function MerchantDetailsPage() {
           {/* Services and Features Section */}
           {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
             <div className="mt-4">
-              <h3 className="text-xl font-semibold text-[#0b0707] mb-4">Services & Features</h3>
+              <h3 className="text-xl font-semibold text-[#0b0707] mb-4">{t('sections.servicesFeatures')}</h3>
               <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
                 {(() => {
                   const trainer = trainerData.onboardingTrainerData.trainers[0];
@@ -306,11 +308,11 @@ export default function MerchantDetailsPage() {
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
                       <div>
-                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Onboarding Service</div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">{t('fields.onboardingService')}</div>
                         <div className="text-sm text-gray-900">{trainer.onboardingServicesBought || 'N/A'}</div>
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Service Type</div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">{t('fields.serviceType')}</div>
                         <div className="text-sm text-gray-900">
                           {trainer.serviceType || 'N/A'}
                           {trainer.shippingCity && trainer.shippingState && (
@@ -324,7 +326,7 @@ export default function MerchantDetailsPage() {
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Required Features</div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">{t('fields.requiredFeatures')}</div>
                         <div className="text-sm text-gray-900">{trainer.requiredFeaturesByMerchant || 'N/A'}</div>
                       </div>
                     </div>
@@ -338,7 +340,7 @@ export default function MerchantDetailsPage() {
           {/* Contacts Section */}
           {trainerData && trainerData.success && trainerData.onboardingTrainerData && trainerData.onboardingTrainerData.trainers && trainerData.onboardingTrainerData.trainers[0] && (
             <div className="mt-4">
-              <h3 className="text-xl font-semibold text-[#0b0707] mb-4">Contacts</h3>
+              <h3 className="text-xl font-semibold text-[#0b0707] mb-4">{t('sections.contacts')}</h3>
               <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
                 {(() => {
                   const trainer = trainerData.onboardingTrainerData.trainers[0];
@@ -346,7 +348,7 @@ export default function MerchantDetailsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
                       {/* Merchant PIC */}
                       <div className="space-y-1">
-                        <div className="text-xs font-semibold text-gray-500 uppercase">Merchant PIC</div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase">{t('fields.merchantPic')}</div>
                         <div className="text-sm text-gray-900">
                           {trainer.merchantPICName || 'N/A'}
                         </div>
@@ -359,7 +361,7 @@ export default function MerchantDetailsPage() {
 
                       {/* Business Owner */}
                       <div className="space-y-1">
-                        <div className="text-xs font-semibold text-gray-500 uppercase">Business Owner</div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase">{t('fields.businessOwner')}</div>
                         <div className="text-sm text-gray-900">
                           {trainer.businessOwnerContact?.name || 'N/A'}
                         </div>
@@ -372,7 +374,7 @@ export default function MerchantDetailsPage() {
 
                       {/* Operation Manager */}
                       <div className="space-y-1">
-                        <div className="text-xs font-semibold text-gray-500 uppercase">Operation Manager</div>
+                        <div className="text-xs font-semibold text-gray-500 uppercase">{t('fields.operationManager')}</div>
                         <div className="text-sm text-gray-900">
                           {trainer.operationManagerContact?.name || 'N/A'}
                         </div>
@@ -408,7 +410,7 @@ export default function MerchantDetailsPage() {
 
             return (
               <div className="mt-4">
-                <h3 className="text-xl font-semibold text-[#0b0707] mb-4">Products & Payment</h3>
+                <h3 className="text-xl font-semibold text-[#0b0707] mb-4">{t('sections.productsPayment')}</h3>
                 <div className="space-y-3">
                   {/* Payment Summary at the top */}
                   {trainer && (
@@ -417,30 +419,30 @@ export default function MerchantDetailsPage() {
                         {/* Quote Total Amount */}
                         <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
                           <div className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
-                            Quote Total Amount
+                            {t('fields.quoteTotalAmount')}
                           </div>
                           <div className="text-xl font-bold text-orange-900">
                             {trainer.syncedQuoteTotalAmount !== null && trainer.syncedQuoteTotalAmount !== undefined
                               ? formatCurrency(trainer.syncedQuoteTotalAmount, currencyInfo)
-                              : 'Not Available'}
+                              : t('fields.notAvailable')}
                           </div>
                           <div className="text-xs text-orange-600">
-                            Synced from quote
+                            {t('fields.syncedFromQuote')}
                           </div>
                         </div>
 
                         {/* Pending Payment */}
                         <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                           <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider">
-                            Pending Payment
+                            {t('fields.pendingPayment')}
                           </div>
                           <div className="text-xl font-bold text-amber-900">
                             {trainer.pendingPayment !== null && trainer.pendingPayment !== undefined
                               ? formatCurrency(trainer.pendingPayment, currencyInfo)
-                              : 'Not Available'}
+                              : t('fields.notAvailable')}
                           </div>
                           <div className="text-xs text-amber-600">
-                            Amount outstanding
+                            {t('fields.amountOutstanding')}
                           </div>
                         </div>
                       </div>
@@ -453,18 +455,18 @@ export default function MerchantDetailsPage() {
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                           {orderType}
                         </span>
-                        <span className="ml-2 text-xs text-gray-500">({items.length} items)</span>
+                        <span className="ml-2 text-xs text-gray-500">({items.length} {t('fields.items')})</span>
                       </h4>
-                      
+
                       {/* Products Table List */}
                       <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
-                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">Unit</th>
-                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 uppercase">{t('fields.product')}</th>
+                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">{t('fields.qty')}</th>
+                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">{t('fields.unit')}</th>
+                              <th className="px-2 py-1 text-right text-xs font-medium text-gray-500 uppercase">{t('fields.total')}</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
@@ -479,7 +481,7 @@ export default function MerchantDetailsPage() {
                           </tbody>
                           <tfoot>
                             <tr className="bg-gray-50">
-                              <td colSpan={3} className="px-2 py-1 text-xs font-medium text-gray-900 text-right">Total:</td>
+                              <td colSpan={3} className="px-2 py-1 text-xs font-medium text-gray-900 text-right">{t('fields.total')}:</td>
                               <td className="px-2 py-1 text-xs font-bold text-gray-900 text-right">
                                 {formatCurrency(items.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0), currencyInfo)}
                               </td>
