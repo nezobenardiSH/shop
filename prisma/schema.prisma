@@ -125,3 +125,16 @@ model MerchantRemark {
   @@index([merchantId])
   @@map("merchant_remarks")
 }
+
+model NotificationAdmin {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String
+  larkUserId String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("notification_admins")
+}

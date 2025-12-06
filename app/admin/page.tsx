@@ -19,6 +19,13 @@ interface User {
   }
 }
 
+interface NotificationAdmin {
+  email: string
+  name: string
+  authorized: boolean
+  createdAt?: string
+}
+
 interface UsersData {
   trainers: User[]
   installers: User[]
@@ -33,6 +40,10 @@ interface UsersData {
   }
 }
 
+interface AdminsData {
+  admins: NotificationAdmin[]
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -41,7 +52,8 @@ export default function AdminPage() {
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState('')
   const [usersData, setUsersData] = useState<UsersData | null>(null)
-  const [activeTab, setActiveTab] = useState<'trainers' | 'installers' | 'managers'>('trainers')
+  const [adminsData, setAdminsData] = useState<AdminsData | null>(null)
+  const [activeTab, setActiveTab] = useState<'trainers' | 'installers' | 'managers' | 'admins'>('trainers')
   const [showAddModal, setShowAddModal] = useState(false)
   const [newUser, setNewUser] = useState({
     type: 'trainer' as 'trainer' | 'installer',
@@ -69,6 +81,8 @@ export default function AdminPage() {
           managers: data.managers?.length
         })
         setUsersData(data)
+        // Also fetch notification admins
+        fetchNotificationAdmins()
       } else {
         console.error('Failed to fetch users, status:', response.status)
         setIsAuthenticated(false)
@@ -78,6 +92,42 @@ export default function AdminPage() {
       setIsAuthenticated(false)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchNotificationAdmins = async () => {
+    try {
+      const response = await fetch('/api/admins/authorization-status')
+      if (response.ok) {
+        const data = await response.json()
+        setAdminsData(data)
+      }
+    } catch (error) {
+      console.error('Error fetching notification admins:', error)
+    }
+  }
+
+  const handleRevokeNotificationAdmin = async (email: string) => {
+    if (!confirm(`Are you sure you want to revoke notification access for ${email}?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/admins/revoke-authorization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+
+      if (response.ok) {
+        alert('Notification admin revoked successfully')
+        fetchNotificationAdmins()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to revoke notification admin')
+      }
+    } catch (error) {
+      alert('Failed to revoke notification admin')
     }
   }
 
@@ -270,7 +320,8 @@ export default function AdminPage() {
 
   const currentUsers = activeTab === 'trainers' ? usersData?.trainers || []
     : activeTab === 'installers' ? usersData?.installers || []
-    : usersData?.managers || []
+    : activeTab === 'managers' ? usersData?.managers || []
+    : []
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -306,7 +357,7 @@ export default function AdminPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Trainers</h3>
             <p className="text-3xl font-bold text-blue-600">
@@ -327,6 +378,13 @@ export default function AdminPage() {
               {usersData?.summary.authorizedManagers}
             </p>
             <p className="text-sm text-gray-500 mt-1">Authorized</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Notification Admins</h3>
+            <p className="text-3xl font-bold text-red-600">
+              {adminsData?.admins?.length || 0}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">Receiving Alerts</p>
           </div>
         </div>
 
@@ -363,6 +421,16 @@ export default function AdminPage() {
                 }`}
               >
                 Managers ({usersData?.managers.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('admins')}
+                className={`px-6 py-3 text-sm font-medium ${
+                  activeTab === 'admins'
+                    ? 'border-b-2 border-red-500 text-red-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Notification Admins ({adminsData?.admins?.length || 0})
               </button>
             </nav>
           </div>
@@ -471,103 +539,186 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    {activeTab === 'trainers' && (
-                      <>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Location
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Languages
-                        </th>
-                      </>
-                    )}
-                    {activeTab === 'installers' && (
+            {activeTab === 'admins' && (
+              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-red-900 mb-2">
+                  📋 Notification Admin Setup
+                </h3>
+                <ol className="text-sm text-red-800 space-y-1 ml-4 list-decimal">
+                  <li>
+                    <strong>Self-Registration:</strong> Notification admins authorize themselves via Lark OAuth.
+                  </li>
+                  <li>
+                    <strong>Send Authorization Link:</strong> Share this link with team members who should receive error notifications:
+                    <div className="mt-1 p-2 bg-white rounded border border-red-300 font-mono text-xs break-all">
+                      https://onboarding-portal-5fhi.onrender.com/admins/authorize
+                    </div>
+                  </li>
+                  <li>
+                    <strong>Admin Authorizes:</strong> They click "Authorize with Lark" and log in with their Lark account.
+                  </li>
+                  <li>
+                    <strong>Join Lark Group:</strong> Make sure admins are added to the Lark error notification group to receive alerts.
+                  </li>
+                </ol>
+                <p className="text-xs text-red-700 mt-3 italic">
+                  Note: Notification admins will receive Lark messages when server errors (500 errors) occur.
+                </p>
+              </div>
+            )}
+
+            {activeTab === 'admins' ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Location
+                        Name
                       </th>
-                    )}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {currentUsers.map((user) => (
-                    <tr key={user.email}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {user.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.email}
-                      </td>
-                      {activeTab === 'trainers' && (
-                        <>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {(user as any).location?.join(', ') || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            <div className="flex flex-wrap gap-1">
-                              {((user as any).languages || []).map((lang: string) => (
-                                <span key={lang} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                  {lang}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                        </>
-                      )}
-                      {activeTab === 'installers' && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.location || 'N/A'}
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(adminsData?.admins || []).map((admin) => (
+                      <tr key={admin.email}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {admin.name}
                         </td>
-                      )}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {user.authorized ? (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {admin.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Authorized
+                            Active
                           </span>
-                        ) : (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                            Not Authorized
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        {user.authorized && (
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => handleRevokeAuth(user.email)}
-                            className="text-orange-600 hover:text-orange-900"
+                            onClick={() => handleRevokeNotificationAdmin(admin.email)}
+                            className="text-red-600 hover:text-red-900"
                           >
                             Revoke
                           </button>
-                        )}
-                        {user.inConfig && activeTab !== 'managers' && (
-                          <button
-                            onClick={() => handleRemoveUser(user.type, user.email)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </td>
+                        </td>
+                      </tr>
+                    ))}
+                    {(adminsData?.admins || []).length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                          No notification admins yet. Share the authorization link above.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      {activeTab === 'trainers' && (
+                        <>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Location
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Languages
+                          </th>
+                        </>
+                      )}
+                      {activeTab === 'installers' && (
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Location
+                        </th>
+                      )}
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentUsers.map((user) => (
+                      <tr key={user.email}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {user.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.email}
+                        </td>
+                        {activeTab === 'trainers' && (
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {(user as any).location?.join(', ') || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              <div className="flex flex-wrap gap-1">
+                                {((user as any).languages || []).map((lang: string) => (
+                                  <span key={lang} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                    {lang}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </>
+                        )}
+                        {activeTab === 'installers' && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {user.location || 'N/A'}
+                          </td>
+                        )}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {user.authorized ? (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              Authorized
+                            </span>
+                          ) : (
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                              Not Authorized
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          {user.authorized && (
+                            <button
+                              onClick={() => handleRevokeAuth(user.email)}
+                              className="text-orange-600 hover:text-orange-900"
+                            >
+                              Revoke
+                            </button>
+                          )}
+                          {user.inConfig && activeTab !== 'managers' && (
+                            <button
+                              onClick={() => handleRemoveUser(user.type, user.email)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
