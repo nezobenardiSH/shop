@@ -235,14 +235,23 @@ export async function mapMerchantToSurftekTicket(
     remarks = remarks.substring(0, MAX_REMARK_LENGTH - 3) + '...'
   }
 
-  // Ensure phone number is in correct format (remove spaces, ensure country code)
-  let phone = merchant.contactPhone.replace(/\s+/g, '')
-  if (phone.startsWith('0')) {
-    phone = '60' + phone.substring(1) // Convert 0123456789 to 60123456789
-  }
-  if (!phone.startsWith('60')) {
+  // Ensure phone number is in correct format for Surftek (Malaysian format required)
+  // Remove all non-digit characters (spaces, dashes, parentheses, plus sign)
+  let phone = merchant.contactPhone.replace(/[^\d]/g, '')
+
+  // Handle various country code formats
+  if (phone.startsWith('60')) {
+    // Already has Malaysian country code - keep as is
+  } else if (phone.startsWith('0')) {
+    // Local Malaysian format (0123456789) -> convert to 60123456789
+    phone = '60' + phone.substring(1)
+  } else if (phone.length >= 9 && phone.length <= 10) {
+    // Likely Malaysian number without leading 0 (e.g., 123456789)
     phone = '60' + phone
   }
+  // Note: Non-Malaysian numbers may still fail Surftek validation
+
+  console.log(`📞 Phone formatting: "${merchant.contactPhone}" -> "${phone}"`)
 
   return {
     Ticket: {

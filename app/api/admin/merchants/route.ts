@@ -83,7 +83,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Query Salesforce in batches of 50 (to avoid query length limits)
+    // Query Salesforce for portal access via Onboarding_Portal__c
+    // Onboarding_Portal_Access__c is on Onboarding_Portal__c, linked via Onboarding_Trainer_Record__c
     const batchSize = 50
     const portalAccessMap = new Map<string, boolean>()
 
@@ -93,14 +94,14 @@ export async function GET(request: NextRequest) {
 
       try {
         const result = await conn.query(`
-          SELECT Id, Onboarding_Portal_Access__c
-          FROM Onboarding_Trainer__c
-          WHERE Id IN (${idList})
+          SELECT Onboarding_Trainer_Record__c, Onboarding_Portal_Access__c
+          FROM Onboarding_Portal__c
+          WHERE Onboarding_Trainer_Record__c IN (${idList})
         `)
 
         if (result.records) {
           result.records.forEach((record: any) => {
-            portalAccessMap.set(record.Id, record.Onboarding_Portal_Access__c === true)
+            portalAccessMap.set(record.Onboarding_Trainer_Record__c, record.Onboarding_Portal_Access__c === true)
           })
         }
       } catch (error) {
