@@ -9,6 +9,7 @@ Content groups categorize page views in Google Analytics 4 for easier analysis o
 
 | URL Pattern | Content Group | Description |
 |-------------|---------------|-------------|
+| `/` | `other` | Onboarding Portal Root |
 | `/login/*` | `login` | Login pages |
 | `/merchant/{id}/overview` | `overview` | Merchant overview page |
 | `/merchant/{id}/details` | `details` | Merchant details page |
