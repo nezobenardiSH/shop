@@ -35,15 +35,33 @@ Content groups categorize page views in Google Analytics 4 for easier analysis o
 
 ## GA4 Configuration
 
-### Custom Dimension Setup
+### Custom Dimensions Setup
+
+You need to create **two** custom dimensions in GA4:
+
+#### 1. Content Group
 - **Dimension name:** Content Group
 - **Scope:** Event
 - **Event parameter:** `content_group`
 
-### Viewing Content Groups in GA4
+#### 2. User Type
+- **Dimension name:** User Type
+- **Scope:** Event
+- **Event parameter:** `user_type`
+
+### User Type Values
+
+| Value | Description |
+|-------|-------------|
+| `merchant` | Merchant users (logged in with phone PIN) |
+| `internal_team` | StoreHub internal team (logged in with internal PIN) |
+| `anonymous` | Not logged in yet |
+
+### Viewing in GA4
 1. Go to **Reports** → **Engagement** → **Pages and screens**
-2. Add "Content group" as a secondary dimension
-3. Or create a custom report with Content Group as primary dimension
+2. Add "Content group" or "User type" as a secondary dimension
+3. Or create a custom report with these as primary dimensions
+4. Filter by User Type to see only merchant or internal team activity
 
 ---
 
