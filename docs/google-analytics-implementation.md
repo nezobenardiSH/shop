@@ -1,118 +1,101 @@
-# Google Analytics 4 (GA4) Implementation Plan
+# Google Analytics 4 (GA4) Implementation
 
 ## Overview
-Integrate Google Analytics 4 for page view tracking and user analytics. Production-only (disabled on localhost).
+Google Analytics 4 integration with **controlled page view tracking**. Automatic GA4 page views are disabled to prevent duplicate tracking and ensure accurate merchant-specific data.
 
 ---
 
-## Prerequisites (Manual Steps)
+## Key Features
 
-1. Go to https://analytics.google.com
-2. Click **Admin** → **Create Property**
-3. Name: "OnboardingPortal" or similar
-4. Create a **Web** data stream with your production URL
-5. Copy the **Measurement ID** (e.g., `G-XXXXXXXXXX`)
-
----
-
-## Implementation Tasks
-
-### Task 1: Install @next/third-parties Package
-**Status:** ✅ Complete
-
-**Command:**
-```bash
-npm install @next/third-parties
-```
+- **Manual page view control** - Automatic GA4 page views disabled via `send_page_view: false`
+- **Delayed tracking** - Waits for auth check and merchant data before tracking
+- **Custom dimensions** - Tracks `content_group` and `user_type` with each page view
+- **Production-only** - Disabled on localhost
 
 ---
 
-### Task 2: Create GoogleAnalytics Component
-**Status:** ✅ Complete
+## How It Works
 
-**File:** `/components/GoogleAnalytics.tsx` (new file)
+### Tracking Flow
 
-**Code:**
+1. User navigates to a page
+2. GA4 script loads (but does NOT auto-track page view)
+3. Component waits for:
+   - **Auth check** - Determines `user_type` (merchant/internal_team/anonymous)
+   - **Merchant data** - For `/merchant/*` and `/login/*` pages, waits for page title to update with merchant name
+4. Once ready, fires a single `page_view` event with all dimensions
+
+### Why Delayed Tracking?
+
+Without delayed tracking, GA4 would fire page views:
+- Before auth status is known (wrong `user_type`)
+- Before merchant name loads (generic "Merchant Onboarding Portal" title)
+- Multiple times per navigation (duplicates)
+
+---
+
+## Implementation
+
+### File: `/components/GoogleAnalytics.tsx`
+
 ```tsx
 "use client";
 
-import { GoogleAnalytics as GA } from "@next/third-parties/google";
+import Script from "next/script";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { getContentGroup } from "@/lib/useContentGroup";
 
 export default function GoogleAnalytics() {
   const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-  const isProduction = typeof window !== "undefined" &&
-    !window.location.hostname.includes("localhost") &&
-    !window.location.hostname.includes("127.0.0.1");
+  const [userType, setUserType] = useState("anonymous");
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const [isMerchantDataReady, setIsMerchantDataReady] = useState(false);
+  const lastTrackedPath = useRef(null);
 
-  if (!isProduction || !gaId) {
-    return null;
-  }
+  // ... tracking logic ...
 
-  return <GA gaId={gaId} />;
+  return (
+    <>
+      <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
+      <Script id="ga4-init">
+        {`
+          gtag('config', '${gaId}', {
+            send_page_view: false  // Disable automatic page views
+          });
+        `}
+      </Script>
+    </>
+  );
 }
 ```
 
----
+### Key Configuration
 
-### Task 3: Add Environment Variable
-**Status:** ✅ Complete
-
-**File:** `.env.local`
-
-**Add:**
-```
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+```javascript
+gtag('config', 'G-XXXXXXXXXX', {
+  send_page_view: false  // Critical: disables automatic tracking
+});
 ```
 
 ---
 
-### Task 4: Update Root Layout
-**Status:** ✅ Complete
+## Environment Variables
 
-**File:** `/app/layout.tsx`
-
-**Add import and component:**
-```tsx
-import GoogleAnalytics from '@/components/GoogleAnalytics'
-
-// In the body:
-<GoogleAnalytics />
-```
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | GA4 Measurement ID (e.g., `G-FP3XZDT8ZH`) |
 
 ---
 
-## Summary
+## Custom Event Tracking
 
-| Task | File | Status |
-|------|------|--------|
-| 1. Install package | `package.json` | ✅ |
-| 2. Create component | `/components/GoogleAnalytics.tsx` | ✅ |
-| 3. Add env variable | `.env.local` | ✅ |
-| 4. Update layout | `/app/layout.tsx` | ✅ |
-
----
-
-## GA4 Features (Automatic)
-
-Once installed, GA4 automatically tracks:
-- Page views
-- Scroll depth
-- Outbound clicks
-- Site searches
-- Video engagement
-- File downloads
-
----
-
-## Custom Event Tracking (Optional)
-
-To track custom events, use `gtag`:
+To track custom events elsewhere in the app:
 
 ```tsx
-// In any component
 declare global {
   interface Window {
-    gtag: (...args: any[]) => void;
+    gtag: (...args: unknown[]) => void;
   }
 }
 

@@ -56,7 +56,9 @@ You need to create **two** custom dimensions in GA4:
 |-------|-------------|
 | `merchant` | Merchant users (logged in with phone PIN) |
 | `internal_team` | StoreHub internal team (logged in with internal PIN) |
-| `anonymous` | Not logged in yet |
+| `anonymous` | Not logged in (only appears on login page before authentication) |
+
+> **Note:** The `anonymous` value should only appear for genuinely unauthenticated page views (e.g., login page). The tracking is delayed until auth status is determined to prevent false `anonymous` entries.
 
 ### Viewing in GA4
 1. Go to **Reports** → **Engagement** → **Pages and screens**
@@ -97,3 +99,31 @@ if (stage === "new-stage") return "progress-new-stage";
 - Data appears in GA4 reports within 24-48 hours
 - Realtime reports show data immediately
 - Both GA4 and Clarity are configured for production-only tracking
+
+---
+
+## Tracking Behavior
+
+### Delayed Page View Tracking
+
+Page views are **not** tracked immediately on navigation. The `GoogleAnalytics` component waits for:
+
+1. **Auth check** - Fetches `/api/auth/me` to determine `user_type`
+2. **Merchant data** - For `/merchant/*` and `/login/*` pages, waits for the page title to change from default ("Merchant Onboarding Portal" or "Merchant Login - Onboarding Portal") to the merchant-specific title
+
+This prevents:
+- Duplicate page views (one with default title, one with merchant name)
+- Incorrect `user_type` values (tracking as `anonymous` before auth completes)
+- Inflated "Merchant Onboarding Portal" entries in GA4 reports
+
+### Automatic Page Views Disabled
+
+GA4 automatic page view tracking is disabled via:
+
+```javascript
+gtag('config', 'G-XXXXXXXXXX', {
+  send_page_view: false
+});
+```
+
+All page views are manually triggered after the waiting conditions are met.
