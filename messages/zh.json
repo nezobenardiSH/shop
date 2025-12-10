@@ -48,6 +48,7 @@
     },
     "disabledReasons": {
       "submitStoreSetupFirst": "请先提交门店设置视频",
+      "submitStoreSetupAndWaitForHardware": "请先提交门店设置视频并等待硬件发货日期",
       "submitProductListFirst": "请先提交产品列表",
       "setInstallationFirst": "请先设置安装日期"
     },
@@ -168,7 +169,8 @@
       "copyLink": "复制链接",
       "viewVideo": "查看视频",
       "viewActivationGuide": "查看激活指南",
-      "shareFeedback": "分享您的反馈"
+      "shareFeedback": "分享您的反馈",
+      "editAddress": "编辑地址"
     },
     "completion": {
       "yes": "是",
@@ -179,7 +181,7 @@
     "messages": {
       "rescheduleWarning": "重新预约需提前至少 2 天",
       "contactOnboardingManager": "如需重新预约，请联系您的入驻经理",
-      "submitVideoFirst": "请先提交门店设置视频再预约安装。",
+      "submitVideoFirst": "请先提交门店设置视频并等待硬件发货日期设置后再预约安装。",
       "submitCollectionFirst": "请先提交您的{collectionName}再预约培训。",
       "scheduleInstallationFirst": "请先预约安装再预约培训。",
       "formNotAvailable": "表单链接不可用",
@@ -316,6 +318,7 @@
     "allTrainers": "所有培训师",
     "selectInstaller": "选择安装人员（仅限内部）",
     "selectAnInstaller": "-- 选择安装人员 --",
+    "storeAddress": "门店地址",
     "installer": "安装人员",
     "installationRequested": "安装已申请！",
     "installationRequestedDesc": "您的安装预约已成功提交",
@@ -393,7 +396,29 @@
       "qty": "数量",
       "unit": "单价",
       "total": "总计",
-      "items": "件商品"
+      "items": "件商品",
+      "street": "街道",
+      "city": "城市",
+      "state": "州/省",
+      "postalCode": "邮编",
+      "country": "国家"
+    },
+    "buttons": {
+      "editAddress": "编辑地址",
+      "save": "保存",
+      "cancel": "取消",
+      "saving": "保存中..."
+    },
+    "placeholders": {
+      "street": "输入街道地址",
+      "city": "城市",
+      "state": "州/省",
+      "selectState": "选择州属",
+      "postalCode": "邮编",
+      "country": "国家"
+    },
+    "messages": {
+      "addressUpdated": "地址更新成功！"
     }
   }
 }

@@ -48,6 +48,7 @@
     },
     "disabledReasons": {
       "submitStoreSetupFirst": "Submit store setup video first",
+      "submitStoreSetupAndWaitForHardware": "Submit store setup video and wait for hardware fulfillment date",
       "submitProductListFirst": "Submit product list first",
       "setInstallationFirst": "Set installation date first"
     },
@@ -168,7 +169,8 @@
       "copyLink": "Copy Link",
       "viewVideo": "View Video",
       "viewActivationGuide": "View activation guide",
-      "shareFeedback": "Share Your Feedback"
+      "shareFeedback": "Share Your Feedback",
+      "editAddress": "Edit Address"
     },
     "completion": {
       "yes": "Yes",
@@ -179,7 +181,7 @@
     "messages": {
       "rescheduleWarning": "Rescheduling must be done at least 2 days in advance",
       "contactOnboardingManager": "To reschedule, please contact your onboarding manager",
-      "submitVideoFirst": "Please submit your Store Setup Video before scheduling installation.",
+      "submitVideoFirst": "Please submit your Store Setup Video and wait for Hardware Fulfillment Date to be set before scheduling installation.",
       "submitCollectionFirst": "Please submit your {collectionName} before scheduling training.",
       "scheduleInstallationFirst": "Please schedule installation first before scheduling training.",
       "formNotAvailable": "Form link not available",
@@ -316,6 +318,7 @@
     "allTrainers": "All Trainers",
     "selectInstaller": "Select Installer (Internal Only)",
     "selectAnInstaller": "-- Select an installer --",
+    "storeAddress": "Store Address",
     "installer": "Installer",
     "installationRequested": "Installation Requested!",
     "installationRequestedDesc": "Your installation session has been successfully requested",
@@ -393,7 +396,29 @@
       "qty": "Qty",
       "unit": "Unit",
       "total": "Total",
-      "items": "items"
+      "items": "items",
+      "street": "Street",
+      "city": "City",
+      "state": "State",
+      "postalCode": "Postal Code",
+      "country": "Country"
+    },
+    "buttons": {
+      "editAddress": "Edit Address",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saving": "Saving..."
+    },
+    "placeholders": {
+      "street": "Enter street address",
+      "city": "City",
+      "state": "State",
+      "selectState": "Select state",
+      "postalCode": "Postal code",
+      "country": "Country"
+    },
+    "messages": {
+      "addressUpdated": "Address updated successfully!"
     }
   }
 }

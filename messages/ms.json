@@ -48,6 +48,7 @@
     },
     "disabledReasons": {
       "submitStoreSetupFirst": "Hantar video persediaan kedai dahulu",
+      "submitStoreSetupAndWaitForHardware": "Hantar video persediaan kedai dan tunggu tarikh penghantaran perkakasan",
       "submitProductListFirst": "Hantar senarai produk dahulu",
       "setInstallationFirst": "Tetapkan tarikh pemasangan dahulu"
     },
@@ -168,7 +169,8 @@
       "copyLink": "Salin Pautan",
       "viewVideo": "Lihat Video",
       "viewActivationGuide": "Lihat panduan pengaktifan",
-      "shareFeedback": "Kongsi Maklum Balas Anda"
+      "shareFeedback": "Kongsi Maklum Balas Anda",
+      "editAddress": "Edit Alamat"
     },
     "completion": {
       "yes": "Ya",
@@ -179,7 +181,7 @@
     "messages": {
       "rescheduleWarning": "Penjadualan semula perlu dilakukan sekurang-kurangnya 2 hari lebih awal",
       "contactOnboardingManager": "Untuk menjadualkan semula, sila hubungi pengurus onboarding anda",
-      "submitVideoFirst": "Sila hantar Video Persediaan Kedai anda sebelum menjadualkan pemasangan.",
+      "submitVideoFirst": "Sila hantar Video Persediaan Kedai anda dan tunggu Tarikh Penghantaran Perkakasan ditetapkan sebelum menjadualkan pemasangan.",
       "submitCollectionFirst": "Sila hantar {collectionName} anda sebelum menjadualkan latihan.",
       "scheduleInstallationFirst": "Sila jadualkan pemasangan terlebih dahulu sebelum menjadualkan latihan.",
       "formNotAvailable": "Pautan borang tidak tersedia",
@@ -316,6 +318,7 @@
     "allTrainers": "Semua Jurulatih",
     "selectInstaller": "Pilih Pemasang (Dalaman Sahaja)",
     "selectAnInstaller": "-- Pilih pemasang --",
+    "storeAddress": "Alamat Kedai",
     "installer": "Pemasang",
     "installationRequested": "Pemasangan Diminta!",
     "installationRequestedDesc": "Sesi pemasangan anda telah berjaya diminta",
@@ -393,7 +396,29 @@
       "qty": "Ktn",
       "unit": "Unit",
       "total": "Jumlah",
-      "items": "item"
+      "items": "item",
+      "street": "Jalan",
+      "city": "Bandar",
+      "state": "Negeri",
+      "postalCode": "Poskod",
+      "country": "Negara"
+    },
+    "buttons": {
+      "editAddress": "Edit Alamat",
+      "save": "Simpan",
+      "cancel": "Batal",
+      "saving": "Menyimpan..."
+    },
+    "placeholders": {
+      "street": "Masukkan alamat jalan",
+      "city": "Bandar",
+      "state": "Negeri",
+      "selectState": "Pilih negeri",
+      "postalCode": "Poskod",
+      "country": "Negara"
+    },
+    "messages": {
+      "addressUpdated": "Alamat berjaya dikemas kini!"
     }
   }
 }
