@@ -204,7 +204,9 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
   // Scheduling prerequisites
   // Internal users can schedule anytime without prerequisites
-  const canScheduleInstallation = isInternalUser || storeSetupCompleted
+  // Regular users need: store setup completed AND hardware fulfillment date set
+  const hardwareFulfillmentDateSet = !!trainerData?.hardwareFulfillmentDate
+  const canScheduleInstallation = isInternalUser || (storeSetupCompleted && hardwareFulfillmentDateSet)
   const productListSubmitted = !!trainerData?.menuCollectionSubmissionTimestamp
   const installationDateSet = !!trainerData?.installationDate
   const canScheduleTraining = isInternalUser || (productListSubmitted && installationDateSet)
@@ -2354,7 +2356,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     trainerData?.shippingZipPostalCode,
                     trainerData?.shippingCountry
                   ].filter(Boolean);
-                  
+
                   return parts.length > 0 ? parts.join(', ') : t('status.notAvailable');
                 })()}
               </div>

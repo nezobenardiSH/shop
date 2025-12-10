@@ -139,7 +139,9 @@ export default function OverviewPage() {
       : null
 
     // Determine disabled states for scheduling
-    const canScheduleInstallation = storeSetupCompleted
+    // Merchants need: store setup completed AND hardware fulfillment date set
+    const hardwareFulfillmentDateSet = !!trainer.hardwareFulfillmentDate
+    const canScheduleInstallation = storeSetupCompleted && hardwareFulfillmentDateSet
     const canScheduleTraining = productSubmitted && installationDateSet
 
     return [
@@ -163,7 +165,7 @@ export default function OverviewPage() {
         completed: installationDateSet,
         stageLink: `/merchant/${merchantId}?stage=installation&section=installation`,
         disabled: !canScheduleInstallation && !installationDateSet,
-        disabledReason: t('disabledReasons.submitStoreSetupFirst')
+        disabledReason: t('disabledReasons.submitStoreSetupAndWaitForHardware')
       },
       {
         id: 'training-date',
