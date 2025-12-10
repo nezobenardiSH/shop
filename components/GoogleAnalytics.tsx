@@ -18,6 +18,7 @@ export default function GoogleAnalytics() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [userType, setUserType] = useState<UserType>("anonymous");
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
 
   const isProduction = typeof window !== "undefined" &&
     !window.location.hostname.includes("localhost") &&
@@ -36,24 +37,28 @@ export default function GoogleAnalytics() {
         }
       } catch {
         // User not logged in, keep as anonymous
+      } finally {
+        setIsAuthChecked(true);
       }
     }
 
     if (isProduction) {
       fetchUserType();
+    } else {
+      setIsAuthChecked(true);
     }
   }, [pathname, isProduction]);
 
   // Track page views with content group and user type
   useEffect(() => {
-    if (isProduction && gaId && typeof window.gtag === "function") {
+    if (isProduction && gaId && isAuthChecked && typeof window.gtag === "function") {
       const contentGroup = getContentGroup(pathname, searchParams);
       window.gtag("event", "page_view", {
         content_group: contentGroup,
         user_type: userType,
       });
     }
-  }, [pathname, searchParams, gaId, isProduction, userType]);
+  }, [pathname, searchParams, gaId, isProduction, userType, isAuthChecked]);
 
   if (!isProduction || !gaId) {
     return null;
