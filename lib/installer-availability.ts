@@ -717,51 +717,49 @@ export async function bookInternalInstallation(
 
   const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
 
-  // Build description with structured formatting
-  // Simplified version without emojis to test if Lark accepts it
+  // Build description with visual separators for Lark calendar popup readability
+  // Lark calendar popup doesn't render \n newlines, so we use | separators
   let eventDescription = ''
 
   // Add pilot merchant note
-  eventDescription += `⚠️ Pilot merchant. Intercom ticket creation required\n\n`
+  eventDescription += `⚠️ Pilot merchant. Intercom ticket creation required`
 
-  // Core installation details
-  eventDescription += `Installation Details\n`
-  eventDescription += `==================\n\n`
-  
-  eventDescription += `Merchant: ${merchantDetails.name || merchantName}\n`
-
+  // Merchant and address
+  eventDescription += ` | 🏪 Merchant: ${merchantDetails.name || merchantName}`
   if (merchantDetails.address) {
-    eventDescription += `\nStore Address:\n${merchantDetails.address}\n`
+    eventDescription += ` | 📍 Store: ${merchantDetails.address}`
   }
-  
-  eventDescription += `\nPrimary Contact:\n`
-  eventDescription += `- Name: ${merchantDetails.primaryContactName || 'N/A'}\n`
-  eventDescription += `- Role: ${merchantDetails.primaryContactRole || 'N/A'}\n`
-  eventDescription += `- Phone: ${merchantDetails.primaryContactPhone || 'N/A'}\n`
-  if (merchantDetails.primaryContactEmail) {
-    eventDescription += `- Email: ${merchantDetails.primaryContactEmail}\n`
-  }
-  
-  eventDescription += `\nHardware List:\n`
-  const simpleHardwareList = hardwareList.length > 0 
-    ? hardwareList.map(item => `- ${item}`).join('\n')
-    : '- No hardware items found'
-  eventDescription += simpleHardwareList + '\n'
-  
+
+  // Primary contact - compact format
+  const contactName = merchantDetails.primaryContactName || 'N/A'
+  const contactRole = merchantDetails.primaryContactRole || ''
+  const contactPhone = merchantDetails.primaryContactPhone || 'N/A'
+  const contactEmail = merchantDetails.primaryContactEmail || ''
+
+  let contactInfo = `👤 Contact: ${contactName}`
+  if (contactRole) contactInfo += ` (${contactRole})`
+  contactInfo += ` - ${contactPhone}`
+  if (contactEmail) contactInfo += ` - ${contactEmail}`
+  eventDescription += ` | ${contactInfo}`
+
+  // Hardware list - compact format
+  const hardwareText = hardwareList.length > 0
+    ? hardwareList.join(', ')
+    : 'No hardware items'
+  eventDescription += ` | 📦 Hardware: ${hardwareText}`
+
+  // Onboarding summary if available
   if (merchantDetails.onboardingSummary && merchantDetails.onboardingSummary !== 'N/A') {
-    eventDescription += `\nOnboarding Summary:\n${merchantDetails.onboardingSummary}\n`
+    eventDescription += ` | 📝 Summary: ${merchantDetails.onboardingSummary}`
   }
-  
-  eventDescription += `\nOnboarding Manager:\n`
-  eventDescription += `- Name: ${merchantDetails.msmName || 'N/A'}\n`
-  if (merchantDetails.msmPhone && merchantDetails.msmPhone !== 'N/A') {
-    eventDescription += `- Phone: ${merchantDetails.msmPhone}\n`
-  }
-  if (merchantDetails.msmEmail) {
-    eventDescription += `- Email: ${merchantDetails.msmEmail}\n`
-  }
-  
-  eventDescription += `\nSalesforce: ${salesforceUrl}`
+
+  // Onboarding Manager - compact format
+  let msmInfo = `👔 Manager: ${merchantDetails.msmName || 'N/A'}`
+  if (merchantDetails.msmEmail) msmInfo += ` - ${merchantDetails.msmEmail}`
+  eventDescription += ` | ${msmInfo}`
+
+  // Salesforce link
+  eventDescription += ` | 🔗 Salesforce: ${salesforceUrl}`
 
   // Event title should be simple - just the installation type and merchant name
   // All details go in the description

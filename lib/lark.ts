@@ -1509,55 +1509,52 @@ class LarkService {
           ? `${servicePrefix} - ${trainerName}`
           : `${servicePrefix} - ${merchantInfo.name}`
 
-        description = `Training Details\n`
-        description += `==================\n\n`
-        description += `Merchant: ${trainerName || merchantInfo.name}\n`
+        // Build description with visual separators for Lark calendar popup readability
+        // Lark calendar popup doesn't render \n newlines, so we use | separators
+        description = `🎓 ${trainerName || merchantInfo.name}`
+
         if (merchantInfo.boAccountName) {
-          description += `Backoffice Account: ${merchantInfo.boAccountName}\n`
+          description += ` | 💼 BO: ${merchantInfo.boAccountName}`
         }
 
         if (merchantInfo.address) {
-          description += `\nStore Address:\n${merchantInfo.address}\n`
+          description += ` | 📍 Store: ${merchantInfo.address}`
         }
 
-        description += `\nPrimary Contact:\n`
-        // Use Merchant PIC contact if available, otherwise fall back to provided contact
-        if (merchantInfo.merchantPICName) {
-          description += `- Name: ${merchantInfo.merchantPICName}\n`
-        } else if (merchantInfo.contactPerson) {
-          description += `- Name: ${merchantInfo.contactPerson}\n`
-        }
-        if (merchantInfo.merchantPICPhone) {
-          description += `- Phone: ${merchantInfo.merchantPICPhone}\n`
-        } else if (merchantInfo.phone) {
-          description += `- Phone: ${merchantInfo.phone}\n`
-        }
-        if (merchantInfo.merchantEmail) {
-          description += `- Email: ${merchantInfo.merchantEmail}\n`
+        // Primary contact - compact format
+        const contactName = merchantInfo.merchantPICName || merchantInfo.contactPerson || ''
+        const contactPhone = merchantInfo.merchantPICPhone || merchantInfo.phone || ''
+        const contactEmail = merchantInfo.merchantEmail || ''
+
+        if (contactName || contactPhone) {
+          let contactInfo = `👤 Contact: ${contactName || 'N/A'}`
+          if (contactPhone) contactInfo += ` - ${contactPhone}`
+          if (contactEmail) contactInfo += ` - ${contactEmail}`
+          description += ` | ${contactInfo}`
         }
 
         if (merchantInfo.language && merchantInfo.language.length > 0) {
-          description += `\nTraining Language: ${merchantInfo.language.join(', ')}\n`
+          description += ` | 🗣️ Language: ${merchantInfo.language.join(', ')}`
         }
 
         if (merchantInfo.onboardingServicesBought) {
-          description += `\nService Type: ${merchantInfo.onboardingServicesBought}\n`
+          description += ` | 📋 Service: ${merchantInfo.onboardingServicesBought}`
         }
         if (merchantInfo.businessType) {
-          description += `Business Type: ${merchantInfo.businessType}\n`
+          description += ` | 🏢 Business: ${merchantInfo.businessType}`
         }
         if (merchantInfo.requiredFeatures) {
-          description += `\nRequired Features:\n${merchantInfo.requiredFeatures}\n`
+          description += ` | ⚙️ Features: ${merchantInfo.requiredFeatures}`
         }
         if (merchantInfo.onboardingSummary) {
-          description += `\nOnboarding Summary:\n${merchantInfo.onboardingSummary}\n`
+          description += ` | 📝 Summary: ${merchantInfo.onboardingSummary}`
         }
         if (merchantInfo.workaroundElaboration) {
-          description += `\nWorkaround Elaboration:\n${merchantInfo.workaroundElaboration}\n`
+          description += ` | 🔧 Workaround: ${merchantInfo.workaroundElaboration}`
         }
         // Add VC meeting link for remote training
         if (merchantInfo.meetingLink) {
-          description += `\n\n🎥 Video Conference Link:\n${merchantInfo.meetingLink}\n`
+          description += ` | 🎥 Meeting: ${merchantInfo.meetingLink}`
         }
         break
     }
@@ -1565,7 +1562,7 @@ class LarkService {
     // Add Salesforce link if ID is available
     if (merchantInfo.salesforceId) {
       const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantInfo.salesforceId}/view`
-      description += `\n\nSalesforce: ${salesforceUrl}`
+      description += ` | 🔗 Salesforce: ${salesforceUrl}`
     }
 
     const event: LarkEvent = {
