@@ -312,6 +312,28 @@ export class LarkOAuthService {
   }
 
   /**
+   * Check if a refresh error is permanent (requires re-authorization)
+   * vs transient (can retry later)
+   */
+  private isPermanentRefreshError(error: any): boolean {
+    const message = (error?.message || '').toLowerCase()
+
+    // Permanent errors that require user to re-authorize
+    const permanentPatterns = [
+      'invalid_grant',
+      'invalid_refresh_token',
+      'token_expired',
+      'refresh token expired',
+      'refresh token invalid',
+      'code: 20003',      // Lark invalid token code
+      'code: 99991668',   // Refresh token invalid
+      'code: 99991663',   // Token expired
+    ]
+
+    return permanentPatterns.some(pattern => message.includes(pattern))
+  }
+
+  /**
    * Get valid access token for a user (refreshes if needed)
    */
   async getValidAccessToken(userEmail: string): Promise<string | null> {
@@ -352,12 +374,18 @@ export class LarkOAuthService {
       return newTokens.accessToken
     } catch (error) {
       console.error(`Failed to refresh token for ${userEmail}:`, error)
-      
-      // Mark token as invalid
-      await prisma.larkAuthToken.delete({
-        where: { userEmail }
-      })
-      
+
+      // Only delete token on permanent errors (requires re-authorization)
+      // Keep token on transient errors (rate limit, network, etc.) for retry
+      if (this.isPermanentRefreshError(error)) {
+        console.log(`🗑️ Permanent refresh failure - deleting token for ${userEmail}`)
+        await prisma.larkAuthToken.delete({
+          where: { userEmail }
+        })
+      } else {
+        console.log(`⚠️ Transient refresh failure - keeping token for ${userEmail} (will retry later)`)
+      }
+
       return null
     }
   }

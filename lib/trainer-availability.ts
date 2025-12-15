@@ -32,6 +32,37 @@ export interface TrainerAvailability {
 }
 
 /**
+ * Process items with limited concurrency to avoid rate limiting
+ * @param items - Array of items to process
+ * @param processor - Async function to process each item
+ * @param maxConcurrent - Maximum number of concurrent operations (default: 3)
+ */
+async function processWithConcurrencyLimit<T, R>(
+  items: T[],
+  processor: (item: T) => Promise<R>,
+  maxConcurrent: number = 3
+): Promise<R[]> {
+  const results: R[] = []
+  let currentIndex = 0
+
+  async function processNext(): Promise<void> {
+    while (currentIndex < items.length) {
+      const index = currentIndex++
+      const result = await processor(items[index])
+      results[index] = result
+    }
+  }
+
+  // Start maxConcurrent workers
+  const workers = Array(Math.min(maxConcurrent, items.length))
+    .fill(null)
+    .map(() => processNext())
+
+  await Promise.all(workers)
+  return results
+}
+
+/**
  * Get combined availability from all trainers
  * Shows a slot as available if ANY authorized trainer (with OAuth token) is free
  * Trainers without OAuth tokens are excluded from availability calculations
@@ -95,72 +126,73 @@ export async function getCombinedAvailability(
   }
   
   console.log(`Checking availability for ${trainers.length} trainers:`, trainers.map((t: any) => t.name))
-  
-  // Fetch availability for all trainers in parallel
+
+  // Fetch availability for trainers with controlled concurrency to avoid rate limiting
   const trainerAvailabilities: Map<string, TrainerAvailability> = new Map()
-  
-  // Process all trainers in parallel for better performance
-  const availabilityPromises = trainers.map(async (trainer: any) => {
-    try {
-      // First check if trainer has OAuth token
-      const { larkOAuthService } = await import('./lark-oauth-service')
-      const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
 
-      if (!hasToken) {
-        console.log(`⚠️ ${trainer.name} has no OAuth token - SKIPPING (not available for booking)`)
-        // If trainer hasn't authorized, they cannot be booked, so skip them
-        return null
-      }
-      
-      // Extract busy times for this trainer from actual calendar events only
-      // Note: We should NOT convert unavailable slots to busy times here
-      // The lark service already provides the actual busy times from calendar events
-      const busySlots: Array<{ start: string; end: string }> = []
-
-      // Get the actual busy times directly from the lark service
-      // instead of converting TIME_SLOTS availability
+  // Process trainers with limited concurrency (max 3 at a time) to avoid Lark API rate limits
+  console.log(`⏳ Checking availability for ${trainers.length} trainers (max 3 concurrent)...`)
+  const results = await processWithConcurrencyLimit(
+    trainers,
+    async (trainer: any) => {
       try {
-        const { larkService } = await import('./lark')
+        // First check if trainer has OAuth token
+        const { larkOAuthService } = await import('./lark-oauth-service')
+        const hasToken = await larkOAuthService.isUserAuthorized(trainer.email)
 
-        // Get raw busy times from calendar events only
-        const rawBusyTimes = await larkService.getRawBusyTimes(
-          trainer.email,
-          startDate,
-          endDate
-        )
+        if (!hasToken) {
+          console.log(`⚠️ ${trainer.name} has no OAuth token - SKIPPING (not available for booking)`)
+          // If trainer hasn't authorized, they cannot be booked, so skip them
+          return null
+        }
 
-        rawBusyTimes.forEach((busy: {start_time: string; end_time: string}) => {
-          busySlots.push({
-            start: busy.start_time,
-            end: busy.end_time
+        // Extract busy times for this trainer from actual calendar events only
+        // Note: We should NOT convert unavailable slots to busy times here
+        // The lark service already provides the actual busy times from calendar events
+        const busySlots: Array<{ start: string; end: string }> = []
+
+        // Get the actual busy times directly from the lark service
+        // instead of converting TIME_SLOTS availability
+        try {
+          const { larkService } = await import('./lark')
+
+          // Get raw busy times from calendar events only
+          const rawBusyTimes = await larkService.getRawBusyTimes(
+            trainer.email,
+            startDate,
+            endDate
+          )
+
+          rawBusyTimes.forEach((busy: {start_time: string; end_time: string}) => {
+            busySlots.push({
+              start: busy.start_time,
+              end: busy.end_time
+            })
           })
-        })
 
-        console.log(`${trainer.name}: Found ${busySlots.length} busy periods (including recurring events)`)
+          console.log(`${trainer.name}: Found ${busySlots.length} busy periods (including recurring events)`)
+        } catch (error) {
+          console.error(`Failed to get raw busy times for ${trainer.name}:`, error)
+          // Fallback to empty busy slots (assume available)
+        }
+
+        return {
+          trainerName: trainer.name,
+          trainerEmail: trainer.email,
+          busySlots
+        }
       } catch (error) {
-        console.error(`Failed to get raw busy times for ${trainer.name}:`, error)
-        // Fallback to empty busy slots (assume available)
+        console.error(`Failed to get availability for ${trainer.name}:`, error)
+        // If we can't get availability, assume trainer is available
+        return {
+          trainerName: trainer.name,
+          trainerEmail: trainer.email,
+          busySlots: []
+        }
       }
-      
-      return {
-        trainerName: trainer.name,
-        trainerEmail: trainer.email,
-        busySlots
-      }
-    } catch (error) {
-      console.error(`Failed to get availability for ${trainer.name}:`, error)
-      // If we can't get availability, assume trainer is available
-      return {
-        trainerName: trainer.name,
-        trainerEmail: trainer.email,
-        busySlots: []
-      }
-    }
-  })
-
-  // Wait for all trainer availability checks to complete
-  console.log(`⏳ Checking availability for ${trainers.length} trainers in parallel...`)
-  const results = await Promise.all(availabilityPromises)
+    },
+    3 // Max 3 trainers at a time to avoid rate limiting
+  )
   
   // Add results to the map (filtering out null results from unauthorized trainers)
   results.forEach(result => {
