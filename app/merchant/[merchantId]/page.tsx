@@ -200,10 +200,11 @@ function TrainerPortalContent() {
   useEffect(() => {
     const urlStage = searchParams.get('stage')
     const bookingParam = searchParams.get('booking')
+    const cancelParam = searchParams.get('cancel')
     const sectionParam = searchParams.get('section')
 
     // Only redirect if there are NO URL parameters (first landing on portal)
-    if (merchantId && !urlStage && !bookingParam && !sectionParam) {
+    if (merchantId && !urlStage && !bookingParam && !cancelParam && !sectionParam) {
       router.replace(`/merchant/${merchantId}/overview`)
     }
   }, [merchantId, router, searchParams])
@@ -375,6 +376,23 @@ function TrainerPortalContent() {
       }
     }
   }, [trainerData, searchParams, hasProcessedUrlParam, router, merchantId])
+
+  // Handle URL parameters to auto-open cancel dialog
+  useEffect(() => {
+    if (!trainerData || hasProcessedUrlParam) return // Wait for trainer data to load and only process once
+
+    const cancelType = searchParams.get('cancel')
+
+    // Valid cancel types: training, installation
+    if (cancelType && ['training', 'installation'].includes(cancelType)) {
+      console.log('Auto-opening cancel dialog from URL parameter:', cancelType)
+
+      // Open the cancel dialog
+      setCancelBookingType(cancelType as 'training' | 'installation')
+      setCancelDialogOpen(true)
+      setHasProcessedUrlParam(true)
+    }
+  }, [trainerData, searchParams, hasProcessedUrlParam])
 
   const handleOpenBookingModal = (trainer: any) => {
     console.log('🎯 Opening booking modal with trainer object:', {
@@ -643,6 +661,10 @@ function TrainerPortalContent() {
   const handleCancelClick = (bookingType: 'training' | 'installation') => {
     setCancelBookingType(bookingType)
     setCancelDialogOpen(true)
+
+    // Update URL to include cancel parameter
+    const currentStageParam = searchParams.get('stage') || currentStage
+    router.push(`/merchant/${merchantId}?stage=${currentStageParam}&cancel=${bookingType}`, { scroll: false })
   }
 
   const handleCancelBooking = async (reason: string) => {
@@ -707,7 +729,7 @@ function TrainerPortalContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           merchantId: trainer.id,
-          merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name,
+          merchantName: trainerData?.name || trainer.name, // Use Onboarding Trainer name, not business store name
           trainerName: assigneeName,
           eventId,
           bookingType: cancelBookingType,
@@ -728,6 +750,10 @@ function TrainerPortalContent() {
       // Success
       setSuccessMessage(t('cancelDialog.successMessage'))
       setCancelDialogOpen(false)
+
+      // Remove cancel parameter from URL
+      const currentStageParam = searchParams.get('stage') || currentStage
+      router.push(`/merchant/${merchantId}?stage=${currentStageParam}`, { scroll: false })
 
       // Refresh data
       await refreshData()
@@ -1076,10 +1102,15 @@ function TrainerPortalContent() {
         {trainerData?.onboardingTrainerData?.trainers?.[0] && (
           <CancelBookingDialog
             isOpen={cancelDialogOpen}
-            onClose={() => setCancelDialogOpen(false)}
+            onClose={() => {
+              setCancelDialogOpen(false)
+              // Remove cancel parameter from URL
+              const currentStageParam = searchParams.get('stage') || currentStage
+              router.push(`/merchant/${merchantId}?stage=${currentStageParam}`, { scroll: false })
+            }}
             onConfirm={handleCancelBooking}
             bookingType={cancelBookingType}
-            merchantName={trainerData?.account?.businessStoreName || trainerData?.account?.name || ''}
+            merchantName={trainerData?.name || ''} // Use Onboarding Trainer name, not business store name
             scheduledDate={cancelBookingType === 'training'
               ? (trainerData.onboardingTrainerData.trainers[0].trainingDate
                 ? new Date(trainerData.onboardingTrainerData.trainers[0].trainingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -1088,8 +1119,12 @@ function TrainerPortalContent() {
                 ? new Date(trainerData.onboardingTrainerData.trainers[0].installationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                 : '')}
             scheduledTime={cancelBookingType === 'training'
-              ? trainerData.onboardingTrainerData.trainers[0].trainingTime
-              : trainerData.onboardingTrainerData.trainers[0].installationTime}
+              ? (trainerData.onboardingTrainerData.trainers[0].trainingDate
+                ? new Date(trainerData.onboardingTrainerData.trainers[0].trainingDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
+                : '')
+              : (trainerData.onboardingTrainerData.trainers[0].installationDate
+                ? new Date(trainerData.onboardingTrainerData.trainers[0].installationDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
+                : '')}
             assigneeName={cancelBookingType === 'training'
               ? (trainerData.onboardingTrainerData.trainers[0].assignedTrainerName || trainerData.onboardingTrainerData.trainers[0].csmName || '')
               : (trainerData.onboardingTrainerData.trainers[0].installerName || '')}

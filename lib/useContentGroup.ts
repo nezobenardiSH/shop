@@ -5,8 +5,17 @@ import { usePathname, useSearchParams } from "next/navigation";
 export function getContentGroup(pathname: string, searchParams: URLSearchParams): string {
   const stage = searchParams.get("stage");
   const booking = searchParams.get("booking");
+  const cancel = searchParams.get("cancel");
 
-  // Booking pages (check first - more specific)
+  // Cancellation pages (check first - most specific)
+  if (cancel === "installation") {
+    return "installation cancellation";
+  }
+  if (cancel === "training") {
+    return "training cancellation";
+  }
+
+  // Booking pages (check second - more specific than stage)
   if (stage === "installation" && booking === "installation") {
     return "installation booking";
   }
