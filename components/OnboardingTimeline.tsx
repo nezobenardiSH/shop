@@ -24,6 +24,7 @@ interface OnboardingTimelineProps {
   onBookingComplete?: (selectedDate?: string) => void
   onOpenBookingModal?: (bookingInfo: any) => void
   onStageChange?: (stage: string) => void
+  onCancelClick?: (bookingType: 'training' | 'installation') => void // Callback when cancel button is clicked
   expandSection?: string // Auto-expand a specific section (e.g., 'product-setup', 'store-setup')
   isInternalUser?: boolean // Internal users have relaxed scheduling rules
 }
@@ -64,7 +65,7 @@ const isWithinNextDay = (dateString: string | null | undefined): boolean => {
 }
 
 
-export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange, expandSection, isInternalUser = false }: OnboardingTimelineProps) {
+export default function OnboardingTimeline({ currentStage, currentStageFromUrl, stageData, trainerData, onBookingComplete, onOpenBookingModal, onStageChange, onCancelClick, expandSection, isInternalUser = false }: OnboardingTimelineProps) {
   const router = useRouter()
   const params = useParams()
   const merchantId = params.merchantId as string
@@ -1055,18 +1056,34 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   const isButtonDisabled = cannotReschedule || (!canScheduleInstallation && !hasExistingDate)
                   return (
                     <div>
-                      <button
-                        onClick={() => !isButtonDisabled && handleBookingClick('installation', trainerData?.installationDate)}
-                        disabled={isButtonDisabled}
-                        className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                          isButtonDisabled
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
-                        }`}
-                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
-                      >
-                        {trainerData?.installationDate ? t('buttons.changeDate') : t('buttons.schedule')}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => !isButtonDisabled && handleBookingClick('installation', trainerData?.installationDate)}
+                          disabled={isButtonDisabled}
+                          className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+                            isButtonDisabled
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
+                          }`}
+                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
+                        >
+                          {trainerData?.installationDate ? t('buttons.changeDate') : t('buttons.schedule')}
+                        </button>
+                        {hasExistingDate && (
+                          <button
+                            onClick={() => onCancelClick?.('installation')}
+                            disabled={cannotReschedule}
+                            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 border ${
+                              cannotReschedule
+                                ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                                : 'bg-white text-red-600 border-red-300 hover:bg-red-50 active:scale-95'
+                            }`}
+                            title={cannotReschedule ? 'Cancellation must be done at least 2 days in advance' : ''}
+                          >
+                            {t('buttons.cancelBooking')}
+                          </button>
+                        )}
+                      </div>
                       {!canScheduleInstallation && !hasExistingDate && (
                         <div className="mt-2 text-sm text-amber-600">
                           {t('messages.submitVideoFirst')}
@@ -1169,18 +1186,34 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   const isButtonDisabled = cannotReschedule || (!canScheduleTraining && !hasExistingDate)
                   return (
                     <div>
-                      <button
-                        onClick={() => !isButtonDisabled && handleBookingClick('training', trainerData?.trainingDate)}
-                        disabled={isButtonDisabled}
-                        className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                          isButtonDisabled
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
-                        }`}
-                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
-                      >
-                        {trainerData?.trainingDate ? t('buttons.changeDate') : t('buttons.schedule')}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => !isButtonDisabled && handleBookingClick('training', trainerData?.trainingDate)}
+                          disabled={isButtonDisabled}
+                          className={`px-4 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+                            isButtonDisabled
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
+                          }`}
+                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
+                        >
+                          {trainerData?.trainingDate ? t('buttons.changeDate') : t('buttons.schedule')}
+                        </button>
+                        {hasExistingDate && (
+                          <button
+                            onClick={() => onCancelClick?.('training')}
+                            disabled={cannotReschedule}
+                            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 border ${
+                              cannotReschedule
+                                ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                                : 'bg-white text-red-600 border-red-300 hover:bg-red-50 active:scale-95'
+                            }`}
+                            title={cannotReschedule ? 'Cancellation must be done at least 2 days in advance' : ''}
+                          >
+                            {t('buttons.cancelBooking')}
+                          </button>
+                        )}
+                      </div>
                       {!productListSubmitted && !hasExistingDate && !isInternalUser && (
                         <div className="mt-2 text-sm text-amber-600">
                           Please submit your {terminology.collectionName} before scheduling training.
@@ -2285,21 +2318,37 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     const hasExistingDate = !!trainerData?.installationDate
                     const isButtonDisabled = cannotReschedule || (!canScheduleInstallation && !hasExistingDate)
                     return (
-                      <button
-                        onClick={() => !isButtonDisabled && handleBookingClick('installation', trainerData?.installationDate)}
-                        disabled={isButtonDisabled}
-                        className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                          isButtonDisabled
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
-                        }`}
-                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
-                      >
-                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        {trainerData?.installationDate ? t('buttons.changeDate') : t('buttons.schedule')}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => !isButtonDisabled && handleBookingClick('installation', trainerData?.installationDate)}
+                          disabled={isButtonDisabled}
+                          className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+                            isButtonDisabled
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
+                          }`}
+                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
+                        >
+                          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {trainerData?.installationDate ? t('buttons.changeDate') : t('buttons.schedule')}
+                        </button>
+                        {hasExistingDate && (
+                          <button
+                            onClick={() => onCancelClick?.('installation')}
+                            disabled={cannotReschedule}
+                            className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-200 border ${
+                              cannotReschedule
+                                ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                                : 'bg-white text-red-600 border-red-300 hover:bg-red-50 active:scale-95'
+                            }`}
+                            title={cannotReschedule ? 'Cancellation must be done at least 2 days in advance' : ''}
+                          >
+                            {t('buttons.cancelBooking')}
+                          </button>
+                        )}
+                      </div>
                     )
                   })()}
                 </div>
@@ -2418,21 +2467,37 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                     const hasExistingDate = !!trainerData?.trainingDate
                     const isButtonDisabled = cannotReschedule || (!canScheduleTraining && !hasExistingDate)
                     return (
-                      <button
-                        onClick={() => !isButtonDisabled && handleBookingClick('training', trainerData?.trainingDate)}
-                        disabled={isButtonDisabled}
-                        className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
-                          isButtonDisabled
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
-                        }`}
-                        title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
-                      >
-                        <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        {trainerData?.trainingDate ? t('buttons.changeDate') : t('buttons.schedule')}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => !isButtonDisabled && handleBookingClick('training', trainerData?.trainingDate)}
+                          disabled={isButtonDisabled}
+                          className={`inline-flex items-center px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg ${
+                            isButtonDisabled
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
+                          }`}
+                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
+                        >
+                          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {trainerData?.trainingDate ? t('buttons.changeDate') : t('buttons.schedule')}
+                        </button>
+                        {hasExistingDate && (
+                          <button
+                            onClick={() => onCancelClick?.('training')}
+                            disabled={cannotReschedule}
+                            className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-200 border ${
+                              cannotReschedule
+                                ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                                : 'bg-white text-red-600 border-red-300 hover:bg-red-50 active:scale-95'
+                            }`}
+                            title={cannotReschedule ? 'Cancellation must be done at least 2 days in advance' : ''}
+                          >
+                            {t('buttons.cancelBooking')}
+                          </button>
+                        )}
+                      </div>
                     )
                   })()}
                 </div>

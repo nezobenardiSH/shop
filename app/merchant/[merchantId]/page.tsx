@@ -4,9 +4,11 @@ import { useState, useEffect, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import DatePickerModal from '@/components/DatePickerModal'
+import CancelBookingDialog from '@/components/CancelBookingDialog'
 import OnboardingTimeline from '@/components/OnboardingTimeline'
 import { usePageTracking } from '@/lib/useAnalytics'
 import { useMerchantContext } from './layout'
+import { useTranslations } from 'next-intl'
 
 // Helper function to get currency based on country
 const getCurrencyInfo = (country: string) => {
@@ -122,6 +124,13 @@ function TrainerPortalContent() {
   const [currentBookingInfo, setCurrentBookingInfo] = useState<any>(null)
   const [hasProcessedUrlParam, setHasProcessedUrlParam] = useState(false)
   const [currentStage, setCurrentStage] = useState<string>('welcome')
+
+  // Cancel booking state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [cancelBookingType, setCancelBookingType] = useState<'training' | 'installation'>('training')
+  const [cancelLoading, setCancelLoading] = useState(false)
+
+  const t = useTranslations()
 
   // Alias for refreshData to maintain compatibility
   const loadTrainerData = refreshData
@@ -516,6 +525,26 @@ function TrainerPortalContent() {
     })
 
     console.log('🔍 DEBUG - trainer.requiredFeaturesByMerchant:', trainer.requiredFeaturesByMerchant);
+
+    // Determine "other" booking info for region change scenario
+    // If current is installation, other is training, and vice versa
+    const otherBookingType = bookingType === 'installation' ? 'training' : 'installation'
+    const otherBookingDate = bookingType === 'installation' ? trainer.trainingDate : trainer.installationDate
+    const otherBookingAssignee = bookingType === 'installation'
+      ? trainer.assignedTrainerName // Trainer assigned to training
+      : trainer.installerName // Installer assigned to installation
+
+    // Determine current booking info for address change notification
+    const currentBookingEventId = bookingType === 'installation'
+      ? trainer.installationEventId
+      : trainer.trainingEventId
+    const currentBookingAssigneeEmail = bookingType === 'installation'
+      ? trainer.installerEmail || '' // Installer's email (may not always be available)
+      : trainer.assignedTrainerEmail || trainer.csmEmail || '' // Trainer's email
+    const currentBookingAssigneeName = bookingType === 'installation'
+      ? trainer.installerName || ''
+      : trainer.assignedTrainerName || actualTrainerName
+
     const bookingInfo = {
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
@@ -534,7 +563,15 @@ function TrainerPortalContent() {
       goLiveDate: goLiveDate, // Pass the go-live date
       installationDate: installationDate, // Pass installation date for training bookings
       trainingDate: trainingDate, // Pass earliest training date for installation bookings
-      existingBooking: existingBooking // Pass existing booking info if rescheduling
+      existingBooking: existingBooking, // Pass existing booking info if rescheduling
+      // For region change (clear OTHER booking)
+      otherBookingType: otherBookingType as 'installation' | 'training',
+      otherBookingDate: otherBookingDate,
+      otherBookingAssignee: otherBookingAssignee,
+      // For address change notification (notify CURRENT booking assignee)
+      currentBookingEventId: currentBookingEventId,
+      currentBookingAssigneeEmail: currentBookingAssigneeEmail,
+      currentBookingAssigneeName: currentBookingAssigneeName
     }
 
     console.log('📦 About to set currentBookingInfo with existingBooking:', existingBooking)
@@ -600,6 +637,110 @@ function TrainerPortalContent() {
     // Remove booking parameter from URL but keep stage
     const currentStageParam = searchParams.get('stage') || currentStage
     router.push(`/merchant/${merchantId}?stage=${currentStageParam}`, { scroll: false })
+  }
+
+  // Cancel booking handlers
+  const handleCancelClick = (bookingType: 'training' | 'installation') => {
+    setCancelBookingType(bookingType)
+    setCancelDialogOpen(true)
+  }
+
+  const handleCancelBooking = async (reason: string) => {
+    setCancelLoading(true)
+
+    try {
+      const trainer = trainerData?.onboardingTrainerData?.trainers?.[0]
+      if (!trainer) {
+        throw new Error('No trainer data available')
+      }
+
+      // Determine if external vendor (check installerType from trainerData)
+      const isExternal = cancelBookingType === 'installation' &&
+        trainerData?.installerType === 'External'
+
+      // Get relevant IDs based on booking type
+      const eventId = cancelBookingType === 'training'
+        ? trainer.trainingEventId
+        : trainer.installationEventId
+
+      const salesforceEventId = cancelBookingType === 'training'
+        ? trainer.trainingSalesforceEventId
+        : trainer.installationSalesforceEventId
+
+      const assigneeName = cancelBookingType === 'training'
+        ? trainer.trainerName || trainer.csmName
+        : trainer.installerName
+
+      // Get scheduled time if available
+      const scheduledTime = cancelBookingType === 'training'
+        ? trainer.trainingTime
+        : trainer.installationTime
+
+      console.log('[Cancel] Sending cancellation request:', {
+        merchantId: trainer.id,
+        trainerName: assigneeName,
+        eventId,
+        bookingType: cancelBookingType,
+        isExternal,
+        trainerId: trainer.id,
+        // Debug: show available fields
+        trainerFields: {
+          trainerName: trainer.trainerName,
+          csmName: trainer.csmName,
+          trainingEventId: trainer.trainingEventId,
+          installationEventId: trainer.installationEventId,
+          installerName: trainer.installerName
+        }
+      })
+
+      // Validate required fields before sending
+      if (!isExternal && (!assigneeName || !eventId)) {
+        const missingFields = []
+        if (!assigneeName) missingFields.push('trainerName (trainer.trainerName or trainer.csmName is null)')
+        if (!eventId) missingFields.push(`eventId (trainer.${cancelBookingType}EventId is null)`)
+        console.error('[Cancel] Missing required data:', missingFields)
+        throw new Error(`Cannot cancel: Missing ${missingFields.join(', ')}. The booking data may not be saved in Salesforce Onboarding_Portal__c.`)
+      }
+
+      const response = await fetch('/api/lark/cancel-training', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchantId: trainer.id,
+          merchantName: trainerData?.account?.businessStoreName || trainerData?.account?.name || trainer.name,
+          trainerName: assigneeName,
+          eventId,
+          bookingType: cancelBookingType,
+          cancellationReason: reason,
+          isExternal,
+          salesforceEventId,
+          surftekTicketId: trainer.surftekTicketId,
+          surftekCaseNumber: trainer.surftekCaseNumber,
+          scheduledTime
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to cancel booking')
+      }
+
+      // Success
+      setSuccessMessage(t('cancelDialog.successMessage'))
+      setCancelDialogOpen(false)
+
+      // Refresh data
+      await refreshData()
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(''), 5000)
+
+    } catch (error) {
+      console.error('Cancel booking error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to cancel booking. Please try again.')
+    } finally {
+      setCancelLoading(false)
+    }
   }
 
   const startEditing = (trainer: any) => {
@@ -877,6 +1018,7 @@ function TrainerPortalContent() {
                 }}
                 onBookingComplete={handleBookingComplete}
                 onOpenBookingModal={handleOpenBookingModal}
+                onCancelClick={handleCancelClick}
                 onStageChange={(stage) => setCurrentStage(stage)}
                 expandSection={searchParams.get('section') || undefined}
                 isInternalUser={isInternalUser}
@@ -901,25 +1043,66 @@ function TrainerPortalContent() {
               merchantName={currentBookingInfo.merchantName || currentBookingInfo.name}
               merchantAddress={currentBookingInfo.merchantAddress}
               merchantState={currentBookingInfo.merchantState}
-            merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
-            merchantContactPerson={currentBookingInfo.merchantContactPerson}
-            trainerName={currentBookingInfo.trainerName}
-            trainerEmail={currentBookingInfo.trainerEmail}
-            assignedTrainerEmail={currentBookingInfo.assignedTrainerEmail}
-            onboardingTrainerName={currentBookingInfo.displayName}
-            bookingType={currentBookingInfo.bookingType}
-            onboardingServicesBought={currentBookingInfo.onboardingServicesBought}
-            requiredFeatures={currentBookingInfo.requiredFeatures}
-            currentBooking={currentBookingInfo.existingBooking}
-            dependentDate={currentBookingInfo.dependentDate}
-            goLiveDate={currentBookingInfo.goLiveDate}
-            installationDate={currentBookingInfo.installationDate}
-            trainingDate={currentBookingInfo.trainingDate}
-            isInternalUser={isInternalUser}
-            onBookingComplete={handleBookingComplete}
-          />
+              merchantPhone={currentBookingInfo.merchantPhone || currentBookingInfo.phoneNumber}
+              merchantContactPerson={currentBookingInfo.merchantContactPerson}
+              trainerName={currentBookingInfo.trainerName}
+              trainerEmail={currentBookingInfo.trainerEmail}
+              assignedTrainerEmail={currentBookingInfo.assignedTrainerEmail}
+              onboardingTrainerName={currentBookingInfo.displayName}
+              bookingType={currentBookingInfo.bookingType}
+              onboardingServicesBought={currentBookingInfo.onboardingServicesBought}
+              requiredFeatures={currentBookingInfo.requiredFeatures}
+              currentBooking={currentBookingInfo.existingBooking}
+              dependentDate={currentBookingInfo.dependentDate}
+              goLiveDate={currentBookingInfo.goLiveDate}
+              installationDate={currentBookingInfo.installationDate}
+              trainingDate={currentBookingInfo.trainingDate}
+              isInternalUser={isInternalUser}
+              onBookingComplete={handleBookingComplete}
+              onAddressUpdated={refreshData}
+              // For region change (clear OTHER booking)
+              otherBookingType={currentBookingInfo.otherBookingType}
+              otherBookingDate={currentBookingInfo.otherBookingDate}
+              otherBookingAssignee={currentBookingInfo.otherBookingAssignee}
+              // For address change notification (notify CURRENT booking assignee)
+              currentBookingEventId={currentBookingInfo.currentBookingEventId}
+              currentBookingAssigneeEmail={currentBookingInfo.currentBookingAssigneeEmail}
+              currentBookingAssigneeName={currentBookingInfo.currentBookingAssigneeName}
+            />
             </>
         )}
+
+        {/* Cancel Booking Dialog */}
+        {trainerData?.onboardingTrainerData?.trainers?.[0] && (
+          <CancelBookingDialog
+            isOpen={cancelDialogOpen}
+            onClose={() => setCancelDialogOpen(false)}
+            onConfirm={handleCancelBooking}
+            bookingType={cancelBookingType}
+            merchantName={trainerData?.account?.businessStoreName || trainerData?.account?.name || ''}
+            scheduledDate={cancelBookingType === 'training'
+              ? (trainerData.onboardingTrainerData.trainers[0].trainingDate
+                ? new Date(trainerData.onboardingTrainerData.trainers[0].trainingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : '')
+              : (trainerData.onboardingTrainerData.trainers[0].installationDate
+                ? new Date(trainerData.onboardingTrainerData.trainers[0].installationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : '')}
+            scheduledTime={cancelBookingType === 'training'
+              ? trainerData.onboardingTrainerData.trainers[0].trainingTime
+              : trainerData.onboardingTrainerData.trainers[0].installationTime}
+            assigneeName={cancelBookingType === 'training'
+              ? (trainerData.onboardingTrainerData.trainers[0].assignedTrainerName || trainerData.onboardingTrainerData.trainers[0].csmName || '')
+              : (trainerData.onboardingTrainerData.trainers[0].installerName || '')}
+            location={[
+              trainerData.onboardingTrainerData.trainers[0].shippingStreet,
+              trainerData.onboardingTrainerData.trainers[0].shippingCity,
+              trainerData.onboardingTrainerData.trainers[0].shippingState
+            ].filter(Boolean).join(', ')}
+            isExternal={cancelBookingType === 'installation' && trainerData?.installerType === 'External'}
+            isLoading={cancelLoading}
+          />
+        )}
+
     </>
   )
 }

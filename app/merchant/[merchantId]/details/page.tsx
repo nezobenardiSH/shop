@@ -147,6 +147,27 @@ export default function MerchantDetailsPage() {
     });
 
     console.log('[DEBUG] Setting booking info with requiredFeatures:', trainer.requiredFeaturesByMerchant);
+
+    const bookingType = trainer.bookingType || 'training'
+
+    // Determine "other" booking info for region change scenario
+    const otherBookingType = bookingType === 'installation' ? 'training' : 'installation'
+    const otherBookingDate = bookingType === 'installation' ? trainer.trainingDate : trainer.installationDate
+    const otherBookingAssignee = bookingType === 'installation'
+      ? trainer.assignedTrainerName
+      : trainer.installerName
+
+    // Determine current booking info for address change notification
+    const currentBookingEventId = bookingType === 'installation'
+      ? trainer.installationEventId
+      : trainer.trainingEventId
+    const currentBookingAssigneeEmail = bookingType === 'installation'
+      ? trainer.installerEmail || ''
+      : trainer.assignedTrainerEmail || trainer.csmEmail || ''
+    const currentBookingAssigneeName = bookingType === 'installation'
+      ? trainer.installerName || ''
+      : trainer.assignedTrainerName || actualTrainerName
+
     setCurrentBookingInfo({
       trainerId: trainer.id,
       trainerName: actualTrainerName, // Use the actual trainer name for Lark
@@ -158,12 +179,22 @@ export default function MerchantDetailsPage() {
       merchantPhone: trainer.phoneNumber || trainer.merchantPICContactNumber || '',
       merchantContactPerson: trainer.operationManagerContact?.name || trainer.businessOwnerContact?.name || '',
       displayName: trainer.name, // Keep the Salesforce trainer name for display
-      bookingType: trainer.bookingType || 'training', // Pass the booking type
+      bookingType: bookingType, // Pass the booking type
       requiredFeatures: trainer.requiredFeaturesByMerchant, // Pass required features for training bookings
       onboardingSummary: trainer.onboardingSummary, // Pass onboarding summary
       workaroundElaboration: trainer.workaroundElaboration, // Pass workaround elaboration
       onboardingServicesBought: trainer.onboardingServicesBought, // Pass the service type for location filtering
-      existingBooking: null // Don't pass existing booking for now, let user select new date
+      existingBooking: null, // Don't pass existing booking for now, let user select new date
+      installationDate: trainer.installationDate,
+      trainingDate: trainer.trainingDate,
+      // For region change (clear OTHER booking)
+      otherBookingType: otherBookingType as 'installation' | 'training',
+      otherBookingDate: otherBookingDate,
+      otherBookingAssignee: otherBookingAssignee,
+      // For address change notification (notify CURRENT booking assignee)
+      currentBookingEventId: currentBookingEventId,
+      currentBookingAssigneeEmail: currentBookingAssigneeEmail,
+      currentBookingAssigneeName: currentBookingAssigneeName
     })
     setBookingModalOpen(true)
   }
@@ -514,7 +545,19 @@ export default function MerchantDetailsPage() {
             onboardingSummary={currentBookingInfo.onboardingSummary}
             workaroundElaboration={currentBookingInfo.workaroundElaboration}
             currentBooking={currentBookingInfo.existingBooking}
+            installationDate={currentBookingInfo.installationDate}
+            trainingDate={currentBookingInfo.trainingDate}
+            isInternalUser={isInternalUser}
             onBookingComplete={handleBookingComplete}
+            onAddressUpdated={refreshData}
+            // For region change (clear OTHER booking)
+            otherBookingType={currentBookingInfo.otherBookingType}
+            otherBookingDate={currentBookingInfo.otherBookingDate}
+            otherBookingAssignee={currentBookingInfo.otherBookingAssignee}
+            // For address change notification (notify CURRENT booking assignee)
+            currentBookingEventId={currentBookingInfo.currentBookingEventId}
+            currentBookingAssigneeEmail={currentBookingInfo.currentBookingAssigneeEmail}
+            currentBookingAssigneeName={currentBookingInfo.currentBookingAssigneeName}
           />
         )}
     </>

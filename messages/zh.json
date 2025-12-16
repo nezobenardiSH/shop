@@ -160,6 +160,7 @@
     "buttons": {
       "schedule": "预约",
       "changeDate": "更改日期",
+      "cancelBooking": "取消",
       "uploadVideo": "上传视频",
       "replaceVideo": "替换视频",
       "uploading": "上传中...",
@@ -354,7 +355,15 @@
     "availableFromDay": "可用日期：{fromDate}（硬件发货后+{days}天）",
     "calculating": "计算中...",
     "afterHardwareShipment": "硬件发货后",
-    "selectDate": "选择日期"
+    "selectDate": "选择日期",
+    "regionChangeWarning": "区域变更警告",
+    "regionChangeMessage": "更改为「{newState}」将从「{oldRegion}」移动到「{newRegion}」。",
+    "bookingWillBeCleared": "此预约将被取消，您需要重新预约。",
+    "confirmClearBooking": "确认并取消预约",
+    "installationCleared": "安装预约已取消。请重新预约。",
+    "trainingCleared": "培训预约已取消。请重新预约。",
+    "bookingScheduledFor": "{bookingType} 已安排在 {date}",
+    "bookingScheduledForWith": "{bookingType} 已安排在 {date}，负责人：{assignee}"
   },
   "login": {
     "title": "入驻门户",
@@ -420,5 +429,19 @@
     "messages": {
       "addressUpdated": "地址更新成功！"
     }
+  },
+  "cancelDialog": {
+    "title": "取消预约",
+    "confirmTitle": "您确定要取消此预约吗？",
+    "reasonLabel": "取消原因",
+    "reasonPlaceholder": "请提供取消原因...",
+    "reasonRequired": "请提供取消原因",
+    "cancelButton": "取消预约",
+    "keepButton": "保留预约",
+    "successMessage": "预约已成功取消",
+    "externalWarning": "这是外部供应商的预约。我们的团队将手动取消 Surftek 的预约。",
+    "trainingLabel": "培训",
+    "installationLabel": "安装",
+    "cancelling": "取消中..."
   }
 }

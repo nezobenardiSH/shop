@@ -199,6 +199,8 @@ export async function GET(
     let portalData: any = {
       trainingEventId: null,
       installationEventId: null,
+      trainingSalesforceEventId: null,
+      installationSalesforceEventId: null,
       installationDate: null,
       installerName: null,
       trainerName: null,
@@ -208,6 +210,7 @@ export async function GET(
     try {
       const portalQuery = `
         SELECT Id, Training_Event_ID__c, Installation_Event_ID__c,
+               Training_Salesforce_Event_ID__c, Installation_Salesforce_Event_ID__c,
                Installation_Date__c, Installer_Name__c,
                Training_Date__c, Trainer_Name__c,
                Remote_Training_Meeting_Link__c
@@ -220,6 +223,8 @@ export async function GET(
         const portal = portalResult.records[0] as any
         portalData.trainingEventId = portal.Training_Event_ID__c
         portalData.installationEventId = portal.Installation_Event_ID__c
+        portalData.trainingSalesforceEventId = portal.Training_Salesforce_Event_ID__c || null
+        portalData.installationSalesforceEventId = portal.Installation_Salesforce_Event_ID__c || null
         portalData.installationDate = portal.Installation_Date__c
         portalData.trainingDate = portal.Training_Date__c
         portalData.remoteTrainingMeetingLink = portal.Remote_Training_Meeting_Link__c || null
@@ -230,6 +235,8 @@ export async function GET(
         console.log('🔍 Installer_Name__c value:', portal.Installer_Name__c)
         console.log('🔍 Trainer_Name__c value:', portal.Trainer_Name__c)
         console.log('🔍 Remote_Training_Meeting_Link__c value:', portal.Remote_Training_Meeting_Link__c)
+        console.log('🔍 Training_Salesforce_Event_ID__c value:', portal.Training_Salesforce_Event_ID__c)
+        console.log('🔍 Installation_Salesforce_Event_ID__c value:', portal.Installation_Salesforce_Event_ID__c)
 
         console.log('✅ Found Onboarding_Portal__c record with data:', portalData)
       } else {
@@ -551,6 +558,10 @@ export async function GET(
         // Event IDs for rescheduling (from Onboarding_Portal__c object)
         installationEventId: portalData.installationEventId,
         trainingEventId: portalData.trainingEventId,
+
+        // Salesforce Event IDs for cancellation (deletes synced Google Calendar events)
+        trainingSalesforceEventId: portalData.trainingSalesforceEventId,
+        installationSalesforceEventId: portalData.installationSalesforceEventId,
 
         // Remote training meeting link (from Onboarding_Portal__c object)
         remoteTrainingMeetingLink: portalData.remoteTrainingMeetingLink,

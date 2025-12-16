@@ -160,6 +160,7 @@
     "buttons": {
       "schedule": "Schedule",
       "changeDate": "Change Date",
+      "cancelBooking": "Cancel",
       "uploadVideo": "Upload Video",
       "replaceVideo": "Replace Video",
       "uploading": "Uploading...",
@@ -354,7 +355,15 @@
     "availableFromDay": "Available from: {fromDate} (+{days} day after hardware shipment)",
     "calculating": "Calculating...",
     "afterHardwareShipment": "after hardware shipment",
-    "selectDate": "Select Date"
+    "selectDate": "Select Date",
+    "regionChangeWarning": "Region Change Warning",
+    "regionChangeMessage": "Changing to \"{newState}\" will move from \"{oldRegion}\" to \"{newRegion}\".",
+    "bookingWillBeCleared": "This booking will be cleared and you'll need to rebook.",
+    "confirmClearBooking": "Confirm & Clear Booking",
+    "installationCleared": "Installation booking has been cleared. Please rebook.",
+    "trainingCleared": "Training booking has been cleared. Please rebook.",
+    "bookingScheduledFor": "{bookingType} is currently scheduled for {date}",
+    "bookingScheduledForWith": "{bookingType} is currently scheduled for {date} with {assignee}"
   },
   "login": {
     "title": "Onboarding Portal",
@@ -420,5 +429,19 @@
     "messages": {
       "addressUpdated": "Address updated successfully!"
     }
+  },
+  "cancelDialog": {
+    "title": "Cancel Booking",
+    "confirmTitle": "Are you sure you want to cancel this booking?",
+    "reasonLabel": "Reason for cancellation",
+    "reasonPlaceholder": "Please provide a reason for cancellation...",
+    "reasonRequired": "Please provide a reason for cancellation",
+    "cancelButton": "Cancel Booking",
+    "keepButton": "Keep Booking",
+    "successMessage": "Booking cancelled successfully",
+    "externalWarning": "This is an external vendor booking. Our team will manually cancel the Surftek appointment.",
+    "trainingLabel": "Training",
+    "installationLabel": "Installation",
+    "cancelling": "Cancelling..."
   }
 }

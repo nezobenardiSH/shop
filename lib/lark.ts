@@ -921,6 +921,93 @@ class LarkService {
   }
 
   /**
+   * Update calendar event (e.g., location change)
+   */
+  async updateCalendarEvent(
+    calendarId: string,
+    eventId: string,
+    updates: Partial<LarkEvent>,
+    userEmail?: string
+  ): Promise<{ event_id: string }> {
+    console.log('📝 updateCalendarEvent called:', {
+      calendarId,
+      eventId,
+      userEmail,
+      updates: JSON.stringify(updates)
+    })
+
+    // Validate event ID format
+    if (!eventId || eventId.length === 0) {
+      throw new Error('Invalid event ID: empty or null')
+    }
+
+    // CRITICAL FIX: Find the user's writable calendar
+    // Google synced calendars (type: 'google') cannot be written to via Lark API
+    // We need to use the primary Lark calendar (type: 'primary')
+    let actualCalendarId = calendarId
+
+    if (userEmail) {
+      try {
+        console.log(`🔍 Finding writable calendar for ${userEmail}...`)
+        const calendars = await this.getCalendarList(userEmail)
+
+        // PRIORITY 1: Find PRIMARY type calendar (native Lark calendar, not synced from Google)
+        const primaryCalendar = calendars.find((cal: any) =>
+          cal.type === 'primary' &&
+          cal.role === 'owner'
+        )
+
+        if (primaryCalendar) {
+          actualCalendarId = primaryCalendar.calendar_id
+          console.log(`✅ Using primary Lark calendar for update: ${actualCalendarId}`)
+        } else {
+          // PRIORITY 2: Find any owner calendar that is NOT a Google sync
+          const nativeCalendar = calendars.find((cal: any) =>
+            cal.role === 'owner' &&
+            cal.type !== 'google'
+          )
+
+          if (nativeCalendar) {
+            actualCalendarId = nativeCalendar.calendar_id
+            console.log(`✅ Using native Lark calendar for update: ${actualCalendarId}`)
+          } else {
+            // PRIORITY 3: Fallback to any owner calendar
+            const ownerCalendar = calendars.find((cal: any) => cal.role === 'owner')
+            if (ownerCalendar) {
+              actualCalendarId = ownerCalendar.calendar_id
+              console.log(`⚠️ Using owner calendar for update: ${actualCalendarId}`)
+            } else {
+              console.log(`⚠️ No writable calendar found, using provided ID: ${calendarId}`)
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Failed to get calendar list, using provided ID:`, error)
+      }
+    }
+
+    try {
+      const response = await this.makeRequest(
+        `/open-apis/calendar/v4/calendars/${actualCalendarId}/events/${eventId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(updates),
+          userEmail: userEmail
+        }
+      )
+
+      console.log('✅ Successfully updated calendar event:', eventId)
+      return { event_id: eventId }
+    } catch (error: any) {
+      console.error('❌ Failed to update calendar event:')
+      console.error('  Event ID:', eventId)
+      console.error('  Calendar ID:', actualCalendarId)
+      console.error('  Error:', error.message)
+      throw error
+    }
+  }
+
+  /**
    * Delete calendar event
    */
   async deleteCalendarEvent(
@@ -946,10 +1033,15 @@ class LarkService {
     // We need to use the primary Lark calendar (type: 'primary')
     let actualCalendarId = calendarId
 
-    if (userEmail) {
+    // IMPORTANT: If calendarId is "primary" (a placeholder), we MUST look up the actual calendar ID
+    // Lark API does not accept "primary" as a literal value
+    const needsCalendarLookup = userEmail && (calendarId === 'primary' || !calendarId || calendarId.length < 10)
+
+    if (needsCalendarLookup) {
+      console.log(`🔍 Calendar ID "${calendarId}" requires lookup - finding actual calendar for ${userEmail}...`)
       try {
-        console.log(`🔍 Finding writable calendar for ${userEmail}...`)
-        const calendars = await this.getCalendarList(userEmail)
+        const calendars = await this.getCalendarList(userEmail!)
+        console.log(`📋 Found ${calendars.length} calendars for ${userEmail}`)
 
         // PRIORITY 1: Find PRIMARY type calendar (native Lark calendar, not synced from Google)
         const primaryCalendar = calendars.find((cal: any) =>
@@ -981,13 +1073,18 @@ class LarkService {
               console.log(`⚠️ Using owner calendar for deletion (may be Google sync): ${actualCalendarId}`)
               console.log(`   Type: ${ownerCalendar.type}`)
             } else {
-              console.log(`⚠️ No writable calendar found, using provided ID: ${calendarId}`)
+              console.error(`❌ No writable calendar found for ${userEmail}! Available calendars:`,
+                calendars.map((c: any) => ({ id: c.calendar_id, type: c.type, role: c.role, summary: c.summary })))
+              throw new Error(`No writable calendar found for ${userEmail}`)
             }
           }
         }
-      } catch (error) {
-        console.error(`❌ Failed to get calendar list, using provided ID:`, error)
+      } catch (error: any) {
+        console.error(`❌ Failed to get calendar list for ${userEmail}:`, error?.message || error)
+        throw new Error(`Cannot delete event: Failed to find calendar for ${userEmail}. ${error?.message || ''}`)
       }
+    } else if (userEmail) {
+      console.log(`📌 Using provided calendar ID: ${calendarId} (looks like a valid Lark calendar ID)`)
     }
 
     try {
@@ -997,7 +1094,7 @@ class LarkService {
         eventId: eventId,
         userEmail: userEmail
       })
-      
+
       const response = await this.makeRequest(`/open-apis/calendar/v4/calendars/${actualCalendarId}/events/${eventId}`, {
         method: 'DELETE',
         userEmail: userEmail
@@ -1009,7 +1106,7 @@ class LarkService {
       console.error('  Event ID:', eventId)
       console.error('  Calendar ID:', actualCalendarId)
       console.error('  Error:', error.message)
-      
+
       // Log specific Lark API error codes for better debugging
       if (error.message?.includes('invalid request parameters')) {
         console.error('  💡 Possible causes:')
@@ -1018,7 +1115,7 @@ class LarkService {
         console.error('    - Calendar ID is incorrect')
         console.error('    - Insufficient permissions to delete event')
       }
-      
+
       throw error
     }
   }

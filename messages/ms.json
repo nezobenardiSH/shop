@@ -160,6 +160,7 @@
     "buttons": {
       "schedule": "Jadual",
       "changeDate": "Tukar Tarikh",
+      "cancelBooking": "Batal",
       "uploadVideo": "Muat Naik Video",
       "replaceVideo": "Ganti Video",
       "uploading": "Memuat naik...",
@@ -354,7 +355,15 @@
     "availableFromDay": "Tersedia dari: {fromDate} (+{days} hari selepas penghantaran Hardware)",
     "calculating": "Mengira...",
     "afterHardwareShipment": "selepas penghantaran Hardware",
-    "selectDate": "Pilih Tarikh"
+    "selectDate": "Pilih Tarikh",
+    "regionChangeWarning": "Amaran Perubahan Wilayah",
+    "regionChangeMessage": "Menukar ke \"{newState}\" akan berpindah dari \"{oldRegion}\" ke \"{newRegion}\".",
+    "bookingWillBeCleared": "Tempahan ini akan dibatalkan dan anda perlu menempah semula.",
+    "confirmClearBooking": "Sahkan & Batalkan Tempahan",
+    "installationCleared": "Tempahan pemasangan telah dibatalkan. Sila tempah semula.",
+    "trainingCleared": "Tempahan latihan telah dibatalkan. Sila tempah semula.",
+    "bookingScheduledFor": "{bookingType} dijadualkan pada {date}",
+    "bookingScheduledForWith": "{bookingType} dijadualkan pada {date} dengan {assignee}"
   },
   "login": {
     "title": "Portal Onboarding",
@@ -420,5 +429,19 @@
     "messages": {
       "addressUpdated": "Alamat berjaya dikemas kini!"
     }
+  },
+  "cancelDialog": {
+    "title": "Batal Tempahan",
+    "confirmTitle": "Adakah anda pasti mahu membatalkan tempahan ini?",
+    "reasonLabel": "Sebab pembatalan",
+    "reasonPlaceholder": "Sila nyatakan sebab pembatalan...",
+    "reasonRequired": "Sila nyatakan sebab pembatalan",
+    "cancelButton": "Batal Tempahan",
+    "keepButton": "Kekalkan Tempahan",
+    "successMessage": "Tempahan berjaya dibatalkan",
+    "externalWarning": "Ini adalah tempahan vendor luar. Pasukan kami akan membatalkan temujanji Surftek secara manual.",
+    "trainingLabel": "Latihan",
+    "installationLabel": "Pemasangan",
+    "cancelling": "Membatalkan..."
   }
 }

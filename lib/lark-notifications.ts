@@ -55,6 +55,64 @@ export async function sendCancellationNotification(
 }
 
 /**
+ * Send notification when address changes for an existing booking
+ */
+export async function sendAddressChangeNotification(
+  assignedPersonEmail: string,
+  merchantName: string,
+  bookingType: string,
+  bookingDate: string,
+  oldAddress: string,
+  newAddress: string
+): Promise<void> {
+  try {
+    const formattedDate = formatDateToDDMMYYYY(bookingDate)
+    const typeLabel = bookingType.charAt(0).toUpperCase() + bookingType.slice(1)
+
+    const message = `📍 Address Change Notification\n\n` +
+                   `Merchant: ${merchantName}\n` +
+                   `${typeLabel} Date: ${formattedDate}\n\n` +
+                   `Old Address:\n${oldAddress}\n\n` +
+                   `New Address:\n${newAddress}\n\n` +
+                   `Please update your records accordingly.`
+
+    await larkService.sendAppMessage(assignedPersonEmail, message, 'text')
+    console.log(`📧 Address change notification sent to: ${assignedPersonEmail}`)
+  } catch (error) {
+    // Log but don't throw - notifications should not break the save flow
+    console.error('Failed to send address change notification:', error)
+  }
+}
+
+/**
+ * Notify manager to cancel Surftek booking manually
+ * Called when address changes from external vendor region to internal installer region
+ */
+export async function sendSurftekCancelNotification(
+  managerEmail: string,
+  merchantName: string,
+  merchantId: string,
+  surftekCaseNum?: string | null
+): Promise<void> {
+  try {
+    const salesforceUrl = `https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchantId}/view`
+
+    const message = `🚫 Surftek Booking Cancellation Required\n\n` +
+                   `Merchant: ${merchantName}\n` +
+                   (surftekCaseNum ? `Surftek Case #: ${surftekCaseNum}\n` : '') +
+                   `\nMerchant address changed to internal installer region.\n` +
+                   `Please cancel the Surftek booking manually on the Surftek portal.\n\n` +
+                   `🔗 Salesforce: ${salesforceUrl}`
+
+    await larkService.sendAppMessage(managerEmail, message, 'text')
+    console.log(`📧 Surftek cancel notification sent to: ${managerEmail}`)
+  } catch (error) {
+    // Log but don't throw - notifications should not break the save flow
+    console.error('Failed to send Surftek cancel notification:', error)
+  }
+}
+
+/**
  * Format date to dd mmm yyyy (e.g., 04 Nov 2025)
  */
 function formatDateToDDMMYYYY(dateStr: string): string {
