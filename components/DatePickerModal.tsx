@@ -58,6 +58,9 @@ interface TimeSlot {
   // Added for "All Trainers" expanded slots
   trainerName?: string
   trainerEmail?: string
+  // Added for "All Installers" expanded slots
+  installerName?: string
+  installerEmail?: string
   displayLabel?: string
 }
 
@@ -310,16 +313,16 @@ export default function DatePickerModal({
       // Fetch trainers/installers list for internal users
       if (isInternalUser) {
         fetchTrainersAndInstallersList()
-        // For internal users booking training, don't fetch availability yet
-        // Wait for them to select a trainer first
-        if (bookingType === 'training') {
-          console.log('🔄 Internal user - waiting for trainer selection before fetching availability')
+        // For internal users, don't fetch availability yet
+        // Wait for them to select a trainer/installer first
+        if (bookingType === 'training' || bookingType === 'installation') {
+          console.log('🔄 Internal user - waiting for trainer/installer selection before fetching availability')
           setAvailability([])
           return
         }
       }
 
-      // Fetch availability (for non-internal users, or internal users booking installation)
+      // Fetch availability (for non-internal users only)
       fetchAvailability()
     }
   }, [isOpen, trainerName, filterByLocation, merchantAddress, isInternalUser])
@@ -331,6 +334,14 @@ export default function DatePickerModal({
       fetchAvailability()
     }
   }, [selectedTrainerEmail])
+
+  // Fetch availability when internal user selects an installer (or "all")
+  useEffect(() => {
+    if (isOpen && isInternalUser && bookingType === 'installation' && selectedInstallerEmail) {
+      console.log('🔄 Internal user selected installer, fetching availability:', selectedInstallerEmail === 'all' ? 'ALL INSTALLERS' : selectedInstallerEmail)
+      fetchAvailability()
+    }
+  }, [selectedInstallerEmail])
 
   // Fetch trainers and installers list for internal user manual selection
   const fetchTrainersAndInstallersList = async () => {
@@ -655,13 +666,25 @@ export default function DatePickerModal({
         if (isInternalUser) {
           installParams.append('includeWeekends', 'true')
           console.log('🗓️ Internal user - including weekends in installation availability')
+
+          // If internal user selected a specific installer (not "all"), fetch only their availability
+          if (selectedInstallerEmail && selectedInstallerEmail !== 'all') {
+            const selectedInstaller = availableInstallersList.find(i => i.email === selectedInstallerEmail)
+            if (selectedInstaller) {
+              installParams.append('installerName', selectedInstaller.name)
+              console.log('🎯 Fetching availability for selected installer:', selectedInstaller.name)
+            }
+          } else if (selectedInstallerEmail === 'all') {
+            console.log('🎯 Fetching combined availability for ALL installers')
+          }
         }
 
         url = `/api/installation/availability?${installParams.toString()}`
         console.log('🔧 Fetching installer availability:', {
           merchantId,
           url,
-          isInternalUser
+          isInternalUser,
+          selectedInstaller: selectedInstallerEmail
         })
         
         response = await fetch(url)
@@ -861,8 +884,15 @@ export default function DatePickerModal({
 
         // Internal user: pass selected installer if manually chosen
         if (isInternalUser && selectedInstallerEmail) {
-          installationRequestBody.selectedInstallerEmail = selectedInstallerEmail
-          console.log('🔧 Internal user selected installer:', selectedInstallerEmail)
+          if (selectedInstallerEmail === 'all' && selectedSlot?.installerEmail) {
+            // "All Installers" selected - use the installer from the selected slot
+            installationRequestBody.selectedInstallerEmail = selectedSlot.installerEmail
+            console.log('🔧 Internal user selected "All Installers", using installer from slot:', selectedSlot.installerName, selectedSlot.installerEmail)
+          } else if (selectedInstallerEmail !== 'all') {
+            // Specific installer selected
+            installationRequestBody.selectedInstallerEmail = selectedInstallerEmail
+            console.log('🔧 Internal user selected specific installer:', selectedInstallerEmail)
+          }
         }
 
         response = await fetch('/api/installation/book', {
@@ -1348,7 +1378,51 @@ export default function DatePickerModal({
     console.log('Required features:', requiredFeatures)
     console.log('Selected trainer (internal):', selectedTrainerEmail)
 
-    // Only filter for training bookings
+    // For installation bookings
+    if (bookingType === 'installation') {
+      const availableSlots = allSlots.filter(slot => slot.available)
+      console.log('Installation booking - available slots:', availableSlots)
+
+      // For internal users with "all installers" selected, expand slots to show individual installers
+      if (isInternalUser && selectedInstallerEmail === 'all') {
+        const expandedSlots: any[] = []
+
+        availableSlots.forEach(slot => {
+          // Get installers available for this slot (stored in availableTrainers from transform)
+          const installersForSlot = slot.availableTrainers || []
+          console.log(`Slot ${slot.start}: available installers=${installersForSlot.join(',')}`)
+
+          if (installersForSlot.length === 0) {
+            // No specific installer info, show generic slot
+            expandedSlots.push(slot)
+          } else {
+            // Create individual slot for each installer
+            installersForSlot.forEach((installerName: string) => {
+              const installerInfo = availableInstallersList.find(i => i.name === installerName)
+              expandedSlots.push({
+                ...slot,
+                installerName: installerName,
+                installerEmail: installerInfo?.email,
+                displayLabel: `${slot.start} - ${installerName}`
+              })
+            })
+          }
+        })
+
+        // Sort by time, then by installer name
+        expandedSlots.sort((a, b) => {
+          if (a.start !== b.start) return a.start.localeCompare(b.start)
+          return (a.installerName || '').localeCompare(b.installerName || '')
+        })
+
+        console.log('Expanded slots for all installers:', expandedSlots)
+        return expandedSlots
+      }
+
+      return availableSlots
+    }
+
+    // Only filter for training bookings (other booking types)
     if (bookingType !== 'training') {
       const availableSlots = allSlots.filter(slot => slot.available)
       console.log('Non-training booking - available slots:', availableSlots)
@@ -1439,7 +1513,7 @@ export default function DatePickerModal({
 
     console.log('Filtered slots:', filtered)
     return filtered
-  }, [selectedDate, selectedLanguages, availability, bookingType, requiredFeatures, isInternalUser, selectedTrainerEmail, availableTrainersList])
+  }, [selectedDate, selectedLanguages, availability, bookingType, requiredFeatures, isInternalUser, selectedTrainerEmail, availableTrainersList, selectedInstallerEmail, availableInstallersList])
 
   const isSelectedDate = (date: Date | null) => {
     if (!date || !selectedDate) return false
@@ -1792,6 +1866,28 @@ export default function DatePickerModal({
               </div>
             )}
 
+            {/* Internal User: Installer Selection Dropdown */}
+            {bookingType === 'installation' && isInternalUser && !isExternalVendor && availableInstallersList.length > 0 && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('selectInstaller')}
+                </label>
+                <select
+                  value={selectedInstallerEmail}
+                  onChange={(e) => setSelectedInstallerEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="">{t('selectAnInstaller')}</option>
+                  <option value="all">{t('allInstallers')}</option>
+                  {availableInstallersList.map((installer) => (
+                    <option key={installer.email} value={installer.email}>
+                      {installer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {bookingType === 'training' && (
               <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1888,26 +1984,6 @@ export default function DatePickerModal({
               </div>
             )}
 
-          {/* Internal User: Installer Selection Dropdown (for installation bookings) */}
-          {isInternalUser && bookingType === 'installation' && !isExternalVendor && availableInstallersList.length > 0 && (
-            <div className="mt-4 px-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('selectInstaller')}
-              </label>
-              <select
-                value={selectedInstallerEmail}
-                onChange={(e) => setSelectedInstallerEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="">{t('selectAnInstaller')}</option>
-                {availableInstallersList.map((installer: any) => (
-                  <option key={installer.email} value={installer.email}>
-                    {installer.name} {installer.region ? `(${installer.region})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           </div>
 
           {/* Calendar and Time Slots Section */}
@@ -2085,7 +2161,7 @@ export default function DatePickerModal({
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-3">
                     {filteredSlots.map((slot, index) => (
                       <button
-                        key={`${slot.start}-${slot.trainerName || index}`}
+                        key={`${slot.start}-${slot.trainerName || slot.installerName || index}`}
                         onClick={() => setSelectedSlot(slot)}
                         className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
                           selectedSlot === slot
@@ -2102,6 +2178,10 @@ export default function DatePickerModal({
                                 {/* Show trainer name when "All Trainers" is selected */}
                                 {slot.trainerName && (
                                   <span className="ml-2 text-blue-600">({slot.trainerName})</span>
+                                )}
+                                {/* Show installer name when "All Installers" is selected */}
+                                {slot.installerName && (
+                                  <span className="ml-2 text-blue-600">({slot.installerName})</span>
                                 )}
                               </span>
                             </div>

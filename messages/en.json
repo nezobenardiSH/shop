@@ -319,6 +319,7 @@
     "allTrainers": "All Trainers",
     "selectInstaller": "Select Installer (Internal Only)",
     "selectAnInstaller": "-- Select an installer --",
+    "allInstallers": "All Installers",
     "storeAddress": "Store Address",
     "installer": "Installer",
     "installationRequested": "Installation Requested!",

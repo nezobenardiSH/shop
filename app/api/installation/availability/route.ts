@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const includeWeekends = searchParams.get('includeWeekends') === 'true' // For internal users
+    const installerName = searchParams.get('installerName') // For filtering by specific installer
 
     if (!merchantId || !startDate || !endDate) {
       return NextResponse.json(
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('📅 Installation availability request:', { merchantId, startDate, endDate, includeWeekends })
+    console.log('📅 Installation availability request:', { merchantId, startDate, endDate, includeWeekends, installerName })
 
     // Check if merchant needs internal or external installer
     const installerType = await getInstallerType(merchantId)
@@ -29,8 +30,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get availability for internal installers
-    const availability = await getInternalInstallersAvailability(startDate, endDate, merchantId, includeWeekends)
+    // Get availability for internal installers (optionally filtered by specific installer)
+    const availability = await getInternalInstallersAvailability(startDate, endDate, merchantId, includeWeekends, installerName || undefined)
     
     return NextResponse.json({
       type: 'internal',

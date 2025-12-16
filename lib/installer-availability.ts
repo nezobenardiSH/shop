@@ -192,10 +192,12 @@ export async function getInternalInstallersAvailability(
   startDate: string,
   endDate: string,
   merchantId?: string,
-  includeWeekends: boolean = false
+  includeWeekends: boolean = false,
+  specificInstallerName?: string  // Filter by specific installer name (optional)
 ): Promise<InstallerAvailability[]> {
   console.log('Getting installer availability...')
   console.log('Include weekends:', includeWeekends)
+  console.log('Specific installer filter:', specificInstallerName || 'ALL INSTALLERS')
 
   // Read installers config dynamically to pick up changes without restart
   const installersConfig = await loadInstallersConfig()
@@ -213,7 +215,36 @@ export async function getInternalInstallersAvailability(
 
   // Get the appropriate installer config
   const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
-  const installers = locationConfig.installers.filter((i: any) => i.isActive)
+  let installers = locationConfig.installers.filter((i: any) => i.isActive)
+
+  // If specific installer is requested, filter to only that installer
+  if (specificInstallerName) {
+    const filteredInstallers = installers.filter((i: any) =>
+      i.name.toLowerCase() === specificInstallerName.toLowerCase()
+    )
+    if (filteredInstallers.length > 0) {
+      installers = filteredInstallers
+      console.log(`🎯 Filtering to specific installer: ${specificInstallerName}`)
+    } else {
+      console.log(`⚠️ Installer "${specificInstallerName}" not found in ${locationKey}, checking all regions...`)
+      // Search across all regions for the installer
+      const allRegions = ['klangValley', 'penang', 'johorBahru']
+      for (const region of allRegions) {
+        const regionConfig = (installersConfig as any)[region]
+        if (regionConfig?.installers) {
+          const found = regionConfig.installers.filter((i: any) =>
+            i.isActive && i.name.toLowerCase() === specificInstallerName.toLowerCase()
+          )
+          if (found.length > 0) {
+            installers = found
+            console.log(`🎯 Found installer "${specificInstallerName}" in region: ${region}`)
+            break
+          }
+        }
+      }
+    }
+  }
+
   console.log(`Checking availability for ${installers.length} installers:`, installers.map((i: any) => i.name))
   
   // Map to store each installer's availability
