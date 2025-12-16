@@ -410,6 +410,66 @@ export async function bookInternalInstallation(
 
   console.log(`✅ Found installer: ${installer.name} (${installer.email})`)
 
+  // SERVER-SIDE AVAILABILITY VALIDATION
+  // Always validate that the installer is actually available for the requested slot
+  // This prevents bookings when installer has blocked their calendar (leave, other appointments, etc.)
+  console.log('🔍 Validating installer availability server-side...')
+  try {
+    const startDateTime = new Date(`${date}T00:00:00+08:00`)
+    const endDateTime = new Date(`${date}T23:59:59+08:00`)
+
+    const busyTimes = await larkService.getRawBusyTimes(
+      installer.email,
+      startDateTime,
+      endDateTime
+    )
+
+    // Create slot time range for comparison
+    const slotStart = new Date(`${date}T${timeSlot.start}:00+08:00`)
+    const slotEnd = new Date(`${date}T${timeSlot.end}:00+08:00`)
+
+    // Check if any busy time overlaps with the requested slot
+    const conflictingBusy = busyTimes.find((busy: any) => {
+      const busyStart = new Date(busy.start_time)
+      const busyEnd = new Date(busy.end_time)
+      // Overlap exists if: slotStart < busyEnd AND slotEnd > busyStart
+      return slotStart < busyEnd && slotEnd > busyStart
+    })
+
+    if (conflictingBusy) {
+      const busyStartSGT = new Date(conflictingBusy.start_time).toLocaleString('en-US', {
+        timeZone: 'Asia/Singapore',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      const busyEndSGT = new Date(conflictingBusy.end_time).toLocaleString('en-US', {
+        timeZone: 'Asia/Singapore',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+
+      console.error(`❌ SERVER-SIDE VALIDATION FAILED: ${installer.name} is not available`)
+      console.error(`   Requested slot: ${timeSlot.start} - ${timeSlot.end}`)
+      console.error(`   Conflicting busy period: ${busyStartSGT} - ${busyEndSGT}`)
+      console.error(`   Source: ${conflictingBusy.source || 'calendar event'}`)
+
+      throw new Error(`${installer.name} is not available for ${timeSlot.label || `${timeSlot.start} - ${timeSlot.end}`}. They have a calendar conflict during this time.`)
+    }
+
+    console.log(`✅ Server-side validation passed: ${installer.name} is available for ${timeSlot.start} - ${timeSlot.end}`)
+  } catch (validationError: any) {
+    // If the error is our availability error, re-throw it
+    if (validationError.message.includes('is not available for')) {
+      throw validationError
+    }
+    // For other errors (API failures), log but allow booking to proceed
+    // This prevents blocking all bookings if Lark API is temporarily down
+    console.error(`⚠️ Server-side availability check failed:`, validationError.message)
+    console.log(`⚠️ Proceeding with booking despite validation error (fail-open for API issues)`)
+  }
+
   // Fetch merchant details from Salesforce for calendar event
   console.log('📋 Fetching merchant details from Salesforce for calendar event...')
   const conn = await getSalesforceConnection()

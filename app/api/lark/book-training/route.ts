@@ -190,6 +190,67 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           )
         }
+
+        // SERVER-SIDE AVAILABILITY VALIDATION for manually selected trainer
+        // This prevents booking when trainer has blocked their calendar (leave, other appointments, etc.)
+        if (!mockMode) {
+          console.log('🔍 Validating selected trainer availability server-side...')
+          try {
+            const startDateTime = new Date(`${date}T00:00:00+08:00`)
+            const endDateTime = new Date(`${date}T23:59:59+08:00`)
+
+            const busyTimes = await larkService.getRawBusyTimes(
+              selectedTrainerEmail,
+              startDateTime,
+              endDateTime
+            )
+
+            // Create slot time range for comparison
+            const slotStart = new Date(`${date}T${startTime}:00+08:00`)
+            const slotEnd = new Date(`${date}T${endTime}:00+08:00`)
+
+            // Check if any busy time overlaps with the requested slot
+            const conflictingBusy = busyTimes.find((busy: any) => {
+              const busyStart = new Date(busy.start_time)
+              const busyEnd = new Date(busy.end_time)
+              return slotStart < busyEnd && slotEnd > busyStart
+            })
+
+            if (conflictingBusy) {
+              const busyStartSGT = new Date(conflictingBusy.start_time).toLocaleString('en-US', {
+                timeZone: 'Asia/Singapore',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+              const busyEndSGT = new Date(conflictingBusy.end_time).toLocaleString('en-US', {
+                timeZone: 'Asia/Singapore',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+
+              console.error(`❌ SERVER-SIDE VALIDATION FAILED: ${selectedTrainer.name} is not available`)
+              console.error(`   Requested slot: ${startTime} - ${endTime}`)
+              console.error(`   Conflicting busy period: ${busyStartSGT} - ${busyEndSGT}`)
+
+              return NextResponse.json(
+                {
+                  error: `${selectedTrainer.name} is not available for ${startTime} - ${endTime}`,
+                  details: 'The selected trainer has a calendar conflict during this time.'
+                },
+                { status: 409 }
+              )
+            }
+
+            console.log(`✅ Server-side validation passed: ${selectedTrainer.name} is available for ${startTime} - ${endTime}`)
+          } catch (validationError: any) {
+            // For API failures, log but allow booking to proceed (fail-open)
+            console.error(`⚠️ Server-side availability check failed:`, validationError.message)
+            console.log(`⚠️ Proceeding with booking despite validation error (fail-open for API issues)`)
+          }
+        }
+
         assignment = { assigned: selectedTrainer.name, reason: 'Manually selected by internal user' }
         console.log('🎯 Internal user selected trainer:', assignment)
       } else {
