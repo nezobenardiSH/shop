@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { X, ChevronLeft, ChevronRight, Calendar, Clock, Globe } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Calendar, Clock, Globe, AlertTriangle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { detectServiceType, getServiceTypeMessage, shouldFilterByLocation, type ServiceType } from '@/lib/service-type-detector'
-import { calculateInstallationDateLowerBound, getRegionType, getDaysToAddForRegion } from '@/lib/location-matcher'
+import { calculateInstallationDateLowerBound, getRegionType, getDaysToAddForRegion, MALAYSIAN_STATE_OPTIONS, getLocationCategoryFromStateName } from '@/lib/location-matcher'
 import { requiresExtendedTrainingSlot, EXTENDED_TRAINING_SLOT } from '@/lib/time-slot-config'
 
 interface DatePickerModalProps {
@@ -36,6 +36,17 @@ interface DatePickerModalProps {
   trainingDate?: string  // Earliest scheduled training date (POS or BackOffice) - used as upper bound for installation bookings
   isInternalUser?: boolean  // Internal team has relaxed scheduling rules
   onBookingComplete: (selectedDate?: string) => void
+  onAddressUpdated?: () => void  // Callback when address is updated (to refresh parent data)
+
+  // For region change - info about OTHER booking (to clear if region changes)
+  otherBookingType?: 'installation' | 'training'
+  otherBookingDate?: string
+  otherBookingAssignee?: string
+
+  // For address change notification - info about CURRENT booking (to notify assignee)
+  currentBookingEventId?: string  // Event ID for calendar update
+  currentBookingAssigneeEmail?: string  // Email to send notification
+  currentBookingAssigneeName?: string  // Name of assigned person
 }
 
 interface TimeSlot {
@@ -85,7 +96,16 @@ export default function DatePickerModal({
   installationDate,
   trainingDate,
   isInternalUser = false,
-  onBookingComplete
+  onBookingComplete,
+  onAddressUpdated,
+  // For region change - OTHER booking
+  otherBookingType,
+  otherBookingDate,
+  otherBookingAssignee,
+  // For address change notification - CURRENT booking
+  currentBookingEventId,
+  currentBookingAssigneeEmail,
+  currentBookingAssigneeName
 }: DatePickerModalProps) {
   // Debug props
   console.log('📋 DatePickerModal Props:', {
@@ -127,6 +147,69 @@ export default function DatePickerModal({
   const [availableInstallersList, setAvailableInstallersList] = useState<Array<{ name: string; email: string }>>([])
   const [selectedTrainerEmail, setSelectedTrainerEmail] = useState<string>('')
   const [selectedInstallerEmail, setSelectedInstallerEmail] = useState<string>('')
+
+  // Address editing state (internal users only)
+  const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const [addressFormData, setAddressFormData] = useState({
+    shippingStreet: '',
+    shippingCity: '',
+    shippingState: '',
+    shippingZipPostalCode: '',
+    shippingCountry: ''
+  })
+  const [savedAddressDisplay, setSavedAddressDisplay] = useState<{state: string, full: string} | null>(null) // Track saved address for display
+  const [originalState, setOriginalState] = useState('')
+  const [savingAddress, setSavingAddress] = useState(false)
+  const [addressError, setAddressError] = useState('')
+  const [addressSuccess, setAddressSuccess] = useState('')
+
+  // Region change confirmation dialog state
+  const [showRegionChangeConfirm, setShowRegionChangeConfirm] = useState(false)
+  const [pendingAddressChange, setPendingAddressChange] = useState<{
+    formData: typeof addressFormData
+    oldRegion: string
+    newRegion: string
+    affectedBookingType: string
+    affectedBookingDate: string
+    affectedBookingAssignee: string
+    // For installer type change scenarios
+    installerTypeChange?: 'internal-to-external' | 'external-to-internal'
+    clearCurrentInstallation?: boolean
+  } | null>(null)
+
+  // Store original full address for notification (when editing starts)
+  const [originalFullAddress, setOriginalFullAddress] = useState('')
+
+  // Track effective merchant state (can be updated after address change)
+  // This is used for installer type decisions and availability fetching
+  const [effectiveMerchantState, setEffectiveMerchantState] = useState(merchantState)
+
+  // Update effectiveMerchantState when prop changes (modal re-opens)
+  useEffect(() => {
+    setEffectiveMerchantState(merchantState)
+  }, [merchantState])
+
+  // Helper to detect if a state is an internal installer region
+  const INTERNAL_INSTALLER_REGIONS = ['Within Klang Valley', 'Penang', 'Johor']
+
+  const isInternalInstallerRegion = (state: string | undefined): boolean => {
+    if (!state) return false
+    const region = getLocationCategoryFromStateName(state)
+    return INTERNAL_INSTALLER_REGIONS.includes(region)
+  }
+
+  // Compute region change warning for address editing
+  const getRegionChangeWarning = (): string | null => {
+    if (!originalState || !addressFormData.shippingState) return null
+    if (originalState === addressFormData.shippingState) return null
+
+    const originalCategory = getLocationCategoryFromStateName(originalState)
+    const newCategory = getLocationCategoryFromStateName(addressFormData.shippingState)
+
+    if (originalCategory === newCategory) return null
+
+    return `Changing from "${originalCategory}" to "${newCategory}" will affect trainer/installer availability.`
+  }
 
   // Log when modal opens with currentBooking data
   useEffect(() => {
@@ -222,6 +305,7 @@ export default function DatePickerModal({
       setSelectedSlot(null)
       setSelectedTrainerEmail('')
       setSelectedInstallerEmail('')
+      setSavedAddressDisplay(null) // Reset saved address display when modal opens
 
       // Fetch trainers/installers list for internal users
       if (isInternalUser) {
@@ -271,6 +355,252 @@ export default function DatePickerModal({
     }
   }
 
+  // Address editing handlers (internal users only)
+  const handleStartEditAddress = async () => {
+    // Fetch current address from Salesforce
+    try {
+      const response = await fetch(`/api/salesforce/merchant/${merchantId}`)
+      const data = await response.json()
+      if (data.success && data.onboardingTrainerData?.trainers?.[0]) {
+        const trainer = data.onboardingTrainerData.trainers[0]
+        setAddressFormData({
+          shippingStreet: trainer.shippingStreet || '',
+          shippingCity: trainer.shippingCity || '',
+          shippingState: trainer.shippingState || '',
+          shippingZipPostalCode: trainer.shippingZipPostalCode || '',
+          shippingCountry: trainer.shippingCountry || ''
+        })
+        setOriginalState(trainer.shippingState || '')
+
+        // Store original full address for notification
+        const fullAddr = [
+          trainer.shippingStreet,
+          trainer.shippingCity,
+          trainer.shippingState,
+          trainer.shippingZipPostalCode,
+          trainer.shippingCountry
+        ].filter(Boolean).join(', ')
+        setOriginalFullAddress(fullAddr)
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error)
+    }
+    setAddressError('')
+    setAddressSuccess('')
+    setIsEditingAddress(true)
+  }
+
+  const handleCancelEditAddress = () => {
+    setIsEditingAddress(false)
+    setAddressError('')
+    setAddressSuccess('')
+  }
+
+  const handleSaveAddress = async () => {
+    // Check if region changed AND other booking exists
+    const oldRegion = getLocationCategoryFromStateName(originalState)
+    const newRegion = getLocationCategoryFromStateName(addressFormData.shippingState)
+
+    // Check if installer type changed (for installation bookings)
+    const wasInternal = isInternalInstallerRegion(originalState)
+    const nowInternal = isInternalInstallerRegion(addressFormData.shippingState)
+    const installerTypeChanged = bookingType === 'installation' && wasInternal !== nowInternal
+
+    // Determine current booking date for installation
+    const currentInstallationDate = bookingType === 'installation' ? installationDate : null
+
+    // Priority 1: Installer type change for CURRENT installation booking
+    if (installerTypeChanged && currentInstallationDate && currentBookingEventId) {
+      const installerTypeChange = wasInternal ? 'internal-to-external' : 'external-to-internal'
+      setPendingAddressChange({
+        formData: { ...addressFormData },
+        oldRegion,
+        newRegion,
+        affectedBookingType: 'installation',
+        affectedBookingDate: currentInstallationDate,
+        affectedBookingAssignee: currentBookingAssigneeName || '',
+        installerTypeChange,
+        clearCurrentInstallation: true
+      })
+      setShowRegionChangeConfirm(true)
+      return
+    }
+
+    // Priority 2: Region change affects OTHER booking
+    if (oldRegion !== newRegion && otherBookingDate) {
+      // Show confirmation dialog instead of saving immediately
+      setPendingAddressChange({
+        formData: { ...addressFormData },
+        oldRegion,
+        newRegion,
+        affectedBookingType: otherBookingType || '',
+        affectedBookingDate: otherBookingDate,
+        affectedBookingAssignee: otherBookingAssignee || ''
+      })
+      setShowRegionChangeConfirm(true)
+      return
+    }
+
+    // No significant change - save normally
+    await saveAddressToSalesforce(addressFormData, false, false)
+  }
+
+  // Handler for confirming region change (clears other booking or current installation)
+  const handleConfirmRegionChange = async () => {
+    if (!pendingAddressChange) return
+
+    if (pendingAddressChange.clearCurrentInstallation) {
+      // Clear CURRENT installation booking (installer type changed)
+      await saveAddressToSalesforce(
+        pendingAddressChange.formData,
+        false, // Don't clear other booking
+        true,  // Clear current installation
+        pendingAddressChange.installerTypeChange
+      )
+    } else {
+      // Clear OTHER booking (region change affects other booking type)
+      await saveAddressToSalesforce(pendingAddressChange.formData, true, false)
+    }
+
+    setShowRegionChangeConfirm(false)
+    setPendingAddressChange(null)
+  }
+
+  // Actual save logic
+  const saveAddressToSalesforce = async (
+    formData: typeof addressFormData,
+    clearOtherBooking: boolean,
+    clearCurrentInstallation: boolean = false,
+    installerTypeChange?: 'internal-to-external' | 'external-to-internal'
+  ) => {
+    setSavingAddress(true)
+    setAddressError('')
+    setAddressSuccess('')
+
+    try {
+      // Build the new full address
+      const newFullAddress = [
+        formData.shippingStreet,
+        formData.shippingCity,
+        formData.shippingState,
+        formData.shippingZipPostalCode,
+        formData.shippingCountry
+      ].filter(Boolean).join(', ')
+
+      // Build updates object
+      const updates: any = { ...formData }
+
+      // If clearing other booking, add the flag
+      if (clearOtherBooking && otherBookingType) {
+        if (otherBookingType === 'installation') {
+          updates.clearInstallation = true
+        } else {
+          updates.clearTraining = true
+        }
+      }
+
+      // If clearing current installation (installer type changed)
+      if (clearCurrentInstallation) {
+        updates.clearInstallation = true
+
+        // If switching from external (Surftek) to internal, notify manager
+        if (installerTypeChange === 'external-to-internal') {
+          updates.notifySurftekCancel = {
+            merchantName: merchantName,
+            merchantId: merchantId
+            // Note: Surftek case number would need to be passed from parent
+          }
+        }
+      }
+
+      // If current booking exists AND we're NOT clearing it, add notification data
+      // (Only notify if keeping the booking but updating address)
+      const currentBookingDate = bookingType === 'installation' ? installationDate : trainingDate
+      const shouldNotifyCurrentBooking = currentBookingEventId &&
+        currentBookingAssigneeEmail &&
+        currentBookingDate &&
+        !clearCurrentInstallation // Don't notify if we're clearing the booking
+
+      if (shouldNotifyCurrentBooking) {
+        updates.notifyAddressChange = {
+          eventId: currentBookingEventId,
+          assigneeEmail: currentBookingAssigneeEmail,
+          assigneeName: currentBookingAssigneeName || '',
+          bookingType: bookingType,
+          bookingDate: currentBookingDate,
+          oldAddress: originalFullAddress,
+          newAddress: newFullAddress,
+          merchantName: merchantName
+        }
+      }
+
+      const response = await fetch('/api/salesforce/update-trainer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trainerId: merchantId,
+          updates
+        })
+      })
+      const result = await response.json()
+
+      if (result.success) {
+        // Update effective state for UI refresh (enables installer type switch)
+        setEffectiveMerchantState(formData.shippingState)
+
+        // Check if installer type changed (only relevant for installation bookings)
+        const wasInternal = isInternalInstallerRegion(originalState)
+        const nowInternal = isInternalInstallerRegion(formData.shippingState)
+        const installerTypeChanged = bookingType === 'installation' && wasInternal !== nowInternal
+
+        // Build success message based on what was done
+        let successMsg = 'Address updated!'
+        if (clearOtherBooking) {
+          const clearedType = otherBookingType === 'installation' ? 'Installation' : 'Training'
+          successMsg += ` ${clearedType} booking has been cleared. Please rebook.`
+        } else if (installerTypeChanged) {
+          if (nowInternal) {
+            successMsg += ' Switched to internal installer region. Please select a new booking.'
+          } else {
+            successMsg += ' Switched to external vendor region. Please select a new booking.'
+          }
+        } else {
+          successMsg += ' Refreshing availability...'
+        }
+        setAddressSuccess(successMsg)
+        setIsEditingAddress(false)
+
+        // Save the new address for display (since props won't update immediately)
+        setSavedAddressDisplay({
+          state: formData.shippingState,
+          full: newFullAddress
+        })
+
+        // Notify parent to refresh data
+        if (onAddressUpdated) {
+          onAddressUpdated()
+        }
+
+        // Reset selections since availability will change
+        setSelectedDate(null)
+        setSelectedSlot(null)
+        setAvailability([])
+
+        // Re-fetch availability with new address (this will update isExternalVendor based on API response)
+        setTimeout(() => {
+          fetchAvailability()
+          setAddressSuccess('')
+        }, 1000)
+      } else {
+        setAddressError(result.error || 'Failed to update address')
+      }
+    } catch (error) {
+      setAddressError(`Error updating address: ${error}`)
+    } finally {
+      setSavingAddress(false)
+    }
+  }
+
   const fetchAvailability = async () => {
     console.log('🔄 fetchAvailability called with isInternalUser:', isInternalUser)
 
@@ -293,16 +623,32 @@ export default function DatePickerModal({
       // Use different endpoints for installation vs training bookings
       if (bookingType === 'installation') {
         // For installations, use the installer availability endpoint
-        // Installation bookings can be scheduled up to 14 days in advance
-        const today = new Date()
-        const endDate = new Date()
-        endDate.setDate(endDate.getDate() + 14)
+        // Installation bookings can be scheduled up to 14 WORKING days in advance
+        // (weekends don't count toward the 14-day limit, but can still be booked by internal users)
+        const today = getSingaporeNow()
+        const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+        // Calculate end date: 14 working days from today
+        let endDate = new Date(today)
+        let workingDaysAdded = 0
+        const startDayOfWeek = today.getDay()
+        if (startDayOfWeek >= 1 && startDayOfWeek <= 5) {
+          workingDaysAdded = 1 // First day counts if it's a working day
+        }
+        while (workingDaysAdded < 14) {
+          endDate.setDate(endDate.getDate() + 1)
+          const dayOfWeek = endDate.getDay()
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            workingDaysAdded++
+          }
+        }
+        const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
 
         // Use merchantId directly (it's the Salesforce record ID)
         const installParams = new URLSearchParams({
           merchantId: merchantId,
-          startDate: today.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0]
+          startDate: startDateStr,
+          endDate: endDateStr
         })
 
         // Internal users can see weekends
@@ -392,9 +738,11 @@ export default function DatePickerModal({
 
         // Build query params
         const params = new URLSearchParams()
-        if (filterByLocation && merchantState) {
-          params.append('merchantState', merchantState)
-          console.log('🌍 Fetching availability WITH location filter:', merchantState)
+        // Use effectiveMerchantState for location filtering (can be updated after address change)
+        const stateForFiltering = effectiveMerchantState || merchantState
+        if (filterByLocation && stateForFiltering) {
+          params.append('merchantState', stateForFiltering)
+          console.log('🌍 Fetching availability WITH location filter:', stateForFiltering)
         } else {
           console.log('🌍 Fetching availability WITHOUT location filter')
         }
@@ -1269,7 +1617,7 @@ export default function DatePickerModal({
           )}
           
           {/* Show warning for missing state (only for onsite training) */}
-          {bookingType === 'training' && serviceType === 'onsite' && !merchantState && (
+          {bookingType === 'training' && serviceType === 'onsite' && !merchantState && !isInternalUser && (
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="text-base font-medium text-amber-800">
                 ⚠️ {t('noStoreState')}
@@ -1279,7 +1627,149 @@ export default function DatePickerModal({
                 </div>
               </div>
             )}
-          
+
+          {/* Internal User: Address Editing Section */}
+          {isInternalUser && (
+            <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-gray-700">
+                  {t('storeAddress') || 'Store Address'}
+                </div>
+                {!isEditingAddress && (
+                  <button
+                    onClick={handleStartEditAddress}
+                    className="text-[#ff630f] hover:text-[#fe5b25] text-sm font-medium flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    Edit
+                  </button>
+                )}
+              </div>
+
+              {!isEditingAddress ? (
+                <div className="text-sm text-gray-600">
+                  {/* Use saved address if available, otherwise fall back to props */}
+                  {savedAddressDisplay ? (
+                    <>
+                      {savedAddressDisplay.state || 'No address set'}
+                      {savedAddressDisplay.full && savedAddressDisplay.full !== savedAddressDisplay.state && (
+                        <span className="text-gray-400 ml-1">({savedAddressDisplay.full})</span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {merchantState ? `${merchantState}` : 'No address set'}
+                      {merchantAddress && merchantAddress !== merchantState && (
+                        <span className="text-gray-400 ml-1">({merchantAddress})</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Street</label>
+                    <input
+                      type="text"
+                      value={addressFormData.shippingStreet}
+                      onChange={(e) => setAddressFormData({ ...addressFormData, shippingStreet: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent"
+                      placeholder="Enter street address"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
+                      <input
+                        type="text"
+                        value={addressFormData.shippingCity}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, shippingCity: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent"
+                        placeholder="City"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">State</label>
+                      <select
+                        value={addressFormData.shippingState}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, shippingState: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent bg-white"
+                      >
+                        <option value="">Select state</option>
+                        {MALAYSIAN_STATE_OPTIONS.map((state) => (
+                          <option key={state} value={state}>{state}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Postal Code</label>
+                      <input
+                        type="text"
+                        value={addressFormData.shippingZipPostalCode}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, shippingZipPostalCode: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent"
+                        placeholder="Postal code"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Country</label>
+                      <input
+                        type="text"
+                        value={addressFormData.shippingCountry}
+                        onChange={(e) => setAddressFormData({ ...addressFormData, shippingCountry: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff630f] focus:border-transparent"
+                        placeholder="Country"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Region change warning */}
+                  {getRegionChangeWarning() && (
+                    <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded-lg flex items-start gap-2">
+                      <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span>{getRegionChangeWarning()}</span>
+                    </div>
+                  )}
+
+                  {addressError && (
+                    <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                      {addressError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveAddress}
+                      disabled={savingAddress}
+                      className="px-3 py-1.5 bg-[#ff630f] hover:bg-[#fe5b25] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {savingAddress ? 'Saving...' : 'Save & Refresh'}
+                    </button>
+                    <button
+                      onClick={handleCancelEditAddress}
+                      disabled={savingAddress}
+                      className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {addressSuccess && (
+                <div className="mt-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+                  {addressSuccess}
+                </div>
+              )}
+            </div>
+          )}
+
             {/* Internal User: Trainer Selection Dropdown - shown BEFORE language selection */}
             {bookingType === 'training' && isInternalUser && availableTrainersList.length > 0 && (
               <div className="mt-4">
@@ -1668,6 +2158,88 @@ export default function DatePickerModal({
       </div>
 
       {/* Booking Confirmation Popup */}
+      {/* Region Change Confirmation Dialog */}
+      {showRegionChangeConfirm && pendingAddressChange && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8">
+            {/* Warning Icon */}
+            <div className="flex items-center gap-3 text-amber-600 mb-4">
+              <AlertTriangle className="w-6 h-6" />
+              <h3 className="font-semibold text-lg">
+                {pendingAddressChange.installerTypeChange === 'internal-to-external'
+                  ? 'External Vendor Required'
+                  : pendingAddressChange.installerTypeChange === 'external-to-internal'
+                    ? 'Internal Installer Available'
+                    : 'Region Change Warning'}
+              </h3>
+            </div>
+
+            {pendingAddressChange.installerTypeChange ? (
+              // Installer type change message
+              <>
+                <p className="text-gray-700 mb-4">
+                  Changing to &quot;{pendingAddressChange.formData.shippingState}&quot;
+                  {pendingAddressChange.installerTypeChange === 'internal-to-external'
+                    ? ' requires an external vendor (Surftek) for installation.'
+                    : ' allows booking with an internal installer.'}
+                </p>
+
+                {pendingAddressChange.affectedBookingDate && (
+                  <p className="text-gray-700 mb-4">
+                    Your current installation is scheduled for <strong>{formatDate(pendingAddressChange.affectedBookingDate)}</strong>
+                    {pendingAddressChange.affectedBookingAssignee && (
+                      <> with <strong>{pendingAddressChange.affectedBookingAssignee}</strong></>
+                    )}.
+                  </p>
+                )}
+
+                <p className="text-amber-600 font-medium mb-6">
+                  {pendingAddressChange.installerTypeChange === 'external-to-internal'
+                    ? 'This booking will be cleared. Your onboarding manager will be notified to cancel the Surftek request.'
+                    : 'This booking will be cleared and you\'ll need to request installation through the external vendor process.'}
+                </p>
+              </>
+            ) : (
+              // Regular region change message
+              <>
+                <p className="text-gray-700 mb-4">
+                  Changing to &quot;{pendingAddressChange.formData.shippingState}&quot; will move from
+                  &quot;{pendingAddressChange.oldRegion}&quot; to &quot;{pendingAddressChange.newRegion}&quot;.
+                </p>
+
+                <p className="text-gray-700 mb-4">
+                  <strong>{pendingAddressChange.affectedBookingType === 'installation' ? 'Installation' : 'Training'}</strong> is
+                  currently scheduled for <strong>{formatDate(pendingAddressChange.affectedBookingDate)}</strong>
+                  {pendingAddressChange.affectedBookingAssignee && (
+                    <> with <strong>{pendingAddressChange.affectedBookingAssignee}</strong></>
+                  )}.
+                </p>
+
+                <p className="text-amber-600 font-medium mb-6">
+                  This booking will be cleared and you&apos;ll need to rebook.
+                </p>
+              </>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setShowRegionChangeConfirm(false); setPendingAddressChange(null) }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRegionChange}
+                disabled={savingAddress}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                {savingAddress ? 'Saving...' : 'Confirm & Clear Booking'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showConfirmation && bookingDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8 animate-fade-in">

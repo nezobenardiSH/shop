@@ -1,6 +1,7 @@
 import { larkService } from './lark'
 import { loadTrainersConfig } from './config-loader'
 import { getTimeSlots } from './time-slot-config'
+import { getDateStringInSingapore, getSingaporeDateParts } from './date-utils'
 
 /**
  * Create a date in Singapore timezone
@@ -208,17 +209,15 @@ export async function getCombinedAvailability(
 
   const current = new Date(startDate)
   while (current <= endDate) {
-    const dayOfWeek = current.getDay()
+    // Get the date string and date parts in Singapore timezone
+    const dateStr = getDateStringInSingapore(current)
+    // Create a date object at midnight Singapore time to get correct day of week
+    const sgDate = new Date(`${dateStr}T12:00:00+08:00`)
+    const dayOfWeek = sgDate.getDay()
 
     // Only weekdays (Monday=1 to Friday=5) unless includeWeekends is true
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
     if (!isWeekend || includeWeekends) {
-      // Extract date components directly from the Date object (which is already in Singapore timezone)
-      // Don't use toISOString() as it converts to UTC and may shift the date
-      const year = current.getFullYear()
-      const month = String(current.getMonth() + 1).padStart(2, '0')
-      const day = String(current.getDate()).padStart(2, '0')
-      const dateStr = `${year}-${month}-${day}`
 
       // Get time slots for this specific date (supports date-based slot changes)
       const TIME_SLOTS = getTimeSlots(current)
@@ -618,15 +617,15 @@ export async function getSingleTrainerAvailability(
 
   const current = new Date(startDate)
   while (current <= endDate) {
-    const dayOfWeek = current.getDay()
+    // Get the date string and date parts in Singapore timezone
+    const dateStr = getDateStringInSingapore(current)
+    // Create a date object at noon Singapore time to get correct day of week
+    const sgDate = new Date(`${dateStr}T12:00:00+08:00`)
+    const dayOfWeek = sgDate.getDay()
 
     // Only weekdays (Monday=1 to Friday=5) unless includeWeekends is true
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
     if (!isWeekend || includeWeekends) {
-      const year = current.getFullYear()
-      const month = String(current.getMonth() + 1).padStart(2, '0')
-      const day = String(current.getDate()).padStart(2, '0')
-      const dateStr = `${year}-${month}-${day}`
 
       // Get time slots for this specific date (supports date-based slot changes)
       const TIME_SLOTS = getTimeSlots(current)

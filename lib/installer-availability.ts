@@ -13,6 +13,7 @@ import {
 } from './salesforce-tasks'
 import { getDeviceType, OrderItem } from './device-type-detector'
 import { createTicketForMerchant, MerchantDetails } from './surftek-api'
+import { getDateStringInSingapore, createSingaporeMidnight, createSingaporeEndOfDay } from './date-utils'
 
 interface TimeSlot {
   start: string
@@ -262,21 +263,21 @@ export async function getInternalInstallersAvailability(
   const combinedAvailability: InstallationAvailability[] = []
   const TIME_SLOTS = installersConfig.settings.defaultTimeSlots
 
-  // Parse dates directly as strings to avoid timezone conversion issues
-  const start = new Date(startDate)
-  const end = new Date(endDate)
+  // Use Singapore timezone for date calculations
+  const start = createSingaporeMidnight(startDate)
+  const end = createSingaporeEndOfDay(endDate)
   const current = new Date(start)
 
   while (current <= end) {
-    const dayOfWeek = current.getUTCDay()
+    // Get the date string and day of week in Singapore timezone
+    const dateStr = getDateStringInSingapore(current)
+    // Create a date object at noon Singapore time to get correct day of week
+    const sgDate = new Date(`${dateStr}T12:00:00+08:00`)
+    const dayOfWeek = sgDate.getDay()
 
     // Only weekdays (Monday=1 to Friday=5) unless includeWeekends is true
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
     if (!isWeekend || includeWeekends) {
-      const year = current.getUTCFullYear()
-      const month = String(current.getUTCMonth() + 1).padStart(2, '0')
-      const day = String(current.getUTCDate()).padStart(2, '0')
-      const dateStr = `${year}-${month}-${day}`
       
       const slots = TIME_SLOTS.map((timeSlot: any) => {
         const slotStart = new Date(`${dateStr}T${timeSlot.start}:00+08:00`)
@@ -453,7 +454,7 @@ export async function bookInternalInstallation(
       console.error(`❌ SERVER-SIDE VALIDATION FAILED: ${installer.name} is not available`)
       console.error(`   Requested slot: ${timeSlot.start} - ${timeSlot.end}`)
       console.error(`   Conflicting busy period: ${busyStartSGT} - ${busyEndSGT}`)
-      console.error(`   Source: ${conflictingBusy.source || 'calendar event'}`)
+      console.error(`   Source: calendar event`)
 
       throw new Error(`${installer.name} is not available for ${timeSlot.label || `${timeSlot.start} - ${timeSlot.end}`}. They have a calendar conflict during this time.`)
     }

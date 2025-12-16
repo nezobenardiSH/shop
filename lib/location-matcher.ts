@@ -58,6 +58,45 @@ const KLANG_VALLEY_STATES = ['Kuala Lumpur', 'Selangor', 'Putrajaya']
 // States that are considered East Malaysia
 const EAST_MALAYSIA_STATES = ['Sabah', 'Sarawak', 'Labuan']
 
+// Malaysian states for dropdown selection (matching Salesforce picklist values)
+export const MALAYSIAN_STATE_OPTIONS = [
+  'Johor',
+  'Kedah',
+  'Kelantan',
+  'Kuala Lumpur',
+  'Labuan',
+  'Melaka',
+  'Negeri Sembilan',
+  'Pahang',
+  'Penang',
+  'Perak',
+  'Perlis',
+  'Putrajaya',
+  'Sabah',
+  'Sarawak',
+  'Selangor',
+  'Terengganu'
+]
+
+/**
+ * Get location category from state name (for display/warning purposes)
+ * Used to show warnings when merchant state changes to a different region
+ * @param state - State name from dropdown (e.g., "Selangor", "Penang")
+ * @returns Location category string
+ */
+export function getLocationCategoryFromStateName(state: string | null | undefined): string {
+  if (!state) return 'Unknown'
+
+  const klangValleyStates = ['Kuala Lumpur', 'Selangor', 'Putrajaya']
+  const penangStates = ['Penang']
+  const johorStates = ['Johor']
+
+  if (klangValleyStates.includes(state)) return 'Within Klang Valley'
+  if (penangStates.includes(state)) return 'Penang'
+  if (johorStates.includes(state)) return 'Johor'
+  return 'Outside Klang Valley'
+}
+
 /**
  * Extract state/location from address string
  * @param address - Full address string

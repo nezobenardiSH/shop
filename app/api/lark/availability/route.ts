@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCombinedAvailability, getSingleTrainerAvailability } from '@/lib/trainer-availability'
 import { loadTrainersConfig } from '@/lib/config-loader'
+import {
+  getSingaporeTodayString,
+  addWorkingDaysInSingapore,
+  createSingaporeMidnight,
+  createSingaporeEndOfDay
+} from '@/lib/date-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,30 +21,34 @@ export async function GET(request: NextRequest) {
     const startDateParam = searchParams.get('startDate') // Optional: custom start date (YYYY-MM-DD)
     const endDateParam = searchParams.get('endDate') // Optional: custom end date (YYYY-MM-DD)
 
-    // Start from midnight of current day in Singapore timezone (or custom start date)
-    const now = new Date()
-    const singaporeNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}))
+    // Get today's date in Singapore timezone (YYYY-MM-DD format)
+    const todayStr = getSingaporeTodayString()
+    console.log('📅 Today in Singapore timezone:', todayStr)
 
-    let startDate: Date
+    // Determine start date string
+    let startDateStr: string
     if (startDateParam) {
-      // Use custom start date if provided
-      startDate = new Date(`${startDateParam}T00:00:00+08:00`)
-      console.log('📅 Using custom start date:', startDateParam)
+      startDateStr = startDateParam
+      console.log('📅 Using custom start date:', startDateStr)
     } else {
-      startDate = new Date(`${singaporeNow.getFullYear()}-${String(singaporeNow.getMonth() + 1).padStart(2, '0')}-${String(singaporeNow.getDate()).padStart(2, '0')}T00:00:00+08:00`)
+      startDateStr = todayStr
     }
 
-    let endDate: Date
+    // Determine end date string (14 working days from start)
+    let endDateStr: string
     if (endDateParam) {
-      // Use custom end date if provided
-      endDate = new Date(`${endDateParam}T23:59:59+08:00`)
-      console.log('📅 Using custom end date:', endDateParam)
+      endDateStr = endDateParam
+      console.log('📅 Using custom end date:', endDateStr)
     } else {
-      // Default: 14 days from start date
-      const endDateSingapore = new Date(startDate)
-      endDateSingapore.setDate(endDateSingapore.getDate() + 14)
-      endDate = new Date(`${endDateSingapore.getFullYear()}-${String(endDateSingapore.getMonth() + 1).padStart(2, '0')}-${String(endDateSingapore.getDate()).padStart(2, '0')}T23:59:59+08:00`)
+      // Default: 14 working days from start date (excludes weekends from count)
+      // This means the actual calendar range may be ~20 days to include 14 working days
+      endDateStr = addWorkingDaysInSingapore(startDateStr, 14)
+      console.log('📅 Calculated end date (14 working days):', endDateStr)
     }
+
+    // Create Date objects for the range (used by availability functions)
+    const startDate = createSingaporeMidnight(startDateStr)
+    const endDate = createSingaporeEndOfDay(endDateStr)
 
     console.log('📅 Availability date range:', startDate.toISOString(), 'to', endDate.toISOString())
 
