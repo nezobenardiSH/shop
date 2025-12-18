@@ -3,6 +3,7 @@ import { larkService } from '@/lib/lark'
 import { getSalesforceConnection } from '@/lib/salesforce'
 import { deleteSalesforceEvent } from '@/lib/salesforce-events'
 import { createSalesforceTask, getMsmSalesforceUserId, getTodayDateString, getSalesforceRecordUrl } from '@/lib/salesforce-tasks'
+import { deleteIntercomTicket } from '@/lib/intercom'
 import { prisma } from '@/lib/prisma'
 import { TaskType } from '@prisma/client'
 import fs from 'fs/promises'
@@ -235,7 +236,7 @@ export async function DELETE(request: NextRequest) {
       // Clear fields from Onboarding_Portal__c
       try {
         const portalQuery = `
-          SELECT Id
+          SELECT Id, Intercom_Installation_Ticket_ID__c
           FROM Onboarding_Portal__c
           WHERE Onboarding_Trainer_Record__c = '${merchantId}'
           LIMIT 1
@@ -243,7 +244,9 @@ export async function DELETE(request: NextRequest) {
         const portalResult = await conn.query(portalQuery)
 
         if (portalResult.totalSize > 0) {
-          const portalId = portalResult.records[0].Id
+          const portalRecord = portalResult.records[0] as any
+          const portalId = portalRecord.Id
+          const intercomTicketId = portalRecord.Intercom_Installation_Ticket_ID__c
           const portalUpdateData: any = {
             Id: portalId
           }
@@ -265,6 +268,24 @@ export async function DELETE(request: NextRequest) {
             portalUpdateData.Installation_Salesforce_Event_ID__c = null
             // Save cancellation reason
             portalUpdateData.Installation_Cancellation_Reason__c = cancellationReason
+
+            // Close Intercom ticket if exists (for internal installations)
+            if (!isExternal && intercomTicketId) {
+              try {
+                const ticketClosed = await deleteIntercomTicket(intercomTicketId)
+                if (ticketClosed) {
+                  console.log('[Cancel] Intercom ticket closed:', intercomTicketId)
+                } else {
+                  console.log('[Cancel] Failed to close Intercom ticket:', intercomTicketId)
+                }
+              } catch (intercomError) {
+                console.error('[Cancel] Error closing Intercom ticket:', intercomError)
+                // Non-blocking - continue with cancellation
+              }
+              // Clear Intercom fields regardless of API success
+              portalUpdateData.Intercom_Installation_Ticket_ID__c = null
+              portalUpdateData.Intercom_Installation_Ticket_URL__c = null
+            }
 
             // For external vendor, also clear Surftek fields
             if (isExternal) {

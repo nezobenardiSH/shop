@@ -14,6 +14,7 @@ import {
 import { getDeviceType, OrderItem } from './device-type-detector'
 import { createTicketForMerchant, MerchantDetails } from './surftek-api'
 import { getDateStringInSingapore, createSingaporeMidnight, createSingaporeEndOfDay } from './date-utils'
+import { createL2OnsiteSupportTicket, updateL2OnsiteSupportTicket, L2OnsiteSupportMerchantData } from './intercom'
 
 interface TimeSlot {
   start: string
@@ -513,6 +514,7 @@ export async function bookInternalInstallation(
       // Get merchant/trainer record with all required fields including emails and hardware order
       const trainerQuery = `
         SELECT Id, Name, Account_Name__c, Hardware_Order__c, Opportunity_Name__c,
+               BO_Account_Name__c,
                Shipping_Street__c, Shipping_City__c, Shipping_State__c, Shipping_Zip_Postal_Code__c, Shipping_Country__c,
                Operation_Manager_Contact__r.Name, Operation_Manager_Contact__r.Phone, Operation_Manager_Contact__r.Email,
                Business_Owner_Contact__r.Name, Business_Owner_Contact__r.Phone, Business_Owner_Contact__r.Email,
@@ -561,6 +563,7 @@ export async function bookInternalInstallation(
             .map((part: string) => part.trim().replace(/,+$/, '')) // Remove trailing commas and trim
             .filter(Boolean) // Remove empty strings after cleanup
             .join(', '),
+          shippingStreet: trainer.Shipping_Street__c,
           shippingCity: trainer.Shipping_City__c,
           shippingState: trainer.Shipping_State__c,
           shippingCountry: trainer.Shipping_Country__c,
@@ -581,7 +584,8 @@ export async function bookInternalInstallation(
           msmEmail: trainer.MSM_Name__r?.Email || null,
           msmPhone: trainer.MSM_Name__r?.Phone || 'N/A',
           onboardingSummary: trainer.Onboarding_Summary__c || 'N/A',
-          accountId: trainer.Account_Name__c
+          accountId: trainer.Account_Name__c,
+          boAccountName: trainer.BO_Account_Name__c || trainer.Name || ''
         }
 
         console.log('✅ Processed merchantDetails:')
@@ -600,11 +604,6 @@ export async function bookInternalInstallation(
         if (trainer.Hardware_Order__c) {
           hardwareOrderId = trainer.Hardware_Order__c
           console.log('📦 Using Hardware_Order__c:', hardwareOrderId)
-        }
-        // Hardcoded fallback for specific merchant (activate175)
-        else if (trainer.Id === 'a0yQ9000003aAvBIAU') {
-          hardwareOrderId = '00050419'
-          console.log('📦 Using hardcoded hardware order for activate175:', hardwareOrderId)
         }
         // If not, try to get from Opportunity
         else if (trainer.Opportunity_Name__c) {
@@ -1200,7 +1199,105 @@ export async function bookInternalInstallation(
   } else {
     console.log('⚠️ No Salesforce connection available')
   }
-  
+
+  // Create or Update Intercom L2 Onsite Support ticket for internal installer bookings
+  try {
+    const installationDateFormatted = `${date} ${timeSlot.start}-${timeSlot.end}`
+    const isRescheduling = !!existingEventId
+
+    // Check if there's an existing Intercom ticket (for rescheduling)
+    let existingIntercomTicketId: string | null = null
+    if (isRescheduling && conn) {
+      try {
+        const portalQuery = `
+          SELECT Id, Intercom_Installation_Ticket_ID__c FROM Onboarding_Portal__c
+          WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+          LIMIT 1
+        `
+        const portalResult = await conn.query(portalQuery)
+        if (portalResult.totalSize > 0) {
+          existingIntercomTicketId = (portalResult.records[0] as any).Intercom_Installation_Ticket_ID__c
+          console.log('📋 Found existing Intercom ticket:', existingIntercomTicketId || 'None')
+        }
+      } catch (queryError) {
+        console.error('⚠️ Failed to query existing Intercom ticket ID:', queryError)
+      }
+    }
+
+    let intercomResult: { ticketId: string; ticketUrl: string } | null = null
+
+    if (isRescheduling && existingIntercomTicketId) {
+      // UPDATE existing ticket
+      console.log('🔄 Updating existing Intercom ticket for rescheduling...')
+      intercomResult = await updateL2OnsiteSupportTicket(
+        existingIntercomTicketId,
+        installationDateFormatted,
+        assignedInstaller,
+        hardwareList
+      )
+    } else {
+      // CREATE new ticket
+      const intercomData: L2OnsiteSupportMerchantData = {
+        boAccountName: merchantDetails.boAccountName || merchantName,
+        merchantId: merchantId,
+        shippingCountry: merchantDetails.shippingCountry || 'Malaysia',
+        shippingState: merchantDetails.shippingState || '',
+        shippingStreet: merchantDetails.shippingStreet || '',
+        shippingCity: merchantDetails.shippingCity || '',
+        picName: merchantDetails.primaryContactName || '',
+        picEmail: merchantDetails.primaryContactEmail || '',
+        picContactNumber: merchantDetails.primaryContactPhone || '',
+        msmName: merchantDetails.msmName || '',
+        installationDate: installationDateFormatted,
+        hardwareItems: hardwareList,
+        installerName: assignedInstaller
+      }
+
+      console.log('🎫 Creating Intercom L2 Onsite Support ticket...')
+      intercomResult = await createL2OnsiteSupportTicket(intercomData)
+
+      // Store new ticket ID in Onboarding_Portal__c
+      if (intercomResult && conn) {
+        try {
+          const portalQuery = `
+            SELECT Id FROM Onboarding_Portal__c
+            WHERE Onboarding_Trainer_Record__c = '${merchantId}'
+            LIMIT 1
+          `
+          const portalResult = await conn.query(portalQuery)
+
+          if (portalResult.totalSize > 0) {
+            const portalId = portalResult.records[0].Id
+            await conn.sobject('Onboarding_Portal__c').update({
+              Id: portalId,
+              Intercom_Installation_Ticket_ID__c: intercomResult.ticketId,
+              Intercom_Installation_Ticket_URL__c: intercomResult.ticketUrl
+            })
+            console.log('✅ Intercom ticket ID and URL stored in Onboarding_Portal__c')
+          }
+
+          // Update Onboarding_Trainer__c with the same Intercom ticket URL
+          await conn.sobject('Onboarding_Trainer__c').update({
+            Id: merchantId,
+            Installation_ST_Ticket_No2__c: intercomResult.ticketUrl
+          })
+          console.log('✅ Intercom ticket URL stored in Onboarding_Trainer__c.Installation_ST_Ticket_No2__c')
+        } catch (intercomSaveError) {
+          console.error('⚠️ Failed to save Intercom ticket to Salesforce:', intercomSaveError)
+        }
+      }
+    }
+
+    if (intercomResult) {
+      console.log(`✅ Intercom ticket ${isRescheduling ? 'updated' : 'created'}:`, intercomResult.ticketId)
+    } else {
+      console.log('⚠️ Intercom ticket operation skipped or failed')
+    }
+  } catch (intercomError) {
+    console.error('❌ Intercom ticket operation failed:', intercomError)
+    // Don't fail the booking if Intercom fails
+  }
+
   // Send notification to the assigned installer
   try {
     await sendBookingNotification({
