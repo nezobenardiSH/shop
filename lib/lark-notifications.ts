@@ -14,6 +14,7 @@ interface BookingNotificationData {
   contactPerson?: string
   contactPhone?: string
   onboardingServicesBought?: string  // Onboarding Services Bought (to show onsite/remote)
+  intercomTicketUrl?: string  // Intercom ticket URL for installation bookings
 }
 
 /**
@@ -156,6 +157,10 @@ function formatBookingMessage(data: BookingNotificationData): string {
 
   if (data.contactPhone) {
     message += `Phone: ${data.contactPhone}\n`
+  }
+
+  if (data.intercomTicketUrl) {
+    message += `\nIntercom Ticket: ${data.intercomTicketUrl}\n`
   }
 
   message += `\nYou have been assigned to this ${data.bookingType.toLowerCase()} session.`

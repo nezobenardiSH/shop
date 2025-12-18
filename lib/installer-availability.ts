@@ -1201,6 +1201,8 @@ export async function bookInternalInstallation(
   }
 
   // Create or Update Intercom L2 Onsite Support ticket for internal installer bookings
+  let intercomResult: { ticketId: string; ticketUrl: string } | null = null
+
   try {
     const installationDateFormatted = `${date} ${timeSlot.start}-${timeSlot.end}`
     const isRescheduling = !!existingEventId
@@ -1223,8 +1225,6 @@ export async function bookInternalInstallation(
         console.error('⚠️ Failed to query existing Intercom ticket ID:', queryError)
       }
     }
-
-    let intercomResult: { ticketId: string; ticketUrl: string } | null = null
 
     if (isRescheduling && existingIntercomTicketId) {
       // UPDATE existing ticket
@@ -1290,6 +1290,23 @@ export async function bookInternalInstallation(
 
     if (intercomResult) {
       console.log(`✅ Intercom ticket ${isRescheduling ? 'updated' : 'created'}:`, intercomResult.ticketId)
+
+      // Update Lark calendar event to include Intercom ticket URL
+      if (eventId && calendarId) {
+        try {
+          const updatedDescription = eventDescription + ` | 🎫 Intercom: ${intercomResult.ticketUrl}`
+          await larkService.updateCalendarEvent(
+            calendarId,
+            eventId,
+            { description: updatedDescription },
+            installer.email
+          )
+          console.log('✅ Lark calendar event updated with Intercom ticket URL')
+        } catch (updateError) {
+          console.error('⚠️ Failed to update Lark event with Intercom URL:', updateError)
+          // Don't fail - the event was already created
+        }
+      }
     } else {
       console.log('⚠️ Intercom ticket operation skipped or failed')
     }
@@ -1310,7 +1327,8 @@ export async function bookInternalInstallation(
       isRescheduling: !!existingEventId,
       assignedPersonName: assignedInstaller,
       assignedPersonEmail: installer.email,
-      location: merchantDetails.address  // Add merchant address to notification
+      location: merchantDetails.address,
+      intercomTicketUrl: intercomResult?.ticketUrl  // Include Intercom ticket URL
     })
     console.log('📧 Notification sent to installer:', installer.email)
   } catch (notificationError) {
