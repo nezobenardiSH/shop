@@ -171,6 +171,7 @@ export interface MerchantDetails {
   onboardingSummary?: string
   preferredDate?: string
   preferredTime?: string
+  boAccountName?: string  // Backoffice Account Name from Salesforce
 }
 
 /**
@@ -197,6 +198,11 @@ export async function mapMerchantToSurftekTicket(
   const MAX_REMARK_LENGTH = 850
   let remarkParts: string[] = []
 
+  // Add BO Account Name at the top for easy reference
+  if (merchant.boAccountName) {
+    remarkParts.push(`BO Account: ${merchant.boAccountName}`)
+  }
+
   if (merchant.hardwareItems && merchant.hardwareItems.length > 0) {
     remarkParts.push(`Hardware:\n${merchant.hardwareItems.map(item => `- ${item}`).join('\n')}`)
   }
@@ -217,18 +223,8 @@ export async function mapMerchantToSurftekTicket(
   const salesforceLink = `Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer__c/${merchant.merchantId}/view`
   remarkParts.push(salesforceLink)
 
-  // Calculate remaining space for onboarding summary
+  // Join all remark parts
   let remarks = remarkParts.join('\n\n')
-
-  if (merchant.onboardingSummary) {
-    const remainingSpace = MAX_REMARK_LENGTH - remarks.length - 25 // 25 for "\n\nOnboarding Summary:\n"
-    if (remainingSpace > 50) { // Only add if we have meaningful space
-      const summary = merchant.onboardingSummary.length > remainingSpace
-        ? merchant.onboardingSummary.substring(0, remainingSpace - 3) + '...'
-        : merchant.onboardingSummary
-      remarks += `\n\nOnboarding Summary:\n${summary}`
-    }
-  }
 
   // Final truncation safety
   if (remarks.length > MAX_REMARK_LENGTH) {

@@ -812,11 +812,11 @@ export async function bookInternalInstallation(
   // Lark calendar popup doesn't render \n newlines, so we use | separators
   let eventDescription = ''
 
-  // Add pilot merchant note
-  eventDescription += `⚠️ Pilot merchant. Intercom ticket creation required`
-
   // Merchant and address
-  eventDescription += ` | 🏪 Merchant: ${merchantDetails.name || merchantName}`
+  eventDescription += `🏪 Merchant: ${merchantDetails.name || merchantName}`
+  if (merchantDetails.boAccountName) {
+    eventDescription += ` | 💼 BO: ${merchantDetails.boAccountName}`
+  }
   if (merchantDetails.address) {
     eventDescription += ` | 📍 Store: ${merchantDetails.address}`
   }
@@ -838,11 +838,6 @@ export async function bookInternalInstallation(
     ? hardwareList.join(', ')
     : 'No hardware items'
   eventDescription += ` | 📦 Hardware: ${hardwareText}`
-
-  // Onboarding summary if available
-  if (merchantDetails.onboardingSummary && merchantDetails.onboardingSummary !== 'N/A') {
-    eventDescription += ` | 📝 Summary: ${merchantDetails.onboardingSummary}`
-  }
 
   // Onboarding Manager - compact format
   let msmInfo = `👔 Manager: ${merchantDetails.msmName || 'N/A'}`
@@ -1540,6 +1535,7 @@ export async function submitExternalInstallationRequest(
     const merchantQuery = `
       SELECT
         Email__c,
+        BO_Account_Name__c,
         Shipping_Street__c,
         Shipping_City__c,
         Shipping_State__c,
@@ -1562,12 +1558,14 @@ export async function submitExternalInstallationRequest(
       const msmName = merchant.MSM_Name__r?.Name
       const msmPhone = merchant.MSM_Name__r?.Phone
       const merchantEmail = merchant.Email__c
+      const boAccountName = merchant.BO_Account_Name__c || merchantName
 
       console.log(`🔍 [SURFTEK-DEBUG] MSM lookup result:`)
       console.log(`   - MSM_Name__r object: ${JSON.stringify(merchant.MSM_Name__r)}`)
       console.log(`   - msmEmail: ${msmEmail || 'NOT FOUND'}`)
       console.log(`   - msmName: ${msmName || 'NOT FOUND'}`)
       console.log(`   - merchantEmail: ${merchantEmail || 'NOT FOUND'}`)
+      console.log(`   - boAccountName: ${boAccountName || 'NOT FOUND'}`)
 
       // Build store address
       const addressParts = [
@@ -1665,9 +1663,9 @@ export async function submitExternalInstallationRequest(
             contactEmail: merchantEmail || undefined,
             msmName: msmName || undefined,
             hardwareItems,
-            onboardingSummary,
             preferredDate,
-            preferredTime
+            preferredTime,
+            boAccountName
           }
 
           // Create ticket on Surftek

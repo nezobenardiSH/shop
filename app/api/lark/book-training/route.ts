@@ -1031,12 +1031,12 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
               portalUpdateData.Training_Date__c = dateTimeValue
               console.log(`📝 Updating Onboarding_Portal__c with Training_Date__c: ${dateTimeValue}`)
 
-              // Update trainer name if we found the User ID
-              if (userId) {
-                portalUpdateData.Trainer_Name__c = userId
-                console.log(`📝 Updating Onboarding_Portal__c with Trainer_Name__c (User ID): ${userId}`)
+              // Update trainer name (use trainer.name, not userId)
+              if (trainer.name) {
+                portalUpdateData.Trainer_Name__c = trainer.name
+                console.log(`📝 Updating Onboarding_Portal__c with Trainer_Name__c: ${trainer.name}`)
               } else {
-                console.log(`⚠️ Skipping Trainer_Name__c update - User ID not found`)
+                console.log(`⚠️ Skipping Trainer_Name__c update - Trainer name not found`)
               }
 
               // Add remote training meeting link if available

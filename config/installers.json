@@ -5,19 +5,19 @@
     "scheduling": "calendar",
     "installers": [
       {
-        "name": "Fattah",
+        "name": "Muhammad Fattah bin Osman",
         "email": "fattah.osman@storehub.com",
         "larkCalendarId": "",
         "isActive": true
       },
       {
-        "name": "Fairul",
+        "name": "Mohamad Fairul Ismail",
         "email": "fairul.ismail@storehub.com",
         "larkCalendarId": "",
         "isActive": true
       },
       {
-        "name": "Azroll",
+        "name": "Mohamad Azroll bin Jamil",
         "email": "azroll.jamil@storehub.com",
         "larkCalendarId": "",
         "isActive": true
@@ -43,7 +43,7 @@
     "scheduling": "calendar",
     "installers": [
       {
-        "name": "Faizul",
+        "name": "Norfaizul Salam",
         "email": "norfaizul.salam@storehub.com",
         "larkCalendarId": "",
         "isActive": true

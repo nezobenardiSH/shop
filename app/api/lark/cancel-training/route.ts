@@ -124,9 +124,45 @@ export async function DELETE(request: NextRequest) {
           availableTrainers: trainersConfig.trainers.map((t: any) => t.name)
         })
 
-        const trainer = trainersConfig.trainers.find(
+        let trainer = trainersConfig.trainers.find(
           (t: any) => t.name.toLowerCase().trim() === trainerName.toLowerCase().trim()
         )
+
+        // If trainerName looks like a Salesforce ID (starts with 005), look up actual trainer
+        if (!trainer && trainerName.startsWith('005')) {
+          console.log('[Cancel] trainerName is a Salesforce ID, looking up actual trainer...')
+          try {
+            const conn = await getSalesforceConnection()
+
+            // First try to get the User's name and email from Salesforce
+            const userQuery = `SELECT Id, Name, Email FROM User WHERE Id = '${trainerName}' LIMIT 1`
+            console.log('[Cancel] Querying Salesforce User:', userQuery)
+            const userResult = await conn.query(userQuery)
+
+            if (userResult.totalSize > 0) {
+              const sfUser = userResult.records[0] as any
+              console.log('[Cancel] Found Salesforce User:', sfUser.Name, sfUser.Email)
+
+              // Match by email first (most reliable)
+              trainer = trainersConfig.trainers.find(
+                (t: any) => t.email.toLowerCase() === sfUser.Email?.toLowerCase()
+              )
+
+              // If not found by email, try by name
+              if (!trainer) {
+                trainer = trainersConfig.trainers.find(
+                  (t: any) => t.name.toLowerCase().trim() === sfUser.Name?.toLowerCase().trim()
+                )
+              }
+
+              if (trainer) {
+                console.log('[Cancel] Matched trainer from SF User:', trainer.name, trainer.email)
+              }
+            }
+          } catch (lookupError) {
+            console.error('[Cancel] Failed to look up trainer from Salesforce User:', lookupError)
+          }
+        }
 
         if (trainer) {
           console.log('[Cancel] Found trainer in config:', trainer.name, trainer.email)
