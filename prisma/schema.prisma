@@ -24,22 +24,26 @@ model Merchant {
 }
 
 model LarkAuthToken {
-  id           String   @id @default(cuid())
-  userEmail    String   @unique
+  id           String    @id @default(cuid())
+  userEmail    String    @unique
   userName     String?
   larkUserId   String?
-  userType     String?  // 'trainer', 'installer', or 'manager'
-  accessToken  String   @db.Text
-  refreshToken String   @db.Text
-  expiresAt    DateTime
+  userType     String?   // 'trainer', 'installer', or 'manager'
+  accessToken  String?   @db.Text  // Nullable - null before OAuth authorization
+  refreshToken String?   @db.Text  // Nullable - null before OAuth authorization
+  expiresAt    DateTime?            // Nullable - null before OAuth authorization
   calendarId   String?
-  scopes       String?  @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  scopes       String?   @db.Text
+  languages    String?   @db.Text  // JSON array: ["English", "Bahasa Malaysia", "Chinese"]
+  location     String?   @db.Text  // JSON array: ["Within Klang Valley", "Penang", "Johor Bahru"]
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([userEmail])
   @@index([expiresAt])
   @@index([userType])
+  @@index([isActive])
 }
 
 model PageView {

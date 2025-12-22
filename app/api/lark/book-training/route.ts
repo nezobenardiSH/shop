@@ -7,7 +7,7 @@ import { sendBookingNotification, sendManagerBookingNotification } from '@/lib/l
 import { trackEvent, generateSessionId, getClientInfo, isSessionExpired } from '@/lib/analytics'
 import { verifyToken } from '@/lib/auth-utils'
 import { cookies } from 'next/headers'
-import trainersConfig from '@/config/trainers.json'
+import { loadTrainersConfig } from '@/lib/config-loader'
 import { createSalesforceTask, getMsmSalesforceUserId, getTodayDateString, getSalesforceRecordUrl } from '@/lib/salesforce-tasks'
 import { prisma } from '@/lib/prisma'
 
@@ -78,6 +78,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Load trainers config from database
+    const trainersConfig = await loadTrainersConfig()
 
     // Step 1: Determine if location filtering should be applied
     const { detectServiceType, shouldFilterByLocation, canBook } = await import('@/lib/service-type-detector')

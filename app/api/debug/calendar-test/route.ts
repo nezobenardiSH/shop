@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
     }
 
     const now = new Date()
-    const isExpired = now >= token.expiresAt
+    const isExpired = token.expiresAt ? now >= token.expiresAt : true
     results.steps.push(`✅ OAuth token found. Expired: ${isExpired}`)
-    results.steps.push(`📅 Token expires: ${token.expiresAt.toISOString()}`)
+    results.steps.push(`📅 Token expires: ${token.expiresAt?.toISOString() || 'Not set'}`)
     results.steps.push(`📝 Calendar ID: ${token.calendarId}`)
 
     if (isExpired) {

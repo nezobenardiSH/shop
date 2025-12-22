@@ -348,8 +348,15 @@ export class LarkOAuthService {
 
     // Check if token is expired (with 5 minute buffer)
     const now = new Date()
+
+    // If no expiry date or no access token, token is invalid
+    if (!token.expiresAt || !token.accessToken) {
+      console.log(`Token missing expiry or access token for ${userEmail}`)
+      return null
+    }
+
     const expiryBuffer = new Date(token.expiresAt.getTime() - 5 * 60 * 1000)
-    
+
     if (now < expiryBuffer) {
       // Token is still valid
       return token.accessToken
@@ -357,7 +364,13 @@ export class LarkOAuthService {
 
     // Token needs refresh
     console.log(`Refreshing token for ${userEmail}`)
-    
+
+    // If no refresh token, can't refresh
+    if (!token.refreshToken) {
+      console.log(`No refresh token for ${userEmail}`)
+      return null
+    }
+
     try {
       const newTokens = await this.refreshAccessToken(token.refreshToken)
       

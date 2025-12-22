@@ -102,7 +102,13 @@ async function fixCalendarIds() {
       console.log(`Processing: ${token.userName || token.userEmail}`)
       console.log(`Email: ${token.userEmail}`)
       console.log(`Current Calendar ID: ${token.calendarId || 'none'}`)
-      
+
+      // Skip if no access token
+      if (!token.accessToken) {
+        console.log(`⚠️ No access token, skipping...`)
+        continue
+      }
+
       // Get writable calendar
       const newCalendarId = await getWritableCalendar(token.accessToken, token.userEmail)
       

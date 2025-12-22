@@ -18,7 +18,7 @@ export async function GET() {
       count: tokens.length,
       tokens: tokens.map(t => ({
         ...t,
-        isExpired: new Date(t.expiresAt) < new Date(),
+        isExpired: t.expiresAt ? new Date(t.expiresAt) < new Date() : true,
         hasAccessToken: true, // We don't expose the actual token
         hasRefreshToken: true
       }))

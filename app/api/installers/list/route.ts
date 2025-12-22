@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import installersConfig from '@/config/installers.json'
+import { loadInstallersConfig } from '@/lib/config-loader'
 
 /**
  * GET /api/installers/list
@@ -7,6 +7,9 @@ import installersConfig from '@/config/installers.json'
  */
 export async function GET() {
   try {
+    // Load installers from database
+    const installersConfig = await loadInstallersConfig()
+
     // Collect all internal installers from all regions
     const installers: Array<{ name: string; email: string; region: string }> = []
 

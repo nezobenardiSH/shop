@@ -30,9 +30,13 @@ async function testVCAPI() {
 
     console.log(`✅ Found auth record`);
     console.log(`   Scopes: ${authRecord.scopes}`);
-    console.log(`   Token expires: ${new Date(authRecord.expiresAt)}`);
+    console.log(`   Token expires: ${authRecord.expiresAt ? new Date(authRecord.expiresAt) : 'Not set'}`);
 
     const userAccessToken = authRecord.accessToken;
+    if (!userAccessToken) {
+      console.log(`❌ No access token found`);
+      return;
+    }
     console.log(`🔑 Token (first 20 chars): ${userAccessToken.substring(0, 20)}...\n`);
 
     // Test VC API endpoint (CORRECT PATH: /reserves/apply not /reserve/apply!)

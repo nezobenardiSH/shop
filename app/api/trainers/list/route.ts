@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import trainersConfig from '@/config/trainers.json'
+import { loadTrainersConfig } from '@/lib/config-loader'
 
 /**
  * GET /api/trainers/list
@@ -7,6 +7,9 @@ import trainersConfig from '@/config/trainers.json'
  */
 export async function GET() {
   try {
+    // Load trainers from database
+    const trainersConfig = await loadTrainersConfig()
+
     const trainers = trainersConfig.trainers.map(trainer => ({
       name: trainer.name,
       email: trainer.email,

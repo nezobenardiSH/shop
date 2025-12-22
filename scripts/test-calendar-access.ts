@@ -27,7 +27,7 @@ async function testCalendarAccess() {
       
       // Check if token is expired
       const now = new Date()
-      const isExpired = trainer.expiresAt < now
+      const isExpired = trainer.expiresAt ? trainer.expiresAt < now : true
       console.log(`⏱️  Token Status: ${isExpired ? '❌ EXPIRED' : '✅ Valid'}`)
       
       // Check required scopes
