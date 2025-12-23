@@ -342,7 +342,7 @@
     "trainingAfterInstallationOnly": "Training must be scheduled after Installation date ({installDate})",
     "trainingBeforeGoLive": "Training must be scheduled on or before Go-Live date ({goLiveDate})",
     "noGoLiveSet": "No go-live date set - please check with your onboarding manager",
-    "dateRange14Days": "You can select dates up to 14 days from the earliest eligible date",
+    "dateRange14Days": "You can select dates up to 30 days from the earliest eligible date",
     "installationFirst": "Installation must be scheduled first",
     "installationFirstDesc": "Training cannot be booked until installation has been scheduled. Please schedule the installation date first.",
     "trainingConfigIncomplete": "Training configuration incomplete",

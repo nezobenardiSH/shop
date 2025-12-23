@@ -634,19 +634,19 @@ export default function DatePickerModal({
       // Use different endpoints for installation vs training bookings
       if (bookingType === 'installation') {
         // For installations, use the installer availability endpoint
-        // Installation bookings can be scheduled up to 14 WORKING days in advance
-        // (weekends don't count toward the 14-day limit, but can still be booked by internal users)
+        // Installation bookings can be scheduled up to 30 WORKING days in advance
+        // (weekends don't count toward the 30-day limit, but can still be booked by internal users)
         const today = getSingaporeNow()
         const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-        // Calculate end date: 14 working days from today
+        // Calculate end date: 30 working days from today
         let endDate = new Date(today)
         let workingDaysAdded = 0
         const startDayOfWeek = today.getDay()
         if (startDayOfWeek >= 1 && startDayOfWeek <= 5) {
           workingDaysAdded = 1 // First day counts if it's a working day
         }
-        while (workingDaysAdded < 14) {
+        while (workingDaysAdded < 30) {
           endDate.setDate(endDate.getDate() + 1)
           const dayOfWeek = endDate.getDay()
           if (dayOfWeek >= 1 && dayOfWeek <= 5) {
@@ -1293,9 +1293,9 @@ export default function DatePickerModal({
       console.log('  -> ✅ Internal user - hardware fulfillment lower bound constraint BYPASSED for installation')
     }
 
-    // Maximum date is 14 days from the minimum eligible date
+    // Maximum date is 30 days from the minimum eligible date
     let maxDate = new Date(minDate)
-    maxDate.setDate(maxDate.getDate() + 14)
+    maxDate.setDate(maxDate.getDate() + 30)
 
     // For installation bookings, training date is the upper bound
     // Internal users bypass this constraint
@@ -2120,9 +2120,9 @@ export default function DatePickerModal({
                       }
                     }
 
-                    // Calculate max date (14 days or go-live date, whichever is earlier)
+                    // Calculate max date (30 days or go-live date, whichever is earlier)
                     let endDate = new Date(startDate)
-                    endDate.setDate(endDate.getDate() + 14)
+                    endDate.setDate(endDate.getDate() + 30)
 
                     if (bookingType === 'training' && goLiveDate) {
                       const goLiveParts = goLiveDate.split('-')

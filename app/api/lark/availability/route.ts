@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
       endDateStr = endDateParam
       console.log('📅 Using custom end date:', endDateStr)
     } else {
-      // Default: 14 working days from start date (excludes weekends from count)
-      // This means the actual calendar range may be ~20 days to include 14 working days
-      endDateStr = addWorkingDaysInSingapore(startDateStr, 14)
-      console.log('📅 Calculated end date (14 working days):', endDateStr)
+      // Default: 30 working days from start date (excludes weekends from count)
+      // This means the actual calendar range may be ~42 days to include 30 working days
+      endDateStr = addWorkingDaysInSingapore(startDateStr, 30)
+      console.log('📅 Calculated end date (30 working days):', endDateStr)
     }
 
     // Create Date objects for the range (used by availability functions)
