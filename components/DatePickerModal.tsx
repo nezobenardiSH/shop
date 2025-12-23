@@ -201,19 +201,6 @@ export default function DatePickerModal({
     return INTERNAL_INSTALLER_REGIONS.includes(region)
   }
 
-  // Compute region change warning for address editing
-  const getRegionChangeWarning = (): string | null => {
-    if (!originalState || !addressFormData.shippingState) return null
-    if (originalState === addressFormData.shippingState) return null
-
-    const originalCategory = getLocationCategoryFromStateName(originalState)
-    const newCategory = getLocationCategoryFromStateName(addressFormData.shippingState)
-
-    if (originalCategory === newCategory) return null
-
-    return `Changing from "${originalCategory}" to "${newCategory}" will affect trainer/installer availability.`
-  }
-
   // Log when modal opens with currentBooking data
   useEffect(() => {
     if (isOpen) {
@@ -246,16 +233,21 @@ export default function DatePickerModal({
   }, [bookingType, onboardingServicesBought])
 
   // Determine if location filtering should be applied
+  // Internal users bypass location restrictions entirely
   const filterByLocation = useMemo(() => {
-    const shouldFilter = shouldFilterByLocation(serviceType, bookingType)
+    const baseFilter = shouldFilterByLocation(serviceType, bookingType)
+    // Internal users should NOT have location filtering applied
+    const shouldFilter = isInternalUser ? false : baseFilter
     console.log('🔍 Location Filtering:', {
       serviceType,
       bookingType,
       merchantAddress,
+      baseFilter,
+      isInternalUser,
       shouldFilter
     })
     return shouldFilter
-  }, [serviceType, bookingType, merchantAddress])
+  }, [serviceType, bookingType, merchantAddress, isInternalUser])
 
   // Calculate available languages from the availability data
   const availableLanguages = useMemo(() => {
@@ -945,11 +937,24 @@ export default function DatePickerModal({
       } else {
         // For training bookings, use the existing training booking endpoint
         // Build the request body without trainerName for training bookings
+        // Use saved/edited address if available, otherwise fall back to original props
+        const effectiveAddress = savedAddressDisplay?.full || merchantAddress
+        const effectiveState = savedAddressDisplay?.state || merchantState
+
+        console.log('📍 Address for booking:', {
+          savedAddressDisplay,
+          merchantAddress,
+          merchantState,
+          effectiveAddress,
+          effectiveState,
+          usingEditedAddress: !!savedAddressDisplay
+        })
+
         const trainingRequestBody: any = {
           merchantId,
           merchantName,
-          merchantAddress,
-          merchantState,  // Include state for location detection
+          merchantAddress: effectiveAddress,
+          merchantState: effectiveState,  // Include state for location detection
           merchantPhone,
           merchantContactPerson,
           onboardingTrainerName,  // Pass the Salesforce Onboarding_Trainer__c.Name
@@ -1842,16 +1847,6 @@ export default function DatePickerModal({
                       />
                     </div>
                   </div>
-
-                  {/* Region change warning */}
-                  {getRegionChangeWarning() && (
-                    <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded-lg flex items-start gap-2">
-                      <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <span>{getRegionChangeWarning()}</span>
-                    </div>
-                  )}
 
                   {addressError && (
                     <div className="text-sm text-red-600 bg-red-50 p-2 rounded">

@@ -20,9 +20,17 @@ export async function GET(request: NextRequest) {
     console.log('📅 Installation availability request:', { merchantId, startDate, endDate, includeWeekends, installerName })
 
     // Check if merchant needs internal or external installer
+    // CRITICAL: Internal users (includeWeekends=true) selecting a specific installer bypass location check
+    const isInternalUserWithSelectedInstaller = includeWeekends && installerName
+
+    if (isInternalUserWithSelectedInstaller) {
+      console.log('✅ Internal user selected specific installer - bypassing location check')
+    }
+
     const installerType = await getInstallerType(merchantId)
 
-    if (installerType === 'external') {
+    // Only enforce external vendor for non-internal users OR when no specific installer is selected
+    if (installerType === 'external' && !isInternalUserWithSelectedInstaller) {
       return NextResponse.json({
         type: 'external',
         message: 'External vendor required. Please submit preferred date and time.',

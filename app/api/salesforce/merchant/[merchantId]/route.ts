@@ -204,6 +204,7 @@ export async function GET(
       installationDate: null,
       installerName: null,
       trainerName: null,
+      assignedTrainerEmail: null, // CRITICAL: Trainer's email for rescheduling (from User lookup)
       trainingDate: null,
       remoteTrainingMeetingLink: null
     }
@@ -229,11 +230,36 @@ export async function GET(
         portalData.trainingDate = portal.Training_Date__c
         portalData.remoteTrainingMeetingLink = portal.Remote_Training_Meeting_Link__c || null
 
-        // Installer_Name__c and Trainer_Name__c are text fields, not lookups
+        // Installer_Name__c is a text field with installer name
         portalData.installerName = portal.Installer_Name__c || null
-        portalData.trainerName = portal.Trainer_Name__c || null
+
+        // Trainer_Name__c now stores User ID (for rescheduling)
+        // Query User to get display name AND email (email needed for rescheduling)
+        const trainerUserId = portal.Trainer_Name__c
+        if (trainerUserId) {
+          try {
+            const userResult = await conn.query(`SELECT Name, Email FROM User WHERE Id = '${trainerUserId}' LIMIT 1`)
+            if (userResult.totalSize > 0) {
+              const user = userResult.records[0] as any
+              portalData.trainerName = user.Name
+              portalData.assignedTrainerEmail = user.Email // CRITICAL: Used for rescheduling
+              console.log(`🔍 Trainer_Name__c (User ID): ${trainerUserId} -> Name: ${portalData.trainerName}, Email: ${portalData.assignedTrainerEmail}`)
+            } else {
+              // Fallback: treat as name (for backward compatibility with old records)
+              portalData.trainerName = trainerUserId
+              console.log(`⚠️ User not found for ID ${trainerUserId}, using value as name (no email for rescheduling)`)
+            }
+          } catch (userQueryError) {
+            // Fallback: treat as name
+            portalData.trainerName = trainerUserId
+            console.log(`⚠️ Failed to query User for Trainer_Name__c, using value as name`)
+          }
+        }
+
         console.log('🔍 Installer_Name__c value:', portal.Installer_Name__c)
-        console.log('🔍 Trainer_Name__c value:', portal.Trainer_Name__c)
+        console.log('🔍 Trainer_Name__c raw value:', portal.Trainer_Name__c)
+        console.log('🔍 Trainer display name:', portalData.trainerName)
+        console.log('🔍 Assigned trainer email:', portalData.assignedTrainerEmail)
         console.log('🔍 Remote_Training_Meeting_Link__c value:', portal.Remote_Training_Meeting_Link__c)
         console.log('🔍 Training_Salesforce_Event_ID__c value:', portal.Training_Salesforce_Event_ID__c)
         console.log('🔍 Installation_Salesforce_Event_ID__c value:', portal.Installation_Salesforce_Event_ID__c)
@@ -348,14 +374,84 @@ export async function GET(
           // Get other order details
           hardwareFulfillmentDate = order.Hardware_Fulfillment_Date__c
           orderNSStatus = order.NSStatus__c
+
+          // Get OrderItems from this specific Hardware Order (Non-Software)
+          const orderItemsQuery = `
+            SELECT Id, Product2Id, Product2.Name, TotalPrice, UnitPrice, Quantity, OrderId
+            FROM OrderItem
+            WHERE OrderId = '${trainer.Hardware_Order__c}'
+            LIMIT 50
+          `
+          const orderItemsResult = await conn.query(orderItemsQuery)
+          console.log('📦 OrderItems from Hardware_Order__c:', orderItemsResult.totalSize)
+
+          if (orderItemsResult.totalSize > 0) {
+            orderItems = orderItemsResult.records.map((item: any) => ({
+              id: item.Id,
+              product2Id: item.Product2Id,
+              productName: item.Product2?.Name || 'Unknown Product',
+              totalPrice: item.TotalPrice,
+              unitPrice: item.UnitPrice,
+              quantity: item.Quantity,
+              orderId: item.OrderId,
+              orderType: order.Type || 'Non-Software Only'
+            }))
+          }
         }
       } catch (error) {
         console.log('Failed to fetch Hardware Order:', error)
       }
     }
 
-    // Now get all orders for order items (if account exists)
+    // Also get Software Only orders and their items (always, if account exists)
     if (account) {
+      try {
+        // Query for Software Only orders
+        const softwareOrdersQuery = `
+          SELECT Id, Type
+          FROM Order
+          WHERE AccountId = '${account.Id}' AND Type = 'Software Only'
+          ORDER BY CreatedDate DESC
+          LIMIT 5
+        `
+        const softwareOrdersResult = await conn.query(softwareOrdersQuery)
+        console.log('📦 Software Only orders found:', softwareOrdersResult.totalSize)
+
+        if (softwareOrdersResult.totalSize > 0) {
+          const softwareOrderIds = softwareOrdersResult.records.map((o: any) => `'${o.Id}'`).join(',')
+
+          // Get OrderItems from Software Only orders
+          const softwareItemsQuery = `
+            SELECT Id, Product2Id, Product2.Name, TotalPrice, UnitPrice, Quantity, OrderId
+            FROM OrderItem
+            WHERE OrderId IN (${softwareOrderIds})
+            LIMIT 50
+          `
+          const softwareItemsResult = await conn.query(softwareItemsQuery)
+          console.log('📦 Software Only OrderItems:', softwareItemsResult.totalSize)
+
+          if (softwareItemsResult.totalSize > 0) {
+            const softwareItems = softwareItemsResult.records.map((item: any) => ({
+              id: item.Id,
+              product2Id: item.Product2Id,
+              productName: item.Product2?.Name || 'Unknown Product',
+              totalPrice: item.TotalPrice,
+              unitPrice: item.UnitPrice,
+              quantity: item.Quantity,
+              orderId: item.OrderId,
+              orderType: 'Software Only'
+            }))
+            // Combine with hardware items
+            orderItems = [...orderItems, ...softwareItems]
+          }
+        }
+      } catch (error) {
+        console.log('Failed to fetch Software Only orders:', error)
+      }
+    }
+
+    // Fallback: get all orders if Hardware_Order__c is NOT set and no items yet
+    if (!trainer.Hardware_Order__c && orderItems.length === 0 && account) {
       try {
         // First get Orders for this Account with Type field and Hardware Fulfillment Date
         // ShippingAddress is a compound field - query all its components

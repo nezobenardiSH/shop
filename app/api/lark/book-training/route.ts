@@ -79,6 +79,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Detect internal user early - needed for location filtering bypass
+    const cookieStore = await cookies()
+    let isInternalUser = false
+    const authToken = cookieStore.get('auth-token')?.value
+    if (authToken) {
+      const decoded = verifyToken(authToken)
+      if (decoded) {
+        isInternalUser = decoded.isInternalUser || false
+      }
+    }
+    console.log('👤 User type:', isInternalUser ? 'INTERNAL' : 'MERCHANT')
+
     // Load trainers config from database
     const trainersConfig = await loadTrainersConfig()
 
@@ -101,12 +113,16 @@ export async function POST(request: NextRequest) {
     // Determine if location filtering is needed
     // - Onsite training: YES - filter trainers by merchant location
     // - Remote training: NO - show all trainers regardless of location
-    const filterByLocation = shouldFilterByLocation(serviceType, bookingType)
+    // - Internal users: NO - bypass location restrictions
+    const baseFilterByLocation = shouldFilterByLocation(serviceType, bookingType)
+    const filterByLocation = isInternalUser ? false : baseFilterByLocation
 
     console.log('🔍 Service Type Detection:', {
       onboardingServicesBought,
       serviceType,
+      baseFilterByLocation,
       filterByLocation,
+      isInternalUser,
       merchantState
     })
 
@@ -122,12 +138,13 @@ export async function POST(request: NextRequest) {
         merchantState: merchantState,
         onboardingServicesBought: onboardingServicesBought,
         serviceType: serviceType,
-        filterByLocation: filterByLocation
+        filterByLocation: filterByLocation,
+        isInternalUser: isInternalUser
       })
 
-      // Pass merchantState only if location filtering should be applied (onsite training)
+      // Pass merchantState only if location filtering should be applied (onsite training, non-internal user)
       const stateForFiltering = filterByLocation ? merchantState : undefined
-      console.log(`📍 State for filtering: ${stateForFiltering || 'NONE (remote training)'}`)
+      console.log(`📍 State for filtering: ${stateForFiltering || 'NONE (remote training or internal user)'}`)
 
       const slotResult = await getSlotAvailability(date, startTime, endTime, stateForFiltering)
       available = slotResult.available
@@ -1031,12 +1048,15 @@ Salesforce: https://storehub.lightning.force.com/lightning/r/Onboarding_Trainer_
               portalUpdateData.Training_Date__c = dateTimeValue
               console.log(`📝 Updating Onboarding_Portal__c with Training_Date__c: ${dateTimeValue}`)
 
-              // Update trainer name (use trainer.name, not userId)
-              if (trainer.name) {
-                portalUpdateData.Trainer_Name__c = trainer.name
-                console.log(`📝 Updating Onboarding_Portal__c with Trainer_Name__c: ${trainer.name}`)
+              // CRITICAL: Store User ID in Trainer_Name__c (NOT trainer.name!)
+              // This is required for rescheduling to find the correct trainer's calendar to delete from
+              // The rescheduling logic queries: User WHERE Id = Trainer_Name__c
+              if (userId) {
+                portalUpdateData.Trainer_Name__c = userId
+                console.log(`📝 Updating Onboarding_Portal__c with Trainer_Name__c (User ID): ${userId}`)
+                console.log(`   Trainer: ${trainer.name} (${trainer.email})`)
               } else {
-                console.log(`⚠️ Skipping Trainer_Name__c update - Trainer name not found`)
+                console.log(`⚠️ Skipping Trainer_Name__c update - User ID not found for trainer: ${trainer.name}`)
               }
 
               // Add remote training meeting link if available
@@ -1204,25 +1224,15 @@ Phone: ${merchantPICPhone || merchantPhone || 'N/A'}
 
     // Track the booking event
     try {
-      const cookieStore = await cookies()
       const existingSessionId = cookieStore.get('analytics-session-id')?.value
       const lastActivity = cookieStore.get('analytics-last-activity')?.value
       const sessionId = (existingSessionId && !isSessionExpired(lastActivity))
         ? existingSessionId
         : generateSessionId(request)
       const { userAgent, ipAddress, deviceType } = getClientInfo(request)
-      
-      // Get user info from auth token
-      let isInternalUser = false
-      let userType = 'merchant'
-      const authToken = cookieStore.get('auth-token')?.value
-      if (authToken) {
-        const decoded = verifyToken(authToken)
-        if (decoded) {
-          isInternalUser = decoded.isInternalUser || false
-          userType = decoded.userType || 'internal_team'
-        }
-      }
+
+      // Get user type from auth token (isInternalUser already detected earlier)
+      let userType = isInternalUser ? 'internal_team' : 'merchant'
       
       const eventAction = bookingType === 'training' ? 'training_scheduled' : 
                           bookingType === 'installation' ? 'installation_scheduled' : 

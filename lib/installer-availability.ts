@@ -717,14 +717,16 @@ export async function bookInternalInstallation(
           console.log(`✅ Found current event ID: ${currentEventIdForDeletion}`)
           console.log(`✅ Found current Salesforce Event ID: ${currentSalesforceEventId}`)
 
-          // Find the installer object to get their email
-          if (currentInstallerName && locationConfig.installers) {
-            const installerObj = locationConfig.installers.find(
-              (inst: any) => inst.name === currentInstallerName
-            )
+          // Find the installer email by name from database (searches all installers)
+          if (currentInstallerName) {
+            const { getAllInstallersFromDB } = await import('./config-loader')
+            const allInstallers = await getAllInstallersFromDB()
+            const installerObj = allInstallers.find(inst => inst.name === currentInstallerName)
             if (installerObj) {
               currentInstallerEmailForDeletion = installerObj.email
               console.log(`✅ Resolved installer email: ${currentInstallerEmailForDeletion}`)
+            } else {
+              console.log(`⚠️ Installer "${currentInstallerName}" not found in database`)
             }
           }
         }
@@ -761,9 +763,12 @@ export async function bookInternalInstallation(
       }
 
       // If we couldn't delete from the known installer, try all installers as fallback
-      if (!deleted && locationConfig.installers) {
-        console.log('   📋 Falling back to trying all installers...')
-        for (const inst of locationConfig.installers) {
+      if (!deleted) {
+        console.log('   📋 Falling back to trying all installers from database...')
+        const { getAllInstallersFromDB } = await import('./config-loader')
+        const allInstallers = await getAllInstallersFromDB()
+
+        for (const inst of allInstallers) {
           if (!inst.isActive) continue
 
           try {
