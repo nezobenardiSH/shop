@@ -667,6 +667,44 @@ export default function DatePickerModal({
           installParams.append('includeWeekends', 'true')
           console.log('🗓️ Internal user - including weekends in installation availability')
 
+          // Handle external installer selection - skip API call and generate slots directly
+          if (selectedInstallerEmail === 'external') {
+            console.log('🔧 Internal user selected external installer - generating external slots')
+            setIsExternalVendor(true)
+
+            // Generate external vendor availability (weekdays 9am-6pm, 2-day advance)
+            const externalAvailability = []
+            const extStartDate = new Date()
+            extStartDate.setDate(extStartDate.getDate() + 2) // 2 days advance booking
+
+            for (let i = 0; i < 14; i++) {
+              const currentDate = new Date(extStartDate)
+              currentDate.setDate(currentDate.getDate() + i)
+
+              // Skip weekends
+              if (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+                continue
+              }
+
+              const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
+
+              externalAvailability.push({
+                date: dateStr,
+                slots: [
+                  { start: '09:00', end: '11:00', available: true, availableTrainers: ['External Vendor'] },
+                  { start: '11:00', end: '13:00', available: true, availableTrainers: ['External Vendor'] },
+                  { start: '14:00', end: '16:00', available: true, availableTrainers: ['External Vendor'] },
+                  { start: '16:00', end: '18:00', available: true, availableTrainers: ['External Vendor'] }
+                ]
+              })
+            }
+
+            console.log('🔧 External vendor availability generated:', externalAvailability.length, 'days')
+            setAvailability(externalAvailability)
+            setLoading(false)
+            return // Skip API call
+          }
+
           // If internal user selected a specific installer (not "all"), fetch only their availability
           if (selectedInstallerEmail && selectedInstallerEmail !== 'all') {
             const selectedInstaller = availableInstallersList.find(i => i.email === selectedInstallerEmail)
@@ -884,12 +922,16 @@ export default function DatePickerModal({
 
         // Internal user: pass selected installer if manually chosen
         if (isInternalUser && selectedInstallerEmail) {
-          if (selectedInstallerEmail === 'all' && selectedSlot?.installerEmail) {
-            // "All Installers" selected - use the installer from the selected slot
+          if (selectedInstallerEmail === 'external') {
+            // External installer selected - signal API to use Surftek flow
+            installationRequestBody.useExternalVendor = true
+            console.log('🔧 Internal user selected external installer - using Surftek flow')
+          } else if (selectedInstallerEmail === 'all' && selectedSlot?.installerEmail) {
+            // "All Internal Installers" selected - use the installer from the selected slot
             installationRequestBody.selectedInstallerEmail = selectedSlot.installerEmail
-            console.log('🔧 Internal user selected "All Installers", using installer from slot:', selectedSlot.installerName, selectedSlot.installerEmail)
+            console.log('🔧 Internal user selected "All Internal Installers", using installer from slot:', selectedSlot.installerName, selectedSlot.installerEmail)
           } else if (selectedInstallerEmail !== 'all') {
-            // Specific installer selected
+            // Specific internal installer selected
             installationRequestBody.selectedInstallerEmail = selectedInstallerEmail
             console.log('🔧 Internal user selected specific installer:', selectedInstallerEmail)
           }
@@ -1867,7 +1909,7 @@ export default function DatePickerModal({
             )}
 
             {/* Internal User: Installer Selection Dropdown */}
-            {bookingType === 'installation' && isInternalUser && !isExternalVendor && availableInstallersList.length > 0 && (
+            {bookingType === 'installation' && isInternalUser && availableInstallersList.length > 0 && (
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('selectInstaller')}
@@ -1878,12 +1920,17 @@ export default function DatePickerModal({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   <option value="">{t('selectAnInstaller')}</option>
-                  <option value="all">{t('allInstallers')}</option>
-                  {availableInstallersList.map((installer) => (
-                    <option key={installer.email} value={installer.email}>
-                      {installer.name}
-                    </option>
-                  ))}
+                  <optgroup label={t('internalInstallers')}>
+                    <option value="all">{t('allInternalInstallers')}</option>
+                    {availableInstallersList.map((installer) => (
+                      <option key={installer.email} value={installer.email}>
+                        {installer.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={t('external')}>
+                    <option value="external">{t('externalInstaller')}</option>
+                  </optgroup>
                 </select>
               </div>
             )}

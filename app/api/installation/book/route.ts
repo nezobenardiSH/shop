@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
       availableInstallers,
       contactPhone,
       existingEventId,  // Event ID of existing booking to be cancelled (for rescheduling)
-      selectedInstallerEmail  // Internal user manually selected installer (optional)
+      selectedInstallerEmail,  // Internal user manually selected installer (optional)
+      useExternalVendor  // Internal user explicitly chose external vendor (optional)
     } = body
 
     console.log('📥 Installation booking request:', {
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest) {
       timeSlot,
       isRescheduling: !!existingEventId,
       existingEventId: existingEventId || 'NONE (new booking)',
-      selectedInstallerEmail: selectedInstallerEmail || 'AUTO-ASSIGN'
+      selectedInstallerEmail: selectedInstallerEmail || 'AUTO-ASSIGN',
+      useExternalVendor: useExternalVendor || false
     })
 
     if (!merchantId || !merchantName || !date) {
@@ -54,9 +56,98 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check installer type
+    // Helper function to track analytics
+    const trackInstallationAnalytics = async (installerType: 'internal' | 'external', extraMetadata: Record<string, any> = {}) => {
+      try {
+        const sessionId = request.headers.get('x-session-id') || `session_${Date.now()}`
+        const userAgent = request.headers.get('user-agent') || ''
+        const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || ''
+        const deviceType = userAgent.includes('Mobile') ? 'mobile' : 'desktop'
+
+        await trackEvent({
+          merchantId: merchantId,
+          merchantName: onboardingTrainerName || merchantName,
+          page: 'booking-installation',
+          action: 'installation_scheduled',
+          sessionId,
+          userAgent,
+          deviceType,
+          ipAddress,
+          isInternalUser,
+          userType,
+          metadata: {
+            bookedBy: isInternalUser ? 'internal' : 'merchant',
+            bookingType: 'installation',
+            date: date,
+            isRescheduling: !!existingEventId,
+            installerType,
+            ...extraMetadata
+          }
+        })
+        console.log(`📊 Analytics: ${installerType} installation tracked`)
+      } catch (analyticsError) {
+        console.error('Failed to track installation analytics:', analyticsError)
+      }
+    }
+
+    // Internal user explicitly chose external vendor - skip location validation
+    if (useExternalVendor) {
+      console.log('🔧 Internal user selected external vendor - skipping location validation')
+      const preferredTime = timeSlot?.start || '09:00'
+
+      const result = await submitExternalInstallationRequest(
+        merchantId,
+        onboardingTrainerName || merchantName,
+        date,
+        preferredTime,
+        contactPhone || ''
+      )
+
+      await trackInstallationAnalytics('external', { preferredTime, internalOverride: true })
+
+      return NextResponse.json({
+        type: 'external',
+        ...result
+      })
+    }
+
+    // Internal user explicitly chose internal installer - skip location validation
+    if (selectedInstallerEmail) {
+      console.log('🔧 Internal user selected internal installer - skipping location validation')
+
+      if (!timeSlot) {
+        return NextResponse.json(
+          { error: 'No time slot selected' },
+          { status: 400 }
+        )
+      }
+
+      const result = await bookInternalInstallation(
+        merchantId,
+        onboardingTrainerName || merchantName,
+        date,
+        timeSlot,
+        availableInstallers || [],
+        existingEventId,
+        selectedInstallerEmail
+      )
+
+      await trackInstallationAnalytics('internal', {
+        startTime: timeSlot.start,
+        endTime: timeSlot.end,
+        assignedInstaller: selectedInstallerEmail,
+        internalOverride: true
+      })
+
+      return NextResponse.json({
+        type: 'internal',
+        ...result
+      })
+    }
+
+    // Regular merchant flow - use location-based routing
     const installerType = await getInstallerType(merchantId)
-    
+
     if (installerType === 'internal') {
       // Book with internal installer
       if (!timeSlot || !availableInstallers || availableInstallers.length === 0) {
@@ -68,48 +159,19 @@ export async function POST(request: NextRequest) {
 
       const result = await bookInternalInstallation(
         merchantId,
-        onboardingTrainerName || merchantName,  // Use Onboarding Trainer Name (e.g., "activate175")
+        onboardingTrainerName || merchantName,
         date,
         timeSlot,
         availableInstallers,
         existingEventId,
-        selectedInstallerEmail  // Pass manually selected installer if provided by internal user
+        undefined  // No manually selected installer for regular merchants
       )
 
-      // Track analytics event for installation scheduling
-      try {
-        const sessionId = request.headers.get('x-session-id') || `session_${Date.now()}`
-        const userAgent = request.headers.get('user-agent') || ''
-        const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || ''
-        const deviceType = userAgent.includes('Mobile') ? 'mobile' : 'desktop'
-
-        await trackEvent({
-          merchantId: merchantId,
-          merchantName: onboardingTrainerName || merchantName,
-          page: 'booking-installation',
-          action: 'installation_scheduled',
-          sessionId,
-          userAgent,
-          deviceType,
-          ipAddress,
-          isInternalUser,
-          userType,
-          metadata: {
-            bookedBy: isInternalUser ? 'internal' : 'merchant',
-            bookingType: 'installation',
-            date: date,
-            startTime: timeSlot.start,
-            endTime: timeSlot.end,
-            assignedInstaller: availableInstallers[0],
-            isRescheduling: !!existingEventId,
-            installerType: 'internal'
-          }
-        })
-        console.log(`📊 Analytics: installation scheduling tracked`)
-      } catch (analyticsError) {
-        console.error('Failed to track installation analytics:', analyticsError)
-        // Don't fail the request if analytics tracking fails
-      }
+      await trackInstallationAnalytics('internal', {
+        startTime: timeSlot.start,
+        endTime: timeSlot.end,
+        assignedInstaller: availableInstallers[0]
+      })
 
       return NextResponse.json({
         type: 'internal',
@@ -117,50 +179,17 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Submit request for external vendor
-      // Use the actual time (e.g., "14:00") not the label for Salesforce update
-      // timeSlot has 'start' property, not 'time' property
-      const preferredTime = timeSlot?.start || '09:00' // Default to 9 AM if no time provided
+      const preferredTime = timeSlot?.start || '09:00'
 
       const result = await submitExternalInstallationRequest(
         merchantId,
-        onboardingTrainerName || merchantName,  // Use Onboarding Trainer Name if available
+        onboardingTrainerName || merchantName,
         date,
         preferredTime,
         contactPhone || ''
       )
 
-      // Track analytics event for external installation request
-      try {
-        const sessionId = request.headers.get('x-session-id') || `session_${Date.now()}`
-        const userAgent = request.headers.get('user-agent') || ''
-        const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || ''
-        const deviceType = userAgent.includes('Mobile') ? 'mobile' : 'desktop'
-
-        await trackEvent({
-          merchantId: merchantId,
-          merchantName: onboardingTrainerName || merchantName,
-          page: 'booking-installation',
-          action: 'installation_scheduled',
-          sessionId,
-          userAgent,
-          deviceType,
-          ipAddress,
-          isInternalUser,
-          userType,
-          metadata: {
-            bookedBy: isInternalUser ? 'internal' : 'merchant',
-            bookingType: 'installation',
-            date: date,
-            preferredTime: preferredTime,
-            isRescheduling: false,
-            installerType: 'external'
-          }
-        })
-        console.log(`📊 Analytics: external installation request tracked`)
-      } catch (analyticsError) {
-        console.error('Failed to track installation analytics:', analyticsError)
-        // Don't fail the request if analytics tracking fails
-      }
+      await trackInstallationAnalytics('external', { preferredTime })
 
       return NextResponse.json({
         type: 'external',
