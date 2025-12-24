@@ -562,7 +562,7 @@ class LarkService {
             }
           }
           console.log(`✅ FreeBusy API returned ${freeBusyTimes.length} busy periods`)
-          
+
           // Log first 3 for debugging
           if (freeBusyTimes.length > 0) {
             console.log('  Sample busy times from FreeBusy:')
@@ -1423,7 +1423,7 @@ class LarkService {
         time_max: formatRFC3339(endTime),
         user_id: userId, // Use user_id, not user_id_list
         only_busy: true,
-        include_external_calendar: true
+        include_external_calendar: false  // Don't include external calendars (Google, etc.) - they may have "WORKING" events marked as busy
       };
       
       console.log('FreeBusy request:', requestBody);

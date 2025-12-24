@@ -203,20 +203,38 @@ export async function getInternalInstallersAvailability(
   // Read installers config dynamically to pick up changes without restart
   const installersConfig = await loadInstallersConfig()
 
-  // Determine which location's installers to use
-  let locationKey = 'klangValley' // default
-  if (merchantId) {
-    const location = await getLocationCategory(merchantId)
-    if (location !== 'external') {
-      locationKey = location
+  // For internal users (includeWeekends=true), get ALL installers from ALL regions
+  // For regular users, filter by merchant location
+  let installers: any[] = []
+
+  if (includeWeekends) {
+    // Internal user - get all installers from all regions
+    console.log('🔓 Internal user - getting ALL installers from ALL regions')
+    const allRegions = ['klangValley', 'penang', 'johorBahru']
+    for (const region of allRegions) {
+      const regionConfig = (installersConfig as any)[region]
+      if (regionConfig?.installers) {
+        const regionInstallers = regionConfig.installers.filter((i: any) => i.isActive)
+        installers.push(...regionInstallers)
+        console.log(`  ${region}: ${regionInstallers.length} installers`)
+      }
     }
+  } else {
+    // Regular user - filter by merchant location
+    let locationKey = 'klangValley' // default
+    if (merchantId) {
+      const location = await getLocationCategory(merchantId)
+      if (location !== 'external') {
+        locationKey = location
+      }
+    }
+
+    console.log(`Using installers for location: ${locationKey}`)
+
+    // Get the appropriate installer config
+    const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
+    installers = locationConfig.installers.filter((i: any) => i.isActive)
   }
-
-  console.log(`Using installers for location: ${locationKey}`)
-
-  // Get the appropriate installer config
-  const locationConfig = (installersConfig as any)[locationKey] || installersConfig.klangValley
-  let installers = locationConfig.installers.filter((i: any) => i.isActive)
 
   // If specific installer is requested, filter to only that installer
   if (specificInstallerName) {
@@ -346,7 +364,7 @@ export async function getInternalInstallersAvailability(
 
     current.setUTCDate(current.getUTCDate() + 1)
   }
-  
+
   return combinedAvailability
 }
 
