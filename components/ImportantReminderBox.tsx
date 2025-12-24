@@ -9,6 +9,11 @@ interface ImportantReminderBoxProps {
   isCompleted?: boolean
   /** The name to use for the collection (e.g., "menu" for F&B, "product list" for Retail) */
   collectionName?: string
+  /** Optional link to show at the bottom of the banner */
+  actionLink?: {
+    text: string
+    href: string
+  }
 }
 
 // Warning icon component
@@ -27,7 +32,8 @@ export default function ImportantReminderBox({
   installationDate,
   trainingDate,
   isCompleted = false,
-  collectionName = 'menu'
+  collectionName = 'menu',
+  actionLink
 }: ImportantReminderBoxProps) {
   // Don't show if the task is completed
   if (isCompleted) return null
@@ -60,6 +66,13 @@ export default function ImportantReminderBox({
             </>
           )}
         </p>
+        {actionLink && (
+          <p className="text-sm mt-2">
+            <a href={actionLink.href} className="text-blue-600 hover:text-blue-800 underline font-medium">
+              {actionLink.text} →
+            </a>
+          </p>
+        )}
       </div>
     )
   }
@@ -92,6 +105,13 @@ export default function ImportantReminderBox({
           However, if the equipment isn&apos;t ready on your side and we need to come back for a
           second installation once everything is set up, there will be an extra charge of RM200.
         </p>
+        {actionLink && (
+          <p className="text-sm mt-2">
+            <a href={actionLink.href} className="text-blue-600 hover:text-blue-800 underline font-medium">
+              {actionLink.text} →
+            </a>
+          </p>
+        )}
       </div>
     )
   }

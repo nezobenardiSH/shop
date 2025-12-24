@@ -1100,6 +1100,19 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </div>
             </div>
 
+            {/* Store Setup Video Reminder - Show only if video not submitted */}
+            {!(trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA') && (
+              <ImportantReminderBox
+                type="store-setup"
+                installationDate={trainerData?.installationDate}
+                isCompleted={false}
+                actionLink={{
+                  text: 'Upload Store Setup Video here',
+                  href: `?stage=preparation&expand=store-setup`
+                }}
+              />
+            )}
+
             <div>
               <div className="text-sm text-gray-500 uppercase tracking-wider mb-2">{t('fields.installerName')}</div>
               <div className="text-base font-medium text-gray-900">
@@ -1235,6 +1248,21 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 })()}
               </div>
             </div>
+
+            {/* Menu/Product List Reminder - Show only if not submitted */}
+            {!productListSubmitted && (
+              <ImportantReminderBox
+                type="product-list"
+                installationDate={trainerData?.installationDate}
+                trainingDate={trainerData?.trainingDate}
+                isCompleted={false}
+                collectionName={terminology.collectionName}
+                actionLink={{
+                  text: `Submit your ${terminology.collectionName} here`,
+                  href: `?stage=preparation&expand=product-setup`
+                }}
+              />
+            )}
 
             {/* Remote Training Meeting Link - Only for Remote Training */}
             {trainerData?.onboardingServicesBought?.toLowerCase().includes('remote') && trainerData?.remoteTrainingMeetingLink && (
@@ -2369,6 +2397,19 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
               </div>
             </div>
 
+            {/* Store Setup Video Reminder - Show only if video not submitted */}
+            {!(trainerData?.videoProofLink && trainerData?.videoProofLink !== 'NA') && (
+              <ImportantReminderBox
+                type="store-setup"
+                installationDate={trainerData?.installationDate}
+                isCompleted={false}
+                actionLink={{
+                  text: 'Upload Store Setup Video here',
+                  href: `?stage=preparation&expand=store-setup`
+                }}
+              />
+            )}
+
             {/* Installer Name */}
             <div>
               <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.installerName')}</div>
@@ -2526,6 +2567,21 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                 })()}
               </div>
             </div>
+
+            {/* Menu/Product List Reminder - Show only if not submitted */}
+            {!productListSubmitted && (
+              <ImportantReminderBox
+                type="product-list"
+                installationDate={trainerData?.installationDate}
+                trainingDate={trainerData?.trainingDate}
+                isCompleted={false}
+                collectionName={terminology.collectionName}
+                actionLink={{
+                  text: `Submit your ${terminology.collectionName} here`,
+                  href: `?stage=preparation&expand=product-setup`
+                }}
+              />
+            )}
 
             {/* Remote Training Meeting Link - Only for Remote Training */}
             {trainerData?.onboardingServicesBought?.toLowerCase().includes('remote') && trainerData?.remoteTrainingMeetingLink && (
