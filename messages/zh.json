@@ -49,6 +49,7 @@
     "disabledReasons": {
       "submitStoreSetupFirst": "请先提交门店设置视频",
       "submitStoreSetupAndWaitForHardware": "请先提交门店设置视频并等待硬件发货日期",
+      "waitForHardware": "请等待硬件发货日期",
       "submitProductListFirst": "请先提交产品列表",
       "setInstallationFirst": "请先设置安装日期"
     },
@@ -183,6 +184,7 @@
       "rescheduleWarning": "重新预约需提前至少 2 天",
       "contactOnboardingManager": "如需重新预约，请联系您的入驻经理",
       "submitVideoFirst": "请先提交门店设置视频并等待硬件发货日期设置后再预约安装。",
+      "waitForHardware": "请等待硬件发货日期设置后再预约安装。",
       "submitCollectionFirst": "请先提交您的{collectionName}再预约培训。",
       "scheduleInstallationFirst": "请先预约安装再预约培训。",
       "formNotAvailable": "表单链接不可用",

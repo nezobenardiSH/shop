@@ -139,10 +139,10 @@ export default function OverviewPage() {
       : null
 
     // Determine disabled states for scheduling
-    // Merchants need: store setup completed AND hardware fulfillment date set
+    // Merchants need: hardware fulfillment date set for installation
     const hardwareFulfillmentDateSet = !!trainer.hardwareFulfillmentDate
-    const canScheduleInstallation = storeSetupCompleted && hardwareFulfillmentDateSet
-    const canScheduleTraining = productSubmitted && installationDateSet
+    const canScheduleInstallation = hardwareFulfillmentDateSet
+    const canScheduleTraining = installationDateSet
 
     return [
       {
@@ -165,7 +165,7 @@ export default function OverviewPage() {
         completed: installationDateSet,
         stageLink: `/merchant/${merchantId}?stage=installation&section=installation`,
         disabled: !canScheduleInstallation && !installationDateSet,
-        disabledReason: t('disabledReasons.submitStoreSetupAndWaitForHardware')
+        disabledReason: t('disabledReasons.waitForHardware')
       },
       {
         id: 'training-date',
@@ -173,7 +173,7 @@ export default function OverviewPage() {
         completed: trainingDateSet,
         stageLink: `/merchant/${merchantId}?stage=training&section=training`,
         disabled: !canScheduleTraining && !trainingDateSet,
-        disabledReason: !productSubmitted ? t('disabledReasons.submitProductListFirst') : t('disabledReasons.setInstallationFirst')
+        disabledReason: t('disabledReasons.setInstallationFirst')
       },
       {
         id: 'backoffice-activation',

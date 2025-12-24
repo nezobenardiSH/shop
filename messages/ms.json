@@ -49,6 +49,7 @@
     "disabledReasons": {
       "submitStoreSetupFirst": "Hantar video persediaan kedai dahulu",
       "submitStoreSetupAndWaitForHardware": "Hantar video persediaan kedai dan tunggu tarikh penghantaran perkakasan",
+      "waitForHardware": "Tunggu tarikh penghantaran perkakasan",
       "submitProductListFirst": "Hantar senarai produk dahulu",
       "setInstallationFirst": "Tetapkan tarikh pemasangan dahulu"
     },
@@ -183,6 +184,7 @@
       "rescheduleWarning": "Penjadualan semula perlu dilakukan sekurang-kurangnya 2 hari lebih awal",
       "contactOnboardingManager": "Untuk menjadualkan semula, sila hubungi pengurus onboarding anda",
       "submitVideoFirst": "Sila hantar Video Persediaan Kedai anda dan tunggu Tarikh Penghantaran Perkakasan ditetapkan sebelum menjadualkan pemasangan.",
+      "waitForHardware": "Sila tunggu Tarikh Penghantaran Perkakasan ditetapkan sebelum menjadualkan pemasangan.",
       "submitCollectionFirst": "Sila hantar {collectionName} anda sebelum menjadualkan latihan.",
       "scheduleInstallationFirst": "Sila jadualkan pemasangan terlebih dahulu sebelum menjadualkan latihan.",
       "formNotAvailable": "Pautan borang tidak tersedia",

@@ -205,12 +205,12 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
   // Scheduling prerequisites
   // Internal users can schedule anytime without prerequisites
-  // Regular users need: store setup completed AND hardware fulfillment date set
+  // Regular users need: hardware fulfillment date set for installation
   const hardwareFulfillmentDateSet = !!trainerData?.hardwareFulfillmentDate
-  const canScheduleInstallation = isInternalUser || (storeSetupCompleted && hardwareFulfillmentDateSet)
+  const canScheduleInstallation = isInternalUser || hardwareFulfillmentDateSet
   const productListSubmitted = !!trainerData?.menuCollectionSubmissionTimestamp
   const installationDateSet = !!trainerData?.installationDate
-  const canScheduleTraining = isInternalUser || (productListSubmitted && installationDateSet)
+  const canScheduleTraining = isInternalUser || installationDateSet
 
   // Initialize selectedStage based on URL parameter or welcome call completion status
   const initialStage = currentStageFromUrl ||
@@ -1065,7 +1065,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                               ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                           }`}
-                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
+                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Hardware Fulfillment Date must be set first' : ''}
                         >
                           {trainerData?.installationDate ? t('buttons.changeDate') : t('buttons.schedule')}
                         </button>
@@ -1086,7 +1086,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                       </div>
                       {!canScheduleInstallation && !hasExistingDate && (
                         <div className="mt-2 text-sm text-amber-600">
-                          {t('messages.submitVideoFirst')}
+                          {t('messages.waitForHardware')}
                         </div>
                       )}
                       {cannotReschedule && (
@@ -1159,14 +1159,15 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {trainerData?.installationIssuesElaboration && (
               <div>
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.installationIssues')}</div>
-                <div className="text-sm text-gray-900 bg-red-50 border border-red-200 rounded p-2">
-                  {trainerData.installationIssuesElaboration}
-                </div>
+                <div
+                  className="text-sm text-gray-900 bg-red-50 border border-red-200 rounded p-2"
+                  dangerouslySetInnerHTML={{ __html: trainerData.installationIssuesElaboration }}
+                />
               </div>
             )}
           </div>
         )
-      
+
       case 'training':
         return (
           <div className="space-y-4">
@@ -1195,7 +1196,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                               ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                           }`}
-                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
+                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? 'Installation must be scheduled first' : ''}
                         >
                           {trainerData?.trainingDate ? t('buttons.changeDate') : t('buttons.schedule')}
                         </button>
@@ -1476,11 +1477,9 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             // Tooltip message for locked stages
             const lockedTooltip = isInstallationLocked
-              ? t('messages.submitVideoFirst')
+              ? t('messages.waitForHardware')
               : isTrainingLocked
-                ? !productListSubmitted
-                  ? t('messages.submitCollectionFirst', { collectionName: terminology.collectionName })
-                  : t('messages.scheduleInstallationFirst')
+                ? t('messages.scheduleInstallationFirst')
                 : ''
 
             return (
@@ -1600,11 +1599,9 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
 
             // Prerequisite message for locked stages
             const lockedMessage = isInstallationLocked
-              ? t('messages.submitVideoFirst')
+              ? t('messages.waitForHardware')
               : isTrainingLocked
-                ? !productListSubmitted
-                  ? t('messages.submitCollectionFirst', { collectionName: terminology.collectionName })
-                  : t('messages.scheduleInstallationFirst')
+                ? t('messages.scheduleInstallationFirst')
                 : ''
 
             return (
@@ -2327,7 +2324,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                               ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                           }`}
-                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Store Setup Video must be submitted first' : ''}
+                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleInstallation && !hasExistingDate) ? 'Hardware Fulfillment Date must be set first' : ''}
                         >
                           <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -2359,7 +2356,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                   if (!canScheduleInstallation && !hasExistingDate) {
                     return (
                       <div className="mt-2 text-sm text-amber-600">
-                        Please submit your Store Setup Video before scheduling installation.
+                        {t('messages.waitForHardware')}
                       </div>
                     )
                   }
@@ -2425,9 +2422,10 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
             {trainerData?.installationIssuesElaboration && (
               <div>
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('fields.installationIssues')}</div>
-                <div className="text-sm text-gray-900 bg-red-50 border border-red-200 rounded p-2">
-                  {trainerData.installationIssuesElaboration}
-                </div>
+                <div
+                  className="text-sm text-gray-900 bg-red-50 border border-red-200 rounded p-2"
+                  dangerouslySetInnerHTML={{ __html: trainerData.installationIssuesElaboration }}
+                />
               </div>
             )}
 
@@ -2476,7 +2474,7 @@ export default function OnboardingTimeline({ currentStage, currentStageFromUrl, 
                               ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-[#ff630f] hover:bg-[#fe5b25] active:scale-95'
                           }`}
-                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? `${terminology.collectionName.charAt(0).toUpperCase() + terminology.collectionName.slice(1)} must be submitted and Installation must be scheduled first` : ''}
+                          title={cannotReschedule ? 'Rescheduling must be done at least 2 days in advance' : (!canScheduleTraining && !hasExistingDate) ? 'Installation must be scheduled first' : ''}
                         >
                           <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
