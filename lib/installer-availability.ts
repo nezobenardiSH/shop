@@ -245,7 +245,7 @@ export async function getInternalInstallersAvailability(
       installers = filteredInstallers
       console.log(`🎯 Filtering to specific installer: ${specificInstallerName}`)
     } else {
-      console.log(`⚠️ Installer "${specificInstallerName}" not found in ${locationKey}, checking all regions...`)
+      console.log(`⚠️ Installer "${specificInstallerName}" not found in current list, checking all regions...`)
       // Search across all regions for the installer
       const allRegions = ['klangValley', 'penang', 'johorBahru']
       for (const region of allRegions) {
