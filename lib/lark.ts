@@ -583,46 +583,83 @@ class LarkService {
       // Add FreeBusy times to our collection
       busyTimes.push(...freeBusyTimes)
 
-      // Step 2: Query Calendar Events API (gets primary calendar with recurring events)
-      console.log('🔍 Step 2: Querying Calendar Events API for primary calendar events...')
+      // Step 2: Query Calendar Events API for ALL calendars (primary + subscribed)
+      console.log('🔍 Step 2: Querying Calendar Events API for ALL calendars (including subscribed)...')
 
-      // Get the actual primary calendar ID for this user
-      let calendarId = 'primary' // Default fallback
+      // Get ALL calendars for this user, but only those they OWN
+      // This prevents picking up events from shared calendars where the user is just a reader
+      let calendars: any[] = []
       try {
-        calendarId = await this.getPrimaryCalendarId(trainerEmail)
-        console.log(`📅 Got actual calendar ID for ${trainerEmail}: ${calendarId}`)
+        const allCalendars = await this.getCalendarList(trainerEmail)
+        console.log(`📅 Found ${allCalendars.length} total calendars for ${trainerEmail}`)
+
+        // Only include calendars where the user is the OWNER
+        // This prevents picking up events from other people's calendars that the user can just view
+        calendars = allCalendars.filter(cal => cal.role === 'owner')
+
+        console.log(`📅 Filtered to ${calendars.length} owned calendars:`)
+        calendars.forEach((cal, idx) => {
+          console.log(`   ${idx + 1}. ${cal.calendar_id} (type: ${cal.type}, role: ${cal.role})`)
+        })
+
+        // Log skipped calendars for debugging
+        const skippedCalendars = allCalendars.filter(cal => cal.role !== 'owner')
+        if (skippedCalendars.length > 0) {
+          console.log(`📅 Skipped ${skippedCalendars.length} non-owned calendars:`)
+          skippedCalendars.forEach((cal) => {
+            console.log(`   - ${cal.calendar_id} (type: ${cal.type}, role: ${cal.role})`)
+          })
+        }
       } catch (error) {
-        console.log(`⚠️ Could not get calendar ID for ${trainerEmail}, using 'primary' as fallback`)
-        // Continue with 'primary' as fallback
+        console.log(`⚠️ Could not get calendar list for ${trainerEmail}, using primary as fallback`)
+        calendars = [{ calendar_id: 'primary', type: 'primary', role: 'owner' }]
       }
-      console.log(`   This ensures we check the user's personal calendar where events are actually stored`)
 
       const timeMin = Math.floor(startDate.getTime() / 1000)
       const timeMax = Math.floor(endDate.getTime() / 1000)
+      const busyTimesBeforeCalendarEvents = busyTimes.length
 
-      // Query calendar events - the API should automatically expand recurring events within the time range
-      let eventsResponse
-      try {
-        eventsResponse = await this.makeRequest(
-          `/open-apis/calendar/v4/calendars/${calendarId}/events?start_time=${timeMin}&end_time=${timeMax}`,
-          {
-            method: 'GET',
-            userEmail: trainerEmail
-          }
-        )
-      } catch (error) {
-        // If calendar events API fails (e.g., invalid calendar_id), skip it
-        console.log(`⚠️ Could not fetch calendar events for ${trainerEmail}: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        console.log(`   Will rely on FreeBusy API results only`)
-        eventsResponse = null
-      }
+      // Query events from ALL calendars
+      for (let calIdx = 0; calIdx < calendars.length; calIdx++) {
+        const calendar = calendars[calIdx]
+        const calendarId = calendar.calendar_id
+        const calendarType = calendar.type || 'unknown'
+        const calendarRole = calendar.role || 'unknown'
 
-      console.log(`📅 Calendar Events API returned: ${eventsResponse?.data?.items?.length || 0} events`)
-      console.log(`📅 First 3 events:`, JSON.stringify(eventsResponse?.data?.items?.slice(0, 3), null, 2))
+        console.log(`\n📅 [${calIdx + 1}/${calendars.length}] Querying calendar: ${calendarId}`)
+        console.log(`   Type: ${calendarType}, Role: ${calendarRole}`)
 
-      if (eventsResponse?.data?.items?.length > 0) {
+        // Add small delay between calendar queries to avoid rate limits (skip first)
+        if (calIdx > 0) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+
+        // Query calendar events
+        let eventsResponse
+        try {
+          eventsResponse = await this.makeRequest(
+            `/open-apis/calendar/v4/calendars/${calendarId}/events?start_time=${timeMin}&end_time=${timeMax}`,
+            {
+              method: 'GET',
+              userEmail: trainerEmail
+            }
+          )
+        } catch (error) {
+          console.log(`   ⚠️ Could not fetch events: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          continue // Skip to next calendar
+        }
+
+        const eventCount = eventsResponse?.data?.items?.length || 0
+        console.log(`   📅 Found ${eventCount} events in this calendar`)
+
+        if (eventCount === 0) {
+          continue // Skip to next calendar
+        }
+
         const allEvents = eventsResponse.data.items
-        console.log(`📅 Found ${allEvents.length} calendar events for ${trainerEmail}`)
+        if (calIdx === 0) {
+          console.log(`📅 First 3 events:`, JSON.stringify(allEvents.slice(0, 3), null, 2))
+        }
 
         for (const event of allEvents) {
           // Check if this is a recurring event DEFINITION (has recurrence rule)
@@ -683,10 +720,11 @@ class LarkService {
                       busyTimes.push({
                         start_time: instanceStart.toISOString(),
                         end_time: instanceEnd.toISOString(),
-                        source: `recurring:${event.summary}`,
-                        recurrence: event.recurrence
+                        source: `recurring:${calendarType}:${event.summary}`,
+                        recurrence: event.recurrence,
+                        calendar_id: calendarId
                       } as any)
-                      console.log(`      ✅ Added RECURRING instance to busy times: "${event.summary}"`)
+                      console.log(`      ✅ Added RECURRING instance to busy times: "${event.summary}" (from ${calendarType} calendar)`)
                     } else {
                       console.log(`      ⏭️  Skipped (outside range)`)
                     }
@@ -743,25 +781,24 @@ class LarkService {
                 busyTimes.push({
                   start_time: eventStart.toISOString(),
                   end_time: eventEnd.toISOString(),
-                  source: `one-time:${event.summary || 'No title'}`,
-                  event_id: event.event_id
+                  source: `one-time:${calendarType}:${event.summary || 'No title'}`,
+                  event_id: event.event_id,
+                  calendar_id: calendarId
                 } as any)
-                console.log(`   ✅ Added ONE-TIME event to busy times: "${event.summary || 'No title'}"`)
+                console.log(`   ✅ Added ONE-TIME event to busy times: "${event.summary || 'No title'}" (from ${calendarType} calendar)`)
               } else {
                 console.log(`   ❌ Skipped (outside date range)`)
               }
             } else {
-              console.log(`🔍 Skipping ONE-TIME event: "${event.summary || 'No title'}" (marked as FREE)`)
+              console.log(`🔍 Skipping ONE-TIME event: "${event.summary || 'No title'}" (marked as FREE, from ${calendarType} calendar)`)
             }
           } else {
             console.log(`🔍 Skipping event: "${event.summary || 'No title'}" (missing timestamp or cancelled)`)
           }
         }
+      } // End of calendar loop
 
-        console.log(`📊 Calendar Events API added ${busyTimes.length - freeBusyTimes.length} additional busy periods`)
-      } else {
-        console.log('⚠️ Calendar Events API returned no events')
-      }
+      console.log(`\n📊 Calendar Events API (all ${calendars.length} calendars) added ${busyTimes.length - busyTimesBeforeCalendarEvents} additional busy periods`)
 
       // Step 3: Deduplicate and merge overlapping busy times
       console.log(`🔍 Step 3: Deduplicating and merging ${busyTimes.length} busy periods...`)
@@ -1423,7 +1460,7 @@ class LarkService {
         time_max: formatRFC3339(endTime),
         user_id: userId, // Use user_id, not user_id_list
         only_busy: true,
-        include_external_calendar: false  // Don't include external calendars (Google, etc.) - they may have "WORKING" events marked as busy
+        include_external_calendar: true  // Include external calendars (Google, etc.) to detect training events
       };
       
       console.log('FreeBusy request:', requestBody);
