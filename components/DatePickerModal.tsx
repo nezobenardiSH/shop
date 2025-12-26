@@ -146,8 +146,8 @@ export default function DatePickerModal({
   const t = useTranslations('booking')
 
   // Internal user manual selection states
-  const [availableTrainersList, setAvailableTrainersList] = useState<Array<{ name: string; email: string; languages?: string[] }>>([])
-  const [availableInstallersList, setAvailableInstallersList] = useState<Array<{ name: string; email: string }>>([])
+  const [availableTrainersList, setAvailableTrainersList] = useState<Array<{ name: string; email: string; languages?: string[]; location?: string[] }>>([])
+  const [availableInstallersList, setAvailableInstallersList] = useState<Array<{ name: string; email: string; region?: string }>>([])
   const [selectedTrainerEmail, setSelectedTrainerEmail] = useState<string>('')
   const [selectedInstallerEmail, setSelectedInstallerEmail] = useState<string>('')
 
@@ -1894,11 +1894,16 @@ export default function DatePickerModal({
                 >
                   <option value="">{t('selectATrainer')}</option>
                   <option value="all">{t('allTrainers')}</option>
-                  {availableTrainersList.map((trainer) => (
-                    <option key={trainer.email} value={trainer.email}>
-                      {trainer.name} {trainer.languages ? `(${trainer.languages.join(', ')})` : ''}
-                    </option>
-                  ))}
+                  {availableTrainersList.map((trainer) => {
+                    const locationStr = trainer.location?.join(', ') || ''
+                    const languagesStr = trainer.languages?.join(', ') || ''
+                    const details = [locationStr, languagesStr].filter(Boolean).join('. ')
+                    return (
+                      <option key={trainer.email} value={trainer.email}>
+                        {trainer.name} {details ? `(${details})` : ''}
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
             )}
@@ -1919,7 +1924,7 @@ export default function DatePickerModal({
                     <option value="all">{t('allInternalInstallers')}</option>
                     {availableInstallersList.map((installer) => (
                       <option key={installer.email} value={installer.email}>
-                        {installer.name}
+                        {installer.name} {installer.region ? `(${installer.region})` : ''}
                       </option>
                     ))}
                   </optgroup>
