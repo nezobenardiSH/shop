@@ -307,12 +307,12 @@ export default function BookingModal({
                     )}
                   </div>
                 )}
-                <div className="grid grid-cols-7 gap-2">
+                <div className="flex md:grid md:grid-cols-7 gap-2 overflow-x-auto pb-2 -mx-2 px-2 snap-x snap-mandatory md:snap-none md:overflow-visible">
                   {availability.slice(0, 28).map((day) => {
                     // Check if day has slots available in selected language
                     const isTrainingBooking = bookingType === 'training'
                     let hasAvailableSlots = day.slots.some(slot => slot.available)
-                    
+
                     if (isTrainingBooking && selectedLanguages.length > 0) {
                       hasAvailableSlots = day.slots.some(slot => {
                         if (!slot.available || !slot.availableLanguages) return false
@@ -321,14 +321,19 @@ export default function BookingModal({
                         )
                       })
                     }
-                    
+
+                    const date = new Date(day.date + 'T00:00:00')
+                    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
+                    const monthName = date.toLocaleDateString('en-US', { month: 'short' })
+
                     return (
                       <button
                         key={day.date}
                         onClick={() => setSelectedDate(day.date)}
                         disabled={!hasAvailableSlots}
                         className={`
-                          p-3 rounded-xl text-center transition-colors
+                          p-3 rounded-xl text-center transition-colors flex-shrink-0 snap-start
+                          min-w-[70px] md:min-w-0
                           ${selectedDate === day.date
                             ? 'bg-[#ff630f] text-white'
                             : hasAvailableSlots
@@ -337,8 +342,9 @@ export default function BookingModal({
                           }
                         `}
                       >
-                        <div className="text-xs">{formatDate(day.date).split(',')[0]}</div>
-                        <div className="font-semibold">{new Date(day.date + 'T00:00:00').getDate()}</div>
+                        <div className="text-xs">{dayName}</div>
+                        <div className="font-semibold text-lg">{date.getDate()}</div>
+                        <div className="text-xs">{monthName}</div>
                       </button>
                     )
                   })}
