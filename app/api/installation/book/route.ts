@@ -7,10 +7,18 @@ import {
   bookInternalInstallation,
   submitExternalInstallationRequest
 } from '@/lib/installer-availability'
+import { logServerError } from '@/lib/server-logger'
 
 export async function POST(request: NextRequest) {
+  // Parse body outside try block so it's accessible in catch for error logging
+  let body: any = {}
   try {
-    const body = await request.json()
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  try {
     const {
       merchantId,
       merchantName,
@@ -197,7 +205,17 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error) {
-    console.error('Error booking installation:', error)
+    await logServerError(error, {
+      route: '/api/installation/book',
+      method: 'POST',
+      merchantId: body?.merchantId,
+      additionalInfo: {
+        merchantName: body?.merchantName,
+        date: body?.date,
+        useExternalVendor: body?.useExternalVendor,
+        errorType: 'Installation booking failed'
+      }
+    })
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to book installation' },
       { status: 500 }

@@ -15,6 +15,7 @@ import { getDeviceType, OrderItem } from './device-type-detector'
 import { createTicketForMerchant, MerchantDetails } from './surftek-api'
 import { getDateStringInSingapore, createSingaporeMidnight, createSingaporeEndOfDay } from './date-utils'
 import { createL2OnsiteSupportTicket, updateL2OnsiteSupportTicket, L2OnsiteSupportMerchantData } from './intercom'
+import { logServerError } from './server-logger'
 
 interface TimeSlot {
   start: string
@@ -1728,6 +1729,19 @@ export async function submitExternalInstallationRequest(
           }
         } catch (surftekError) {
           console.error('❌ Surftek API error, falling back to manual flow:', surftekError)
+          // Send error notification to Lark
+          await logServerError(surftekError, {
+            route: '/api/installation/book (Surftek)',
+            method: 'POST',
+            merchantId,
+            additionalInfo: {
+              merchantName,
+              preferredDate,
+              preferredTime,
+              storeAddress,
+              errorType: 'Surftek API ticket creation failed'
+            }
+          })
           // Continue with manual flow - don't fail the booking
         }
 

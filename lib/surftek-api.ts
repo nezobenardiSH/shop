@@ -9,6 +9,7 @@
 
 import { geocodeAddress, extractStateName } from './geocoding'
 import { getServiceId, DeviceType } from './device-type-detector'
+import { logServerError } from './server-logger'
 
 // API Configuration
 const SURFTEK_API_URL = process.env.SURFTEK_API_URL || 'https://storehub.trackking.biz/api/ticket/create'
@@ -147,11 +148,35 @@ export async function createSurftekTicket(request: SurftekTicketRequest): Promis
     } else {
       console.error('❌ Surftek API error:', getErrorDescription(data.ErrorCode))
       console.error('   ErrorMessage:', data.ErrorMessage)
+      // Send error notification to Lark for API error responses
+      await logServerError(new Error(`Surftek API Error: ${data.ErrorMessage || getErrorDescription(data.ErrorCode)}`), {
+        route: 'Surftek API',
+        method: 'POST',
+        additionalInfo: {
+          storeName: request.Ticket.StoreName,
+          contactPhone: request.Ticket.Phone,
+          address: request.Appointment.Address,
+          errorCode: data.ErrorCode,
+          errorMessage: data.ErrorMessage,
+          errorType: 'Surftek API returned error response'
+        }
+      })
     }
 
     return data
   } catch (error) {
     console.error('❌ Surftek API request failed:', error)
+    // Send error notification to Lark
+    await logServerError(error, {
+      route: 'Surftek API',
+      method: 'POST',
+      additionalInfo: {
+        storeName: request.Ticket.StoreName,
+        contactPhone: request.Ticket.Phone,
+        address: request.Appointment.Address,
+        errorType: 'Surftek API request failed'
+      }
+    })
     throw error
   }
 }

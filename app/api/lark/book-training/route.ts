@@ -10,11 +10,19 @@ import { cookies } from 'next/headers'
 import { loadTrainersConfig } from '@/lib/config-loader'
 import { createSalesforceTask, getMsmSalesforceUserId, getTodayDateString, getSalesforceRecordUrl } from '@/lib/salesforce-tasks'
 import { prisma } from '@/lib/prisma'
+import { logServerError } from '@/lib/server-logger'
 
 export async function POST(request: NextRequest) {
+  // Parse body outside try block so it's accessible in catch for error logging
+  let body: any = {}
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams
-    const body = await request.json()
     const {
       merchantId,
       merchantName,
@@ -1276,7 +1284,16 @@ Phone: ${merchantPICPhone || merchantPhone || 'N/A'}
       message: `Training session booked with ${assignment.assigned} for ${date} from ${startTime} to ${endTime}`
     })
   } catch (error) {
-    console.error('Error booking training:', error)
+    await logServerError(error, {
+      route: '/api/lark/book-training',
+      method: 'POST',
+      merchantId: body?.merchantId,
+      additionalInfo: {
+        merchantName: body?.merchantName,
+        date: body?.date,
+        bookingType: body?.bookingType
+      }
+    })
     return NextResponse.json(
       { error: 'Failed to book training session' },
       { status: 500 }
