@@ -6,30 +6,30 @@ import { createSalesforceTask, getMsmSalesforceUserId, getTodayDateString, getSa
 import { deleteIntercomTicket } from '@/lib/intercom'
 import { prisma } from '@/lib/prisma'
 import { TaskType } from '@prisma/client'
-import fs from 'fs/promises'
-import path from 'path'
+import { loadTrainersConfig, loadInstallersConfig } from '@/lib/config-loader'
+import { logServerError } from '@/lib/server-logger'
 
 export async function DELETE(request: NextRequest) {
+  // Parse body outside try block so it's accessible in catch for error logging
+  let body: any = {}
   try {
-    // Read trainers config dynamically to pick up changes without restart
-    const configPath = path.join(process.cwd(), 'config', 'trainers.json')
-    const configContent = await fs.readFile(configPath, 'utf-8')
-    const trainersConfig = JSON.parse(configContent)
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
 
-    // Read installers config for installation bookings
-    const installersConfigPath = path.join(process.cwd(), 'config', 'installers.json')
-    const installersConfigContent = await fs.readFile(installersConfigPath, 'utf-8')
-    const installersConfig = JSON.parse(installersConfigContent)
+  try {
+    // Load trainers and installers config from database
+    const trainersConfig = await loadTrainersConfig()
+    const installersConfig = await loadInstallersConfig()
 
     // Flatten all installers from all regions
-    const allInstallers: any[] = []
-    for (const region of ['klangValley', 'penang', 'johorBahru']) {
-      if (installersConfig[region]?.installers) {
-        allInstallers.push(...installersConfig[region].installers)
-      }
-    }
+    const allInstallers: any[] = [
+      ...installersConfig.klangValley.installers,
+      ...installersConfig.penang.installers,
+      ...installersConfig.johorBahru.installers
+    ]
 
-    const body = await request.json()
     const {
       merchantId,
       merchantName,
@@ -201,6 +201,19 @@ export async function DELETE(request: NextRequest) {
           larkDeletionSucceeded = true
         } catch (larkError: any) {
           console.error('[Cancel] Failed to delete Lark calendar event:', larkError?.message || larkError)
+          // Send error notification to Lark
+          await logServerError(larkError, {
+            route: '/api/lark/cancel-training',
+            method: 'DELETE',
+            merchantId: body?.merchantId,
+            additionalInfo: {
+              merchantName: body?.merchantName,
+              bookingType: body?.bookingType,
+              eventId: body?.eventId,
+              trainerName: body?.trainerName,
+              errorType: 'Lark calendar deletion failed'
+            }
+          })
           // Will still clear other fields but preserve eventId for retry
         }
       } else {
@@ -511,7 +524,17 @@ ${cancellationReason}
       isExternal
     })
   } catch (error) {
-    console.error('[Cancel] Error:', error)
+    await logServerError(error, {
+      route: '/api/lark/cancel-training',
+      method: 'DELETE',
+      merchantId: body?.merchantId,
+      additionalInfo: {
+        merchantName: body?.merchantName,
+        bookingType: body?.bookingType,
+        eventId: body?.eventId,
+        cancellationReason: body?.cancellationReason
+      }
+    })
     return NextResponse.json(
       { error: 'Failed to cancel booking' },
       { status: 500 }
